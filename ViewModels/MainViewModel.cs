@@ -45,6 +45,9 @@ public class MainViewModel : INotifyPropertyChanged
         DeleteOrderCommand = new RelayCommand(
             async _ => await DeleteOrderAsync(),
             _ => SelectedOrder is not null);
+        CopyOrderCommand = new RelayCommand(
+            async _ => await CopyOrderAsync(),
+            _ => SelectedOrder is not null);
     }
 
     // ── Bindable properties ────────────────────────────────────────────────────
@@ -173,6 +176,7 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand NextPageCommand { get; }
     public ICommand PreviousPageCommand { get; }
     public ICommand DeleteOrderCommand { get; }
+    public ICommand CopyOrderCommand { get; }
 
     // ── Operations ─────────────────────────────────────────────────────────────
 
@@ -291,6 +295,97 @@ public class MainViewModel : INotifyPropertyChanged
         catch (Exception ex)
         {
             StatusMessage = _localization.Format("Status.DeleteFailed", ex.Message);
+        }
+    }
+
+    // Statuses that represent a finished order. Copying such an order starts a fresh
+    // active order, so its status is reset to Processing (which also removes the
+    // "picked up" tick, since that flag is derived from the Completed status).
+    private static bool IsClosedStatus(OrderStatus status)
+        => status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned;
+
+    private async Task CopyOrderAsync()
+    {
+        if (SelectedOrder is null) return;
+
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var source = await db.Orders
+                .Include(o => o.Items)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(o => o.Id == SelectedOrder.Id);
+
+            if (source is null)
+                return;
+
+            var copy = new Order
+            {
+                OrderNumber = $"ORD-{DateTime.Now:yyyyMMdd-HHmmss}",
+                OrderDate = DateTime.UtcNow,
+                CustomerName = source.CustomerName,
+                PhoneNumber = source.PhoneNumber,
+                Email = source.Email,
+                Address = source.Address,
+                CurrencyType = source.CurrencyType,
+                ServiceType = source.ServiceType,
+                ServiceDetails = source.ServiceDetails,
+                AdditionalNotes = source.AdditionalNotes,
+                Subtotal = source.Subtotal,
+                TaxRate = source.TaxRate,
+                ChestSize = source.ChestSize,
+                JacketLength = source.JacketLength,
+                CustomMadeRecordsJson = source.CustomMadeRecordsJson,
+                // A closed order becomes a new Processing order; otherwise keep its status.
+                Status = IsClosedStatus(source.Status) ? OrderStatus.Processing : source.Status,
+                TotalAmount = source.TotalAmount,
+                Downpayment = source.Downpayment,
+                DownpaymentMethod = source.DownpaymentMethod,
+                FinalBalanceMethod = source.FinalBalanceMethod,
+                AlterationDownpayment = source.AlterationDownpayment,
+                AlterationDownpaymentMethod = source.AlterationDownpaymentMethod,
+                AlterationDownpaymentCompleted = source.AlterationDownpaymentCompleted,
+                AlterationFinalBalanceMethod = source.AlterationFinalBalanceMethod,
+                AlterationBalanceCleared = source.AlterationBalanceCleared,
+                CustomMadeDownpayment = source.CustomMadeDownpayment,
+                CustomMadeDownpaymentMethod = source.CustomMadeDownpaymentMethod,
+                CustomMadeDownpaymentCompleted = source.CustomMadeDownpaymentCompleted,
+                CustomMadeFinalBalanceMethod = source.CustomMadeFinalBalanceMethod,
+                CustomMadeBalanceCleared = source.CustomMadeBalanceCleared,
+                ClothingDownpayment = source.ClothingDownpayment,
+                ClothingDownpaymentMethod = source.ClothingDownpaymentMethod,
+                ClothingDownpaymentCompleted = source.ClothingDownpaymentCompleted,
+                ClothingFinalBalanceMethod = source.ClothingFinalBalanceMethod,
+                ClothingBalanceCleared = source.ClothingBalanceCleared,
+                AlterationSubtotal = source.AlterationSubtotal,
+                AlterationTaxRate = source.AlterationTaxRate,
+                ClothingSubtotal = source.ClothingSubtotal,
+                ClothingTaxRate = source.ClothingTaxRate,
+                CustomMadeTaxRate = source.CustomMadeTaxRate,
+                Notes = source.Notes,
+                Items = source.Items
+                    .Select(item => new OrderItem
+                    {
+                        ProductName = item.ProductName,
+                        Quantity = item.Quantity,
+                        UnitPrice = item.UnitPrice,
+                        PromotionalPrice = item.PromotionalPrice
+                    })
+                    .ToList()
+            };
+
+            db.Orders.Add(copy);
+            await db.SaveChangesAsync();
+            await LoadOrdersAsync();
+
+            SelectedOrder = Orders.FirstOrDefault(order => order.Id == copy.Id) ?? SelectedOrder;
+            StatusMessage = _localization.Format("Status.CopySucceeded", copy.OrderNumber);
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = _localization.Format("Status.CopyFailed", ex.Message);
         }
     }
 

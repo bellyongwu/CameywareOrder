@@ -226,7 +226,7 @@ public partial class OrderEditWindow : Window
         ApplyReadOnlyModeToClothingRows();
     }
 
-    private void SetReadOnlyPaymentSection(PaymentSectionControls section)
+    private static void SetReadOnlyPaymentSection(PaymentSectionControls section)
     {
         section.DownNone.IsEnabled = false;
         section.DownEtransfer.IsEnabled = false;
@@ -1406,6 +1406,30 @@ public partial class OrderEditWindow : Window
         UpdateSectionVisibility(_alterationControls);
         UpdateSectionVisibility(_customMadeControls);
         UpdateSectionVisibility(_clothingControls);
+
+        ApplySectionLock(_alterationControls);
+        ApplySectionLock(_customMadeControls);
+        ApplySectionLock(_clothingControls);
+    }
+
+    // Once a section's final balance is cleared, its payment is settled and must not be
+    // edited, so lock the whole payment section. The "balance cleared" checkbox itself
+    // stays enabled (unless the entire order is read-only) so the user can un-clear the
+    // section to make it editable again.
+    private void ApplySectionLock(PaymentSectionControls c)
+    {
+        var locked = _isReadOnly || c.BalanceClearedCheck.IsChecked is true;
+
+        c.DownNone.IsEnabled = !locked;
+        c.DownEtransfer.IsEnabled = !locked;
+        c.DownCard.IsEnabled = !locked;
+        c.DownCash.IsEnabled = !locked;
+        c.DownCompletedCheck.IsEnabled = !locked;
+        c.FinalEtransfer.IsEnabled = !locked;
+        c.FinalCard.IsEnabled = !locked;
+        c.FinalCash.IsEnabled = !locked;
+        if (locked)
+            c.DownpaymentBox.IsEnabled = false;
     }
 
     private static void UpdateSectionVisibility(PaymentSectionControls c)

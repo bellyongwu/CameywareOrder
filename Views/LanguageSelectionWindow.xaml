@@ -3,28 +3,80 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:loc="clr-namespace:LeeYongeOrdering.Localization"
     Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Language], Mode=OneWay}"
-    Height="170" Width="360"
+    Height="460" Width="440"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
-        ShowInTaskbar="False">
-    <Grid Margin="16">
+        ShowInTaskbar="False"
+        Icon="/Assets/app-icon.ico"
+        Background="#F5F6FA">
+    <Window.Resources>
+        <Style x:Key="EnterButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bd" CornerRadius="8">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#4F46E5" Offset="0"/>
+                                    <GradientStop Color="#7C3AED" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Prompt], Mode=OneWay}"
-                   FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
+        <!-- Welcome banner -->
+        <Border Grid.Row="0" Height="150">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#4F46E5" Offset="0"/>
+                    <GradientStop Color="#7C3AED" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Image Source="/Assets/app-icon.ico" Width="56" Height="56" HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Welcome], Mode=OneWay}"
+                           Foreground="White" FontSize="22" FontWeight="Bold"
+                           HorizontalAlignment="Center" Margin="0,10,0,0"/>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.WelcomeMessage], Mode=OneWay}"
+                           Foreground="#E5E7FF" FontSize="12"
+                           HorizontalAlignment="Center" Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
 
-        <ComboBox Grid.Row="1" x:Name="LanguageBox" Height="30"
-              ItemsSource="{Binding AvailableLanguages}"
-              DisplayMemberPath="Name"
-              SelectedValuePath="Code"
-              SelectedValue="{Binding CurrentLanguageCode, Mode=TwoWay}"/>
+        <!-- Language options -->
+        <StackPanel Grid.Row="1" Margin="32,24,32,0">
+            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Prompt], Mode=OneWay}"
+                       FontSize="14" FontWeight="SemiBold" Foreground="#374151" Margin="0,0,0,14"/>
+            <StackPanel x:Name="LanguageOptionsPanel"/>
+        </StackPanel>
 
-        <Button Grid.Row="3" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Confirm], Mode=OneWay}" Width="110" Height="30"
-                HorizontalAlignment="Right" Click="OnConfirmClick"/>
+        <!-- Enter button -->
+        <Button Grid.Row="2" Style="{StaticResource EnterButtonStyle}"
+                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Enter], Mode=OneWay}"
+                Height="46" Margin="32,18,32,26" Click="OnConfirmClick"/>
     </Grid>
 </Window>

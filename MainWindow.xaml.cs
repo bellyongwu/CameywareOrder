@@ -167,18 +167,51 @@ public partial class MainWindow : Window
     }
 
     // Requirement 4a: pressing Enter on a selected order opens the same edit
-    // window as a double-click.
+    // window as a double-click. Pressing Delete triggers the delete action.
     private void OnOrderRowKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Enter)
-            return;
-
         if (_viewModel.SelectedOrder is null)
             return;
 
-        e.Handled = true;
-        OnEditOrderClick(sender, new RoutedEventArgs());
+        switch (e.Key)
+        {
+            case Key.Enter:
+                e.Handled = true;
+                OnEditOrderClick(sender, new RoutedEventArgs());
+                break;
+            case Key.Delete:
+                e.Handled = true;
+                if (_viewModel.DeleteOrderCommand.CanExecute(null))
+                    _viewModel.DeleteOrderCommand.Execute(null);
+                break;
+        }
     }
+
+    // Right-clicking a row selects it first so context-menu actions operate on the
+    // intended order (WPF does not select on right-click by default).
+    private void OnOrderRowRightClick(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is DataGridRow row)
+            row.IsSelected = true;
+    }
+
+    private void OnContextEditClick(object sender, RoutedEventArgs e)
+        => OnEditOrderClick(sender, e);
+
+    private void OnContextCopyClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.CopyOrderCommand.CanExecute(null))
+            _viewModel.CopyOrderCommand.Execute(null);
+    }
+
+    private void OnContextDeleteClick(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.DeleteOrderCommand.CanExecute(null))
+            _viewModel.DeleteOrderCommand.Execute(null);
+    }
+
+    private void OnContextPrintClick(object sender, RoutedEventArgs e)
+        => OnPrintReceiptClick(sender, e);
 
     private void OnAddOrderClick(object sender, RoutedEventArgs e)
     {

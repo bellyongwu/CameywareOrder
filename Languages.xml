@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Languages default="zh-CN">
   <Language code="zh-CN" name="简体中文">
-    <Text key="App.MainTitle">LeeYongeOrdering</Text>
-    <Text key="Main.HeaderTitle">LeeYongeOrdering</Text>
+    <Text key="App.MainTitle">Cameyware订单录入系统</Text>
+    <Text key="Main.HeaderTitle">上海丽扬高级定制</Text>
     <Text key="Main.HeaderSubtitle">订单录入系统</Text>
 
     <Text key="Toolbar.NewOrder">新增订单</Text>
     <Text key="Toolbar.EditOrder">编辑订单</Text>
     <Text key="Toolbar.ViewOrder">查看订单</Text>
     <Text key="Toolbar.DeleteOrder">删除订单</Text>
+    <Text key="Toolbar.CopyOrder">复制订单</Text>
     <Text key="Toolbar.PrintReceipt">打印小票</Text>
     <Text key="Toolbar.Refresh">刷新</Text>
     <Text key="Toolbar.Language">语言</Text>
@@ -17,6 +18,9 @@
     <Text key="Toolbar.RevealDataFile">定位数据库文件</Text>
     <Text key="LanguageSelection.Prompt">请选择语言</Text>
     <Text key="LanguageSelection.Confirm">确认</Text>
+    <Text key="LanguageSelection.Welcome">欢迎</Text>
+    <Text key="LanguageSelection.WelcomeMessage">欢迎使用 LeeYonge 订单管理系统</Text>
+    <Text key="LanguageSelection.Enter">进入系统</Text>
 
     <Text key="StatusBar.Label">状态:</Text>
     <Text key="Status.Ready">就绪</Text>
@@ -24,6 +28,8 @@
     <Text key="Status.LoadedSummary">共 {0} 条订单  |  GraphQL 端点: http://localhost:5050/graphql</Text>
     <Text key="Status.LoadFailed">加载失败: {0}</Text>
     <Text key="Status.DeleteFailed">删除失败: {0}</Text>
+    <Text key="Status.CopySucceeded">订单已复制为 {0}</Text>
+    <Text key="Status.CopyFailed">复制失败: {0}</Text>
     <Text key="Status.OpenFolderFailed">打开目录失败: {0}</Text>
     <Text key="Status.CopyPathSucceeded">数据库路径已复制</Text>
     <Text key="Status.CopyPathFailed">复制路径失败: {0}</Text>
@@ -186,14 +192,15 @@
   </Language>
 
   <Language code="en-US" name="English">
-    <Text key="App.MainTitle">LeeYongeOrdering</Text>
-    <Text key="Main.HeaderTitle">LeeYongeOrdering</Text>
+    <Text key="App.MainTitle">Order Entry System Designed by Cameyware</Text>
+    <Text key="Main.HeaderTitle">Shanghai LeeYonge Bespoke</Text>
     <Text key="Main.HeaderSubtitle">Order Entry System</Text>
 
     <Text key="Toolbar.NewOrder">New Order</Text>
     <Text key="Toolbar.EditOrder">Edit Order</Text>
     <Text key="Toolbar.ViewOrder">View Order</Text>
     <Text key="Toolbar.DeleteOrder">Delete Order</Text>
+    <Text key="Toolbar.CopyOrder">Copy Order</Text>
     <Text key="Toolbar.PrintReceipt">Print Receipt</Text>
     <Text key="Toolbar.Refresh">Refresh</Text>
     <Text key="Toolbar.Language">Language</Text>
@@ -202,6 +209,9 @@
     <Text key="Toolbar.RevealDataFile">Reveal Database File</Text>
     <Text key="LanguageSelection.Prompt">Please choose a language</Text>
     <Text key="LanguageSelection.Confirm">Confirm</Text>
+    <Text key="LanguageSelection.Welcome">Welcome</Text>
+    <Text key="LanguageSelection.WelcomeMessage">Welcome to the LeeYonge Ordering System</Text>
+    <Text key="LanguageSelection.Enter">Enter System</Text>
 
     <Text key="StatusBar.Label">Status:</Text>
     <Text key="Status.Ready">Ready</Text>
@@ -209,6 +219,8 @@
     <Text key="Status.LoadedSummary">{0} orders  |  GraphQL endpoint: http://localhost:5050/graphql</Text>
     <Text key="Status.LoadFailed">Load failed: {0}</Text>
     <Text key="Status.DeleteFailed">Delete failed: {0}</Text>
+    <Text key="Status.CopySucceeded">Order copied as {0}</Text>
+    <Text key="Status.CopyFailed">Copy failed: {0}</Text>
     <Text key="Status.OpenFolderFailed">Open folder failed: {0}</Text>
     <Text key="Status.CopyPathSucceeded">Database path copied</Text>
     <Text key="Status.CopyPathFailed">Copy path failed: {0}</Text>

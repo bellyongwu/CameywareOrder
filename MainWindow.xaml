@@ -7,8 +7,10 @@
         xmlns:loc="clr-namespace:LeeYongeOrdering.Localization"
         mc:Ignorable="d"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[App.MainTitle], Mode=OneWay}"
-        Height="760" Width="1320"
+        Height="1440" Width="2560"
         MinHeight="720" MinWidth="1180"
+        Icon="Assets/app-icon.ico"
+        WindowState="Maximized"
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
@@ -132,6 +134,20 @@
                           HeadersVisibility="Column"
                           RowHeaderWidth="0"
                           BorderBrush="#DDD" BorderThickness="1">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnContextEditClick"/>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyOrder], Mode=OneWay}" Click="OnContextCopyClick"/>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Click="OnContextDeleteClick"/>
+                            <Separator/>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnContextPrintClick"/>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnOrderRowRightClick"/>
+                        </Style>
+                    </DataGrid.RowStyle>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Binding="{Binding OrderNumber}" Width="130" MinWidth="80"/>
                         <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Binding="{Binding CustomerName}" Width="150" MinWidth="80"/>
