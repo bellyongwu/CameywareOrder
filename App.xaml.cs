@@ -152,6 +152,7 @@ public partial class App : Application
         ("ClothingDownpaymentCompleted", "ALTER TABLE Orders ADD COLUMN ClothingDownpaymentCompleted INTEGER NOT NULL DEFAULT 0; "),
         ("ClothingFinalBalanceMethod", "ALTER TABLE Orders ADD COLUMN ClothingFinalBalanceMethod INTEGER NULL; "),
         ("ClothingBalanceCleared", "ALTER TABLE Orders ADD COLUMN ClothingBalanceCleared INTEGER NOT NULL DEFAULT 0; "),
+        ("LastModifiedDate", "ALTER TABLE Orders ADD COLUMN LastModifiedDate TEXT NULL; "),
     };
 
     private static async Task EnsureDatabaseCompatibilityAsync(AppDbContext db)

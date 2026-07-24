@@ -42,6 +42,7 @@
     <Text key="Search.Label">搜索</Text>
     <Text key="Filter.Status.Label">状态</Text>
     <Text key="Filter.Status.All">全部</Text>
+    <Text key="Filter.RecordFontSize">字号</Text>
     <Text key="Paging.PageSize">每页</Text>
     <Text key="Paging.Previous">上一页</Text>
     <Text key="Paging.Next">下一页</Text>
@@ -72,6 +73,7 @@
     <Text key="Order.Fields.PromotionalPrice">优惠价</Text>
     <Text key="Order.Fields.ItemCategory">品类</Text>
     <Text key="Order.Fields.OrderDate">订单日期</Text>
+    <Text key="Order.Fields.LastModifiedDate">最后修改时间</Text>
     <Text key="Order.Fields.Status">状态</Text>
     <Text key="Order.Fields.TotalAmount">总金额</Text>
     <Text key="Order.Fields.AllServicesTotalAmount">全部服务总金额</Text>
@@ -128,6 +130,24 @@
     <Text key="OrderEdit.Panel.Measures">测量信息</Text>
     <Text key="OrderEdit.Panel.CustomPrice">定制费用</Text>
     <Text key="OrderEdit.Panel.DownloadMeasurement">下载量身尺寸</Text>
+    <Text key="CustomMade.Documents.Title">相关文件 / 图片</Text>
+    <Text key="CustomMade.Documents.Category.HandwritingReceipt">手写收据</Text>
+    <Text key="CustomMade.Documents.Category.Fabric">选用面料</Text>
+    <Text key="CustomMade.Documents.Category.Photo">照片</Text>
+    <Text key="CustomMade.Documents.Category.Other">其他</Text>
+    <Text key="CustomMade.Documents.Upload">上传</Text>
+    <Text key="CustomMade.Documents.StartUpload">开始上传</Text>
+    <Text key="CustomMade.Documents.AddMore">添加更多图片</Text>
+    <Text key="CustomMade.Documents.View">查看</Text>
+    <Text key="CustomMade.Documents.Download">下载</Text>
+    <Text key="CustomMade.Documents.Replace">替换</Text>
+    <Text key="CustomMade.Documents.Delete">删除</Text>
+    <Text key="CustomMade.Documents.Empty">暂无文件</Text>
+    <Text key="CustomMade.Documents.DeleteConfirm">确定要删除该文件吗？</Text>
+    <Text key="CustomMade.Documents.DeleteTitle">删除文件</Text>
+    <Text key="CustomMade.Documents.InvalidImage">请选择有效的图片文件。</Text>
+    <Text key="CustomMade.Documents.PreviewMissing">找不到该图片文件。</Text>
+    <Text key="CustomMade.Records.ImageCount">已有{0}张图片上传</Text>
     <Text key="Measure.Unit.Label">单位</Text>
     <Text key="Measure.Unit.Cm">厘米</Text>
     <Text key="Measure.Unit.Inch">英寸</Text>
@@ -176,6 +196,8 @@
     <Text key="PaymentMethod.Cash">现金</Text>
     <Text key="PaymentMethod.None">无</Text>
     <Text key="Payment.Status.Cleared">已结清</Text>
+    <Text key="Payment.Status.ClearedPickedUp">已结清（已取货）</Text>
+    <Text key="Payment.Status.ClearedNotPickedUp">已结清（未取货）</Text>
     <Text key="Payment.Status.Outstanding">未结清</Text>
 
     <Text key="ClothingItem.Jackets">西装外套</Text>
@@ -233,6 +255,7 @@
     <Text key="Search.Label">Search</Text>
     <Text key="Filter.Status.Label">Status</Text>
     <Text key="Filter.Status.All">All</Text>
+    <Text key="Filter.RecordFontSize">Text size</Text>
     <Text key="Paging.PageSize">Per page</Text>
     <Text key="Paging.Previous">Previous</Text>
     <Text key="Paging.Next">Next</Text>
@@ -263,6 +286,7 @@
     <Text key="Order.Fields.PromotionalPrice">Promotional Price</Text>
     <Text key="Order.Fields.ItemCategory">Item Category</Text>
     <Text key="Order.Fields.OrderDate">Order Date</Text>
+    <Text key="Order.Fields.LastModifiedDate">Last Modified</Text>
     <Text key="Order.Fields.Status">Status</Text>
     <Text key="Order.Fields.TotalAmount">Total Amount</Text>
     <Text key="Order.Fields.AllServicesTotalAmount">All Services Total Amount</Text>
@@ -319,6 +343,24 @@
     <Text key="OrderEdit.Panel.Measures">Measurements</Text>
     <Text key="OrderEdit.Panel.CustomPrice">Custom Price</Text>
     <Text key="OrderEdit.Panel.DownloadMeasurement">Download Measurement</Text>
+    <Text key="CustomMade.Documents.Title">Documents / Images</Text>
+    <Text key="CustomMade.Documents.Category.HandwritingReceipt">Handwriting Receipts</Text>
+    <Text key="CustomMade.Documents.Category.Fabric">Fabrics Selected</Text>
+    <Text key="CustomMade.Documents.Category.Photo">Photos</Text>
+    <Text key="CustomMade.Documents.Category.Other">Others</Text>
+    <Text key="CustomMade.Documents.Upload">Upload</Text>
+    <Text key="CustomMade.Documents.StartUpload">Start Upload</Text>
+    <Text key="CustomMade.Documents.AddMore">Add More Images</Text>
+    <Text key="CustomMade.Documents.View">View</Text>
+    <Text key="CustomMade.Documents.Download">Download</Text>
+    <Text key="CustomMade.Documents.Replace">Replace</Text>
+    <Text key="CustomMade.Documents.Delete">Delete</Text>
+    <Text key="CustomMade.Documents.Empty">No documents yet</Text>
+    <Text key="CustomMade.Documents.DeleteConfirm">Delete this document?</Text>
+    <Text key="CustomMade.Documents.DeleteTitle">Delete Document</Text>
+    <Text key="CustomMade.Documents.InvalidImage">Please choose a valid image file.</Text>
+    <Text key="CustomMade.Documents.PreviewMissing">The image file could not be found.</Text>
+    <Text key="CustomMade.Records.ImageCount">{0} image(s) uploaded</Text>
     <Text key="Measure.Unit.Label">Unit</Text>
     <Text key="Measure.Unit.Cm">cm</Text>
     <Text key="Measure.Unit.Inch">inch</Text>
@@ -367,6 +409,8 @@
     <Text key="PaymentMethod.Cash">Cash</Text>
     <Text key="PaymentMethod.None">None</Text>
     <Text key="Payment.Status.Cleared">Cleared</Text>
+    <Text key="Payment.Status.ClearedPickedUp">Cleared (picked up)</Text>
+    <Text key="Payment.Status.ClearedNotPickedUp">Cleared (not picked up)</Text>
     <Text key="Payment.Status.Outstanding">Outstanding</Text>
 
     <Text key="ClothingItem.Jackets">Jackets</Text>

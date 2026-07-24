@@ -583,6 +583,7 @@ public partial class OrderEditWindow : Window
         order.Status = data.Status;
         order.TotalAmount = _totalAmount;
         order.Notes = NullIfWhiteSpace(NotesBox.Text);
+        order.LastModifiedDate = DateTime.UtcNow;
         ApplyPaymentFields(order);
     }
 

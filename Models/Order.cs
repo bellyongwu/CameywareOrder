@@ -12,6 +12,7 @@ public class Order
     public string? Email { get; set; }
     public string? Address { get; set; }
     public DateTime OrderDate { get; set; } = DateTime.UtcNow;
+    public DateTime? LastModifiedDate { get; set; }
     public CurrencyType CurrencyType { get; set; } = CurrencyType.CAD;
     public OrderServiceType ServiceType { get; set; } = OrderServiceType.Alterations;
     public string? ServiceDetails { get; set; }
@@ -155,6 +156,12 @@ public class Order
             return AlterationSectionCleared && CustomMadeSectionCleared && ClothingSectionCleared;
         }
     }
+
+    // An order is treated as picked up / completed once it has been shipped: shipping
+    // hands the goods to the customer, so "Shipped" and "Completed" are equivalent for
+    // pickup-related display (gray-out, balance-cleared label, etc.).
+    [NotMapped]
+    public bool IsPickedUp => Status is OrderStatus.Shipped or OrderStatus.Completed;
 
     private static bool IsSectionCleared(decimal sectionTotal, decimal? downpayment, bool balanceCleared)
     {

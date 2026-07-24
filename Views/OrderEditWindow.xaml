@@ -4,10 +4,10 @@
     xmlns:conv="clr-namespace:LeeYongeOrdering.Converters"
         xmlns:loc="clr-namespace:LeeYongeOrdering.Localization"
         xmlns:model="clr-namespace:LeeYongeOrdering.Models"
-    Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.NewTitle], Mode=OneWay}" Height="1020" Width="980"
+    Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.NewTitle], Mode=OneWay}" Height="1160" Width="1240"
         WindowStartupLocation="CenterOwner"
-    MinHeight="860"
-    MinWidth="900"
+    MinHeight="900"
+    MinWidth="1040"
         ResizeMode="CanResize"
         ShowInTaskbar="False">
 

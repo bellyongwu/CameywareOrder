@@ -191,8 +191,23 @@ public partial class MainWindow : Window
     // intended order (WPF does not select on right-click by default).
     private void OnOrderRowRightClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is DataGridRow row)
-            row.IsSelected = true;
+        if (sender is ListViewItem item)
+            item.IsSelected = true;
+    }
+
+    // Keeps the trailing (Notes) column filling the remaining width as the list resizes.
+    private void OnOrdersListSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (sender is not ListView { View: GridView grid } list || grid.Columns.Count == 0)
+            return;
+
+        double used = 0;
+        for (int i = 0; i < grid.Columns.Count - 1; i++)
+            used += grid.Columns[i].ActualWidth;
+
+        double remaining = list.ActualWidth - used - 28; // account for border + scrollbar
+        if (remaining > 200)
+            grid.Columns[^1].Width = remaining;
     }
 
     private void OnContextEditClick(object sender, RoutedEventArgs e)

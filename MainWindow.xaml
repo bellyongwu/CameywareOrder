@@ -24,6 +24,100 @@
         <conv:OrderServicesSummaryConverter x:Key="OrderServicesSummaryConverter"/>
         <conv:PositiveAmountToVisibilityConverter x:Key="PositiveAmountToVisibility"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+
+        <!-- Right-click context menu styling -->
+        <Style x:Key="OrderContextMenuStyle" TargetType="ContextMenu">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#D9DCE1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+        </Style>
+        <Style x:Key="OrderMenuItemStyle" TargetType="MenuItem">
+            <Setter Property="Padding" Value="12,7"/>
+            <Setter Property="Margin" Value="2,1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+
+        <!-- Card container used to lift the detail sections off the flat background -->
+        <Style x:Key="DetailSectionCard" TargetType="Border">
+            <Setter Property="Background" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="#E1E5EA"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="14"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <!-- Column header styling for the orders ListView/GridView -->
+        <Style x:Key="OrderListHeaderStyle" TargetType="GridViewColumnHeader">
+            <Setter Property="Background" Value="#2C3E50"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Setter Property="Padding" Value="10,0"/>
+            <Setter Property="BorderBrush" Value="#22303C"/>
+            <Setter Property="BorderThickness" Value="0,0,1,0"/>
+        </Style>
+
+        <!-- Orders row: taller rows, hover, animated selection highlight, gray-out completed -->
+        <Style x:Key="OrderListItemStyle" TargetType="ListViewItem">
+            <Setter Property="FontSize" Value="{Binding Value, ElementName=RecordFontSizeSlider}"/>
+            <Setter Property="MinHeight" Value="54"/>
+            <Setter Property="Padding" Value="8,6"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnOrderRowRightClick"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border x:Name="Bd" Background="Transparent" BorderBrush="#ECEFF2" BorderThickness="0,0,0,1" SnapsToDevicePixels="True">
+                            <Grid>
+                                <!-- Selection/focus color that fades in and out (Requirement D) -->
+                                <Border x:Name="Highlight" Background="#D6E9F8" Opacity="0" SnapsToDevicePixels="True"/>
+                                <Border x:Name="Accent" Width="4" HorizontalAlignment="Left" Background="#2980B9" Opacity="0"/>
+                                <GridViewRowPresenter Content="{TemplateBinding Content}"
+                                                      Columns="{TemplateBinding GridView.ColumnCollection}"
+                                                      VerticalAlignment="Center"
+                                                      Margin="{TemplateBinding Padding}"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#F3F7FB"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Highlight" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.30"/>
+                                            <DoubleAnimation Storyboard.TargetName="Accent" Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.30"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Highlight" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.30"/>
+                                            <DoubleAnimation Storyboard.TargetName="Accent" Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.30"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                            </Trigger>
+                            <!-- Gray out completed records; shipped counts as completed/picked up (Accessibility B) -->
+                            <DataTrigger Binding="{Binding IsPickedUp}" Value="True">
+                                <Setter TargetName="Bd" Property="TextElement.Foreground" Value="#9AA3AB"/>
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.7"/>
+                            </DataTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <DockPanel>
@@ -119,53 +213,81 @@
 
                         <TextBlock Grid.Column="4" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Paging.PageSize], Mode=OneWay}" VerticalAlignment="Center" Margin="16,0,8,0"/>
                         <TextBox Grid.Column="5" Text="{Binding PageSize, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"/>
+
+                        <StackPanel Grid.Column="6" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.RecordFontSize], Mode=OneWay}" VerticalAlignment="Center" Margin="16,0,8,0"/>
+                            <Slider x:Name="RecordFontSizeSlider" Width="150" VerticalAlignment="Center"
+                                    Minimum="12" Maximum="40" Value="20"
+                                    TickFrequency="1" IsSnapToTickEnabled="True"
+                                    SmallChange="1" LargeChange="2"/>
+                            <TextBlock Text="{Binding Value, ElementName=RecordFontSizeSlider, StringFormat={}{0:0}px}" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="40"/>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
-                <DataGrid Grid.Row="1"
+                <ListView Grid.Row="1"
+                          x:Name="OrdersListView"
                           ItemsSource="{Binding Orders}"
                           SelectedItem="{Binding SelectedOrder}"
                           MouseDoubleClick="OnOrderRowDoubleClick"
                           KeyDown="OnOrderRowKeyDown"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
+                          SizeChanged="OnOrdersListSizeChanged"
                           SelectionMode="Single"
-                          GridLinesVisibility="Horizontal"
-                          HeadersVisibility="Column"
-                          RowHeaderWidth="0"
+                          ItemContainerStyle="{StaticResource OrderListItemStyle}"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                           BorderBrush="#DDD" BorderThickness="1">
-                    <DataGrid.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnContextEditClick"/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyOrder], Mode=OneWay}" Click="OnContextCopyClick"/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Click="OnContextDeleteClick"/>
+                    <ListView.ContextMenu>
+                        <ContextMenu Style="{StaticResource OrderContextMenuStyle}">
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnContextEditClick" Style="{StaticResource OrderMenuItemStyle}">
+                                <MenuItem.Icon>
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70F;" FontSize="13" Foreground="#2980B9"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyOrder], Mode=OneWay}" Click="OnContextCopyClick" Style="{StaticResource OrderMenuItemStyle}">
+                                <MenuItem.Icon>
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8C8;" FontSize="13" Foreground="#2980B9"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Click="OnContextDeleteClick" Style="{StaticResource OrderMenuItemStyle}">
+                                <MenuItem.Icon>
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="13" Foreground="#C0392B"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
                             <Separator/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnContextPrintClick"/>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnContextPrintClick" Style="{StaticResource OrderMenuItemStyle}">
+                                <MenuItem.Icon>
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE749;" FontSize="13" Foreground="#2980B9"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
                         </ContextMenu>
-                    </DataGrid.ContextMenu>
-                    <DataGrid.RowStyle>
-                        <Style TargetType="DataGridRow">
-                            <EventSetter Event="PreviewMouseRightButtonDown" Handler="OnOrderRowRightClick"/>
-                        </Style>
-                    </DataGrid.RowStyle>
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Binding="{Binding OrderNumber}" Width="130" MinWidth="80"/>
-                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Binding="{Binding CustomerName}" Width="150" MinWidth="80"/>
-                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" Binding="{Binding PhoneNumber}" Width="120" MinWidth="80"/>
-                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Binding="{Binding OrderDate, StringFormat=yyyy-MM-dd}" Width="110" MinWidth="80"/>
-                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Binding="{Binding Status, Converter={StaticResource OrderStatusToLocalizedTextConverter}}" Width="90" MinWidth="60"/>
-                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TotalAmount], Mode=OneWay}" Width="130" MinWidth="90">
-                            <DataGridTextColumn.Binding>
-                                <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
-                                    <Binding Path="TotalAmount"/>
-                                    <Binding Path="CurrencyType"/>
-                                </MultiBinding>
-                            </DataGridTextColumn.Binding>
-                        </DataGridTextColumn>
-                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Binding="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}" Width="110" MinWidth="70"/>
-                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Notes], Mode=OneWay}" Binding="{Binding Notes}" Width="*" MinWidth="60"/>
-                    </DataGrid.Columns>
-                </DataGrid>
+                    </ListView.ContextMenu>
+                    <ListView.View>
+                        <GridView ColumnHeaderContainerStyle="{StaticResource OrderListHeaderStyle}">
+                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Width="150" DisplayMemberBinding="{Binding OrderNumber}"/>
+                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Width="170" DisplayMemberBinding="{Binding CustomerName}"/>
+                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" Width="150" DisplayMemberBinding="{Binding PhoneNumber}"/>
+                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Width="130" DisplayMemberBinding="{Binding OrderDate, StringFormat=yyyy-MM-dd}"/>
+                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Width="110" DisplayMemberBinding="{Binding Status, Converter={StaticResource OrderStatusToLocalizedTextConverter}}"/>
+                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TotalAmount], Mode=OneWay}" Width="150">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock VerticalAlignment="Center">
+                                            <TextBlock.Text>
+                                                <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                                    <Binding Path="TotalAmount"/>
+                                                    <Binding Path="CurrencyType"/>
+                                                </MultiBinding>
+                                            </TextBlock.Text>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Width="140" DisplayMemberBinding="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}"/>
+                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.LastModifiedDate], Mode=OneWay}" Width="170" DisplayMemberBinding="{Binding LastModifiedDate, StringFormat=yyyy-MM-dd HH:mm}"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
 
                 <DockPanel Grid.Row="2" Margin="0,8,0,0">
                     <TextBlock Text="{Binding PageSummary}" VerticalAlignment="Center" Margin="0,0,12,0"/>
@@ -181,9 +303,14 @@
             <!-- Detail panel (visible only when an order is selected) -->
             <ScrollViewer Grid.Column="2" Margin="0,8,8,8"
                           VerticalScrollBarVisibility="Auto"
+                          Background="#EDF1F5"
                           Visibility="{Binding SelectedOrder, Converter={StaticResource NullToVisibility}}">
-                <StackPanel Margin="14">
-                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.Title], Mode=OneWay}" FontSize="16" FontWeight="Bold" Margin="0,0,0,14"/>
+                <Border Background="White" CornerRadius="10" Margin="6" Padding="20"
+                        BorderBrush="#E1E5EA" BorderThickness="1">
+                <StackPanel>
+                    <Border Margin="0,0,0,14" Padding="0,0,0,10" BorderBrush="#2980B9" BorderThickness="0,0,0,2">
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.Title], Mode=OneWay}" FontSize="17" FontWeight="Bold" Foreground="#2C3E50"/>
+                    </Border>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Foreground="#777" FontSize="11"/>
                     <TextBlock Text="{Binding SelectedOrder.OrderNumber}"   Margin="0,2,0,10" FontSize="13"/>
@@ -257,7 +384,7 @@
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.OrderItems], Mode=OneWay}" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
                     <!-- Alterations service -->
-                    <Border BorderBrush="#C7CDD4" BorderThickness="0,0,0,1" Padding="0,0,0,8" Margin="0,0,0,8" Visibility="{Binding SelectedOrder.AlterationAddedToReceipt, Converter={StaticResource BoolToVisibility}}">
+                    <Border Style="{StaticResource DetailSectionCard}" Visibility="{Binding SelectedOrder.AlterationAddedToReceipt, Converter={StaticResource BoolToVisibility}}">
                         <StackPanel>
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Alterations], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#2C3E50" Margin="0,4,0,4"/>
                             <TextBlock Text="{Binding SelectedOrder.ServiceDetails, Converter={StaticResource LocalizationLookupConverter}, ConverterParameter=Alteration.Category}" FontSize="12" TextWrapping="Wrap"/>
@@ -310,9 +437,9 @@
                     </Border>
 
                     <!-- Ready-made clothing / accessory -->
-                    <Border BorderBrush="#C7CDD4" BorderThickness="0,0,0,1" Padding="0,0,0,8" Margin="0,0,0,8">
+                    <Border>
                         <Border.Style>
-                            <Style TargetType="Border">
+                            <Style TargetType="Border" BasedOn="{StaticResource DetailSectionCard}">
                                 <Setter Property="Visibility" Value="Visible"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SelectedOrder.ClothingAddedToReceipt}" Value="False">
@@ -419,9 +546,9 @@
                     </Border>
 
                     <!-- Custom-made service -->
-                    <Border BorderBrush="#C7CDD4" BorderThickness="0,0,0,1" Padding="0,0,0,8" Margin="0,0,0,8">
+                    <Border>
                         <Border.Style>
-                            <Style TargetType="Border">
+                            <Style TargetType="Border" BasedOn="{StaticResource DetailSectionCard}">
                                 <Setter Property="Visibility" Value="Visible"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding SelectedOrder.CustomMadeAddedToReceipt}" Value="False">
@@ -497,6 +624,7 @@
                         </StackPanel>
                     </Border>
                 </StackPanel>
+                </Border>
             </ScrollViewer>
         </Grid>
 

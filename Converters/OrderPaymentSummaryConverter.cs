@@ -23,9 +23,13 @@ public class OrderPaymentSummaryConverter : IValueConverter
 
         if (string.Equals(mode, "Status", StringComparison.OrdinalIgnoreCase))
         {
-            return order.IsBalanceCleared
-                ? loc["Payment.Status.Cleared"]
-                : loc["Payment.Status.Outstanding"];
+            if (!order.IsBalanceCleared)
+                return loc["Payment.Status.Outstanding"];
+
+            // When the balance is settled, indicate whether the order has been picked up.
+            return order.IsPickedUp
+                ? loc["Payment.Status.ClearedPickedUp"]
+                : loc["Payment.Status.ClearedNotPickedUp"];
         }
 
         var symbol = order.CurrencyType == CurrencyType.CNY ? "￥" : "$";

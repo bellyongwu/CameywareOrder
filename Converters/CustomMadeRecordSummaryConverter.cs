@@ -23,9 +23,15 @@ public class CustomMadeRecordSummaryConverter : IValueConverter
                 SectionName("Measure.Section.Shirt", record.ShirtLength, record.ShirtChest, record.ShirtSitAround, record.ShirtSleeves)
             }.Where(part => !string.IsNullOrWhiteSpace(part)));
 
-        return string.IsNullOrWhiteSpace(items)
+        var summary = string.IsNullOrWhiteSpace(items)
             ? $"{record.CustomerName} | {mode} | {ageType}"
             : $"{record.CustomerName} | {mode} | {ageType} | {items}";
+
+        var imageCount = record.Documents?.Count ?? 0;
+        if (imageCount > 0)
+            summary += "    " + LocalizationService.Instance.Format("CustomMade.Records.ImageCount", imageCount);
+
+        return summary;
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

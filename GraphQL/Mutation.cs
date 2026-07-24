@@ -56,6 +56,7 @@ public class Mutation
             Email = input.Email,
             Address = input.Address,
             OrderDate = DateTime.UtcNow,
+            LastModifiedDate = DateTime.UtcNow,
             Status = input.Status,
             TotalAmount = input.TotalAmount,
             Notes = input.Notes

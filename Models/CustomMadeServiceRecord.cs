@@ -53,6 +53,8 @@ public class CustomMadeServiceRecord
     public decimal? Price { get; set; }
     public decimal? TaxRate { get; set; }
 
+    public List<CustomMadeDocument> Documents { get; set; } = new();
+
     public decimal Subtotal => Price ?? 0m;
 
     public decimal SumTotal => Subtotal + (Subtotal * (TaxRate ?? 0m) / 100m);

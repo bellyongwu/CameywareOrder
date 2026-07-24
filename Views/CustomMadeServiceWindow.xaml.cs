@@ -5,8 +5,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Collections.ObjectModel;
 using LeeYongeOrdering.Localization;
 using LeeYongeOrdering.Models;
+using LeeYongeOrdering.Services;
 using Microsoft.Win32;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -17,6 +19,8 @@ namespace LeeYongeOrdering.Views;
 public partial class CustomMadeServiceWindow : Window
 {
     public CustomMadeServiceRecord? Result { get; private set; }
+
+    private const string ValidationTitleKey = "OrderEdit.ValidationTitle";
 
     private static readonly Regex MoneyInputPattern = new(@"^\d*(\.\d{0,2})?$");
     private static readonly Regex MeasurementInputPattern = new(@"^(\d+(\.\d*)?[+-]?)?$");
@@ -33,6 +37,19 @@ public partial class CustomMadeServiceWindow : Window
     private bool _isRefreshingLanguage;
     private bool _isApplyingMeasurementView;
     private bool _isInch;
+
+    // Documents are grouped by category into their own collections so each category
+    // renders its own list. Uploaded files are copied into the store immediately;
+    // the changes are only committed to disk on Save and rolled back on cancel/close.
+    private readonly ObservableCollection<CustomMadeDocument> _handwritingDocs = new();
+    private readonly ObservableCollection<CustomMadeDocument> _fabricDocs = new();
+    private readonly ObservableCollection<CustomMadeDocument> _photoDocs = new();
+    private readonly ObservableCollection<CustomMadeDocument> _otherDocs = new();
+    private readonly List<string> _pendingAddedFiles = new();
+    private readonly List<string> _pendingRemovedFiles = new();
+
+    // Bound from XAML to gate the edit buttons (upload/replace/delete) in view mode.
+    public bool CanEditDocuments => !_isReadOnly;
 
     public CustomMadeServiceWindow(LocalizationService localization, CustomMadeServiceRecord? existing = null, string? defaultOrderNumber = null, string? defaultCustomerName = null, string? defaultPhoneNumber = null, string? defaultEmail = null, bool isReadOnly = false)
     {
@@ -53,6 +70,8 @@ public partial class CustomMadeServiceWindow : Window
         CustomPriceBox.Text = _workingRecord.Price?.ToString("0.##") ?? string.Empty;
 
         RegisterInputFilters();
+
+        InitializeDocumentLists();
 
         InitializeMode(existing?.ServiceMode ?? CustomMadeServiceMode.CustomFromScratch);
         InitializeAgeType(existing?.AgeType ?? CustomMadeAgeType.AdultMale);
@@ -119,6 +138,7 @@ public partial class CustomMadeServiceWindow : Window
             RefreshWindowTitle();
             RefreshMeasurementContextText();
             RefreshGenderButtons(_workingRecord.AgeType);
+            RefreshUploadButtonTexts();
         }
         finally
         {
@@ -160,18 +180,6 @@ public partial class CustomMadeServiceWindow : Window
         ApplyMeasurementValuesForCurrentUnit();
     }
 
-    private void ConvertMeasurementBoxes(bool toInch)
-    {
-        foreach (var box in new[]
-        {
-            JacketLengthBox, JacketChestBox, JacketSitAroundBox, JacketSleevesBox,
-            ShirtLengthBox, ShirtChestBox, ShirtSitAroundBox, ShirtSleevesBox
-        })
-        {
-            box.Text = ConvertMeasurement(box.Text, toInch);
-        }
-    }
-
     private static string ConvertMeasurement(string? text, bool toInch)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -185,13 +193,6 @@ public partial class CustomMadeServiceWindow : Window
         var converted = toInch ? value / CentimetersPerInch : value * CentimetersPerInch;
         var rounded = Math.Round(converted, 2, MidpointRounding.AwayFromZero);
         return rounded.ToString("0.##") + match.Groups[2].Value;
-    }
-
-    private string? MeasurementForStorage(string? text)
-    {
-        // Canonical storage is always in cm so receipts/summaries stay consistent.
-        var normalized = _isInch ? ConvertMeasurement(text, toInch: false) : text;
-        return NullIfWhiteSpace(normalized);
     }
 
     private void OnMeasurementValueChanged(object sender, TextChangedEventArgs e)
@@ -224,7 +225,7 @@ public partial class CustomMadeServiceWindow : Window
         catch (Exception ex)
         {
             ErrorText.Text = ex.Message;
-            MessageBox.Show(ex.Message, _localization["OrderEdit.ValidationTitle"], MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.Message, _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -243,14 +244,14 @@ public partial class CustomMadeServiceWindow : Window
         if (string.IsNullOrWhiteSpace(customerName))
         {
             ErrorText.Text = _localization["OrderEdit.Validate.CustomerName"];
-            MessageBox.Show(_localization["OrderEdit.Validate.CustomerName"], _localization["OrderEdit.ValidationTitle"], MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(_localization["OrderEdit.Validate.CustomerName"], _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
         if (string.IsNullOrWhiteSpace(phoneNumber))
         {
             ErrorText.Text = _localization["OrderEdit.Validate.PhoneNumber"];
-            MessageBox.Show(_localization["OrderEdit.Validate.PhoneNumber"], _localization["OrderEdit.ValidationTitle"], MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(_localization["OrderEdit.Validate.PhoneNumber"], _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
@@ -262,11 +263,212 @@ public partial class CustomMadeServiceWindow : Window
         _workingRecord.Price = ParseNullableDecimal(CustomPriceBox.Text);
         _workingRecord.TaxRate = null;
 
+        CommitDocumentChanges();
+
         Result = Clone(_workingRecord);
         DialogResult = true;
     }
 
     private void OnCancelClick(object sender, RoutedEventArgs e) => DialogResult = false;
+
+    // Discard any files uploaded this session when the window closes without saving.
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+
+        if (DialogResult is true)
+            return;
+
+        foreach (var storedName in _pendingAddedFiles)
+            DocumentStorageService.DeleteByStoredName(storedName);
+
+        _pendingAddedFiles.Clear();
+        _pendingRemovedFiles.Clear();
+    }
+
+    private void InitializeDocumentLists()
+    {
+        HandwritingDocsList.ItemsSource = _handwritingDocs;
+        FabricDocsList.ItemsSource = _fabricDocs;
+        PhotoDocsList.ItemsSource = _photoDocs;
+        OtherDocsList.ItemsSource = _otherDocs;
+
+        foreach (var document in _workingRecord.Documents)
+            GetCollection(document.Category).Add(document);
+
+        _handwritingDocs.CollectionChanged += (_, _) => RefreshUploadButtonText(_handwritingDocs, HandwritingUploadText);
+        _fabricDocs.CollectionChanged += (_, _) => RefreshUploadButtonText(_fabricDocs, FabricUploadText);
+        _photoDocs.CollectionChanged += (_, _) => RefreshUploadButtonText(_photoDocs, PhotoUploadText);
+        _otherDocs.CollectionChanged += (_, _) => RefreshUploadButtonText(_otherDocs, OtherUploadText);
+
+        RefreshUploadButtonTexts();
+    }
+
+    // The upload label reads "Start upload" while a category is empty and switches
+    // to "Add more images" once at least one image exists.
+    private void RefreshUploadButtonTexts()
+    {
+        RefreshUploadButtonText(_handwritingDocs, HandwritingUploadText);
+        RefreshUploadButtonText(_fabricDocs, FabricUploadText);
+        RefreshUploadButtonText(_photoDocs, PhotoUploadText);
+        RefreshUploadButtonText(_otherDocs, OtherUploadText);
+    }
+
+    private void RefreshUploadButtonText(ObservableCollection<CustomMadeDocument> collection, TextBlock target)
+    {
+        var key = collection.Count == 0
+            ? "CustomMade.Documents.StartUpload"
+            : "CustomMade.Documents.AddMore";
+        target.Text = _localization[key];
+    }
+
+    private ObservableCollection<CustomMadeDocument> GetCollection(CustomMadeDocumentCategory category)
+        => category switch
+        {
+            CustomMadeDocumentCategory.HandwritingReceipt => _handwritingDocs,
+            CustomMadeDocumentCategory.Fabric => _fabricDocs,
+            CustomMadeDocumentCategory.Photo => _photoDocs,
+            _ => _otherDocs
+        };
+
+    private void OnUploadDocumentClick(object sender, RoutedEventArgs e)
+    {
+        if (_isReadOnly || sender is not FrameworkElement { Tag: CustomMadeDocumentCategory category })
+            return;
+
+        var path = PickImageFile();
+        if (path is null)
+            return;
+
+        var document = DocumentStorageService.Import(path, category);
+        _pendingAddedFiles.Add(document.StoredFileName);
+        GetCollection(category).Add(document);
+    }
+
+    private void OnViewDocumentClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: CustomMadeDocument document })
+            return;
+
+        if (!DocumentStorageService.Exists(document))
+        {
+            MessageBox.Show(_localization["CustomMade.Documents.PreviewMissing"],
+                _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var preview = new DocumentPreviewWindow(
+            DocumentStorageService.GetFullPath(document.StoredFileName), document.FileName)
+        {
+            Owner = this
+        };
+        preview.ShowDialog();
+    }
+
+    private void OnDownloadDocumentClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: CustomMadeDocument document })
+            return;
+
+        if (!DocumentStorageService.Exists(document))
+        {
+            MessageBox.Show(_localization["CustomMade.Documents.PreviewMissing"],
+                _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            FileName = document.FileName,
+            Filter = DocumentStorageService.ImageFileFilter
+        };
+
+        if (dialog.ShowDialog(this) is true)
+            DocumentStorageService.Export(document, dialog.FileName);
+    }
+
+    private void OnReplaceDocumentClick(object sender, RoutedEventArgs e)
+    {
+        if (_isReadOnly || sender is not FrameworkElement { DataContext: CustomMadeDocument document })
+            return;
+
+        var path = PickImageFile();
+        if (path is null)
+            return;
+
+        var collection = GetCollection(document.Category);
+        var index = collection.IndexOf(document);
+        if (index < 0)
+            return;
+
+        DiscardStoredFile(document.StoredFileName);
+
+        var replacement = DocumentStorageService.Import(path, document.Category);
+        _pendingAddedFiles.Add(replacement.StoredFileName);
+        collection[index] = replacement;
+    }
+
+    private void OnDeleteDocumentClick(object sender, RoutedEventArgs e)
+    {
+        if (_isReadOnly || sender is not FrameworkElement { DataContext: CustomMadeDocument document })
+            return;
+
+        var confirm = MessageBox.Show(
+            _localization["CustomMade.Documents.DeleteConfirm"],
+            _localization["CustomMade.Documents.DeleteTitle"],
+            MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        DiscardStoredFile(document.StoredFileName);
+        GetCollection(document.Category).Remove(document);
+    }
+
+    private string? PickImageFile()
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = DocumentStorageService.ImageFileFilter,
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog(this) is not true)
+            return null;
+
+        if (!DocumentStorageService.IsSupportedImage(dialog.FileName))
+        {
+            MessageBox.Show(_localization["CustomMade.Documents.InvalidImage"],
+                _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
+            return null;
+        }
+
+        return dialog.FileName;
+    }
+
+    // Removing a document that was uploaded this session deletes its file right away
+    // (it was never committed); an already-saved file is only deleted on Save.
+    private void DiscardStoredFile(string storedFileName)
+    {
+        if (_pendingAddedFiles.Remove(storedFileName))
+            DocumentStorageService.DeleteByStoredName(storedFileName);
+        else
+            _pendingRemovedFiles.Add(storedFileName);
+    }
+
+    private void CommitDocumentChanges()
+    {
+        foreach (var storedName in _pendingRemovedFiles)
+            DocumentStorageService.DeleteByStoredName(storedName);
+
+        _pendingRemovedFiles.Clear();
+        _pendingAddedFiles.Clear();
+
+        _workingRecord.Documents = _handwritingDocs
+            .Concat(_fabricDocs)
+            .Concat(_photoDocs)
+            .Concat(_otherDocs)
+            .ToList();
+    }
 
     private void InitializeMode(CustomMadeServiceMode mode)
     {
@@ -500,7 +702,7 @@ public partial class CustomMadeServiceWindow : Window
     private static string ShortLanguageName(string languageCode)
         => languageCode.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "zh" : "en";
 
-    private string? MeasurementForPdf(string? text)
+    private static string? MeasurementForPdf(string? text)
     {
         if (string.IsNullOrWhiteSpace(text))
             return text;
@@ -808,7 +1010,17 @@ public partial class CustomMadeServiceWindow : Window
             ShirtSleevesCm = source.ShirtSleevesCm,
             ShirtSleevesIn = source.ShirtSleevesIn,
             Price = source.Price,
-            TaxRate = source.TaxRate
+            TaxRate = source.TaxRate,
+            Documents = source.Documents
+                .Select(d => new CustomMadeDocument
+                {
+                    Id = d.Id,
+                    Category = d.Category,
+                    FileName = d.FileName,
+                    StoredFileName = d.StoredFileName,
+                    UploadedAtUtc = d.UploadedAtUtc
+                })
+                .ToList()
         };
 }
 

@@ -190,7 +190,7 @@ public class MainViewModel : INotifyPropertyChanged
 
             var orders = await db.Orders
                 .Include(o => o.Items)
-                .OrderByDescending(o => o.OrderDate)
+                .OrderByDescending(o => o.LastModifiedDate ?? o.OrderDate)
                 .ToListAsync();
 
             _allOrders = orders;
@@ -325,6 +325,7 @@ public class MainViewModel : INotifyPropertyChanged
             {
                 OrderNumber = $"ORD-{DateTime.Now:yyyyMMdd-HHmmss}",
                 OrderDate = DateTime.UtcNow,
+                LastModifiedDate = DateTime.UtcNow,
                 CustomerName = source.CustomerName,
                 PhoneNumber = source.PhoneNumber,
                 Email = source.Email,
