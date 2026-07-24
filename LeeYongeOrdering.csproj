@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ApplicationIcon>Assets\app-icon.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\ICONS\app-icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,7 +32,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="Assets\app-icon.ico" />
+    <Resource Include="Assets\ICONS\app-icon.ico" />
+    <Resource Include="Assets\WELCOME PANEL\welcome_header_enter_system.jpg" />
   </ItemGroup>
 
 </Project>

@@ -30,6 +30,7 @@ public partial class LanguageSelectionWindow : Window
                 FontSize = 14,
                 Margin = new Thickness(0, 6, 0, 6),
                 Padding = new Thickness(6, 0, 0, 0),
+                VerticalContentAlignment = VerticalAlignment.Center,
                 IsChecked = string.Equals(option.Code, _localization.CurrentLanguageCode, StringComparison.OrdinalIgnoreCase)
             };
             radio.Checked += OnLanguageRadioChecked;

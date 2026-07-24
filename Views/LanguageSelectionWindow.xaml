@@ -7,7 +7,7 @@
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        Icon="/Assets/app-icon.ico"
+        Icon="/Assets/ICONS/app-icon.ico"
         Background="#F5F6FA">
     <Window.Resources>
         <Style x:Key="EnterButtonStyle" TargetType="Button">
@@ -49,22 +49,25 @@
         </Grid.RowDefinitions>
 
         <!-- Welcome banner -->
-        <Border Grid.Row="0" Height="150">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#4F46E5" Offset="0"/>
-                    <GradientStop Color="#7C3AED" Offset="1"/>
-                </LinearGradientBrush>
-            </Border.Background>
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Image Source="/Assets/app-icon.ico" Width="56" Height="56" HorizontalAlignment="Center"/>
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Welcome], Mode=OneWay}"
-                           Foreground="White" FontSize="22" FontWeight="Bold"
-                           HorizontalAlignment="Center" Margin="0,10,0,0"/>
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.WelcomeMessage], Mode=OneWay}"
-                           Foreground="#E5E7FF" FontSize="12"
-                           HorizontalAlignment="Center" Margin="0,4,0,0"/>
-            </StackPanel>
+        <Border Grid.Row="0" Height="170" ClipToBounds="True">
+            <Grid>
+                <Image Source="/Assets/WELCOME%20PANEL/welcome_header_enter_system.jpg"
+                       Stretch="UniformToFill"/>
+                <Border>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#33000000" Offset="0"/>
+                            <GradientStop Color="#CC000000" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="24,0,24,16">
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Welcome], Mode=OneWay}"
+                               Foreground="White" FontSize="24" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.WelcomeMessage], Mode=OneWay}"
+                               Foreground="#F0F0F0" FontSize="12" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Grid>
         </Border>
 
         <!-- Language options -->

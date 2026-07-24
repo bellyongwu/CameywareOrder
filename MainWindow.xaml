@@ -9,7 +9,7 @@
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[App.MainTitle], Mode=OneWay}"
         Height="1440" Width="2560"
         MinHeight="720" MinWidth="1180"
-        Icon="Assets/app-icon.ico"
+        Icon="/Assets/ICONS/app-icon.ico"
         WindowState="Maximized"
         WindowStartupLocation="CenterScreen">
 
@@ -79,9 +79,9 @@
         <!-- ── Main area ───────────────────────────────────────────────── -->
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="65*"/>
                 <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="340" MinWidth="200"/>
+                <ColumnDefinition Width="35*" MinWidth="200"/>
             </Grid.ColumnDefinitions>
 
             <Grid Grid.Column="0" Margin="8">
