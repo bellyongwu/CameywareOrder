@@ -1369,8 +1369,11 @@ public partial class OrderEditWindow : Window
         if (sectionTotal <= 0m)
             return;
 
-        // The final balance is paid the same way the service deposit was taken.
-        if (downMethod is not null && downMethod != PaymentMethod.None)
+        // Default the final balance to the deposit method ONLY when the user hasn't
+        // already picked one. A manually forced final method (e.g. deposit by card,
+        // final by cash) must be respected instead of being reset to the deposit way.
+        if (GetSelectedPaymentMethod(finalEtransfer, finalCard, finalCash) is null
+            && downMethod is not null && downMethod != PaymentMethod.None)
             SetSelectedPaymentMethod(finalEtransfer, finalCard, finalCash, downMethod);
 
         balanceClearedCheck.IsChecked = true;
