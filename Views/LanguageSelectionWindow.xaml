@@ -1,0 +1,30 @@
+<Window x:Class="LeeYongeOrdering.Views.LanguageSelectionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:loc="clr-namespace:LeeYongeOrdering.Localization"
+    Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Language], Mode=OneWay}"
+    Height="170" Width="360"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Prompt], Mode=OneWay}"
+                   FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+        <ComboBox Grid.Row="1" x:Name="LanguageBox" Height="30"
+              ItemsSource="{Binding AvailableLanguages}"
+              DisplayMemberPath="Name"
+              SelectedValuePath="Code"
+              SelectedValue="{Binding CurrentLanguageCode, Mode=TwoWay}"/>
+
+        <Button Grid.Row="3" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Confirm], Mode=OneWay}" Width="110" Height="30"
+                HorizontalAlignment="Right" Click="OnConfirmClick"/>
+    </Grid>
+</Window>

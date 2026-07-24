@@ -1,0 +1,15 @@
+# Build outputs
+bin/
+obj/
+publish/
+
+# IDE files
+.vs/
+
+# Local database
+*.db
+*.db-*
+
+# User-specific files
+*.user
+*.suo

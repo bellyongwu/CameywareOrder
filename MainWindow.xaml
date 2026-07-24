@@ -1,0 +1,487 @@
+<Window x:Class="LeeYongeOrdering.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:conv="clr-namespace:LeeYongeOrdering.Converters"
+        xmlns:loc="clr-namespace:LeeYongeOrdering.Localization"
+        mc:Ignorable="d"
+        Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[App.MainTitle], Mode=OneWay}"
+        Height="760" Width="1320"
+        MinHeight="720" MinWidth="1180"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
+        <conv:OrderStatusToLocalizedTextConverter x:Key="OrderStatusToLocalizedTextConverter"/>
+        <conv:LocalizationLookupConverter x:Key="LocalizationLookupConverter"/>
+        <conv:CustomMadeRecordSummaryConverter x:Key="CustomMadeRecordSummaryConverter"/>
+        <conv:CurrencyAmountConverter x:Key="CurrencyAmountConverter"/>
+        <conv:OrderPaymentSummaryConverter x:Key="OrderPaymentSummaryConverter"/>
+        <conv:LastItemBorderThicknessConverter x:Key="LastItemBorderThickness"/>
+        <conv:OrderServicesSummaryConverter x:Key="OrderServicesSummaryConverter"/>
+        <conv:PositiveAmountToVisibilityConverter x:Key="PositiveAmountToVisibility"/>
+    </Window.Resources>
+
+    <DockPanel>
+
+        <!-- ── Header ──────────────────────────────────────────────────── -->
+        <Border DockPanel.Dock="Top" Background="#2C3E50" Padding="16,10">
+            <Grid>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Main.HeaderTitle], Mode=OneWay}" Foreground="White"
+                           FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Main.HeaderSubtitle], Mode=OneWay}" Foreground="#7F8C8D"
+                           FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+
+        <!-- ── Status bar ──────────────────────────────────────────────── -->
+        <StatusBar DockPanel.Dock="Bottom" Background="#ECF0F1">
+            <StatusBarItem>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[StatusBar.Label], Mode=OneWay}" Margin="4,0,8,0" FontWeight="SemiBold"/>
+            </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}" Margin="4,0"/>
+            </StatusBarItem>
+            <Separator/>
+            <StatusBarItem>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[DataPath.Label], Mode=OneWay}" Margin="4,0,4,0" FontWeight="SemiBold"/>
+            </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding DatabaseFilePath}" Margin="0,0,4,0" TextTrimming="CharacterEllipsis"/>
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- ── Toolbar ─────────────────────────────────────────────────── -->
+        <ToolBar DockPanel.Dock="Top" Background="#F5F6FA">
+                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.NewOrder], Mode=OneWay}" Click="OnAddOrderClick"   Padding="10,4" Margin="2"/>
+                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnEditOrderClick"  Padding="10,4" Margin="2"
+                    IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility},
+                                        ConverterParameter=NotNull}"/>
+                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Command="{Binding DeleteOrderCommand}" Padding="10,4" Margin="2"/>
+            <Separator/>
+                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick" Padding="10,4" Margin="2"
+                    IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility},
+                                        ConverterParameter=NotNull}"/>
+            <Separator/>
+                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Refresh], Mode=OneWay}" Command="{Binding LoadOrdersCommand}"  Padding="10,4" Margin="2"/>
+            <Separator/>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Language], Mode=OneWay}" VerticalAlignment="Center" Margin="8,0,4,0"/>
+            <ComboBox x:Name="LanguageSwitchBox" Width="130" Margin="2" VerticalAlignment="Center" SelectionChanged="OnLanguageChanged"/>
+            <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyDataPath], Mode=OneWay}" Click="OnCopyDataPathClick" Padding="10,4" Margin="8,2,2,2"/>
+                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.RevealDataFile], Mode=OneWay}" Click="OnRevealDataFileClick" Padding="10,4" Margin="2"/>
+                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.OpenDataFolder], Mode=OneWay}" Click="OnOpenDataFolderClick" Padding="10,4" Margin="8,2,2,2"/>
+        </ToolBar>
+
+        <!-- ── Main area ───────────────────────────────────────────────── -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="5"/>
+                <ColumnDefinition Width="340" MinWidth="200"/>
+            </Grid.ColumnDefinitions>
+
+            <Grid Grid.Column="0" Margin="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Background="#F8FAFC" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="260"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Label], Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"/>
+
+                        <TextBlock Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.Status.Label], Mode=OneWay}" VerticalAlignment="Center" Margin="16,0,8,0"/>
+                        <ComboBox Grid.Column="3" Width="150" VerticalAlignment="Center"
+                                  ItemsSource="{Binding StatusFilterOptions}"
+                                  SelectedItem="{Binding SelectedStatusFilter}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Value, Converter={StaticResource OrderStatusToLocalizedTextConverter}}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Grid.Column="4" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Paging.PageSize], Mode=OneWay}" VerticalAlignment="Center" Margin="16,0,8,0"/>
+                        <TextBox Grid.Column="5" Text="{Binding PageSize, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"/>
+                    </Grid>
+                </Border>
+
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding Orders}"
+                          SelectedItem="{Binding SelectedOrder}"
+                          MouseDoubleClick="OnOrderRowDoubleClick"
+                          KeyDown="OnOrderRowKeyDown"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectionMode="Single"
+                          GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column"
+                          RowHeaderWidth="0"
+                          BorderBrush="#DDD" BorderThickness="1">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Binding="{Binding OrderNumber}" Width="130" MinWidth="80"/>
+                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Binding="{Binding CustomerName}" Width="150" MinWidth="80"/>
+                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" Binding="{Binding PhoneNumber}" Width="120" MinWidth="80"/>
+                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Binding="{Binding OrderDate, StringFormat=yyyy-MM-dd}" Width="110" MinWidth="80"/>
+                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Binding="{Binding Status, Converter={StaticResource OrderStatusToLocalizedTextConverter}}" Width="90" MinWidth="60"/>
+                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TotalAmount], Mode=OneWay}" Width="130" MinWidth="90">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                    <Binding Path="TotalAmount"/>
+                                    <Binding Path="CurrencyType"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Binding="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}" Width="110" MinWidth="70"/>
+                        <DataGridTextColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Notes], Mode=OneWay}" Binding="{Binding Notes}" Width="*" MinWidth="60"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <DockPanel Grid.Row="2" Margin="0,8,0,0">
+                    <TextBlock Text="{Binding PageSummary}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
+                        <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Paging.Previous], Mode=OneWay}" Command="{Binding PreviousPageCommand}" Margin="0,0,8,0" Padding="10,4"/>
+                        <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Paging.Next], Mode=OneWay}" Command="{Binding NextPageCommand}" Padding="10,4"/>
+                    </StackPanel>
+                </DockPanel>
+            </Grid>
+
+            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#DDD"/>
+
+            <!-- Detail panel (visible only when an order is selected) -->
+            <ScrollViewer Grid.Column="2" Margin="0,8,8,8"
+                          VerticalScrollBarVisibility="Auto"
+                          Visibility="{Binding SelectedOrder, Converter={StaticResource NullToVisibility}}">
+                <StackPanel Margin="14">
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.Title], Mode=OneWay}" FontSize="16" FontWeight="Bold" Margin="0,0,0,14"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.OrderNumber}"   Margin="0,2,0,10" FontSize="13"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.CustomerName}"  Margin="0,2,0,10" FontSize="13"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.PhoneNumber}" Margin="0,2,0,10" FontSize="13"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Email], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.Email}" Margin="0,2,0,10" FontSize="13"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Address], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.Address}" Margin="0,2,0,10" FontSize="13" TextWrapping="Wrap"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.OrderDate, StringFormat='yyyy-MM-dd  HH:mm'}"
+                               Margin="0,2,0,10" FontSize="13"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.Status, Converter={StaticResource OrderStatusToLocalizedTextConverter}}" Margin="0,2,0,10" FontSize="13"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CurrencyType], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.CurrencyType, Converter={StaticResource LocalizationLookupConverter}, ConverterParameter=CurrencyType}" Margin="0,2,0,10" FontSize="13"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ServiceType], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderServicesSummaryConverter}}" Margin="0,2,0,10" FontSize="13"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TotalAmount], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Margin="0,2,0,10" FontSize="14" FontWeight="Bold" Foreground="#27AE60">
+                        <TextBlock.Text>
+                            <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                <Binding Path="SelectedOrder.TotalAmount"/>
+                                <Binding Path="SelectedOrder.CurrencyType"/>
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PrepaidDownpayment], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Margin="0,2,0,10" FontSize="13" FontWeight="SemiBold" Foreground="#27AE60">
+                        <TextBlock.Text>
+                            <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                <Binding Path="SelectedOrder.Downpayment"/>
+                                <Binding Path="SelectedOrder.CurrencyType"/>
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Margin="0,2,0,10" FontSize="13" FontWeight="SemiBold" Foreground="#C0392B">
+                        <TextBlock.Text>
+                            <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                <Binding Path="SelectedOrder.FinalBalance"/>
+                                <Binding Path="SelectedOrder.CurrencyType"/>
+                            </MultiBinding>
+                        </TextBlock.Text>
+                    </TextBlock>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}" Margin="0,2,0,10" FontSize="13" FontWeight="SemiBold"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PaymentBreakdown], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderPaymentSummaryConverter}}" Margin="0,2,0,10" FontSize="12" TextWrapping="Wrap"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Notes], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.Notes}"         Margin="0,2,0,10"
+                               FontSize="13" TextWrapping="Wrap"/>
+
+                    <Border BorderBrush="#8A929B" BorderThickness="0,0,0,2" Margin="0,10,0,10"/>
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.OrderItems], Mode=OneWay}" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                    <!-- Alterations service -->
+                    <Border BorderBrush="#C7CDD4" BorderThickness="0,0,0,1" Padding="0,0,0,8" Margin="0,0,0,8" Visibility="{Binding SelectedOrder.ServiceDetails, Converter={StaticResource NullToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Alterations], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#2C3E50" Margin="0,4,0,4"/>
+                            <TextBlock Text="{Binding SelectedOrder.ServiceDetails, Converter={StaticResource LocalizationLookupConverter}, ConverterParameter=Alteration.Category}" FontSize="12" TextWrapping="Wrap"/>
+                            <Grid Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Subtotal], Mode=OneWay}" FontSize="12" Foreground="#666"/>
+                                <TextBlock Grid.Column="1" FontSize="12">
+                                    <TextBlock.Text>
+                                        <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                            <Binding Path="SelectedOrder.AlterationSubtotal"/>
+                                            <Binding Path="SelectedOrder.CurrencyType"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                            </Grid>
+                            <Grid Margin="0,2,0,0" Visibility="{Binding SelectedOrder.AlterationTax, Converter={StaticResource PositiveAmountToVisibility}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TaxAmount], Mode=OneWay}" FontSize="12" Foreground="#666"/>
+                                <TextBlock Grid.Column="1" FontSize="12">
+                                    <TextBlock.Text>
+                                        <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                            <Binding Path="SelectedOrder.AlterationTax"/>
+                                            <Binding Path="SelectedOrder.CurrencyType"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                            </Grid>
+                            <Grid Margin="0,2,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Receipt.SectionTotal], Mode=OneWay}" FontSize="12" Foreground="#666" FontWeight="SemiBold"/>
+                                <TextBlock Grid.Column="1" FontSize="12" FontWeight="Bold">
+                                    <TextBlock.Text>
+                                        <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                            <Binding Path="SelectedOrder.AlterationTotal"/>
+                                            <Binding Path="SelectedOrder.CurrencyType"/>
+                                        </MultiBinding>
+                                    </TextBlock.Text>
+                                </TextBlock>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Ready-made clothing / accessory -->
+                    <Border BorderBrush="#C7CDD4" BorderThickness="0,0,0,1" Padding="0,0,0,8" Margin="0,0,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedOrder.Items.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.ReadyMade], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#2C3E50" Margin="0,4,0,4"/>
+                    <ItemsControl ItemsSource="{Binding SelectedOrder.Items}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#EEE" Padding="0,8">
+                                    <Border.BorderThickness>
+                                        <MultiBinding Converter="{StaticResource LastItemBorderThickness}">
+                                            <Binding/>
+                                            <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Items"/>
+                                        </MultiBinding>
+                                    </Border.BorderThickness>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding ProductName, Converter={StaticResource LocalizationLookupConverter}, ConverterParameter=ClothingItem}" FontWeight="SemiBold"/>
+                                            <TextBlock FontSize="11" Foreground="#666">
+                                                <Run Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.QuantityPrefix], Mode=OneWay}"/><Run Text=" "/><Run Text="{Binding Quantity}"/>
+                                                <Run Text="  ×  "/>
+                                                <Run>
+                                                    <Run.Text>
+                                                        <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                                            <Binding Path="EffectiveUnitPrice" Mode="OneWay"/>
+                                                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DataContext.SelectedOrder.CurrencyType"/>
+                                                        </MultiBinding>
+                                                    </Run.Text>
+                                                </Run>
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                            <TextBlock FontWeight="Bold">
+                                                <Run>
+                                                    <Run.Text>
+                                                        <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                                            <Binding Path="TotalPrice" Mode="OneWay"/>
+                                                            <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DataContext.SelectedOrder.CurrencyType"/>
+                                                        </MultiBinding>
+                                                    </Run.Text>
+                                                </Run>
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Subtotal], Mode=OneWay}" FontSize="12" Foreground="#666"/>
+                            <TextBlock Grid.Column="1" FontSize="12">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                        <Binding Path="SelectedOrder.ClothingSubtotal"/>
+                                        <Binding Path="SelectedOrder.CurrencyType"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </Grid>
+                        <Grid Margin="0,2,0,0" Visibility="{Binding SelectedOrder.ClothingTax, Converter={StaticResource PositiveAmountToVisibility}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TaxAmount], Mode=OneWay}" FontSize="12" Foreground="#666"/>
+                            <TextBlock Grid.Column="1" FontSize="12">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                        <Binding Path="SelectedOrder.ClothingTax"/>
+                                        <Binding Path="SelectedOrder.CurrencyType"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </Grid>
+                        <Grid Margin="0,2,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Receipt.SectionTotal], Mode=OneWay}" FontSize="12" Foreground="#666" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" FontSize="12" FontWeight="Bold">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                        <Binding Path="SelectedOrder.ClothingTotal"/>
+                                        <Binding Path="SelectedOrder.CurrencyType"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Custom-made service -->
+                    <Border BorderBrush="#C7CDD4" BorderThickness="0,0,0,1" Padding="0,0,0,8" Margin="0,0,0,8">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Visibility" Value="Visible"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedOrder.CustomMadeRecords.Count}" Value="0">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.CustomMadeRecords], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#2C3E50" Margin="0,0,0,8"/>
+
+                    <ItemsControl ItemsSource="{Binding SelectedOrder.CustomMadeRecords}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="#EEE" Padding="0,8">
+                                    <Border.BorderThickness>
+                                        <MultiBinding Converter="{StaticResource LastItemBorderThickness}">
+                                            <Binding/>
+                                            <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="Items"/>
+                                        </MultiBinding>
+                                    </Border.BorderThickness>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Converter={StaticResource CustomMadeRecordSummaryConverter}}" TextWrapping="Wrap"/>
+                                        <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0" FontWeight="Bold">
+                                            <Run>
+                                                <Run.Text>
+                                                    <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                                        <Binding Path="SumTotal" Mode="OneWay"/>
+                                                        <Binding RelativeSource="{RelativeSource AncestorType=Window}" Path="DataContext.SelectedOrder.CurrencyType"/>
+                                                    </MultiBinding>
+                                                </Run.Text>
+                                            </Run>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                        <Grid Margin="0,6,0,0" Visibility="{Binding SelectedOrder.CustomMadeTax, Converter={StaticResource PositiveAmountToVisibility}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TaxAmount], Mode=OneWay}" FontSize="12" Foreground="#666"/>
+                            <TextBlock Grid.Column="1" FontSize="12">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                        <Binding Path="SelectedOrder.CustomMadeTax"/>
+                                        <Binding Path="SelectedOrder.CurrencyType"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </Grid>
+                        <Grid Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Receipt.SectionTotal], Mode=OneWay}" FontSize="12" Foreground="#666" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="1" FontSize="12" FontWeight="Bold">
+                                <TextBlock.Text>
+                                    <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
+                                        <Binding Path="SelectedOrder.CustomMadeTotal"/>
+                                        <Binding Path="SelectedOrder.CurrencyType"/>
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+    </DockPanel>
+</Window>

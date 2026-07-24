@@ -1,0 +1,213 @@
+<Window x:Class="LeeYongeOrdering.Views.CustomMadeServiceWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:LeeYongeOrdering.Localization"
+        xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
+        Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.CustomMade], Mode=OneWay}"
+        Height="980" Width="920"
+        MinHeight="860" MinWidth="820"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False">
+    <Window.Resources>
+        <Style x:Key="SelectionToggleButtonStyle" TargetType="primitives:ToggleButton">
+            <Setter Property="Margin" Value="0,0,10,0"/>
+            <Setter Property="Padding" Value="12,5"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#B8C2CC"/>
+            <Setter Property="Background" Value="#F7F9FB"/>
+            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="primitives:ToggleButton">
+                        <Border x:Name="Border" CornerRadius="4" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#EEF3F7"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#2980B9"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#2980B9"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock x:Name="TitleText" Grid.Row="0"
+                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.CustomMade], Mode=OneWay}"
+                   FontSize="18" FontWeight="Bold" Margin="0,0,0,14"/>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Padding="14" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Customer.Measurements.Title], Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="CustomerNameBox" Margin="0,8,14,8" Padding="6,4"/>
+
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                            <TextBox Grid.Row="0" Grid.Column="3" x:Name="PhoneNumberBox" Margin="0,8" Padding="6,4"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Email], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="EmailBox" Margin="0,8,14,8" Padding="6,4"/>
+
+                            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.MeasurementMode], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                            <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,8">
+                                <RadioButton x:Name="CustomFromScratchRadio" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.CustomFromScratch], Mode=OneWay}" IsChecked="True" VerticalAlignment="Center" Margin="0,0,18,0" Checked="OnModeChanged"/>
+                                <RadioButton x:Name="MeasurementsOnlyRadio" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.MeasurementsOnly], Mode=OneWay}" VerticalAlignment="Center" Checked="OnModeChanged"/>
+                            </StackPanel>
+
+                            <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.AgeType], Mode=OneWay}" VerticalAlignment="Top" Margin="0,10,0,0"/>
+                            <StackPanel Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3">
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                                    <RadioButton x:Name="AdultRadio" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Adult], Mode=OneWay}" GroupName="AgeGroup" IsChecked="True" Margin="0,0,12,0" Checked="OnAgeGroupChanged"/>
+                                    <RadioButton x:Name="TeenRadio" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Teen], Mode=OneWay}" GroupName="AgeGroup" Margin="0,0,12,0" Checked="OnAgeGroupChanged"/>
+                                    <RadioButton x:Name="ChildRadio" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Child], Mode=OneWay}" GroupName="AgeGroup" Checked="OnAgeGroupChanged"/>
+                                </StackPanel>
+
+                                <StackPanel x:Name="GenderButtonsPanel" Orientation="Horizontal" Margin="0,0,0,8"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,12">
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Unit.Label], Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                <RadioButton x:Name="CmRadio" GroupName="MeasureUnit" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Unit.Cm], Mode=OneWay}" IsChecked="True" VerticalAlignment="Center" Margin="0,0,12,0" Checked="OnUnitChanged"/>
+                                <RadioButton x:Name="InchRadio" GroupName="MeasureUnit" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Unit.Inch], Mode=OneWay}" VerticalAlignment="Center" Checked="OnUnitChanged"/>
+                            </StackPanel>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Measures], Mode=OneWay}" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <TextBlock x:Name="MeasurementContextText" Foreground="#2C3E50" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Section.Jacket], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Length], Mode=OneWay}" Margin="0,4"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="JacketLengthBox" Margin="0,4" Padding="6,4" PreviewTextInput="OnMeasurementPreviewTextInput"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Chest], Mode=OneWay}" Margin="0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="JacketChestBox" Margin="0,4" Padding="6,4" PreviewTextInput="OnMeasurementPreviewTextInput"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.SitAround], Mode=OneWay}" Margin="0,4"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="JacketSitAroundBox" Margin="0,4" Padding="6,4" PreviewTextInput="OnMeasurementPreviewTextInput"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Sleeves], Mode=OneWay}" Margin="0,4"/>
+                                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="JacketSleevesBox" Margin="0,4" Padding="6,4" PreviewTextInput="OnMeasurementPreviewTextInput"/>
+                                </Grid>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Section.Shirt], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Length], Mode=OneWay}" Margin="0,4"/>
+                                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="ShirtLengthBox" Margin="0,4" Padding="6,4" PreviewTextInput="OnMeasurementPreviewTextInput"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Chest], Mode=OneWay}" Margin="0,4"/>
+                                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="ShirtChestBox" Margin="0,4" Padding="6,4" PreviewTextInput="OnMeasurementPreviewTextInput"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.SitAround], Mode=OneWay}" Margin="0,4"/>
+                                    <TextBox Grid.Row="2" Grid.Column="1" x:Name="ShirtSitAroundBox" Margin="0,4" Padding="6,4" PreviewTextInput="OnMeasurementPreviewTextInput"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.Sleeves], Mode=OneWay}" Margin="0,4"/>
+                                    <TextBox Grid.Row="3" Grid.Column="1" x:Name="ShirtSleevesBox" Margin="0,4" Padding="6,4" PreviewTextInput="OnMeasurementPreviewTextInput"/>
+                                </Grid>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.CustomPrice], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="120"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Price], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="CustomPriceBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnPriceValuesChanged" PreviewTextInput="OnMoneyPreviewTextInput"/>
+
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Subtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                            <TextBlock Grid.Row="0" Grid.Column="3" x:Name="CustomSubtotalText" Margin="0,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6">
+                    <StackPanel>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.DownloadMeasurement], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Download.Language.Label], Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <RadioButton x:Name="DownloadChineseRadio" GroupName="DownloadLanguage" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Download.Language.Chinese], Mode=OneWay}" IsChecked="True" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                            <RadioButton x:Name="DownloadEnglishRadio" GroupName="DownloadLanguage" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Download.Language.English], Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                            <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownloadSubmit], Mode=OneWay}" Width="110" Height="30" Padding="12,5" Click="OnDownloadSubmitClick" Background="#2980B9" Foreground="White"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock x:Name="ErrorText" Foreground="#E74C3C" TextWrapping="Wrap" Margin="0,12,0,0"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Cancel], Mode=OneWay}" Width="82" Height="32" Margin="0,0,10,0" IsCancel="True" Click="OnCancelClick"/>
+            <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Save], Mode=OneWay}" Width="82" Height="32" IsDefault="True" Click="OnSaveClick" Background="#2980B9" Foreground="White"/>
+        </StackPanel>
+    </Grid>
+</Window>
