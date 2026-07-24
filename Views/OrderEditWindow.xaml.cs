@@ -1021,6 +1021,39 @@ public partial class OrderEditWindow : Window
         // the payment method selections. Auto-complete runs only on deposit/method changes.
         if (runAutoComplete)
             AutoCompleteFullyPaidSections();
+
+        // A cleared section is settled, so its pricing inputs (price/tax and the
+        // item/record editors that feed the total) must be locked too. Runs last so
+        // it wins over the tax-box enabling done inside the Refresh*Totals passes.
+        RefreshPricingLocks();
+    }
+
+    private void RefreshPricingLocks()
+    {
+        var alterationLocked = _isReadOnly || AlterationBalanceClearedCheck.IsChecked is true;
+        AlterationPriceBox.IsReadOnly = alterationLocked;
+        AlterationTaxBox.IsReadOnly = alterationLocked;
+
+        var customMadeLocked = _isReadOnly || CustomMadeBalanceClearedCheck.IsChecked is true;
+        CustomMadeTaxBox.IsReadOnly = customMadeLocked;
+        AddCustomMadeButton.IsEnabled = !customMadeLocked;
+        RemoveCustomMadeButton.IsEnabled = !customMadeLocked;
+
+        var clothingLocked = _isReadOnly || ClothingBalanceClearedCheck.IsChecked is true;
+        ClothingTaxBox.IsReadOnly = clothingLocked;
+        AddItemButton.IsEnabled = !clothingLocked;
+        SetClothingRowsLocked(clothingLocked);
+    }
+
+    private void SetClothingRowsLocked(bool locked)
+    {
+        foreach (var row in _clothingItemRows)
+        {
+            row.CategoryBox.IsEnabled = !locked;
+            row.UnitPriceBox.IsReadOnly = locked;
+            row.PromotionalPriceBox.IsReadOnly = locked;
+            row.RemoveButton.IsEnabled = !locked;
+        }
     }
 
     /// <summary>
