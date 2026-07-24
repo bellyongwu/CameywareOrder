@@ -340,13 +340,22 @@ public partial class OrderEditWindow : Window
             TitleText.Text = _localization[titleKey];
         }
 
-        EditCustomMadeButton.Content = _localization[_isReadOnly ? "OrderEdit.ViewCustomMade" : "OrderEdit.EditCustomMade"];
+        RefreshCustomMadeButtonLabel();
 
         RefreshCurrencyBoxLabels();
         RefreshServicePanels();
         RefreshCustomMadeEmptyState();
         RefreshPaymentLabels();
         RefreshComputedTotals();
+    }
+
+    // The record button opens the custom-made editor in view mode when the whole
+    // order is read-only OR the custom-made section balance is cleared (settled),
+    // so its label mirrors that state (View vs. Edit).
+    private void RefreshCustomMadeButtonLabel()
+    {
+        var viewOnly = _isReadOnly || CustomMadeBalanceClearedCheck.IsChecked is true;
+        EditCustomMadeButton.Content = _localization[viewOnly ? "OrderEdit.ViewCustomMade" : "OrderEdit.EditCustomMade"];
     }
 
     private void RefreshPaymentLabels()
@@ -766,7 +775,13 @@ public partial class OrderEditWindow : Window
         if (CustomMadeRecordsList.SelectedItem is not CustomMadeServiceRecord selected)
             return;
 
-        if (!_isReadOnly && !CanOpenCustomMadeWindow())
+        // A settled custom-made section (final balance cleared) is locked: the record
+        // opens in view mode (title from the OrderEdit.ViewCustomMade key) with every
+        // field — including the document upload area — read-only, mirroring the
+        // whole-order read-only path.
+        var recordReadOnly = _isReadOnly || CustomMadeBalanceClearedCheck.IsChecked is true;
+
+        if (!recordReadOnly && !CanOpenCustomMadeWindow())
             return;
 
         var dialog = new CustomMadeServiceWindow(
@@ -776,12 +791,12 @@ public partial class OrderEditWindow : Window
             defaultCustomerName: CustomerNameBox.Text,
             defaultPhoneNumber: PhoneNumberBox.Text,
             defaultEmail: EmailBox.Text,
-            isReadOnly: _isReadOnly)
+            isReadOnly: recordReadOnly)
         {
             Owner = this
         };
 
-        if (_isReadOnly)
+        if (recordReadOnly)
         {
             dialog.ShowDialog();
             return;
@@ -1039,6 +1054,7 @@ public partial class OrderEditWindow : Window
         CustomMadeTaxBox.IsReadOnly = customMadeLocked;
         AddCustomMadeButton.IsEnabled = !customMadeLocked;
         RemoveCustomMadeButton.IsEnabled = !customMadeLocked;
+        RefreshCustomMadeButtonLabel();
 
         var clothingLocked = _isReadOnly || ClothingBalanceClearedCheck.IsChecked is true;
         ClothingTaxBox.IsReadOnly = clothingLocked;

@@ -13,6 +13,15 @@
         ShowInTaskbar="False">
     <Window.Resources>
         <conv:DocumentThumbnailConverter x:Key="DocumentThumbnailConverter"/>
+        <!-- Locked inputs (IsReadOnly) look grayed out like a disabled box. -->
+        <Style TargetType="TextBox">
+            <Style.Triggers>
+                <Trigger Property="IsReadOnly" Value="True">
+                    <Setter Property="Background" Value="#F0F0F0"/>
+                    <Setter Property="Foreground" Value="#808080"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <Style x:Key="SelectionToggleButtonStyle" TargetType="primitives:ToggleButton">
             <Setter Property="Margin" Value="0,0,10,0"/>
             <Setter Property="Padding" Value="12,5"/>

@@ -222,9 +222,9 @@ public enum PaymentMethod
 
 public enum OrderStatus
 {
-    Processing = 1, // 处理中
-    Shipped = 2,    // 已发货
-    Completed = 3,  // 已完成 (legacy Delivered)
-    Cancelled = 4,  // 已取消
-    Returned = 5    // 已退货
+    Processing = 1, // Processing
+    Shipped = 2,    // Shipped
+    Completed = 3,  // Completed (legacy Delivered)
+    Cancelled = 4,  // Cancelled
+    Returned = 5    // Returned
 }
