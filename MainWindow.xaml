@@ -21,6 +21,7 @@
         <conv:LastItemBorderThicknessConverter x:Key="LastItemBorderThickness"/>
         <conv:OrderServicesSummaryConverter x:Key="OrderServicesSummaryConverter"/>
         <conv:PositiveAmountToVisibilityConverter x:Key="PositiveAmountToVisibility"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
     </Window.Resources>
 
     <DockPanel>
@@ -240,7 +241,7 @@
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.OrderItems], Mode=OneWay}" FontSize="18" FontWeight="Bold" Margin="0,0,0,10"/>
 
                     <!-- Alterations service -->
-                    <Border BorderBrush="#C7CDD4" BorderThickness="0,0,0,1" Padding="0,0,0,8" Margin="0,0,0,8" Visibility="{Binding SelectedOrder.ServiceDetails, Converter={StaticResource NullToVisibility}}">
+                    <Border BorderBrush="#C7CDD4" BorderThickness="0,0,0,1" Padding="0,0,0,8" Margin="0,0,0,8" Visibility="{Binding SelectedOrder.AlterationAddedToReceipt, Converter={StaticResource BoolToVisibility}}">
                         <StackPanel>
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Alterations], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#2C3E50" Margin="0,4,0,4"/>
                             <TextBlock Text="{Binding SelectedOrder.ServiceDetails, Converter={StaticResource LocalizationLookupConverter}, ConverterParameter=Alteration.Category}" FontSize="12" TextWrapping="Wrap"/>
@@ -298,7 +299,7 @@
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Visible"/>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedOrder.Items.Count}" Value="0">
+                                    <DataTrigger Binding="{Binding SelectedOrder.ClothingAddedToReceipt}" Value="False">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -407,7 +408,7 @@
                             <Style TargetType="Border">
                                 <Setter Property="Visibility" Value="Visible"/>
                                 <Style.Triggers>
-                                    <DataTrigger Binding="{Binding SelectedOrder.CustomMadeRecords.Count}" Value="0">
+                                    <DataTrigger Binding="{Binding SelectedOrder.CustomMadeAddedToReceipt}" Value="False">
                                         <Setter Property="Visibility" Value="Collapsed"/>
                                     </DataTrigger>
                                 </Style.Triggers>

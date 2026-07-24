@@ -114,7 +114,7 @@
     <Text key="OrderEdit.Panel.Currency">币种</Text>
     <Text key="OrderEdit.Panel.MeasurementMode">定制方式</Text>
     <Text key="OrderEdit.Panel.MeasurementsOnly">只量身</Text>
-    <Text key="OrderEdit.Panel.CustomFromScratch">定制量身</Text>
+    <Text key="OrderEdit.Panel.CustomFromScratch">量身加定制</Text>
     <Text key="OrderEdit.Panel.AgeType">客户年龄类型</Text>
     <Text key="OrderEdit.Panel.Adult">成人</Text>
     <Text key="OrderEdit.Panel.Teen">青少年（12岁以上）</Text>

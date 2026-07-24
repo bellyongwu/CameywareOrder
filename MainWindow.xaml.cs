@@ -253,8 +253,9 @@ public partial class MainWindow : Window
 
         document.Blocks.Add(ReceiptDivider());
 
-        // Alterations service detail.
-        if (!string.IsNullOrWhiteSpace(order.ServiceDetails) || order.AlterationTotal > 0m)
+        // Alterations service detail. Only shown when the section carries a charge and a
+        // deposit method has been selected; otherwise the service is considered not added.
+        if (order.AlterationAddedToReceipt)
         {
             document.Blocks.Add(ReceiptSectionTitle(_localization["OrderEdit.Panel.Alterations"]));
             if (!string.IsNullOrWhiteSpace(order.ServiceDetails))
@@ -266,8 +267,9 @@ public partial class MainWindow : Window
             }
         }
 
-        // Ready-made clothing / accessories.
-        if (order.Items.Count > 0)
+        // Ready-made clothing / accessories. Only shown when the section carries a charge and a
+        // deposit method has been selected; otherwise the service is considered not added.
+        if (order.Items.Count > 0 && order.ClothingAddedToReceipt)
         {
             document.Blocks.Add(ReceiptSectionTitle(_localization["OrderEdit.Panel.ReadyMade"]));
             foreach (var item in order.Items)
@@ -282,9 +284,10 @@ public partial class MainWindow : Window
             document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(order.ClothingTotal), bold: true));
         }
 
-        // Custom-made records.
+        // Custom-made records. Only shown when the section carries a charge and a deposit
+        // method has been selected; otherwise the service is considered not added.
         var customMadeRecords = order.CustomMadeRecords;
-        if (customMadeRecords.Count > 0)
+        if (customMadeRecords.Count > 0 && order.CustomMadeAddedToReceipt)
         {
             var summaryConverter = new CustomMadeRecordSummaryConverter();
             document.Blocks.Add(ReceiptSectionTitle(_localization["Detail.CustomMadeRecords"]));

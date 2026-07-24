@@ -97,6 +97,18 @@ public class Order
     [NotMapped]
     public decimal ComputedSectionsTotal => AlterationTotal + CustomMadeTotal + ClothingTotal;
 
+    // A service section counts as "added" (and therefore shown on the receipt / detail panel)
+    // only when it carries a charge and a deposit method has been chosen. A zero total or an
+    // unselected deposit means the service was not actually added.
+    [NotMapped]
+    public bool AlterationAddedToReceipt => AlterationTotal > 0m && AlterationDownpaymentMethod is not null;
+
+    [NotMapped]
+    public bool ClothingAddedToReceipt => ClothingTotal > 0m && ClothingDownpaymentMethod is not null;
+
+    [NotMapped]
+    public bool CustomMadeAddedToReceipt => CustomMadeTotal > 0m && CustomMadeDownpaymentMethod is not null;
+
     // A section is cleared when it carries no charge, has been explicitly marked
     // cleared, or its deposit already covers the full section total.
     [NotMapped]
