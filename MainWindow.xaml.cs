@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
 using System.Globalization;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
@@ -37,8 +38,26 @@ public partial class MainWindow : Window
         DataContext = _viewModel;
 
         InitializeLanguageSwitcher();
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _localization.LanguageChanged += OnLanguageChangedGlobally;
+        RefreshToolbarLabels();
         _ = _viewModel.LoadOrdersAsync();
+    }
+
+    private static bool IsReadOnlyStatus(OrderStatus status)
+        => status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned;
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MainViewModel.SelectedOrder))
+            RefreshToolbarLabels();
+    }
+
+    private void RefreshToolbarLabels()
+    {
+        var selectedStatus = _viewModel.SelectedOrder?.Status;
+        var isReadOnly = selectedStatus.HasValue && IsReadOnlyStatus(selectedStatus.Value);
+        EditOrderButton.Content = _localization[isReadOnly ? "Toolbar.ViewOrder" : "Toolbar.EditOrder"];
     }
 
     private void InitializeLanguageSwitcher()
@@ -72,6 +91,7 @@ public partial class MainWindow : Window
             _viewModel.StatusMessage = _localization["Status.Ready"];
             DataContext = null;
             DataContext = _viewModel;
+            RefreshToolbarLabels();
         }
         finally
         {
@@ -225,8 +245,10 @@ public partial class MainWindow : Window
         });
 
         document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderNumber"], order.OrderNumber));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.CustomerName"], order.CustomerName));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PhoneNumber"], order.PhoneNumber));
+        AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.CustomerName"], order.CustomerName);
+        AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.PhoneNumber"], order.PhoneNumber);
+        AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.Email"], order.Email);
+        AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.Address"], order.Address);
         document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderDate"], order.OrderDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
 
         document.Blocks.Add(ReceiptDivider());
@@ -306,6 +328,14 @@ public partial class MainWindow : Window
             valueRun.FontWeight = FontWeights.Bold;
         paragraph.Inlines.Add(valueRun);
         return paragraph;
+    }
+
+    private static void AddReceiptInfoLineIfHasValue(FlowDocument document, string label, string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+
+        document.Blocks.Add(ReceiptInfoLine(label, value.Trim()));
     }
 
     private static Paragraph ReceiptSectionTitle(string title)

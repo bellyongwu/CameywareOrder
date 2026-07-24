@@ -7,6 +7,7 @@
 
     <Text key="Toolbar.NewOrder">新增订单</Text>
     <Text key="Toolbar.EditOrder">编辑订单</Text>
+    <Text key="Toolbar.ViewOrder">查看订单</Text>
     <Text key="Toolbar.DeleteOrder">删除订单</Text>
     <Text key="Toolbar.PrintReceipt">打印小票</Text>
     <Text key="Toolbar.Refresh">刷新</Text>
@@ -86,6 +87,7 @@
 
     <Text key="OrderEdit.NewTitle">新增订单</Text>
     <Text key="OrderEdit.EditTitle">编辑订单</Text>
+    <Text key="OrderEdit.ViewTitle">查看订单</Text>
     <Text key="OrderEdit.Cancel">取消</Text>
     <Text key="OrderEdit.Save">保存</Text>
     <Text key="OrderEdit.Validate.OrderNumber">请输入订单编号</Text>
@@ -102,6 +104,7 @@
     <Text key="OrderEdit.RemoveItem">删除</Text>
     <Text key="OrderEdit.AddCustomMade">添加定制记录</Text>
     <Text key="OrderEdit.EditCustomMade">修改定制记录</Text>
+    <Text key="OrderEdit.ViewCustomMade">查看定制记录</Text>
     <Text key="OrderEdit.RemoveCustomMade">移除定制记录</Text>
     <Text key="OrderEdit.CustomMade.Empty">暂无定制记录</Text>
     <Text key="OrderEdit.Panel.Alterations">修改衣服</Text>
@@ -189,6 +192,7 @@
 
     <Text key="Toolbar.NewOrder">New Order</Text>
     <Text key="Toolbar.EditOrder">Edit Order</Text>
+    <Text key="Toolbar.ViewOrder">View Order</Text>
     <Text key="Toolbar.DeleteOrder">Delete Order</Text>
     <Text key="Toolbar.PrintReceipt">Print Receipt</Text>
     <Text key="Toolbar.Refresh">Refresh</Text>
@@ -268,6 +272,7 @@
 
     <Text key="OrderEdit.NewTitle">New Order</Text>
     <Text key="OrderEdit.EditTitle">Edit Order</Text>
+    <Text key="OrderEdit.ViewTitle">View Order</Text>
     <Text key="OrderEdit.Cancel">Cancel</Text>
     <Text key="OrderEdit.Save">Save</Text>
     <Text key="OrderEdit.Validate.OrderNumber">Please enter order number.</Text>
@@ -284,6 +289,7 @@
     <Text key="OrderEdit.RemoveItem">Remove</Text>
     <Text key="OrderEdit.AddCustomMade">Add Custom Record</Text>
     <Text key="OrderEdit.EditCustomMade">Edit Custom Record</Text>
+    <Text key="OrderEdit.ViewCustomMade">View Custom Record</Text>
     <Text key="OrderEdit.RemoveCustomMade">Remove Custom Record</Text>
     <Text key="OrderEdit.CustomMade.Empty">No custom records yet</Text>
     <Text key="OrderEdit.Panel.Alterations">Alterations</Text>

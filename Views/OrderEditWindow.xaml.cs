@@ -16,6 +16,7 @@ public partial class OrderEditWindow : Window
 {
     private const decimal DefaultTaxRate = 13m;
     private const string EditTitleKey = "OrderEdit.EditTitle";
+    private const string ViewTitleKey = "OrderEdit.ViewTitle";
     private const string DownpaymentMethodKey = "OrderEdit.DownpaymentMethod";
     private const string FinalBalanceMethodKey = "OrderEdit.FinalBalanceMethod";
     private const string ValidationTitleKey = "OrderEdit.ValidationTitle";
@@ -33,6 +34,7 @@ public partial class OrderEditWindow : Window
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly LocalizationService _localization;
     private readonly Order? _existing;
+    private readonly bool _isReadOnly;
     private readonly ObservableCollection<CustomMadeServiceRecord> _customMadeRecords = new();
     private readonly List<ClothingItemEditorRow> _clothingItemRows = new();
     private bool _suppressLanguageRefresh;
@@ -79,6 +81,7 @@ public partial class OrderEditWindow : Window
 
         InitializeCommonControls();
         _existing = null;
+        _isReadOnly = false;
 
         OrderNumberBox.Text = $"ORD-{DateTime.Now:yyyyMMdd-HHmmss}";
         CustomerNameBox.Text = string.Empty;
@@ -110,11 +113,12 @@ public partial class OrderEditWindow : Window
         _scopeFactory = scopeFactory;
         _localization = localization;
         _existing = existing;
+        _isReadOnly = IsReadOnlyStatus(existing.Status);
 
         InitializeCommonControls();
 
-        Title = _localization[EditTitleKey];
-        TitleText.Text = _localization[EditTitleKey];
+        Title = _localization[_isReadOnly ? ViewTitleKey : EditTitleKey];
+        TitleText.Text = _localization[_isReadOnly ? ViewTitleKey : EditTitleKey];
         OrderNumberBox.Text = existing.OrderNumber;
         OrderNumberBox.IsEnabled = false;
         CustomerNameBox.Text = existing.CustomerName;
@@ -172,11 +176,78 @@ public partial class OrderEditWindow : Window
         RefreshCustomMadeEmptyState();
         _localization.LanguageChanged += OnLanguageChangedGlobally;
 
-        if (existing.Status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned)
+        if (_isReadOnly)
+            ApplyReadOnlyMode();
+    }
+
+    private static bool IsReadOnlyStatus(OrderStatus status)
+        => status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned;
+
+    private void ApplyReadOnlyMode()
+    {
+        SaveButton.Visibility = Visibility.Collapsed;
+        ReadOnlyNotice.Visibility = Visibility.Visible;
+
+        StatusBox.IsEnabled = false;
+        CurrencyBox.IsEnabled = false;
+        PickedUpCheck.IsEnabled = false;
+        ClearAllBalancesCheck.IsEnabled = false;
+
+        CustomerNameBox.IsReadOnly = true;
+        PhoneNumberBox.IsReadOnly = true;
+        EmailBox.IsReadOnly = true;
+        AddressBox.IsReadOnly = true;
+        NotesBox.IsReadOnly = true;
+
+        AlterationCategoryBox.IsEnabled = false;
+        AlterationAdditionalNotesBox.IsReadOnly = true;
+        AlterationPriceBox.IsReadOnly = true;
+        AlterationTaxBox.IsReadOnly = true;
+        CustomMadeTaxBox.IsReadOnly = true;
+        ClothingTaxBox.IsReadOnly = true;
+        AlterationDownpaymentBox.IsReadOnly = true;
+        CustomMadeDownpaymentBox.IsReadOnly = true;
+        ClothingDownpaymentBox.IsReadOnly = true;
+
+        AlterationDownCompletedCheck.IsEnabled = false;
+        AlterationBalanceClearedCheck.IsEnabled = false;
+        CustomMadeDownCompletedCheck.IsEnabled = false;
+        CustomMadeBalanceClearedCheck.IsEnabled = false;
+        ClothingDownCompletedCheck.IsEnabled = false;
+        ClothingBalanceClearedCheck.IsEnabled = false;
+
+        AddItemButton.IsEnabled = false;
+        AddCustomMadeButton.IsEnabled = false;
+        RemoveCustomMadeButton.IsEnabled = false;
+
+        SetReadOnlyPaymentSection(_alterationControls);
+        SetReadOnlyPaymentSection(_customMadeControls);
+        SetReadOnlyPaymentSection(_clothingControls);
+        ApplyReadOnlyModeToClothingRows();
+    }
+
+    private void SetReadOnlyPaymentSection(PaymentSectionControls section)
+    {
+        section.DownNone.IsEnabled = false;
+        section.DownEtransfer.IsEnabled = false;
+        section.DownCard.IsEnabled = false;
+        section.DownCash.IsEnabled = false;
+        section.DownCompletedCheck.IsEnabled = false;
+        section.FinalEtransfer.IsEnabled = false;
+        section.FinalCard.IsEnabled = false;
+        section.FinalCash.IsEnabled = false;
+        section.BalanceClearedCheck.IsEnabled = false;
+        section.DownpaymentBox.IsReadOnly = true;
+    }
+
+    private void ApplyReadOnlyModeToClothingRows()
+    {
+        foreach (var row in _clothingItemRows)
         {
-            FormRoot.IsEnabled = false;
-            SaveButton.Visibility = Visibility.Collapsed;
-            ReadOnlyNotice.Visibility = Visibility.Visible;
+            row.CategoryBox.IsEnabled = false;
+            row.UnitPriceBox.IsReadOnly = true;
+            row.PromotionalPriceBox.IsReadOnly = true;
+            row.RemoveButton.IsEnabled = false;
         }
     }
 
@@ -264,9 +335,12 @@ public partial class OrderEditWindow : Window
         }
         else
         {
-            Title = _localization[EditTitleKey];
-            TitleText.Text = _localization[EditTitleKey];
+            var titleKey = _isReadOnly ? ViewTitleKey : EditTitleKey;
+            Title = _localization[titleKey];
+            TitleText.Text = _localization[titleKey];
         }
+
+        EditCustomMadeButton.Content = _localization[_isReadOnly ? "OrderEdit.ViewCustomMade" : "OrderEdit.EditCustomMade"];
 
         RefreshCurrencyBoxLabels();
         RefreshServicePanels();
@@ -661,6 +735,9 @@ public partial class OrderEditWindow : Window
 
     private void OnAddCustomMadeRecordClick(object sender, RoutedEventArgs e)
     {
+        if (_isReadOnly)
+            return;
+
         if (!CanOpenCustomMadeWindow())
             return;
 
@@ -669,7 +746,8 @@ public partial class OrderEditWindow : Window
             defaultOrderNumber: OrderNumberBox.Text,
             defaultCustomerName: CustomerNameBox.Text,
             defaultPhoneNumber: PhoneNumberBox.Text,
-            defaultEmail: EmailBox.Text)
+            defaultEmail: EmailBox.Text,
+            isReadOnly: false)
         {
             Owner = this
         };
@@ -687,7 +765,7 @@ public partial class OrderEditWindow : Window
         if (CustomMadeRecordsList.SelectedItem is not CustomMadeServiceRecord selected)
             return;
 
-        if (!CanOpenCustomMadeWindow())
+        if (!_isReadOnly && !CanOpenCustomMadeWindow())
             return;
 
         var dialog = new CustomMadeServiceWindow(
@@ -696,10 +774,17 @@ public partial class OrderEditWindow : Window
             defaultOrderNumber: OrderNumberBox.Text,
             defaultCustomerName: CustomerNameBox.Text,
             defaultPhoneNumber: PhoneNumberBox.Text,
-            defaultEmail: EmailBox.Text)
+            defaultEmail: EmailBox.Text,
+            isReadOnly: _isReadOnly)
         {
             Owner = this
         };
+
+        if (_isReadOnly)
+        {
+            dialog.ShowDialog();
+            return;
+        }
 
         if (dialog.ShowDialog() is true && dialog.Result is not null)
         {
@@ -713,6 +798,9 @@ public partial class OrderEditWindow : Window
 
     private void OnRemoveCustomMadeRecordClick(object sender, RoutedEventArgs e)
     {
+        if (_isReadOnly)
+            return;
+
         if (CustomMadeRecordsList.SelectedItem is not CustomMadeServiceRecord selected)
             return;
 
@@ -1602,7 +1690,7 @@ public partial class OrderEditWindow : Window
         };
         Grid.SetColumn(removeButton, 4);
 
-        var row = new ClothingItemEditorRow(rowGrid, categoryBox, unitPriceBox, promotionalPriceBox, subtotalText);
+        var row = new ClothingItemEditorRow(rowGrid, categoryBox, unitPriceBox, promotionalPriceBox, subtotalText, removeButton);
 
         unitPriceBox.TextChanged += (_, _) => RefreshClothingTotals();
         promotionalPriceBox.TextChanged += (_, _) => RefreshClothingTotals();
@@ -1624,6 +1712,9 @@ public partial class OrderEditWindow : Window
 
         ClothingItemsPanel.Children.Add(rowGrid);
         _clothingItemRows.Add(row);
+
+        if (_isReadOnly)
+            ApplyReadOnlyModeToClothingRows();
     }
 
     private UIElement CreateClothingHeader()
@@ -1720,5 +1811,6 @@ public partial class OrderEditWindow : Window
         ComboBox CategoryBox,
         TextBox UnitPriceBox,
         TextBox PromotionalPriceBox,
-        TextBlock SubtotalText);
+        TextBlock SubtotalText,
+        Button RemoveButton);
 }

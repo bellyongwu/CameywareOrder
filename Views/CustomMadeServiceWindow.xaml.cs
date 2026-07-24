@@ -28,30 +28,28 @@ public partial class CustomMadeServiceWindow : Window
     private readonly LocalizationService _localization;
     private readonly string? _defaultOrderNumber;
     private readonly CustomMadeServiceRecord _workingRecord;
+    private readonly bool _isReadOnly;
     private bool _isInitializing;
     private bool _isRefreshingLanguage;
+    private bool _isApplyingMeasurementView;
     private bool _isInch;
 
-    public CustomMadeServiceWindow(LocalizationService localization, CustomMadeServiceRecord? existing = null, string? defaultOrderNumber = null, string? defaultCustomerName = null, string? defaultPhoneNumber = null, string? defaultEmail = null)
+    public CustomMadeServiceWindow(LocalizationService localization, CustomMadeServiceRecord? existing = null, string? defaultOrderNumber = null, string? defaultCustomerName = null, string? defaultPhoneNumber = null, string? defaultEmail = null, bool isReadOnly = false)
     {
         _isInitializing = true;
         InitializeComponent();
         _localization = localization;
         _defaultOrderNumber = defaultOrderNumber;
+        _isReadOnly = isReadOnly;
         _workingRecord = existing is null ? new CustomMadeServiceRecord() : Clone(existing);
 
         CustomerNameBox.Text = _workingRecord.CustomerName = existing?.CustomerName ?? defaultCustomerName ?? string.Empty;
         PhoneNumberBox.Text = _workingRecord.PhoneNumber = existing?.PhoneNumber ?? defaultPhoneNumber ?? string.Empty;
         EmailBox.Text = _workingRecord.Email = existing?.Email ?? defaultEmail;
 
-        JacketLengthBox.Text = _workingRecord.JacketLength = existing?.JacketLength;
-        JacketChestBox.Text = _workingRecord.JacketChest = existing?.JacketChest;
-        JacketSitAroundBox.Text = _workingRecord.JacketSitAround = existing?.JacketSitAround;
-        JacketSleevesBox.Text = _workingRecord.JacketSleeves = existing?.JacketSleeves;
-        ShirtLengthBox.Text = _workingRecord.ShirtLength = existing?.ShirtLength;
-        ShirtChestBox.Text = _workingRecord.ShirtChest = existing?.ShirtChest;
-        ShirtSitAroundBox.Text = _workingRecord.ShirtSitAround = existing?.ShirtSitAround;
-        ShirtSleevesBox.Text = _workingRecord.ShirtSleeves = existing?.ShirtSleeves;
+        InitializeMeasurementCachesFromRecord();
+        ApplyMeasurementValuesForCurrentUnit();
+
         CustomPriceBox.Text = _workingRecord.Price?.ToString("0.##") ?? string.Empty;
 
         RegisterInputFilters();
@@ -67,7 +65,47 @@ public partial class CustomMadeServiceWindow : Window
         RefreshMeasurementContextText();
         RefreshGenderButtons(_workingRecord.AgeType);
         RefreshCustomPriceTotals();
+
+        if (_isReadOnly)
+            ApplyReadOnlyMode();
+
+        RefreshWindowTitle();
+
         _localization.LanguageChanged += OnLanguageChanged;
+    }
+
+    private void RefreshWindowTitle()
+    {
+        var titleKey = _isReadOnly ? "OrderEdit.ViewCustomMade" : "OrderEdit.EditCustomMade";
+        var title = _localization[titleKey];
+        Title = title;
+        TitleText.Text = title;
+    }
+
+    private void ApplyReadOnlyMode()
+    {
+        SaveButton.Visibility = Visibility.Collapsed;
+        ReadOnlyNotice.Visibility = Visibility.Visible;
+
+        CustomerNameBox.IsReadOnly = true;
+        PhoneNumberBox.IsReadOnly = true;
+        EmailBox.IsReadOnly = true;
+        CustomPriceBox.IsReadOnly = true;
+        JacketLengthBox.IsReadOnly = true;
+        JacketChestBox.IsReadOnly = true;
+        JacketSitAroundBox.IsReadOnly = true;
+        JacketSleevesBox.IsReadOnly = true;
+        ShirtLengthBox.IsReadOnly = true;
+        ShirtChestBox.IsReadOnly = true;
+        ShirtSitAroundBox.IsReadOnly = true;
+        ShirtSleevesBox.IsReadOnly = true;
+
+        CustomFromScratchRadio.IsEnabled = false;
+        MeasurementsOnlyRadio.IsEnabled = false;
+        AdultRadio.IsEnabled = false;
+        TeenRadio.IsEnabled = false;
+        ChildRadio.IsEnabled = false;
+        GenderButtonsPanel.IsEnabled = false;
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e)
@@ -78,6 +116,7 @@ public partial class CustomMadeServiceWindow : Window
         _isRefreshingLanguage = true;
         try
         {
+            RefreshWindowTitle();
             RefreshMeasurementContextText();
             RefreshGenderButtons(_workingRecord.AgeType);
         }
@@ -116,8 +155,9 @@ public partial class CustomMadeServiceWindow : Window
         if (toInch == _isInch)
             return;
 
-        ConvertMeasurementBoxes(toInch);
+        PersistMeasurementCachesFromCurrentView(updateOppositeUnit: false);
         _isInch = toInch;
+        ApplyMeasurementValuesForCurrentUnit();
     }
 
     private void ConvertMeasurementBoxes(bool toInch)
@@ -154,6 +194,14 @@ public partial class CustomMadeServiceWindow : Window
         return NullIfWhiteSpace(normalized);
     }
 
+    private void OnMeasurementValueChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_isInitializing || _isApplyingMeasurementView)
+            return;
+
+        PersistMeasurementCachesFromCurrentView(updateOppositeUnit: true);
+    }
+
     private void OnDownloadSubmitClick(object sender, RoutedEventArgs e)
     {
         try
@@ -182,7 +230,13 @@ public partial class CustomMadeServiceWindow : Window
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {
+        if (_isReadOnly)
+            return;
+
         ErrorText.Text = string.Empty;
+
+        PersistMeasurementCachesFromCurrentView(updateOppositeUnit: true);
+        SyncLegacyMeasurementsFromCmCache();
 
         var customerName = CustomerNameBox.Text.Trim();
         var phoneNumber = PhoneNumberBox.Text.Trim();
@@ -205,14 +259,6 @@ public partial class CustomMadeServiceWindow : Window
         _workingRecord.Email = string.IsNullOrWhiteSpace(EmailBox.Text) ? null : EmailBox.Text.Trim();
         _workingRecord.ServiceMode = GetSelectedMode();
         _workingRecord.AgeType = GetSelectedAgeType();
-        _workingRecord.JacketLength = MeasurementForStorage(JacketLengthBox.Text);
-        _workingRecord.JacketChest = MeasurementForStorage(JacketChestBox.Text);
-        _workingRecord.JacketSitAround = MeasurementForStorage(JacketSitAroundBox.Text);
-        _workingRecord.JacketSleeves = MeasurementForStorage(JacketSleevesBox.Text);
-        _workingRecord.ShirtLength = MeasurementForStorage(ShirtLengthBox.Text);
-        _workingRecord.ShirtChest = MeasurementForStorage(ShirtChestBox.Text);
-        _workingRecord.ShirtSitAround = MeasurementForStorage(ShirtSitAroundBox.Text);
-        _workingRecord.ShirtSleeves = MeasurementForStorage(ShirtSleevesBox.Text);
         _workingRecord.Price = ParseNullableDecimal(CustomPriceBox.Text);
         _workingRecord.TaxRate = null;
 
@@ -353,18 +399,18 @@ public partial class CustomMadeServiceWindow : Window
 
         var jacketRows = FilterMeasurementRows(new (string Label, string? Value)[]
         {
-            (L("Measure.Length"), JacketLengthBox.Text),
-            (L("Measure.Chest"), JacketChestBox.Text),
-            (L("Measure.SitAround"), JacketSitAroundBox.Text),
-            (L("Measure.Sleeves"), JacketSleevesBox.Text)
+            (L("Measure.Length"), MeasurementForPdf(JacketLengthBox.Text)),
+            (L("Measure.Chest"), MeasurementForPdf(JacketChestBox.Text)),
+            (L("Measure.SitAround"), MeasurementForPdf(JacketSitAroundBox.Text)),
+            (L("Measure.Sleeves"), MeasurementForPdf(JacketSleevesBox.Text))
         });
 
         var shirtRows = FilterMeasurementRows(new (string Label, string? Value)[]
         {
-            (L("Measure.Length"), ShirtLengthBox.Text),
-            (L("Measure.Chest"), ShirtChestBox.Text),
-            (L("Measure.SitAround"), ShirtSitAroundBox.Text),
-            (L("Measure.Sleeves"), ShirtSleevesBox.Text)
+            (L("Measure.Length"), MeasurementForPdf(ShirtLengthBox.Text)),
+            (L("Measure.Chest"), MeasurementForPdf(ShirtChestBox.Text)),
+            (L("Measure.SitAround"), MeasurementForPdf(ShirtSitAroundBox.Text)),
+            (L("Measure.Sleeves"), MeasurementForPdf(ShirtSleevesBox.Text))
         });
 
         QuestPDF.Settings.License = LicenseType.Community;
@@ -453,6 +499,183 @@ public partial class CustomMadeServiceWindow : Window
 
     private static string ShortLanguageName(string languageCode)
         => languageCode.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "zh" : "en";
+
+    private string? MeasurementForPdf(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return text;
+
+        return text.Trim();
+    }
+
+    private void InitializeMeasurementCachesFromRecord()
+    {
+        (_workingRecord.JacketLengthCm, _workingRecord.JacketLengthIn) = BuildInitialMeasurementPair(
+            _workingRecord.JacketLengthCm,
+            _workingRecord.JacketLengthIn,
+            _workingRecord.JacketLength);
+        (_workingRecord.JacketChestCm, _workingRecord.JacketChestIn) = BuildInitialMeasurementPair(
+            _workingRecord.JacketChestCm,
+            _workingRecord.JacketChestIn,
+            _workingRecord.JacketChest);
+        (_workingRecord.JacketSitAroundCm, _workingRecord.JacketSitAroundIn) = BuildInitialMeasurementPair(
+            _workingRecord.JacketSitAroundCm,
+            _workingRecord.JacketSitAroundIn,
+            _workingRecord.JacketSitAround);
+        (_workingRecord.JacketSleevesCm, _workingRecord.JacketSleevesIn) = BuildInitialMeasurementPair(
+            _workingRecord.JacketSleevesCm,
+            _workingRecord.JacketSleevesIn,
+            _workingRecord.JacketSleeves);
+        (_workingRecord.ShirtLengthCm, _workingRecord.ShirtLengthIn) = BuildInitialMeasurementPair(
+            _workingRecord.ShirtLengthCm,
+            _workingRecord.ShirtLengthIn,
+            _workingRecord.ShirtLength);
+        (_workingRecord.ShirtChestCm, _workingRecord.ShirtChestIn) = BuildInitialMeasurementPair(
+            _workingRecord.ShirtChestCm,
+            _workingRecord.ShirtChestIn,
+            _workingRecord.ShirtChest);
+        (_workingRecord.ShirtSitAroundCm, _workingRecord.ShirtSitAroundIn) = BuildInitialMeasurementPair(
+            _workingRecord.ShirtSitAroundCm,
+            _workingRecord.ShirtSitAroundIn,
+            _workingRecord.ShirtSitAround);
+        (_workingRecord.ShirtSleevesCm, _workingRecord.ShirtSleevesIn) = BuildInitialMeasurementPair(
+            _workingRecord.ShirtSleevesCm,
+            _workingRecord.ShirtSleevesIn,
+            _workingRecord.ShirtSleeves);
+
+        SyncLegacyMeasurementsFromCmCache();
+    }
+
+    private void ApplyMeasurementValuesForCurrentUnit()
+    {
+        _isApplyingMeasurementView = true;
+        try
+        {
+            JacketLengthBox.Text = PickMeasurementForCurrentUnit(_workingRecord.JacketLengthCm, _workingRecord.JacketLengthIn);
+            JacketChestBox.Text = PickMeasurementForCurrentUnit(_workingRecord.JacketChestCm, _workingRecord.JacketChestIn);
+            JacketSitAroundBox.Text = PickMeasurementForCurrentUnit(_workingRecord.JacketSitAroundCm, _workingRecord.JacketSitAroundIn);
+            JacketSleevesBox.Text = PickMeasurementForCurrentUnit(_workingRecord.JacketSleevesCm, _workingRecord.JacketSleevesIn);
+            ShirtLengthBox.Text = PickMeasurementForCurrentUnit(_workingRecord.ShirtLengthCm, _workingRecord.ShirtLengthIn);
+            ShirtChestBox.Text = PickMeasurementForCurrentUnit(_workingRecord.ShirtChestCm, _workingRecord.ShirtChestIn);
+            ShirtSitAroundBox.Text = PickMeasurementForCurrentUnit(_workingRecord.ShirtSitAroundCm, _workingRecord.ShirtSitAroundIn);
+            ShirtSleevesBox.Text = PickMeasurementForCurrentUnit(_workingRecord.ShirtSleevesCm, _workingRecord.ShirtSleevesIn);
+        }
+        finally
+        {
+            _isApplyingMeasurementView = false;
+        }
+    }
+
+    private void PersistMeasurementCachesFromCurrentView(bool updateOppositeUnit)
+    {
+        (_workingRecord.JacketLengthCm, _workingRecord.JacketLengthIn) = BuildMeasurementPairFromDisplay(
+            JacketLengthBox.Text,
+            _isInch,
+            _workingRecord.JacketLengthCm,
+            _workingRecord.JacketLengthIn,
+            updateOppositeUnit);
+        (_workingRecord.JacketChestCm, _workingRecord.JacketChestIn) = BuildMeasurementPairFromDisplay(
+            JacketChestBox.Text,
+            _isInch,
+            _workingRecord.JacketChestCm,
+            _workingRecord.JacketChestIn,
+            updateOppositeUnit);
+        (_workingRecord.JacketSitAroundCm, _workingRecord.JacketSitAroundIn) = BuildMeasurementPairFromDisplay(
+            JacketSitAroundBox.Text,
+            _isInch,
+            _workingRecord.JacketSitAroundCm,
+            _workingRecord.JacketSitAroundIn,
+            updateOppositeUnit);
+        (_workingRecord.JacketSleevesCm, _workingRecord.JacketSleevesIn) = BuildMeasurementPairFromDisplay(
+            JacketSleevesBox.Text,
+            _isInch,
+            _workingRecord.JacketSleevesCm,
+            _workingRecord.JacketSleevesIn,
+            updateOppositeUnit);
+        (_workingRecord.ShirtLengthCm, _workingRecord.ShirtLengthIn) = BuildMeasurementPairFromDisplay(
+            ShirtLengthBox.Text,
+            _isInch,
+            _workingRecord.ShirtLengthCm,
+            _workingRecord.ShirtLengthIn,
+            updateOppositeUnit);
+        (_workingRecord.ShirtChestCm, _workingRecord.ShirtChestIn) = BuildMeasurementPairFromDisplay(
+            ShirtChestBox.Text,
+            _isInch,
+            _workingRecord.ShirtChestCm,
+            _workingRecord.ShirtChestIn,
+            updateOppositeUnit);
+        (_workingRecord.ShirtSitAroundCm, _workingRecord.ShirtSitAroundIn) = BuildMeasurementPairFromDisplay(
+            ShirtSitAroundBox.Text,
+            _isInch,
+            _workingRecord.ShirtSitAroundCm,
+            _workingRecord.ShirtSitAroundIn,
+            updateOppositeUnit);
+        (_workingRecord.ShirtSleevesCm, _workingRecord.ShirtSleevesIn) = BuildMeasurementPairFromDisplay(
+            ShirtSleevesBox.Text,
+            _isInch,
+            _workingRecord.ShirtSleevesCm,
+            _workingRecord.ShirtSleevesIn,
+            updateOppositeUnit);
+
+        SyncLegacyMeasurementsFromCmCache();
+    }
+
+    private void SyncLegacyMeasurementsFromCmCache()
+    {
+        _workingRecord.JacketLength = _workingRecord.JacketLengthCm;
+        _workingRecord.JacketChest = _workingRecord.JacketChestCm;
+        _workingRecord.JacketSitAround = _workingRecord.JacketSitAroundCm;
+        _workingRecord.JacketSleeves = _workingRecord.JacketSleevesCm;
+        _workingRecord.ShirtLength = _workingRecord.ShirtLengthCm;
+        _workingRecord.ShirtChest = _workingRecord.ShirtChestCm;
+        _workingRecord.ShirtSitAround = _workingRecord.ShirtSitAroundCm;
+        _workingRecord.ShirtSleeves = _workingRecord.ShirtSleevesCm;
+    }
+
+    private string PickMeasurementForCurrentUnit(string? cm, string? inch)
+        => _isInch ? (inch ?? string.Empty) : (cm ?? string.Empty);
+
+    private static (string? Cm, string? In) BuildInitialMeasurementPair(string? cm, string? inch, string? legacyValue)
+    {
+        var normalizedCm = NullIfWhiteSpace(cm) ?? NullIfWhiteSpace(legacyValue);
+        var normalizedIn = NullIfWhiteSpace(inch);
+
+        if (normalizedCm is null && normalizedIn is null)
+            return (null, null);
+
+        if (normalizedCm is null)
+            normalizedCm = ConvertMeasurement(normalizedIn, toInch: false);
+
+        if (normalizedIn is null)
+            normalizedIn = ConvertMeasurement(normalizedCm, toInch: true);
+
+        return (normalizedCm, normalizedIn);
+    }
+
+    private static (string? Cm, string? In) BuildMeasurementPairFromDisplay(
+        string? value,
+        bool isInch,
+        string? currentCm,
+        string? currentIn,
+        bool updateOppositeUnit)
+    {
+        var normalized = NullIfWhiteSpace(value);
+        if (normalized is null)
+            return (null, null);
+
+        if (isInch)
+        {
+            var updatedCm = updateOppositeUnit || string.IsNullOrWhiteSpace(currentCm)
+                ? ConvertMeasurement(normalized, toInch: false)
+                : currentCm;
+            return (updatedCm, normalized);
+        }
+
+        var updatedIn = updateOppositeUnit || string.IsNullOrWhiteSpace(currentIn)
+            ? ConvertMeasurement(normalized, toInch: true)
+            : currentIn;
+        return (normalized, updatedIn);
+    }
 
     private void RefreshCustomPriceTotals()
     {
@@ -568,6 +791,22 @@ public partial class CustomMadeServiceWindow : Window
             ShirtChest = source.ShirtChest,
             ShirtSitAround = source.ShirtSitAround,
             ShirtSleeves = source.ShirtSleeves,
+            JacketLengthCm = source.JacketLengthCm,
+            JacketLengthIn = source.JacketLengthIn,
+            JacketChestCm = source.JacketChestCm,
+            JacketChestIn = source.JacketChestIn,
+            JacketSitAroundCm = source.JacketSitAroundCm,
+            JacketSitAroundIn = source.JacketSitAroundIn,
+            JacketSleevesCm = source.JacketSleevesCm,
+            JacketSleevesIn = source.JacketSleevesIn,
+            ShirtLengthCm = source.ShirtLengthCm,
+            ShirtLengthIn = source.ShirtLengthIn,
+            ShirtChestCm = source.ShirtChestCm,
+            ShirtChestIn = source.ShirtChestIn,
+            ShirtSitAroundCm = source.ShirtSitAroundCm,
+            ShirtSitAroundIn = source.ShirtSitAroundIn,
+            ShirtSleevesCm = source.ShirtSleevesCm,
+            ShirtSleevesIn = source.ShirtSleevesIn,
             Price = source.Price,
             TaxRate = source.TaxRate
         };

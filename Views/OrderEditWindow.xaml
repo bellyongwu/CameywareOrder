@@ -215,9 +215,9 @@
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.CustomMade], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,12"/>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                            <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.AddCustomMade], Mode=OneWay}" Click="OnAddCustomMadeRecordClick" Padding="10,4" Margin="0,0,10,0"/>
-                            <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.EditCustomMade], Mode=OneWay}" Click="OnEditCustomMadeRecordClick" Padding="10,4" Margin="0,0,10,0"/>
-                            <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.RemoveCustomMade], Mode=OneWay}" Click="OnRemoveCustomMadeRecordClick" Padding="10,4"/>
+                            <Button x:Name="AddCustomMadeButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.AddCustomMade], Mode=OneWay}" Click="OnAddCustomMadeRecordClick" Padding="10,4" Margin="0,0,10,0"/>
+                            <Button x:Name="EditCustomMadeButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.EditCustomMade], Mode=OneWay}" Click="OnEditCustomMadeRecordClick" Padding="10,4" Margin="0,0,10,0"/>
+                            <Button x:Name="RemoveCustomMadeButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.RemoveCustomMade], Mode=OneWay}" Click="OnRemoveCustomMadeRecordClick" Padding="10,4"/>
                         </StackPanel>
 
                         <ListBox x:Name="CustomMadeRecordsList" MinHeight="120" MouseDoubleClick="OnCustomMadeRecordsDoubleClick" KeyDown="OnCustomMadeRecordsKeyDown">

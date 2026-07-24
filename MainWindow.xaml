@@ -55,7 +55,7 @@
         <!-- ── Toolbar ─────────────────────────────────────────────────── -->
         <ToolBar DockPanel.Dock="Top" Background="#F5F6FA">
                 <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.NewOrder], Mode=OneWay}" Click="OnAddOrderClick"   Padding="10,4" Margin="2"/>
-                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnEditOrderClick"  Padding="10,4" Margin="2"
+                <Button x:Name="EditOrderButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnEditOrderClick"  Padding="10,4" Margin="2"
                     IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility},
                                         ConverterParameter=NotNull}"/>
                 <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Command="{Binding DeleteOrderCommand}" Padding="10,4" Margin="2"/>

@@ -34,6 +34,22 @@ public class CustomMadeServiceRecord
     public string? ShirtChest { get; set; }
     public string? ShirtSitAround { get; set; }
     public string? ShirtSleeves { get; set; }
+    public string? JacketLengthCm { get; set; }
+    public string? JacketLengthIn { get; set; }
+    public string? JacketChestCm { get; set; }
+    public string? JacketChestIn { get; set; }
+    public string? JacketSitAroundCm { get; set; }
+    public string? JacketSitAroundIn { get; set; }
+    public string? JacketSleevesCm { get; set; }
+    public string? JacketSleevesIn { get; set; }
+    public string? ShirtLengthCm { get; set; }
+    public string? ShirtLengthIn { get; set; }
+    public string? ShirtChestCm { get; set; }
+    public string? ShirtChestIn { get; set; }
+    public string? ShirtSitAroundCm { get; set; }
+    public string? ShirtSitAroundIn { get; set; }
+    public string? ShirtSleevesCm { get; set; }
+    public string? ShirtSleevesIn { get; set; }
     public decimal? Price { get; set; }
     public decimal? TaxRate { get; set; }
 
