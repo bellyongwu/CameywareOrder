@@ -51,6 +51,12 @@ public partial class OrderEditWindow : Window
     private decimal _customMadeSubtotal;
     private decimal _customMadeSumTotal;
 
+    // Latest per-section money split (deposit vs final balance, each taxed by its own
+    // method). Recomputed by the Refresh*Totals passes and reused by the summary.
+    private SectionPayment _alterationMoney;
+    private SectionPayment _clothingMoney;
+    private SectionPayment _customMadeMoney;
+
     // Groups the payment controls of a single service section so section-processing
     // methods take one logical parameter instead of a long positional list.
     private PaymentSectionControls _alterationControls = null!;
@@ -1085,9 +1091,9 @@ public partial class OrderEditWindow : Window
         _syncingPayment = true;
         try
         {
-            _alterationAutoCompleted = AutoCompleteSection(_alterationAutoCompleted, _alterationSumTotal, _alterationControls);
-            _customMadeAutoCompleted = AutoCompleteSection(_customMadeAutoCompleted, _customMadeSumTotal, _customMadeControls);
-            _clothingAutoCompleted = AutoCompleteSection(_clothingAutoCompleted, _clothingSumTotal, _clothingControls);
+            _alterationAutoCompleted = AutoCompleteSection(_alterationAutoCompleted, _alterationSubtotal, _alterationControls);
+            _customMadeAutoCompleted = AutoCompleteSection(_customMadeAutoCompleted, _customMadeSubtotal, _customMadeControls);
+            _clothingAutoCompleted = AutoCompleteSection(_clothingAutoCompleted, _clothingSubtotal, _clothingControls);
         }
         finally
         {
@@ -1098,14 +1104,16 @@ public partial class OrderEditWindow : Window
         RefreshPaymentSummary();
     }
 
-    private static bool AutoCompleteSection(bool wasAutoCompleted, decimal sumTotal, PaymentSectionControls c)
+    private static bool AutoCompleteSection(bool wasAutoCompleted, decimal subtotalBase, PaymentSectionControls c)
     {
         var downMethod = GetSelectedDownMethod(c.DownNone, c.DownEtransfer, c.DownCard, c.DownCash);
         var downpayment = ParseDecimalOrZero(c.DownpaymentBox.Text);
         var hasRealDownMethod = downMethod is not null && downMethod != PaymentMethod.None;
         // Bug 1: the deposit-received checkbox is manual; auto-fill only reacts to it.
         var depositReceived = c.DownCompletedCheck.IsChecked is true;
-        var fullyPaid = sumTotal > 0m && downpayment >= sumTotal && hasRealDownMethod;
+        // The deposit is a pre-tax amount, so it fully covers the section when it reaches
+        // the pre-tax subtotal (any card tax is added on top and not owed as a balance).
+        var fullyPaid = subtotalBase > 0m && downpayment >= subtotalBase && hasRealDownMethod;
 
         if (fullyPaid && depositReceived)
         {
@@ -1150,16 +1158,19 @@ public partial class OrderEditWindow : Window
             AlterationTaxBox.Text = "0";
         }
         var taxRate = cardUsed ? ParseDecimalOrZero(AlterationTaxBox.Text) : 0m;
-        var total = price + (price * taxRate / 100m);
         var downpayment = ParseDecimalOrZero(AlterationDownpaymentBox.Text);
-        // Bug 2: a cleared balance means nothing is still owed for this section.
-        var residual = AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : total - downpayment;
+        var money = Order.CalculateSectionPayment(price, downpayment, taxRate,
+            GetSelectedDownMethod(AlterationDownNone, AlterationDownEtransfer, AlterationDownCard, AlterationDownCash),
+            GetSelectedPaymentMethod(AlterationFinalEtransfer, AlterationFinalCard, AlterationFinalCash));
+        // A cleared balance means nothing is still owed for this section.
+        var residual = AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : money.FinalCharge;
 
         _alterationSubtotal = price;
-        _alterationSumTotal = total;
+        _alterationSumTotal = money.Total;
+        _alterationMoney = money;
 
         AlterationSubtotalText.Text = FormatCurrency(price);
-        AlterationSumTotalText.Text = FormatCurrency(total);
+        AlterationSumTotalText.Text = FormatCurrency(money.Total);
         AlterationResidualText.Text = FormatCurrency(residual);
     }
 
@@ -1185,17 +1196,20 @@ public partial class OrderEditWindow : Window
             ClothingTaxBox.Text = "0";
         }
         var taxRate = cardUsed ? ParseDecimalOrZero(ClothingTaxBox.Text) : 0m;
-        var total = subtotal + (subtotal * taxRate / 100m);
         var downpayment = ParseDecimalOrZero(ClothingDownpaymentBox.Text);
-        // Bug 2: a cleared balance means nothing is still owed for this section.
-        var residual = ClothingBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : total - downpayment;
+        var money = Order.CalculateSectionPayment(subtotal, downpayment, taxRate,
+            GetSelectedDownMethod(ClothingDownNone, ClothingDownEtransfer, ClothingDownCard, ClothingDownCash),
+            GetSelectedPaymentMethod(ClothingFinalEtransfer, ClothingFinalCard, ClothingFinalCash));
+        // A cleared balance means nothing is still owed for this section.
+        var residual = ClothingBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : money.FinalCharge;
 
         _clothingSubtotal = subtotal;
-        _clothingSumTotal = total;
+        _clothingSumTotal = money.Total;
+        _clothingMoney = money;
 
         ClothingPriceText.Text = FormatCurrency(subtotal);
         ClothingSubtotalText.Text = FormatCurrency(subtotal);
-        ClothingSumTotalText.Text = FormatCurrency(total);
+        ClothingSumTotalText.Text = FormatCurrency(money.Total);
         ClothingResidualText.Text = FormatCurrency(residual);
     }
 
@@ -1214,15 +1228,19 @@ public partial class OrderEditWindow : Window
             CustomMadeTaxBox.Text = "0";
         }
         var taxRate = cardUsed ? ParseDecimalOrZero(CustomMadeTaxBox.Text) : 0m;
-        _customMadeSumTotal = _customMadeSubtotal + (_customMadeSubtotal * taxRate / 100m);
-
         var downpayment = ParseDecimalOrZero(CustomMadeDownpaymentBox.Text);
-        // Bug 2: a cleared balance means nothing is still owed for this section.
-        var residual = CustomMadeBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : _customMadeSumTotal - downpayment;
+        var money = Order.CalculateSectionPayment(_customMadeSubtotal, downpayment, taxRate,
+            GetSelectedDownMethod(CustomMadeDownNone, CustomMadeDownEtransfer, CustomMadeDownCard, CustomMadeDownCash),
+            GetSelectedPaymentMethod(CustomMadeFinalEtransfer, CustomMadeFinalCard, CustomMadeFinalCash));
+        _customMadeSumTotal = money.Total;
+        _customMadeMoney = money;
+
+        // A cleared balance means nothing is still owed for this section.
+        var residual = CustomMadeBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : money.FinalCharge;
 
         CustomMadePriceText.Text = FormatCurrency(_customMadeSubtotal);
         CustomMadeSubtotalText.Text = FormatCurrency(_customMadeSubtotal);
-        CustomMadeSumTotalText.Text = FormatCurrency(_customMadeSumTotal);
+        CustomMadeSumTotalText.Text = FormatCurrency(money.Total);
         CustomMadeResidualText.Text = FormatCurrency(residual);
     }
 
@@ -1235,25 +1253,30 @@ public partial class OrderEditWindow : Window
 
     private void RefreshPaymentSummary()
     {
-        var alterationDown = ParseDecimalOrZero(AlterationDownpaymentBox.Text);
-        var customMadeDown = ParseDecimalOrZero(CustomMadeDownpaymentBox.Text);
-        var clothingDown = ParseDecimalOrZero(ClothingDownpaymentBox.Text);
-        var prepaid = alterationDown + customMadeDown + clothingDown;
+        var alterationDown = _alterationMoney.Deposit;
+        var customMadeDown = _customMadeMoney.Deposit;
+        var clothingDown = _clothingMoney.Deposit;
 
-        // Bug 2: cleared sections no longer contribute to the outstanding final balance.
-        var alterationResidual = AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : _alterationSumTotal - alterationDown;
-        var customMadeResidual = CustomMadeBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : _customMadeSumTotal - customMadeDown;
-        var clothingResidual = ClothingBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : _clothingSumTotal - clothingDown;
+        // Received deposits: nominal deposits plus tax on any deposit paid by card.
+        var receivedDownpayment = _alterationMoney.ReceivedDownpayment + _customMadeMoney.ReceivedDownpayment + _clothingMoney.ReceivedDownpayment;
+
+        var alterationCleared = AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault();
+        var customMadeCleared = CustomMadeBalanceClearedCheck.IsChecked.GetValueOrDefault();
+        var clothingCleared = ClothingBalanceClearedCheck.IsChecked.GetValueOrDefault();
+
+        // Cleared sections no longer contribute to the outstanding final balance.
+        var alterationResidual = alterationCleared ? 0m : _alterationMoney.FinalCharge;
+        var customMadeResidual = customMadeCleared ? 0m : _customMadeMoney.FinalCharge;
+        var clothingResidual = clothingCleared ? 0m : _clothingMoney.FinalCharge;
         var finalBalance = alterationResidual + customMadeResidual + clothingResidual;
 
-        // Received final balance: the final-balance portion actually collected on every
-        // cleared section (total minus its deposit), accumulated across all services.
+        // Received final balance: the taxed final charge collected on every cleared section.
         var receivedFinalBalance =
-            (AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault() ? Math.Max(0m, _alterationSumTotal - alterationDown) : 0m)
-            + (CustomMadeBalanceClearedCheck.IsChecked.GetValueOrDefault() ? Math.Max(0m, _customMadeSumTotal - customMadeDown) : 0m)
-            + (ClothingBalanceClearedCheck.IsChecked.GetValueOrDefault() ? Math.Max(0m, _clothingSumTotal - clothingDown) : 0m);
+            (alterationCleared ? _alterationMoney.FinalCharge : 0m)
+            + (customMadeCleared ? _customMadeMoney.FinalCharge : 0m)
+            + (clothingCleared ? _clothingMoney.FinalCharge : 0m);
 
-        PrepaidDownpaymentText.Text = FormatCurrency(prepaid);
+        PrepaidDownpaymentText.Text = FormatCurrency(receivedDownpayment);
         SummaryFinalBalanceText.Text = FormatCurrency(finalBalance);
         ReceivedFinalBalanceText.Text = FormatCurrency(receivedFinalBalance);
 
@@ -1273,6 +1296,13 @@ public partial class OrderEditWindow : Window
         BalanceStatusText.Foreground = cleared
             ? System.Windows.Media.Brushes.Green
             : System.Windows.Media.Brushes.OrangeRed;
+
+        // The "picked up" toggle only becomes selectable once the order has at least one
+        // charged service and every final balance is cleared (IsOrderBalanceCleared is
+        // false while the order total is zero). Keep it enabled while already ticked so a
+        // completed order can still be reverted. Read-only orders stay fully locked.
+        if (!_isReadOnly)
+            PickedUpCheck.IsEnabled = cleared || PickedUpCheck.IsChecked.GetValueOrDefault();
 
         // Keep the master "clear all balances" checkbox in sync with the overall state
         // without re-triggering its handler.
@@ -1436,11 +1466,12 @@ public partial class OrderEditWindow : Window
             return false;
 
         // Cleared only when every charged section is settled; empty sections count as cleared.
-        var alterationCleared = IsSectionCleared(_alterationSumTotal,
+        // The deposit is pre-tax, so compare it against the pre-tax subtotal base.
+        var alterationCleared = IsSectionCleared(_alterationSubtotal,
             ParseDecimalOrZero(AlterationDownpaymentBox.Text), AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault());
-        var customMadeCleared = IsSectionCleared(_customMadeSumTotal,
+        var customMadeCleared = IsSectionCleared(_customMadeSubtotal,
             ParseDecimalOrZero(CustomMadeDownpaymentBox.Text), CustomMadeBalanceClearedCheck.IsChecked.GetValueOrDefault());
-        var clothingCleared = IsSectionCleared(_clothingSumTotal,
+        var clothingCleared = IsSectionCleared(_clothingSubtotal,
             ParseDecimalOrZero(ClothingDownpaymentBox.Text), ClothingBalanceClearedCheck.IsChecked.GetValueOrDefault());
         return alterationCleared && customMadeCleared && clothingCleared;
     }

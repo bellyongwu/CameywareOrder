@@ -60,40 +60,65 @@ public class Order
     public string? Notes { get; set; }
     public List<OrderItem> Items { get; set; } = new();
 
+    // Nominal deposits entered by the shop (pre-tax deposit amount), summed across sections.
     [NotMapped]
     public decimal TotalDownpayment
         => (AlterationDownpayment ?? 0m) + (CustomMadeDownpayment ?? 0m) + (ClothingDownpayment ?? 0m);
 
-    // Per-section charges. The persisted tax rate is already 0 whenever card was not
-    // used, so the section total is simply subtotal + subtotal * rate%.
+    // Per-section money split. Tax attaches to each portion (deposit / final balance)
+    // ONLY when that portion is paid by card, so the nominal deposit and the
+    // actually-received deposit can differ — e.g. a 300 deposit paid by card
+    // is received as 339 at 13%, while the same deposit paid by cash is received as 300.
     [NotMapped]
-    public decimal AlterationTotal
-        => (AlterationSubtotal ?? 0m) + ((AlterationSubtotal ?? 0m) * (AlterationTaxRate ?? 0m) / 100m);
+    public SectionPayment AlterationMoney
+        => CalculateSectionPayment(AlterationSubtotal ?? 0m, AlterationDownpayment ?? 0m, AlterationTaxRate ?? 0m,
+            AlterationDownpaymentMethod, AlterationFinalBalanceMethod);
 
     [NotMapped]
-    public decimal ClothingTotal
-        => (ClothingSubtotal ?? 0m) + ((ClothingSubtotal ?? 0m) * (ClothingTaxRate ?? 0m) / 100m);
+    public SectionPayment ClothingMoney
+        => CalculateSectionPayment(ClothingSubtotal ?? 0m, ClothingDownpayment ?? 0m, ClothingTaxRate ?? 0m,
+            ClothingDownpaymentMethod, ClothingFinalBalanceMethod);
 
     // Custom-made pricing mirrors the other sections: the base charge is the sum of the
-    // individual records' prices, and tax is applied at the section level (0 unless a
-    // card payment was used, which is enforced when the rate is persisted).
+    // individual records' prices, and tax is applied per payment portion.
     [NotMapped]
     public decimal CustomMadeSubtotal => CustomMadeRecords.Sum(r => r.Subtotal);
 
     [NotMapped]
-    public decimal CustomMadeTotal
-        => CustomMadeSubtotal + (CustomMadeSubtotal * (CustomMadeTaxRate ?? 0m) / 100m);
+    public SectionPayment CustomMadeMoney
+        => CalculateSectionPayment(CustomMadeSubtotal, CustomMadeDownpayment ?? 0m, CustomMadeTaxRate ?? 0m,
+            CustomMadeDownpaymentMethod, CustomMadeFinalBalanceMethod);
+
+    // Per-section totals (deposit charge + final-balance charge, each taxed by its own method).
+    [NotMapped]
+    public decimal AlterationTotal => AlterationMoney.Total;
+
+    [NotMapped]
+    public decimal ClothingTotal => ClothingMoney.Total;
+
+    [NotMapped]
+    public decimal CustomMadeTotal => CustomMadeMoney.Total;
 
     // Per-section tax amounts (charge minus subtotal). Used by the order detail
     // panel, which only shows a tax line when the amount is greater than zero.
     [NotMapped]
-    public decimal AlterationTax => AlterationTotal - (AlterationSubtotal ?? 0m);
+    public decimal AlterationTax => AlterationMoney.Tax;
 
     [NotMapped]
-    public decimal ClothingTax => ClothingTotal - (ClothingSubtotal ?? 0m);
+    public decimal ClothingTax => ClothingMoney.Tax;
 
     [NotMapped]
-    public decimal CustomMadeTax => CustomMadeTotal - CustomMadeSubtotal;
+    public decimal CustomMadeTax => CustomMadeMoney.Tax;
+
+    // Total tax collected across every charged section, shown as a single line on the receipt.
+    [NotMapped]
+    public decimal TotalTax => AlterationTax + ClothingTax + CustomMadeTax;
+
+    // Actually-received deposits across sections (received deposit): each nominal deposit
+    // plus its tax when that deposit was paid by card.
+    [NotMapped]
+    public decimal ReceivedDownpayment
+        => AlterationMoney.ReceivedDownpayment + CustomMadeMoney.ReceivedDownpayment + ClothingMoney.ReceivedDownpayment;
 
     [NotMapped]
     public decimal ComputedSectionsTotal => AlterationTotal + CustomMadeTotal + ClothingTotal;
@@ -114,29 +139,31 @@ public class Order
     // cleared, or its deposit already covers the full section total.
     [NotMapped]
     public bool AlterationSectionCleared
-        => IsSectionCleared(AlterationTotal, AlterationDownpayment, AlterationBalanceCleared);
+        => IsSectionCleared(AlterationMoney, AlterationBalanceCleared);
 
     [NotMapped]
     public bool CustomMadeSectionCleared
-        => IsSectionCleared(CustomMadeTotal, CustomMadeDownpayment, CustomMadeBalanceCleared);
+        => IsSectionCleared(CustomMadeMoney, CustomMadeBalanceCleared);
 
     [NotMapped]
     public bool ClothingSectionCleared
-        => IsSectionCleared(ClothingTotal, ClothingDownpayment, ClothingBalanceCleared);
+        => IsSectionCleared(ClothingMoney, ClothingBalanceCleared);
 
+    // Outstanding final balance across sections: the taxed final charge on every section
+    // that is not yet cleared.
     [NotMapped]
     public decimal FinalBalance
-        => SectionResidual(AlterationTotal, AlterationDownpayment, AlterationBalanceCleared)
-         + SectionResidual(CustomMadeTotal, CustomMadeDownpayment, CustomMadeBalanceCleared)
-         + SectionResidual(ClothingTotal, ClothingDownpayment, ClothingBalanceCleared);
+        => SectionResidual(AlterationMoney, AlterationBalanceCleared)
+         + SectionResidual(CustomMadeMoney, CustomMadeBalanceCleared)
+         + SectionResidual(ClothingMoney, ClothingBalanceCleared);
 
-    // The final-balance portion actually collected on every cleared section
-    // (section total minus its deposit), accumulated across all services.
+    // Actually-received final balance across cleared sections, including tax when that
+    // final balance was paid by card.
     [NotMapped]
     public decimal ReceivedFinalBalance
-        => SectionReceivedFinal(AlterationTotal, AlterationDownpayment, AlterationBalanceCleared)
-         + SectionReceivedFinal(CustomMadeTotal, CustomMadeDownpayment, CustomMadeBalanceCleared)
-         + SectionReceivedFinal(ClothingTotal, ClothingDownpayment, ClothingBalanceCleared);
+        => SectionReceivedFinal(AlterationMoney, AlterationBalanceCleared)
+         + SectionReceivedFinal(CustomMadeMoney, CustomMadeBalanceCleared)
+         + SectionReceivedFinal(ClothingMoney, ClothingBalanceCleared);
 
     [NotMapped]
     public bool IsBalanceCleared
@@ -163,20 +190,44 @@ public class Order
     [NotMapped]
     public bool IsPickedUp => Status is OrderStatus.Shipped or OrderStatus.Completed;
 
-    private static bool IsSectionCleared(decimal sectionTotal, decimal? downpayment, bool balanceCleared)
+    private static bool IsSectionCleared(SectionPayment money, bool balanceCleared)
+        => money.Total <= 0m || balanceCleared || money.FinalBase <= 0m;
+
+    private static decimal SectionResidual(SectionPayment money, bool balanceCleared)
+        => (balanceCleared || money.FinalBase <= 0m) ? 0m : money.FinalCharge;
+
+    private static decimal SectionReceivedFinal(SectionPayment money, bool balanceCleared)
+        => (balanceCleared && money.FinalBase > 0m) ? money.FinalCharge : 0m;
+
+    // Splits a service section into its deposit and final-balance money, applying tax to
+    // each portion only when that portion is settled by card. The deposit is the pre-tax
+    // amount entered by the shop and ReceivedDownpayment is that deposit after any card
+    // tax. FinalBase is the pre-tax remainder and FinalCharge is that remainder after any
+    // card tax. The deposit is capped at the subtotal so the final balance never goes below zero.
+    public static SectionPayment CalculateSectionPayment(
+        decimal subtotal, decimal deposit, decimal ratePercent,
+        PaymentMethod? downpaymentMethod, PaymentMethod? finalBalanceMethod)
     {
-        if (sectionTotal <= 0m)
-            return true;
-        if (balanceCleared)
-            return true;
-        return (downpayment ?? 0m) >= sectionTotal;
+        var safeSubtotal = subtotal < 0m ? 0m : subtotal;
+        var safeDeposit = Math.Clamp(deposit, 0m, safeSubtotal);
+        var finalBase = safeSubtotal - safeDeposit;
+        var rate = ratePercent < 0m ? 0m : ratePercent;
+
+        var depositRate = downpaymentMethod == PaymentMethod.Card ? rate : 0m;
+        var finalRate = finalBalanceMethod == PaymentMethod.Card ? rate : 0m;
+
+        var receivedDownpayment = safeDeposit + (safeDeposit * depositRate / 100m);
+        var finalCharge = finalBase + (finalBase * finalRate / 100m);
+
+        return new SectionPayment(
+            safeSubtotal,
+            safeDeposit,
+            finalBase,
+            receivedDownpayment,
+            finalCharge,
+            receivedDownpayment + finalCharge,
+            (receivedDownpayment - safeDeposit) + (finalCharge - finalBase));
     }
-
-    private static decimal SectionResidual(decimal sectionTotal, decimal? downpayment, bool balanceCleared)
-        => balanceCleared ? 0m : sectionTotal - (downpayment ?? 0m);
-
-    private static decimal SectionReceivedFinal(decimal sectionTotal, decimal? downpayment, bool balanceCleared)
-        => balanceCleared ? Math.Max(0m, sectionTotal - (downpayment ?? 0m)) : 0m;
 
     [NotMapped]
     public List<CustomMadeServiceRecord> CustomMadeRecords
@@ -204,6 +255,16 @@ public enum CurrencyType
     USD = 2,
     CNY = 3
 }
+
+// Immutable money split for one service section. See Order.CalculateSectionPayment.
+public readonly record struct SectionPayment(
+    decimal Subtotal,
+    decimal Deposit,
+    decimal FinalBase,
+    decimal ReceivedDownpayment,
+    decimal FinalCharge,
+    decimal Total,
+    decimal Tax);
 
 public enum OrderServiceType
 {

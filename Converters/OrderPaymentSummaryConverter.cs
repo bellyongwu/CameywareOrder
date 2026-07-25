@@ -36,33 +36,42 @@ public class OrderPaymentSummaryConverter : IValueConverter
         var builder = new StringBuilder();
 
         AppendSection(builder, loc, symbol, new PaymentSection("ServiceType.Alterations",
-            order.AlterationTotal, order.AlterationDownpaymentMethod, order.AlterationDownpayment, order.AlterationFinalBalanceMethod, order.AlterationSectionCleared));
+            order.AlterationMoney, order.AlterationDownpaymentMethod, order.AlterationFinalBalanceMethod, order.AlterationSectionCleared));
         AppendSection(builder, loc, symbol, new PaymentSection("ServiceType.CustomMade",
-            order.CustomMadeTotal, order.CustomMadeDownpaymentMethod, order.CustomMadeDownpayment, order.CustomMadeFinalBalanceMethod, order.CustomMadeSectionCleared));
+            order.CustomMadeMoney, order.CustomMadeDownpaymentMethod, order.CustomMadeFinalBalanceMethod, order.CustomMadeSectionCleared));
         AppendSection(builder, loc, symbol, new PaymentSection("ServiceType.ReadyMade",
-            order.ClothingTotal, order.ClothingDownpaymentMethod, order.ClothingDownpayment, order.ClothingFinalBalanceMethod, order.ClothingSectionCleared));
+            order.ClothingMoney, order.ClothingDownpaymentMethod, order.ClothingFinalBalanceMethod, order.ClothingSectionCleared));
 
         return builder.Length == 0 ? "-" : builder.ToString().TrimEnd();
     }
 
     private readonly record struct PaymentSection(
         string ServiceKey,
-        decimal SectionTotal,
+        SectionPayment Money,
         PaymentMethod? DownMethod,
-        decimal? DownAmount,
         PaymentMethod? FinalMethod,
         bool Cleared);
 
     private static void AppendSection(StringBuilder builder, LocalizationService loc, string symbol, PaymentSection section)
     {
-        if (section.SectionTotal <= 0m && section.DownMethod is null && section.FinalMethod is null)
+        var money = section.Money;
+        if (money.Total <= 0m && section.DownMethod is null && section.FinalMethod is null)
             return;
 
+        var depositTax = money.ReceivedDownpayment - money.Deposit;
+        var finalTax = money.FinalCharge - money.FinalBase;
+        var taxLabel = loc["Order.Fields.TaxAmount"];
+
         builder.Append(loc[section.ServiceKey]).Append(": ");
+        // Deposit portion: method, base amount and the tax charged on it.
         builder.Append(loc["Order.Fields.Downpayment"]).Append(' ');
-        builder.Append(MethodText(loc, section.DownMethod)).Append(' ').Append(symbol).Append((section.DownAmount ?? 0m).ToString("N2"));
+        builder.Append(MethodText(loc, section.DownMethod)).Append(' ').Append(symbol).Append(money.Deposit.ToString("N2"));
+        builder.Append(" (").Append(taxLabel).Append(' ').Append(symbol).Append(depositTax.ToString("N2")).Append(')');
         builder.Append("  |  ");
-        builder.Append(loc["Order.Fields.FinalBalanceMethod"]).Append(' ').Append(MethodText(loc, section.FinalMethod));
+        // Final balance portion: method, base amount and the tax charged on it.
+        builder.Append(loc["Order.Fields.FinalBalanceShort"]).Append(' ');
+        builder.Append(MethodText(loc, section.FinalMethod)).Append(' ').Append(symbol).Append(money.FinalBase.ToString("N2"));
+        builder.Append(" (").Append(taxLabel).Append(' ').Append(symbol).Append(finalTax.ToString("N2")).Append(')');
         builder.Append("  [")
             .Append(section.Cleared ? loc["Payment.Status.Cleared"] : loc["Payment.Status.Outstanding"])
             .Append(']');

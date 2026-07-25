@@ -25,6 +25,8 @@ public class MainViewModel : INotifyPropertyChanged
     private int _currentPage = 1;
     private int _totalPages = 1;
     private int _filteredCount;
+    private string? _sortKey;
+    private bool _sortAscending = true;
 
     public MainViewModel(IServiceScopeFactory scopeFactory, LocalizationService localization)
     {
@@ -160,6 +162,12 @@ public class MainViewModel : INotifyPropertyChanged
 
     public bool CanGoToNextPage => CurrentPage < TotalPages;
 
+    // Column currently used to sort the orders list, and whether it is ascending.
+    // Null means the default load order (newest activity first).
+    public string? SortKey => _sortKey;
+
+    public bool SortAscending => _sortAscending;
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -223,6 +231,43 @@ public class MainViewModel : INotifyPropertyChanged
         RebuildOrdersView();
     }
 
+    // Toggles the sort direction when the same column header is clicked again, or
+    // switches to the newly clicked column (ascending first). Sorting applies to the
+    // whole filtered set before paging, then resets to the first page.
+    public void SortBy(string sortKey)
+    {
+        if (string.IsNullOrWhiteSpace(sortKey))
+            return;
+
+        if (_sortKey == sortKey)
+        {
+            _sortAscending = !_sortAscending;
+        }
+        else
+        {
+            _sortKey = sortKey;
+            _sortAscending = true;
+        }
+
+        OnPropertyChanged(nameof(SortKey));
+        OnPropertyChanged(nameof(SortAscending));
+        _currentPage = 1;
+        RebuildOrdersView();
+    }
+
+    private static Func<Order, object?>? GetSortSelector(string sortKey) => sortKey switch
+    {
+        nameof(Order.OrderNumber) => order => order.OrderNumber ?? string.Empty,
+        nameof(Order.CustomerName) => order => order.CustomerName ?? string.Empty,
+        nameof(Order.PhoneNumber) => order => order.PhoneNumber ?? string.Empty,
+        nameof(Order.OrderDate) => order => order.OrderDate,
+        nameof(Order.Status) => order => (int)order.Status,
+        nameof(Order.TotalAmount) => order => order.TotalAmount,
+        "BalanceStatus" => order => order.IsBalanceCleared,
+        nameof(Order.LastModifiedDate) => order => order.LastModifiedDate ?? order.OrderDate,
+        _ => null
+    };
+
     private void RebuildOrdersView()
     {
         var query = _allOrders.AsEnumerable();
@@ -242,6 +287,15 @@ public class MainViewModel : INotifyPropertyChanged
 
         var filtered = query.ToList();
         _filteredCount = filtered.Count;
+
+        // Apply the active column sort across the whole filtered set before paging so
+        // sorting spans every page, not just the visible one.
+        if (_sortKey is not null && GetSortSelector(_sortKey) is { } selector)
+        {
+            filtered = _sortAscending
+                ? filtered.OrderBy(selector).ToList()
+                : filtered.OrderByDescending(selector).ToList();
+        }
 
         TotalPages = Math.Max(1, (int)Math.Ceiling(_filteredCount / (double)PageSize));
         if (CurrentPage > TotalPages)

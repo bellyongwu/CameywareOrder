@@ -10,6 +10,7 @@ using LeeYongeOrdering.Converters;
 using LeeYongeOrdering.Data;
 using LeeYongeOrdering.Localization;
 using LeeYongeOrdering.Models;
+using LeeYongeOrdering.Services;
 using LeeYongeOrdering.ViewModels;
 using LeeYongeOrdering.Views;
 
@@ -57,7 +58,9 @@ public partial class MainWindow : Window
     {
         var selectedStatus = _viewModel.SelectedOrder?.Status;
         var isReadOnly = selectedStatus.HasValue && IsReadOnlyStatus(selectedStatus.Value);
-        EditOrderButton.Content = _localization[isReadOnly ? "Toolbar.ViewOrder" : "Toolbar.EditOrder"];
+        var label = _localization[isReadOnly ? "Toolbar.ViewOrder" : "Toolbar.EditOrder"];
+        EditOrderButton.Content = label;
+        EditContextMenuItem.Header = label;
     }
 
     private void InitializeLanguageSwitcher()
@@ -210,6 +213,38 @@ public partial class MainWindow : Window
             grid.Columns[^1].Width = remaining;
     }
 
+    // Sort the orders list when a sortable column header is clicked. Each click toggles
+    // ascending/descending on that column; clicking a new column starts ascending.
+    private void OnOrderColumnHeaderClick(object sender, RoutedEventArgs e)
+    {
+        if (e.OriginalSource is not GridViewColumnHeader header
+            || header.Role == GridViewColumnHeaderRole.Padding
+            || header.Column is null)
+            return;
+
+        var sortKey = OrderColumnSort.GetSortKey(header.Column);
+        if (string.IsNullOrEmpty(sortKey))
+            return;
+
+        _viewModel.SortBy(sortKey);
+        UpdateSortGlyphs();
+    }
+
+    // Reflect the active sort on the column headers with an up/down arrow glyph.
+    private void UpdateSortGlyphs()
+    {
+        if (OrdersListView.View is not GridView grid)
+            return;
+
+        var arrow = _viewModel.SortAscending ? " \u25B2" : " \u25BC";
+        foreach (var column in grid.Columns)
+        {
+            var key = OrderColumnSort.GetSortKey(column);
+            OrderColumnSort.SetSortGlyph(column,
+                !string.IsNullOrEmpty(key) && key == _viewModel.SortKey ? arrow : string.Empty);
+        }
+    }
+
     private void OnContextEditClick(object sender, RoutedEventArgs e)
         => OnEditOrderClick(sender, e);
 
@@ -265,10 +300,15 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnEditBrandingClick(object sender, RoutedEventArgs e)
+    {
+        var window = new ReceiptBrandingWindow(_localization) { Owner = this };
+        window.ShowDialog();
+    }
+
     private FlowDocument BuildReceiptDocument(Order order, double pageWidth)
     {
         var symbol = order.CurrencyType == CurrencyType.CNY ? "￥" : "$";
-        string Money(decimal value) => $"{symbol}{value:N2}";
 
         var document = new FlowDocument
         {
@@ -278,6 +318,32 @@ public partial class MainWindow : Window
             PageWidth = pageWidth,
             ColumnWidth = pageWidth
         };
+
+        var brandingSettings = ReceiptBrandingStore.Load();
+        var branding = brandingSettings.ForLanguage(_localization.CurrentLanguageCode);
+        var hasHeader = !BrandingRenderer.IsEmpty(branding.HeaderXaml);
+
+        AddReceiptTitle(document, hasHeader);
+        AddReceiptCustomerInfo(document, order);
+
+        document.Blocks.Add(ReceiptDivider());
+
+        AddAlterationReceiptSection(document, order, symbol);
+        AddClothingReceiptSection(document, order, symbol);
+        AddCustomMadeReceiptSection(document, order, symbol);
+
+        AddReceiptTotals(document, order, symbol);
+
+        InjectReceiptBranding(document, brandingSettings, branding);
+
+        return document;
+    }
+
+    // The default shop title only appears when the header editor has no content.
+    private void AddReceiptTitle(FlowDocument document, bool hasHeader)
+    {
+        if (hasHeader)
+            return;
 
         document.Blocks.Add(new Paragraph(new Bold(new Run(_localization["Main.HeaderTitle"])))
         {
@@ -291,83 +357,148 @@ public partial class MainWindow : Window
             Foreground = System.Windows.Media.Brushes.Gray,
             Margin = new Thickness(0, 0, 0, 12)
         });
+    }
 
+    private void AddReceiptCustomerInfo(FlowDocument document, Order order)
+    {
         document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderNumber"], order.OrderNumber));
         AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.CustomerName"], order.CustomerName);
         AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.PhoneNumber"], order.PhoneNumber);
         AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.Email"], order.Email);
         AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.Address"], order.Address);
         document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderDate"], order.OrderDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Status"], _localization[$"Status.{order.Status}"]));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.CurrencyType"], _localization[$"CurrencyType.{order.CurrencyType}"]));
+        var servicesSummary = new OrderServicesSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
+        AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.ServiceType"], servicesSummary);
+    }
 
-        document.Blocks.Add(ReceiptDivider());
+    // Alterations service detail. Only shown when the section carries a charge and a
+    // deposit method has been selected; otherwise the service is considered not added.
+    private void AddAlterationReceiptSection(FlowDocument document, Order order, string symbol)
+    {
+        if (!order.AlterationAddedToReceipt)
+            return;
 
-        // Alterations service detail. Only shown when the section carries a charge and a
-        // deposit method has been selected; otherwise the service is considered not added.
-        if (order.AlterationAddedToReceipt)
+        document.Blocks.Add(ReceiptSectionTitle(_localization["OrderEdit.Panel.Alterations"]));
+        if (!string.IsNullOrWhiteSpace(order.ServiceDetails))
+            document.Blocks.Add(new Paragraph(new Run(LocalizeWithFallback("Alteration.Category", order.ServiceDetails))) { Margin = new Thickness(0, 0, 0, 4) });
+
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Subtotal"], Money(symbol, order.AlterationSubtotal ?? 0m)));
+        if (order.AlterationTax > 0m)
+            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TaxAmount"], Money(symbol, order.AlterationTax)));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(symbol, order.AlterationTotal), bold: true));
+        document.Blocks.Add(ReceiptServiceDivider());
+    }
+
+    // Ready-made clothing / accessories. Only shown when the section carries a charge and a
+    // deposit method has been selected; otherwise the service is considered not added.
+    private void AddClothingReceiptSection(FlowDocument document, Order order, string symbol)
+    {
+        if (order.Items.Count == 0 || !order.ClothingAddedToReceipt)
+            return;
+
+        document.Blocks.Add(ReceiptSectionTitle(_localization["OrderEdit.Panel.ReadyMade"]));
+        foreach (var item in order.Items)
         {
-            document.Blocks.Add(ReceiptSectionTitle(_localization["OrderEdit.Panel.Alterations"]));
-            if (!string.IsNullOrWhiteSpace(order.ServiceDetails))
-                document.Blocks.Add(new Paragraph(new Run(LocalizeWithFallback("Alteration.Category", order.ServiceDetails))) { Margin = new Thickness(0, 0, 0, 4) });
-            if (order.AlterationTotal > 0m)
-            {
-                document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Subtotal"], Money(order.AlterationSubtotal ?? 0m)));
-                document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(order.AlterationTotal), bold: true));
-            }
+            var line = new Paragraph { Margin = new Thickness(0, 0, 0, 2) };
+            var name = LocalizeWithFallback("ClothingItem", item.ProductName);
+            line.Inlines.Add(new Run($"{name}  {Money(symbol, item.EffectiveUnitPrice)} x{item.Quantity}"));
+            line.Inlines.Add(new Run($"    {Money(symbol, item.TotalPrice)}") { FontWeight = FontWeights.SemiBold });
+            document.Blocks.Add(line);
         }
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Subtotal"], Money(symbol, order.ClothingSubtotal ?? 0m)));
+        if (order.ClothingTax > 0m)
+            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TaxAmount"], Money(symbol, order.ClothingTax)));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(symbol, order.ClothingTotal), bold: true));
+        document.Blocks.Add(ReceiptServiceDivider());
+    }
 
-        // Ready-made clothing / accessories. Only shown when the section carries a charge and a
-        // deposit method has been selected; otherwise the service is considered not added.
-        if (order.Items.Count > 0 && order.ClothingAddedToReceipt)
-        {
-            document.Blocks.Add(ReceiptSectionTitle(_localization["OrderEdit.Panel.ReadyMade"]));
-            foreach (var item in order.Items)
-            {
-                var line = new Paragraph { Margin = new Thickness(0, 0, 0, 2) };
-                var name = LocalizeWithFallback("ClothingItem", item.ProductName);
-                line.Inlines.Add(new Run($"{name}  {Money(item.EffectiveUnitPrice)} x{item.Quantity}"));
-                line.Inlines.Add(new Run($"    {Money(item.TotalPrice)}") { FontWeight = FontWeights.SemiBold });
-                document.Blocks.Add(line);
-            }
-            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Subtotal"], Money(order.ClothingSubtotal ?? 0m)));
-            document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(order.ClothingTotal), bold: true));
-        }
-
-        // Custom-made records. Only shown when the section carries a charge and a deposit
-        // method has been selected; otherwise the service is considered not added.
+    // Custom-made records. Only shown when the section carries a charge and a deposit
+    // method has been selected; otherwise the service is considered not added.
+    private void AddCustomMadeReceiptSection(FlowDocument document, Order order, string symbol)
+    {
         var customMadeRecords = order.CustomMadeRecords;
-        if (customMadeRecords.Count > 0 && order.CustomMadeAddedToReceipt)
+        if (customMadeRecords.Count == 0 || !order.CustomMadeAddedToReceipt)
+            return;
+
+        var summaryConverter = new CustomMadeRecordSummaryConverter();
+        document.Blocks.Add(ReceiptSectionTitle(_localization["Detail.CustomMadeRecords"]));
+        foreach (var record in customMadeRecords)
         {
-            var summaryConverter = new CustomMadeRecordSummaryConverter();
-            document.Blocks.Add(ReceiptSectionTitle(_localization["Detail.CustomMadeRecords"]));
-            foreach (var record in customMadeRecords)
-            {
-                var summary = summaryConverter.Convert(record, typeof(string), null, CultureInfo.CurrentCulture) as string ?? string.Empty;
-                var line = new Paragraph { Margin = new Thickness(0, 0, 0, 2) };
-                line.Inlines.Add(new Run(summary));
-                line.Inlines.Add(new Run($"    {Money(record.SumTotal)}") { FontWeight = FontWeights.SemiBold });
-                document.Blocks.Add(line);
-            }
-            document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(order.CustomMadeTotal), bold: true));
+            var summary = summaryConverter.Convert(record, typeof(string), null, CultureInfo.CurrentCulture) as string ?? string.Empty;
+            var line = new Paragraph { Margin = new Thickness(0, 0, 0, 2) };
+            line.Inlines.Add(new Run(summary));
+            line.Inlines.Add(new Run($"    {Money(symbol, record.SumTotal)}") { FontWeight = FontWeights.SemiBold });
+            document.Blocks.Add(line);
+        }
+        document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(symbol, order.CustomMadeTotal), bold: true));
+        document.Blocks.Add(ReceiptServiceDivider());
+    }
+
+    private void AddReceiptTotals(FlowDocument document, Order order, string symbol)
+    {
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TotalAmount"], Money(symbol, order.TotalAmount), bold: true));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Downpayment"], Money(symbol, order.TotalDownpayment)));
+        // Show the actually-received deposit only when a card surcharge made it differ
+        // from the nominal deposit, so cash/e-transfer receipts stay uncluttered.
+        if (order.ReceivedDownpayment != order.TotalDownpayment)
+            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedDownpayment"], Money(symbol, order.ReceivedDownpayment)));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedFinalBalance"], Money(symbol, order.ReceivedFinalBalance)));
+        if (order.TotalTax > 0m)
+            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PaidTax"], Money(symbol, order.TotalTax)));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(symbol, order.FinalBalance)));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.BalanceStatus"],
+            new OrderPaymentSummaryConverter().Convert(order, typeof(string), "Status", CultureInfo.CurrentCulture) as string));
+
+        var paymentBreakdown = new OrderPaymentSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
+        if (!string.IsNullOrWhiteSpace(paymentBreakdown) && paymentBreakdown != "-")
+        {
+            document.Blocks.Add(ReceiptSectionTitle(_localization["Order.Fields.PaymentBreakdown"]));
+            document.Blocks.Add(ReceiptMultilineParagraph(paymentBreakdown));
         }
 
-        document.Blocks.Add(ReceiptDivider());
-
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TotalAmount"], Money(order.TotalAmount), bold: true));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PrepaidDownpayment"], Money(order.TotalDownpayment)));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedFinalBalance"], Money(order.ReceivedFinalBalance)));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(order.FinalBalance)));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.BalanceStatus"],
-            order.IsBalanceCleared ? _localization["Payment.Status.Cleared"] : _localization["Payment.Status.Outstanding"]));
-
-        document.Blocks.Add(new Paragraph(new Run($"{_localization["Receipt.PrintedAt"]}: {DateTime.Now:yyyy-MM-dd HH:mm}"))
+        if (!string.IsNullOrWhiteSpace(order.Notes))
         {
-            FontSize = 10,
-            Foreground = System.Windows.Media.Brushes.Gray,
-            TextAlignment = TextAlignment.Center,
-            Margin = new Thickness(0, 12, 0, 0)
-        });
+            document.Blocks.Add(ReceiptSectionTitle(_localization["Order.Fields.Notes"]));
+            document.Blocks.Add(ReceiptMultilineParagraph(order.Notes));
+        }
+    }
 
-        return document;
+    private static string Money(string symbol, decimal value) => $"{symbol}{value:N2}";
+
+    // Prepends the preset logo + rich header and appends the rich footer for the
+    // current language, so printed receipts share the same branding as the
+    // measurements export.
+    private static void InjectReceiptBranding(FlowDocument document, ReceiptBrandingSettings settings, LocalizedBranding branding)
+    {
+        BrandingRenderer.AppendToFlowDocument(document, branding.HeaderXaml, atTop: true);
+
+        var logoBlock = BrandingRenderer.CreateLogoBlock(ReceiptBrandingStore.GetLogoPath(settings), maxHeight: 80, settings.LogoPlacement);
+        if (logoBlock is not null)
+        {
+            var anchor = document.Blocks.FirstBlock;
+            if (anchor is null)
+                document.Blocks.Add(logoBlock);
+            else
+                document.Blocks.InsertBefore(anchor, logoBlock);
+        }
+
+        BrandingRenderer.AppendToFlowDocument(document, branding.FooterXaml, atTop: false);
+    }
+
+    // Builds a paragraph that preserves the line breaks in multi-line receipt content.
+    private static Paragraph ReceiptMultilineParagraph(string content)
+    {
+        var paragraph = new Paragraph { FontSize = 11, Margin = new Thickness(0, 0, 0, 4) };
+        var lines = content.Replace("\r\n", "\n").Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (i > 0)
+                paragraph.Inlines.Add(new LineBreak());
+            paragraph.Inlines.Add(new Run(lines[i]));
+        }
+        return paragraph;
     }
 
     private static Paragraph ReceiptInfoLine(string label, string? value, bool bold = false)
@@ -390,7 +521,7 @@ public partial class MainWindow : Window
     }
 
     private static Paragraph ReceiptSectionTitle(string title)
-        => new(new Bold(new Run(title))) { FontSize = 11, Margin = new Thickness(0, 6, 0, 4) };
+        => new(new Bold(new Run(title))) { FontSize = 14, Margin = new Thickness(0, 6, 0, 4) };
 
     private static Paragraph ReceiptDivider()
         => new()
@@ -398,6 +529,15 @@ public partial class MainWindow : Window
             Margin = new Thickness(0, 6, 0, 6),
             BorderBrush = System.Windows.Media.Brushes.LightGray,
             BorderThickness = new Thickness(0, 0, 0, 1)
+        };
+
+    // A lighter, thinner divider placed after each service section (including the last).
+    private static Paragraph ReceiptServiceDivider()
+        => new()
+        {
+            Margin = new Thickness(0, 4, 0, 4),
+            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE6, 0xE6, 0xE6)),
+            BorderThickness = new Thickness(0, 0, 0, 0.7)
         };
 
     private string LocalizeWithFallback(string prefix, string? suffix)
@@ -409,4 +549,25 @@ public partial class MainWindow : Window
         var localized = _localization[key];
         return string.Equals(localized, key, StringComparison.Ordinal) ? suffix : localized;
     }
+}
+
+// Attached properties that let each GridViewColumn declare the Order member it sorts by
+// (SortKey) and carry the current sort-direction arrow (SortGlyph) shown in its header.
+public static class OrderColumnSort
+{
+    public static readonly DependencyProperty SortKeyProperty =
+        DependencyProperty.RegisterAttached(
+            "SortKey", typeof(string), typeof(OrderColumnSort), new PropertyMetadata(string.Empty));
+
+    public static void SetSortKey(DependencyObject element, string value) => element.SetValue(SortKeyProperty, value);
+
+    public static string GetSortKey(DependencyObject element) => (string)element.GetValue(SortKeyProperty);
+
+    public static readonly DependencyProperty SortGlyphProperty =
+        DependencyProperty.RegisterAttached(
+            "SortGlyph", typeof(string), typeof(OrderColumnSort), new PropertyMetadata(string.Empty));
+
+    public static void SetSortGlyph(DependencyObject element, string value) => element.SetValue(SortGlyphProperty, value);
+
+    public static string GetSortGlyph(DependencyObject element) => (string)element.GetValue(SortGlyphProperty);
 }

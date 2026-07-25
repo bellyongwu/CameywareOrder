@@ -109,7 +109,7 @@
                             <CheckBox x:Name="PickedUpCheck" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.PickedUp], Mode=OneWay}" FontWeight="Bold" Foreground="#1F6F43" VerticalAlignment="Center" Margin="22,4,0,4" Checked="OnPickedUpChanged" Unchecked="OnPickedUpChanged"/>
                         </StackPanel>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PrepaidDownpayment], Mode=OneWay}" FontWeight="Bold" Foreground="Black" VerticalAlignment="Center" Margin="0,4,12,4"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedDownpayment], Mode=OneWay}" FontWeight="Bold" Foreground="Black" VerticalAlignment="Center" Margin="0,4,12,4"/>
                         <TextBlock Grid.Row="1" Grid.Column="1" x:Name="PrepaidDownpaymentText" FontWeight="SemiBold" Foreground="#27AE60" VerticalAlignment="Center" Margin="0,4"/>
 
                         <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedFinalBalance], Mode=OneWay}" FontWeight="Bold" Foreground="Black" VerticalAlignment="Center" Margin="0,4,12,4"/>

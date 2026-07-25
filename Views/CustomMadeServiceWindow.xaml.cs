@@ -617,6 +617,11 @@ public partial class CustomMadeServiceWindow : Window
 
         QuestPDF.Settings.License = LicenseType.Community;
 
+        var brandingSettings = ReceiptBrandingStore.Load();
+        var branding = brandingSettings.ForLanguage(languageCode);
+        var logoBytes = ReceiptBrandingStore.GetLogoBytes(brandingSettings);
+        var hasHeader = !BrandingRenderer.IsEmpty(branding.HeaderXaml);
+
         Document.Create(container =>
         {
             container.Page(page =>
@@ -628,7 +633,14 @@ public partial class CustomMadeServiceWindow : Window
                 page.Content().Column(column =>
                 {
                     column.Spacing(6);
-                    column.Item().Text(L("Customer.Measurements.PrintTitle")).Bold().FontSize(18);
+
+                    if (logoBytes is not null)
+                        BrandingRenderer.AlignLogo(column.Item(), brandingSettings.LogoPlacement).MaxHeight(70).Image(logoBytes);
+                    BrandingRenderer.RenderToPdf(column, branding.HeaderXaml);
+
+                    // Only fall back to the default document title when the header editor is empty.
+                    if (!hasHeader)
+                        column.Item().Text(L("Customer.Measurements.PrintTitle")).Bold().FontSize(18);
 
                     foreach (var (label, value) in infoRows)
                     {
@@ -641,6 +653,8 @@ public partial class CustomMadeServiceWindow : Window
 
                     AddPdfMeasurementSection(column, L("Measure.Section.Jacket"), jacketRows);
                     AddPdfMeasurementSection(column, L("Measure.Section.Shirt"), shirtRows);
+
+                    BrandingRenderer.RenderToPdf(column, branding.FooterXaml);
                 });
             });
         }).GeneratePdf(filePath);
