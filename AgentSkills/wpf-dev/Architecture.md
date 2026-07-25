@@ -1,0 +1,219 @@
+# Architecture — LeeYongeOrdering (WPF Ordering App)
+
+Component map of the app this skill maintains. Keep this current whenever
+components are added/renamed or the way pieces fit together changes.
+
+## Stack
+
+- **UI:** WPF, `net8.0-windows`, C# with `Nullable` + `ImplicitUsings` enabled.
+- **Persistence:** EF Core 8 + SQLite. Schema is evolved at startup with
+  idempotent runtime column guards in addition to the initial migration.
+- **API (in-process):** Hot Chocolate GraphQL server hosted via the .NET
+  Generic Host at `http://localhost:5050` (scheme/host/port composed from
+  constants in `App.xaml.cs`).
+- **PDF/print:** FlowDocument + `PrintDialog`; QuestPDF used for measurement
+  export in the custom-made window.
+
+## Startup / composition root
+
+- `App.xaml` / `App.xaml.cs` — builds the Generic Host, registers
+  `AppDbContext`, the GraphQL server, and view-models; runs startup schema
+  guards (`EnsureDatabaseCompatibilityAsync` — data-driven `OrderColumnMigrations`
+  table + `ReadOrdersSchemaAsync` / `TableExistsAsync` / `ReadColumnNamesAsync`
+  helpers); loads the saved language via `LanguagePreferenceStore`.
+
+## Layers / folders
+
+- **Data/**
+  - `AppDbContext` — `DbSet<Order> Orders`, `DbSet<OrderItem> OrderItems`
+    (auto-property form); `OnModelCreating` maps precision, max-lengths,
+    relationships, and `Ignore`s computed members.
+  - `AppDbContextFactory` — `IDesignTimeDbContextFactory<AppDbContext>` for EF
+    tooling; also writes a legacy migrations-history baseline.
+  - `DatabasePathProvider` — resolves DB file path / connection string, ensures
+    the folder exists.
+- **Services/**
+  - `DocumentStorageService` — static global helper for custom-made record
+    images: import/export/delete under
+    `AppData\LeeYongeOrdering\Documents\CustomMade`. NOTE: `using Path =
+    System.IO.Path;` alias is required because `ImplicitUsings` pulls in
+    `HotChocolate.Path`, making bare `Path` ambiguous.
+  - `MeasurementTermsService` — singleton `Instance` for the Measurement Terms
+    system; persists `measurement-terms.json` under LocalAppData. Holds the
+    `MeasurementTermsConfig` (terms + garments + garment→term maps); resolves
+    localized names (predefined → `Measure.Term.*`/`Measure.Garment.*` string
+    table, custom → per-language Names dict); add/edit/delete custom terms &
+    garments; add/remove term↔garment mapping (blocks locked predefined pairs);
+    `LoadOrSeed`+`MergePredefined` seed/upgrade; `ConfigChanged` event.
+  - `CustomMadeMeasurementReader` — static read-only helper that projects an
+    order's saved `CustomMadeRecords` into print/UI shapes: `GetGarmentNames`
+    (distinct, order-preserving garment display names in a given language) and
+    `BuildSections` (per garment: name + term/value rows in the requested unit,
+    ordered by the garment's configured term order; per-garment work factored
+    into `BuildGarmentSection`). Resolves names via `MeasurementTermsService`;
+    used by the 定制服务 list column and the measurement print paths.
+- **Models/**
+  - `Order` — customer + per-section (Alteration / CustomMade / Clothing) money
+    fields, **a payment method per portion** (deposit + final balance), cleared
+    flags, status; many `[NotMapped]` computed totals/residuals. Money is derived
+    through the static `Order.CalculateSectionPayment(...)` → `SectionPayment`
+    record struct (per-**portion** tax: a portion is taxed only when its own
+    method is Card; deposit is pre-tax and clamped to subtotal). Per-section
+    `XxxMoney` accessors feed `XxxTotal`/`XxxTax`, `ReceivedDownpayment` (实收定金),
+    `TotalTax`, `FinalBalance` (剩余尾款), `ReceivedFinalBalance` (实收尾款), and
+    the `IsSectionCleared`/`SectionResidual`/`SectionReceivedFinal` helpers.
+    Per-section `XxxAddedToReceipt` gates (`total > 0 && deposit method selected`)
+    are shared by the receipt and detail panel; `Items` collection. The
+    `HasCustomMadeService` `[NotMapped]` gate (any custom-made record with a
+    garment carrying a cm/inch value) drives the 定制服务 list flag and gates the
+    measurement print actions. `IsRefunded` (Status Cancelled/Returned) +
+    `PaymentStatusKind` (`BalanceStatusKind` enum: Outstanding / ClearedPickedUp /
+    ClearedNotPickedUp / Refunded) are the single source of truth for the
+    balance-status indicator (label + colour) across the list, detail panel and
+    receipt.
+  - `SectionPayment` — immutable `readonly record struct`
+    (Subtotal, Deposit, FinalBase, ReceivedDownpayment, FinalCharge, Total, Tax)
+    holding one section's money split.
+  - `OrderItem` — clothing line item (`UnitPrice`, `PromotionalPrice`, computed
+    `EffectiveUnitPrice` / `TotalPrice`).
+  - `CustomMadeServiceRecord` — measurement record (serialized to
+    `Order.CustomMadeRecordsJson`); carries a `Documents` list of
+    `CustomMadeDocument` references and a garment-driven `Garments` list
+    (`GarmentMeasurement` → `MeasurementValue` cm/in pairs keyed by garment/term
+    id). Legacy static Jacket*/Shirt* fields are retained for back-compat and
+    migrate into `Garments` on next save.
+  - `MeasurementTerm` / `GarmentType` / `MeasurementTermsConfig` /
+    `MeasurementTermDefaults` (`Models/MeasurementTerm.cs`) — the Measurement
+    Terms domain: a term has an id + `IsPredefined` + per-language `Names`; a
+    garment has an id + `IsPredefined` + `Names` + ordered `TermIds`. Defaults
+    seed 21 predefined term ids and 7 predefined locked garments
+    (jacket/vest/shirt/pants/blouse/dress/qipao) with default garment→term maps;
+    `IsTermLockedInGarment` enforces predefined pairs.
+  - `CustomMadeDocument` — reference to an uploaded image attached to a
+    custom-made record (`Category` enum: HandwritingReceipt/Fabric/Photo/Other,
+    `FileName`, `StoredFileName`). Image bytes live on disk in the document
+    store; only this reference is serialized into the record JSON.
+- **GraphQL/**
+  - `Query` — `GetOrders`, `GetOrderAsync`.
+  - `Mutation` — create/update/delete order, add/remove order item.
+- **Localization/**
+  - `LocalizationService` — singleton `Instance`, indexer `["Key"]`, `Format`,
+    `LanguageChanged` event; reads `Languages.xml`.
+  - `LanguagePreferenceStore` — persists the chosen language code.
+- **Converters/** — `CurrencyAmountConverter`, `LocalizationLookupConverter`,
+  `NullToVisibilityConverter`, `OrderStatusToLocalizedTextConverter`,
+  `CustomMadeRecordSummaryConverter`, `OrderPaymentSummaryConverter`,
+  `PositiveAmountToVisibilityConverter`, `CustomMadeServiceFlagConverter`
+  (binds the whole `Order` row; ConverterParameter `Flag` → localized 有/无,
+  `Names` → bracketed garment names with a zh 、 / en ", " separator,
+  `NamesVisibility` → Visible/Collapsed), and a last-item border-thickness
+  `IMultiValueConverter`. The built-in `BooleanToVisibilityConverter` is also
+  registered in `MainWindow.xaml` (`BoolToVisibility`) for the section gates.
+- **ViewModels/**
+  - `MainViewModel` — order list, paging, search, delete, **copy order**
+    (`CopyOrderCommand`/`CopyOrderAsync`: deep-copy an aggregate, reset a closed
+    status to `Processing`); **column sorting** (`SortBy(key)` + `SortKey`/
+    `SortAscending` state + `GetSortSelector`, applied over the whole filtered set
+    before paging in `RebuildOrdersView`); `DatabaseFilePath` (WPF-bound, kept
+    instance).
+  - `RelayCommand` — `ICommand` helper.
+- **Views/**
+  - `MainWindow` — order list + detail + paging. The list is a **`ListView` +
+    `GridView`** (not a DataGrid) with a right-click `ListView.ContextMenu`
+    (Edit/Copy/Delete/Print) and a `PreviewMouseRightButtonDown` row-select
+    `EventSetter`, keyboard shortcuts (`Enter` = open/details, `Delete` = delete
+    command), and **clickable column headers that sort** (asc/desc toggle + ▲/▼
+    glyph) via the `GridViewColumnHeader.Click` handler and the
+    `OrderColumnSort` attached properties. The Edit toolbar button + context-menu
+    item relabel to "查看订单 / View Order" for read-only orders
+    (`RefreshToolbarLabels`). The list also shows a centered, wrappable **定制服务**
+    column (via `CustomMadeServiceFlagConverter`: 有/无 + bracketed garment names);
+    the former Last Modified column moved into the detail panel (ordering still
+    defaults to LastModifiedDate desc in `LoadOrdersAsync`). Rows gray out by
+    status: **Cancelled/Returned** (`IsRefunded`) are the lightest gray,
+    **Completed/Shipped** (`IsPickedUp`) a bit darker. When
+    `SelectedOrder.HasCustomMadeService` is true, the Print toolbar submenu and the
+    row context menu expose **打印量身尺寸** (measurements only) and
+    **打印小票和所有尺寸** (receipt + measurements); both open
+    `MeasurementPrintOptionsWindow` then print via `PrintDialog` + `FlowDocument`
+    (`PrintMeasurements`/`BuildMeasurementDocument`/`AddMeasurementSections`, the
+    latter starting on a fresh page when appended after a receipt). Measurement
+    language/unit come from the dialog; the receipt portion stays in the UI
+    language. Detail-panel service sections are shown/hidden via
+    the `Order.XxxAddedToReceipt` gates, and show the 定金/实收定金 and
+    剩余尾款/实收尾款 pairs.
+  - `OrderColumnSort` (static, in `MainWindow.xaml.cs`) — attached properties
+    `SortKey` (per-column sort member) and `SortGlyph` (header arrow), consumed by
+    the header `ContentTemplate` and `UpdateSortGlyphs`.
+  - `OrderEditWindow` — the large create/edit form: per-section pricing &
+    payment, computed summary, "clear all balances" master checkbox, and the
+    "已取货 / Picked up" quick-complete checkbox that locks the status dropdown.
+    Switching the status to 已取消/已退货 puts the editor in a **refund lock**
+    state (`_isRefunded`): every service/payment control (incl. 当前服务尾款已结清)
+    is disabled via `SetServiceControlsEnabled(false)`, all checkboxes (incl.
+    已取货) get the `NotApplicableCheckBox` style (red box + red strikethrough
+    label + red line across the whole control), and 余额状态 shows
+    已退款或部分退款; customer fields + the custom-made records list stay usable so
+    measurements remain viewable. Reverting the status unlocks and re-runs
+    `RefreshComputedTotals`. `_isRefunded` also feeds `RefreshPricingLocks`,
+    `UpdateBalanceStatusDisplay` and the PickedUp enable rule.
+  - `CustomMadeServiceWindow` — measurement capture + PDF export, plus a
+    **Documents** section (4 categories: handwriting receipts / fabrics / photos
+    / others; multiple images each) with Upload/View/Download/Replace/Delete.
+    Uploads copy into the store immediately but commit only on Save (rolled back
+    in `OnClosed` when not saved). Edit buttons bind `IsEnabled` to the window's
+    `CanEditDocuments` (`!_isReadOnly`) via `RelativeSource AncestorType=Window`.
+    Measurements are **garment-driven**: a `ToggleButton` selector (from
+    `MeasurementTermsService.Instance.Garments`) preselects garments and only the
+    related terms render as dynamically-generated per-garment measurement cards.
+    A cm/in dual-unit cache (`_valueCache` garmentId→termId→cm/in +
+    `_termEditors`) is the session source of truth; unit switch and language
+    change persist then rebuild; old records seed from legacy Jacket/Shirt fields;
+    `BuildGarmentsIntoRecord` writes `record.Garments` on save; PDF export
+    iterates all selected garments/props (`BuildPdfGarmentSections`).
+  - `MeasurementTermsWindow` — the 3-column drag-drop mapping UI for the
+    Measurement Terms system (left = garments list with lock/alt-language/delete +
+    Add Garment; center = assigned-terms drop zone; right = all terms as draggable
+    chips + Add Measurement). Modern card styling + Segoe MDL2 icons; predefined
+    term/garment names locked; custom items support inline edit/save/delete +
+    alt-language remap. Launched from the 本地配置 menu.
+  - `MeasurementTermLanguageWindow` — alt-language name editor popup (one name row
+    per `LocalizationService.AvailableLanguages`); returns a langCode→name dict.
+  - `MeasurementPrintOptionsWindow` — small pre-print dialog asking for the
+    measurement **language** (radios from `LocalizationService.AvailableLanguages`,
+    default = current) and **unit** (cm default / inch); exposes
+    `SelectedLanguageCode` + `IsInch` (set on Print). Feeds the 打印量身尺寸 /
+    打印小票和所有尺寸 print paths (a print method, not save-to-PDF).
+  - `DocumentPreviewWindow` — in-app image viewer (loads via `BitmapImage`
+    `OnLoad` so the file is not locked).
+  - `LanguageSelectionWindow` — first-run language picker.
+- **Migrations/** — `InitialCreate` + model snapshot.
+- **Languages.xml** (project root) — the single source string table (Chinese
+  block first, English block second).
+
+## Key cross-cutting patterns
+
+- All UI text flows through `Languages.xml` / `LocalizationService`.
+- Per-section money math is centralized in `Order.CalculateSectionPayment` and
+  reused by the model and the live editor summary so persisted and on-screen
+  values match; tax is applied **per payment portion** (deposit vs. final) based
+  on that portion's method.
+- The paged order list is sorted in `MainViewModel` over the whole filtered set
+  before `Skip/Take`, driven by per-column `OrderColumnSort.SortKey` attached
+  properties (never `Items.SortDescriptions`, which would sort one page only).
+- Control-sync handlers use reentrancy guard flags (`_syncingPayment`,
+  `_syncingStatus`) to avoid event loops.
+- Order "picked up" state is represented purely by `OrderStatus.Completed`
+  (no separate column); the "已取货" checkbox is only enabled once the order has a
+  charge and every final balance is cleared, and read-only statuses relabel the
+  open action to "查看订单 / View Order".
+- A service section is "added" only when it carries a charge **and** a deposit
+  method is selected; the `Order.XxxAddedToReceipt` gate is the single source of
+  truth for both the printed receipt and the on-screen detail panel.
+- Balance status is derived, never stored: `Order.PaymentStatusKind` /
+  `IsRefunded` are computed from the order's money + `Status`, and each surface
+  (list column, detail panel, receipt, editor) maps that to its own label +
+  colour (green / light green / orange / red). Cancelled/returned orders are
+  "refunded": their receipt omits 剩余尾款 and shows 已退款或部分退款.
+- Destructive actions (delete) own their confirm dialog inside the command, so
+  toolbar, context menu, and the `Delete` key share one prompt.
