@@ -11,7 +11,9 @@
     <Text key="Toolbar.DeleteOrder">删除订单</Text>
     <Text key="Toolbar.CopyOrder">复制订单</Text>
     <Text key="Toolbar.PrintReceipt">打印小票</Text>
-    <Text key="Toolbar.HeaderFooter">页眉页脚</Text>
+    <Text key="Toolbar.LocalConfig">本地配置</Text>
+    <Text key="Toolbar.HeaderFooter">添加或更改页眉页脚</Text>
+    <Text key="Toolbar.LocalDatabase">本地数据库</Text>
     <Text key="Toolbar.Refresh">刷新</Text>
     <Text key="Toolbar.Language">语言</Text>
     <Text key="Toolbar.OpenDataFolder">打开数据目录</Text>
@@ -244,7 +246,9 @@
     <Text key="Toolbar.DeleteOrder">Delete Order</Text>
     <Text key="Toolbar.CopyOrder">Copy Order</Text>
     <Text key="Toolbar.PrintReceipt">Print Receipt</Text>
-    <Text key="Toolbar.HeaderFooter">Header &amp; Footer</Text>
+    <Text key="Toolbar.LocalConfig">Local Configuration</Text>
+    <Text key="Toolbar.HeaderFooter">Add or Change Header &amp; Footer</Text>
+    <Text key="Toolbar.LocalDatabase">Local Database</Text>
     <Text key="Toolbar.Refresh">Refresh</Text>
     <Text key="Toolbar.Language">Language</Text>
     <Text key="Toolbar.OpenDataFolder">Open Data Folder</Text>

@@ -1350,9 +1350,10 @@ public partial class OrderEditWindow : Window
     }
 
     // Quick-operation "picked up" toggle: ticking it forces the order status to
-    // Completed and locks the status dropdown; unticking unlocks it. A manual
-    // change of the status dropdown to Completed ticks this box in return. A
-    // dedicated guard prevents the two handlers from re-triggering each other.
+    // Completed and locks the status dropdown; unticking reverts the status to
+    // Processing and unlocks it. A manual change of the status dropdown to
+    // Completed ticks this box in return. A dedicated guard prevents the two
+    // handlers from re-triggering each other.
     private void OnPickedUpChanged(object sender, RoutedEventArgs e)
     {
         if (_syncingStatus)
@@ -1368,6 +1369,7 @@ public partial class OrderEditWindow : Window
             }
             else
             {
+                SelectStatus(OrderStatus.Processing);
                 StatusBox.IsEnabled = true;
             }
         }
