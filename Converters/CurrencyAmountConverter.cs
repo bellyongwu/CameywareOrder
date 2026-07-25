@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Windows.Data;
-using LeeYongeOrdering.Models;
 
 namespace LeeYongeOrdering.Converters;
 
@@ -8,12 +7,11 @@ public class CurrencyAmountConverter : IMultiValueConverter
 {
     public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
     {
-        if (values.Length < 2)
+        if (values.Length < 1)
             return string.Empty;
 
         var amount = ParseAmount(values[0]);
-        var currencyType = ParseCurrency(values[1]);
-        var symbol = currencyType == CurrencyType.CNY ? "￥" : "$";
+        var symbol = Services.CurrencySettingService.Instance.Symbol;
 
         return $"{symbol}{amount:N2}";
     }
@@ -33,15 +31,5 @@ public class CurrencyAmountConverter : IMultiValueConverter
             return (decimal)floatValue;
 
         return decimal.TryParse(value?.ToString(), out var parsed) ? parsed : 0m;
-    }
-
-    private static CurrencyType ParseCurrency(object? value)
-    {
-        if (value is CurrencyType currencyType)
-            return currencyType;
-
-        return Enum.TryParse<CurrencyType>(value?.ToString(), out var parsed)
-            ? parsed
-            : CurrencyType.CAD;
     }
 }

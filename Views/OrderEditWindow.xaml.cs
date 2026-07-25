@@ -98,7 +98,6 @@ public partial class OrderEditWindow : Window
         AlterationTaxBox.Text = DefaultTaxRate.ToString("0.##");
         ClothingTaxBox.Text = DefaultTaxRate.ToString("0.##");
         CustomMadeTaxBox.Text = DefaultTaxRate.ToString("0.##");
-        CurrencyBox.SelectedIndex = 0;
         StatusBox.SelectedIndex = 0;
         AlterationCategoryBox.SelectedIndex = 0;
         AlterationsRadio.IsChecked = true;
@@ -147,7 +146,6 @@ public partial class OrderEditWindow : Window
         AlterationTaxBox.Text = (existing.AlterationTaxRate ?? existing.TaxRate)?.ToString("0.##") ?? DefaultTaxRate.ToString("0.##");
         ClothingTaxBox.Text = (existing.ClothingTaxRate ?? existing.TaxRate)?.ToString("0.##") ?? DefaultTaxRate.ToString("0.##");
         CustomMadeTaxBox.Text = existing.CustomMadeTaxRate?.ToString("0.##") ?? DefaultTaxRate.ToString("0.##");
-        CurrencyBox.SelectedValue = existing.CurrencyType;
 
         if (existing.ServiceType == OrderServiceType.Alterations && string.IsNullOrWhiteSpace(AlterationPriceBox.Text))
         {
@@ -195,7 +193,6 @@ public partial class OrderEditWindow : Window
         ReadOnlyNotice.Visibility = Visibility.Visible;
 
         StatusBox.IsEnabled = false;
-        CurrencyBox.IsEnabled = false;
         PickedUpCheck.IsEnabled = false;
         ClearAllBalancesCheck.IsEnabled = false;
 
@@ -261,7 +258,6 @@ public partial class OrderEditWindow : Window
     {
         InitializePaymentSectionControls();
         RegisterDecimalTextBoxes();
-        InitializeCurrencyBox();
         InitializeCustomMadeRecordsList();
         SelectServiceType(OrderServiceType.Alterations);
         RefreshLocalizedLabels();
@@ -348,7 +344,6 @@ public partial class OrderEditWindow : Window
 
         RefreshCustomMadeButtonLabel();
 
-        RefreshCurrencyBoxLabels();
         RefreshServicePanels();
         RefreshCustomMadeEmptyState();
         RefreshPaymentLabels();
@@ -380,34 +375,6 @@ public partial class OrderEditWindow : Window
         ClothingDownMethodLabel.Text = downLabel;
         ClothingFinalMethodLabel.Text = finalLabel;
     }
-
-    private void InitializeCurrencyBox()
-    {
-        RefreshCurrencyBoxLabels();
-        CurrencyBox.SelectedValuePath = nameof(ComboBoxItem.Tag);
-        CurrencyBox.SelectionChanged += (_, _) => RefreshComputedTotals();
-    }
-
-    private void RefreshCurrencyBoxLabels()
-    {
-        var current = CurrencyBox.SelectedValue?.ToString();
-        CurrencyBox.Items.Clear();
-        CurrencyBox.Items.Add(CreateCurrencyItem(CurrencyType.CAD, "CurrencyType.CAD"));
-        CurrencyBox.Items.Add(CreateCurrencyItem(CurrencyType.USD, "CurrencyType.USD"));
-        CurrencyBox.Items.Add(CreateCurrencyItem(CurrencyType.CNY, "CurrencyType.CNY"));
-
-        if (Enum.TryParse<CurrencyType>(current, out var parsedCurrency))
-            CurrencyBox.SelectedValue = parsedCurrency;
-        else if (CurrencyBox.SelectedIndex < 0)
-            CurrencyBox.SelectedIndex = 0;
-    }
-
-    private ComboBoxItem CreateCurrencyItem(CurrencyType currencyType, string key)
-        => new()
-        {
-            Content = _localization[key],
-            Tag = currencyType
-        };
 
     private void InitializeCustomMadeRecordsList()
     {
@@ -443,7 +410,6 @@ public partial class OrderEditWindow : Window
     private readonly record struct OrderSaveData(
         OrderStatus Status,
         OrderServiceType ServiceType,
-        CurrencyType CurrencyType,
         decimal? Subtotal,
         decimal? TaxRate,
         List<OrderItem> ClothingItems,
@@ -460,7 +426,6 @@ public partial class OrderEditWindow : Window
         var data = new OrderSaveData(
             status,
             serviceType,
-            GetSelectedCurrencyType(),
             GetSubtotalForServiceType(serviceType),
             GetTaxRateForServiceType(serviceType),
             // Every section is persisted independently, so clothing items are always captured.
@@ -586,7 +551,6 @@ public partial class OrderEditWindow : Window
         order.PhoneNumber = PhoneNumberBox.Text.Trim();
         order.Email = string.IsNullOrWhiteSpace(EmailBox.Text) ? null : EmailBox.Text.Trim();
         order.Address = string.IsNullOrWhiteSpace(AddressBox.Text) ? null : AddressBox.Text.Trim();
-        order.CurrencyType = data.CurrencyType;
         order.ServiceType = data.ServiceType;
         order.ServiceDetails = (AlterationCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string;
         order.AdditionalNotes = NullIfWhiteSpace(AlterationAdditionalNotesBox.Text);
@@ -1028,9 +992,6 @@ public partial class OrderEditWindow : Window
 
         return OrderServiceType.Alterations;
     }
-
-    private CurrencyType GetSelectedCurrencyType()
-        => CurrencyBox.SelectedValue is CurrencyType currencyType ? currencyType : CurrencyType.CAD;
 
     private void RefreshComputedTotals(bool runAutoComplete = true)
     {
@@ -1892,9 +1853,9 @@ public partial class OrderEditWindow : Window
     private static decimal ParseDecimalOrZero(string? value)
         => decimal.TryParse(value, out var result) ? result : 0m;
 
-    private string FormatCurrency(decimal amount)
+    private static string FormatCurrency(decimal amount)
     {
-        var symbol = GetSelectedCurrencyType() == CurrencyType.CNY ? "￥" : "$";
+        var symbol = Services.CurrencySettingService.Instance.Symbol;
         return $"{symbol}{amount:0.00}";
     }
 

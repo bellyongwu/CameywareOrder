@@ -13,6 +13,7 @@
     <Text key="Toolbar.PrintReceipt">打印小票</Text>
     <Text key="Toolbar.LocalConfig">本地配置</Text>
     <Text key="Toolbar.HeaderFooter">添加或更改页眉页脚</Text>
+    <Text key="Toolbar.CurrencySetting">货币设置</Text>
     <Text key="Toolbar.LocalDatabase">本地数据库</Text>
     <Text key="Toolbar.Refresh">刷新</Text>
     <Text key="Toolbar.Language">语言</Text>
@@ -208,6 +209,8 @@
     <Text key="CurrencyType.CAD">加元</Text>
     <Text key="CurrencyType.USD">美元</Text>
     <Text key="CurrencyType.CNY">人民币</Text>
+    <Text key="Currency.Title">货币设置</Text>
+    <Text key="Currency.Prompt">请选择本店使用的货币，此设置将应用于所有订单。</Text>
 
     <Text key="ServiceType.Alterations">修改衣服</Text>
     <Text key="ServiceType.CustomMade">定制服务</Text>
@@ -248,6 +251,7 @@
     <Text key="Toolbar.PrintReceipt">Print Receipt</Text>
     <Text key="Toolbar.LocalConfig">Local Configuration</Text>
     <Text key="Toolbar.HeaderFooter">Add or Change Header &amp; Footer</Text>
+    <Text key="Toolbar.CurrencySetting">Currency Setup</Text>
     <Text key="Toolbar.LocalDatabase">Local Database</Text>
     <Text key="Toolbar.Refresh">Refresh</Text>
     <Text key="Toolbar.Language">Language</Text>
@@ -443,6 +447,8 @@
     <Text key="CurrencyType.CAD">CAD</Text>
     <Text key="CurrencyType.USD">USD</Text>
     <Text key="CurrencyType.CNY">CNY</Text>
+    <Text key="Currency.Title">Currency Setup</Text>
+    <Text key="Currency.Prompt">Choose the currency used by your shop. This setting applies to all orders.</Text>
 
     <Text key="ServiceType.Alterations">Alterations</Text>
     <Text key="ServiceType.CustomMade">Custom Made Service</Text>

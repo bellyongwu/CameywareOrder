@@ -32,7 +32,7 @@ public class OrderPaymentSummaryConverter : IValueConverter
                 : loc["Payment.Status.ClearedNotPickedUp"];
         }
 
-        var symbol = order.CurrencyType == CurrencyType.CNY ? "￥" : "$";
+        var symbol = Services.CurrencySettingService.Instance.Symbol;
         var builder = new StringBuilder();
 
         AppendSection(builder, loc, symbol, new PaymentSection("ServiceType.Alterations",

@@ -306,9 +306,16 @@ public partial class MainWindow : Window
         window.ShowDialog();
     }
 
+    private void OnCurrencySettingClick(object sender, RoutedEventArgs e)
+    {
+        var window = new CurrencySettingWindow(_localization) { Owner = this };
+        if (window.ShowDialog() == true)
+            _viewModel.LoadOrdersCommand.Execute(null);
+    }
+
     private FlowDocument BuildReceiptDocument(Order order, double pageWidth)
     {
-        var symbol = order.CurrencyType == CurrencyType.CNY ? "￥" : "$";
+        var symbol = CurrencySettingService.Instance.Symbol;
 
         var document = new FlowDocument
         {
@@ -368,7 +375,7 @@ public partial class MainWindow : Window
         AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.Address"], order.Address);
         document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderDate"], order.OrderDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
         document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Status"], _localization[$"Status.{order.Status}"]));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.CurrencyType"], _localization[$"CurrencyType.{order.CurrencyType}"]));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.CurrencyType"], _localization[$"CurrencyType.{CurrencySettingService.Instance.Current}"]));
         var servicesSummary = new OrderServicesSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
         AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.ServiceType"], servicesSummary);
     }

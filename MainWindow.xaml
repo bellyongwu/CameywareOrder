@@ -187,6 +187,7 @@
                             </StackPanel>
                         </MenuItem.Header>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}" Click="OnEditBrandingClick"/>
+                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CurrencySetting], Mode=OneWay}" Click="OnCurrencySettingClick"/>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalDatabase], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyDataPath], Mode=OneWay}" Click="OnCopyDataPathClick"/>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.RevealDataFile], Mode=OneWay}" Click="OnRevealDataFileClick"/>
@@ -365,9 +366,6 @@
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Foreground="#777" FontSize="11"/>
                     <TextBlock Text="{Binding SelectedOrder.Status, Converter={StaticResource OrderStatusToLocalizedTextConverter}}" Margin="0,2,0,10" FontSize="13"/>
-
-                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CurrencyType], Mode=OneWay}" Foreground="#777" FontSize="11"/>
-                    <TextBlock Text="{Binding SelectedOrder.CurrencyType, Converter={StaticResource LocalizationLookupConverter}, ConverterParameter=CurrencyType}" Margin="0,2,0,10" FontSize="13"/>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ServiceType], Mode=OneWay}" Foreground="#777" FontSize="11"/>
                     <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderServicesSummaryConverter}}" Margin="0,2,0,10" FontSize="13"/>
