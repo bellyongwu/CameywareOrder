@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Collections.ObjectModel;
 using LeeYongeOrdering.Localization;
 using LeeYongeOrdering.Models;
@@ -38,6 +39,14 @@ public partial class CustomMadeServiceWindow : Window
     private bool _isApplyingMeasurementView;
     private bool _isInch;
 
+    // Garment-driven measurements replace the old static Jacket/Shirt fields. The
+    // cache is the session's source of truth (both units per value); the editors
+    // are the live text boxes generated for the currently selected garments.
+    private readonly MeasurementTermsService _terms = MeasurementTermsService.Instance;
+    private readonly List<string> _selectedGarmentIds = new();
+    private readonly Dictionary<string, Dictionary<string, MeasurementCell>> _valueCache = new();
+    private readonly List<TermInputEditor> _termEditors = new();
+
     // Documents are grouped by category into their own collections so each category
     // renders its own list. Uploaded files are copied into the store immediately;
     // the changes are only committed to disk on Save and rolled back on cancel/close.
@@ -64,8 +73,7 @@ public partial class CustomMadeServiceWindow : Window
         PhoneNumberBox.Text = _workingRecord.PhoneNumber = existing?.PhoneNumber ?? defaultPhoneNumber ?? string.Empty;
         EmailBox.Text = _workingRecord.Email = existing?.Email ?? defaultEmail;
 
-        InitializeMeasurementCachesFromRecord();
-        ApplyMeasurementValuesForCurrentUnit();
+        InitializeGarmentState();
 
         CustomPriceBox.Text = _workingRecord.Price?.ToString("0.##") ?? string.Empty;
 
@@ -110,14 +118,9 @@ public partial class CustomMadeServiceWindow : Window
         PhoneNumberBox.IsReadOnly = true;
         EmailBox.IsReadOnly = true;
         CustomPriceBox.IsReadOnly = true;
-        JacketLengthBox.IsReadOnly = true;
-        JacketChestBox.IsReadOnly = true;
-        JacketSitAroundBox.IsReadOnly = true;
-        JacketSleevesBox.IsReadOnly = true;
-        ShirtLengthBox.IsReadOnly = true;
-        ShirtChestBox.IsReadOnly = true;
-        ShirtSitAroundBox.IsReadOnly = true;
-        ShirtSleevesBox.IsReadOnly = true;
+        GarmentSelectorPanel.IsEnabled = false;
+        foreach (var editor in _termEditors)
+            editor.Box.IsReadOnly = true;
 
         CustomFromScratchRadio.IsEnabled = false;
         MeasurementsOnlyRadio.IsEnabled = false;
@@ -139,6 +142,9 @@ public partial class CustomMadeServiceWindow : Window
             RefreshMeasurementContextText();
             RefreshGenderButtons(_workingRecord.AgeType);
             RefreshUploadButtonTexts();
+            PersistAllEditors(updateOppositeUnit: true);
+            BuildGarmentSelector();
+            RebuildGarmentMeasurements();
         }
         finally
         {
@@ -175,9 +181,9 @@ public partial class CustomMadeServiceWindow : Window
         if (toInch == _isInch)
             return;
 
-        PersistMeasurementCachesFromCurrentView(updateOppositeUnit: false);
+        PersistAllEditors(updateOppositeUnit: false);
         _isInch = toInch;
-        ApplyMeasurementValuesForCurrentUnit();
+        ApplyEditorsForUnit();
     }
 
     private static string ConvertMeasurement(string? text, bool toInch)
@@ -200,7 +206,8 @@ public partial class CustomMadeServiceWindow : Window
         if (_isInitializing || _isApplyingMeasurementView)
             return;
 
-        PersistMeasurementCachesFromCurrentView(updateOppositeUnit: true);
+        if (sender is TextBox { Tag: TermInputEditor editor })
+            PersistEditor(editor, updateOppositeUnit: true);
     }
 
     private void OnDownloadSubmitClick(object sender, RoutedEventArgs e)
@@ -217,7 +224,7 @@ public partial class CustomMadeServiceWindow : Window
                 FileName = $"{BuildPdfFileName(languageCode)}.pdf"
             };
 
-            if (saveDialog.ShowDialog() != true)
+            if (!saveDialog.ShowDialog().GetValueOrDefault())
                 return;
 
             SaveMeasurementsPdf(saveDialog.FileName, languageCode);
@@ -236,8 +243,8 @@ public partial class CustomMadeServiceWindow : Window
 
         ErrorText.Text = string.Empty;
 
-        PersistMeasurementCachesFromCurrentView(updateOppositeUnit: true);
-        SyncLegacyMeasurementsFromCmCache();
+        PersistAllEditors(updateOppositeUnit: true);
+        BuildGarmentsIntoRecord();
 
         var customerName = CustomerNameBox.Text.Trim();
         var phoneNumber = PhoneNumberBox.Text.Trim();
@@ -485,7 +492,7 @@ public partial class CustomMadeServiceWindow : Window
     }
 
     private CustomMadeServiceMode GetSelectedMode()
-        => CustomFromScratchRadio?.IsChecked == true
+        => (CustomFromScratchRadio?.IsChecked).GetValueOrDefault()
             ? CustomMadeServiceMode.CustomFromScratch
             : CustomMadeServiceMode.MeasurementsOnly;
 
@@ -520,9 +527,9 @@ public partial class CustomMadeServiceWindow : Window
 
         var ageType = selected ?? _workingRecord.AgeType;
         CustomMadeAgeType[] options;
-        if (AdultRadio.IsChecked == true)
+        if (AdultRadio.IsChecked.GetValueOrDefault())
             options = new[] { CustomMadeAgeType.AdultMale, CustomMadeAgeType.AdultFemale };
-        else if (TeenRadio.IsChecked == true)
+        else if (TeenRadio.IsChecked.GetValueOrDefault())
             options = new[] { CustomMadeAgeType.TeenBoy, CustomMadeAgeType.TeenGirl };
         else
             options = new[] { CustomMadeAgeType.ChildBoy, CustomMadeAgeType.ChildGirl };
@@ -570,18 +577,18 @@ public partial class CustomMadeServiceWindow : Window
 
     private string GetAgeGroupLabel()
     {
-        if (AdultRadio.IsChecked == true)
+        if (AdultRadio.IsChecked.GetValueOrDefault())
             return _localization["OrderEdit.Panel.Adult"];
-        if (TeenRadio.IsChecked == true)
+        if (TeenRadio.IsChecked.GetValueOrDefault())
             return _localization["OrderEdit.Panel.Teen"];
         return _localization["OrderEdit.Panel.Child"];
     }
 
     private string GetAgeGroupLabel(string languageCode)
     {
-        if (AdultRadio.IsChecked == true)
+        if (AdultRadio.IsChecked.GetValueOrDefault())
             return _localization.GetText("OrderEdit.Panel.Adult", languageCode);
-        if (TeenRadio.IsChecked == true)
+        if (TeenRadio.IsChecked.GetValueOrDefault())
             return _localization.GetText("OrderEdit.Panel.Teen", languageCode);
         return _localization.GetText("OrderEdit.Panel.Child", languageCode);
     }
@@ -589,6 +596,8 @@ public partial class CustomMadeServiceWindow : Window
     private void SaveMeasurementsPdf(string filePath, string languageCode)
     {
         string L(string key) => _localization.GetText(key, languageCode);
+
+        PersistAllEditors(updateOppositeUnit: true);
 
         var infoRows = new List<(string Label, string Value)>();
         AddInfoRow(infoRows, L("Order.Fields.OrderNumber"), _defaultOrderNumber);
@@ -599,21 +608,7 @@ public partial class CustomMadeServiceWindow : Window
         AddInfoRow(infoRows, L("OrderEdit.Panel.AgeType"), $"{GetAgeGroupLabel(languageCode)} / {GetAgeTypeLabel(_workingRecord.AgeType, languageCode)}");
         AddInfoRow(infoRows, L("Measure.Unit.Label"), L(_isInch ? "Measure.Unit.Inch" : "Measure.Unit.Cm"));
 
-        var jacketRows = FilterMeasurementRows(new (string Label, string? Value)[]
-        {
-            (L("Measure.Length"), MeasurementForPdf(JacketLengthBox.Text)),
-            (L("Measure.Chest"), MeasurementForPdf(JacketChestBox.Text)),
-            (L("Measure.SitAround"), MeasurementForPdf(JacketSitAroundBox.Text)),
-            (L("Measure.Sleeves"), MeasurementForPdf(JacketSleevesBox.Text))
-        });
-
-        var shirtRows = FilterMeasurementRows(new (string Label, string? Value)[]
-        {
-            (L("Measure.Length"), MeasurementForPdf(ShirtLengthBox.Text)),
-            (L("Measure.Chest"), MeasurementForPdf(ShirtChestBox.Text)),
-            (L("Measure.SitAround"), MeasurementForPdf(ShirtSitAroundBox.Text)),
-            (L("Measure.Sleeves"), MeasurementForPdf(ShirtSleevesBox.Text))
-        });
+        var garmentSections = BuildPdfGarmentSections(languageCode);
 
         QuestPDF.Settings.License = LicenseType.Community;
 
@@ -651,8 +646,8 @@ public partial class CustomMadeServiceWindow : Window
                         });
                     }
 
-                    AddPdfMeasurementSection(column, L("Measure.Section.Jacket"), jacketRows);
-                    AddPdfMeasurementSection(column, L("Measure.Section.Shirt"), shirtRows);
+                    foreach (var (title, rows) in garmentSections)
+                        AddPdfMeasurementSection(column, title, rows);
 
                     BrandingRenderer.RenderToPdf(column, branding.FooterXaml);
                 });
@@ -665,6 +660,37 @@ public partial class CustomMadeServiceWindow : Window
             .Where(row => !string.IsNullOrWhiteSpace(row.Value))
             .Select(row => (row.Label, row.Value!.Trim()))
             .ToList();
+
+    private List<(string Title, List<(string Label, string Value)> Rows)> BuildPdfGarmentSections(string languageCode)
+    {
+        var sections = new List<(string Title, List<(string Label, string Value)> Rows)>();
+
+        var orderedIds = _terms.Garments
+            .Select(g => g.Id)
+            .Where(id => _selectedGarmentIds.Contains(id))
+            .ToList();
+
+        foreach (var garmentId in orderedIds)
+        {
+            if (!_valueCache.TryGetValue(garmentId, out var cells))
+                continue;
+
+            var rows = new List<(string Label, string? Value)>();
+            foreach (var term in _terms.GetGarmentTerms(garmentId))
+            {
+                if (!cells.TryGetValue(term.Id, out var cell))
+                    continue;
+                var display = _isInch ? cell.In : cell.Cm;
+                rows.Add((MeasurementTermsService.ResolveTermName(term, languageCode), MeasurementForPdf(display)));
+            }
+
+            var filtered = FilterMeasurementRows(rows);
+            if (filtered.Count > 0)
+                sections.Add((MeasurementTermsService.ResolveGarmentName(_terms.FindGarment(garmentId)!, languageCode), filtered));
+        }
+
+        return sections;
+    }
 
     private static void AddInfoRow(List<(string Label, string Value)> rows, string label, string? value)
     {
@@ -724,57 +750,264 @@ public partial class CustomMadeServiceWindow : Window
         return text.Trim();
     }
 
-    private void InitializeMeasurementCachesFromRecord()
-    {
-        (_workingRecord.JacketLengthCm, _workingRecord.JacketLengthIn) = BuildInitialMeasurementPair(
-            _workingRecord.JacketLengthCm,
-            _workingRecord.JacketLengthIn,
-            _workingRecord.JacketLength);
-        (_workingRecord.JacketChestCm, _workingRecord.JacketChestIn) = BuildInitialMeasurementPair(
-            _workingRecord.JacketChestCm,
-            _workingRecord.JacketChestIn,
-            _workingRecord.JacketChest);
-        (_workingRecord.JacketSitAroundCm, _workingRecord.JacketSitAroundIn) = BuildInitialMeasurementPair(
-            _workingRecord.JacketSitAroundCm,
-            _workingRecord.JacketSitAroundIn,
-            _workingRecord.JacketSitAround);
-        (_workingRecord.JacketSleevesCm, _workingRecord.JacketSleevesIn) = BuildInitialMeasurementPair(
-            _workingRecord.JacketSleevesCm,
-            _workingRecord.JacketSleevesIn,
-            _workingRecord.JacketSleeves);
-        (_workingRecord.ShirtLengthCm, _workingRecord.ShirtLengthIn) = BuildInitialMeasurementPair(
-            _workingRecord.ShirtLengthCm,
-            _workingRecord.ShirtLengthIn,
-            _workingRecord.ShirtLength);
-        (_workingRecord.ShirtChestCm, _workingRecord.ShirtChestIn) = BuildInitialMeasurementPair(
-            _workingRecord.ShirtChestCm,
-            _workingRecord.ShirtChestIn,
-            _workingRecord.ShirtChest);
-        (_workingRecord.ShirtSitAroundCm, _workingRecord.ShirtSitAroundIn) = BuildInitialMeasurementPair(
-            _workingRecord.ShirtSitAroundCm,
-            _workingRecord.ShirtSitAroundIn,
-            _workingRecord.ShirtSitAround);
-        (_workingRecord.ShirtSleevesCm, _workingRecord.ShirtSleevesIn) = BuildInitialMeasurementPair(
-            _workingRecord.ShirtSleevesCm,
-            _workingRecord.ShirtSleevesIn,
-            _workingRecord.ShirtSleeves);
+    // --- Garment-driven measurements -------------------------------------------
 
-        SyncLegacyMeasurementsFromCmCache();
+    private void InitializeGarmentState()
+    {
+        SeedValueCacheFromRecord();
+        BuildGarmentSelector();
+        RebuildGarmentMeasurements();
     }
 
-    private void ApplyMeasurementValuesForCurrentUnit()
+    // Populate the cache + selection from the record's garment list, falling back to
+    // the legacy static Jacket/Shirt fields for records saved before this system.
+    private void SeedValueCacheFromRecord()
+    {
+        _valueCache.Clear();
+        _selectedGarmentIds.Clear();
+
+        if (_workingRecord.Garments.Count > 0)
+        {
+            SeedFromGarmentList();
+            return;
+        }
+
+        SeedLegacyGarment("jacket", new (string, string?, string?, string?)[]
+        {
+            ("length", _workingRecord.JacketLengthCm, _workingRecord.JacketLengthIn, _workingRecord.JacketLength),
+            ("chest", _workingRecord.JacketChestCm, _workingRecord.JacketChestIn, _workingRecord.JacketChest),
+            ("sitAround", _workingRecord.JacketSitAroundCm, _workingRecord.JacketSitAroundIn, _workingRecord.JacketSitAround),
+            ("sleeve", _workingRecord.JacketSleevesCm, _workingRecord.JacketSleevesIn, _workingRecord.JacketSleeves)
+        });
+        SeedLegacyGarment("shirt", new (string, string?, string?, string?)[]
+        {
+            ("length", _workingRecord.ShirtLengthCm, _workingRecord.ShirtLengthIn, _workingRecord.ShirtLength),
+            ("chest", _workingRecord.ShirtChestCm, _workingRecord.ShirtChestIn, _workingRecord.ShirtChest),
+            ("sitAround", _workingRecord.ShirtSitAroundCm, _workingRecord.ShirtSitAroundIn, _workingRecord.ShirtSitAround),
+            ("sleeve", _workingRecord.ShirtSleevesCm, _workingRecord.ShirtSleevesIn, _workingRecord.ShirtSleeves)
+        });
+    }
+
+    private void SeedFromGarmentList()
+    {
+        foreach (var garment in _workingRecord.Garments)
+        {
+            if (_terms.FindGarment(garment.GarmentId) is null)
+                continue;
+
+            var cells = GetOrCreateGarmentCache(garment.GarmentId);
+            foreach (var value in garment.Values)
+            {
+                var (cm, inch) = BuildInitialMeasurementPair(value.Cm, value.In, null);
+                if (cm is null && inch is null)
+                    continue;
+                cells[value.TermId] = new MeasurementCell { Cm = cm, In = inch };
+            }
+
+            if (!_selectedGarmentIds.Contains(garment.GarmentId))
+                _selectedGarmentIds.Add(garment.GarmentId);
+        }
+    }
+
+    private void SeedLegacyGarment(string garmentId, IEnumerable<(string TermId, string? Cm, string? In, string? Legacy)> values)
+    {
+        if (_terms.FindGarment(garmentId) is null)
+            return;
+
+        var cells = GetOrCreateGarmentCache(garmentId);
+        var hasAny = false;
+        foreach (var (termId, cm, inch, legacy) in values)
+        {
+            var (normCm, normIn) = BuildInitialMeasurementPair(cm, inch, legacy);
+            if (normCm is null && normIn is null)
+                continue;
+            cells[termId] = new MeasurementCell { Cm = normCm, In = normIn };
+            hasAny = true;
+        }
+
+        if (hasAny && !_selectedGarmentIds.Contains(garmentId))
+            _selectedGarmentIds.Add(garmentId);
+    }
+
+    private Dictionary<string, MeasurementCell> GetOrCreateGarmentCache(string garmentId)
+    {
+        if (!_valueCache.TryGetValue(garmentId, out var cells))
+        {
+            cells = new Dictionary<string, MeasurementCell>();
+            _valueCache[garmentId] = cells;
+        }
+        return cells;
+    }
+
+    private void BuildGarmentSelector()
+    {
+        GarmentSelectorPanel.Children.Clear();
+        foreach (var garment in _terms.Garments)
+        {
+            var toggle = new ToggleButton
+            {
+                Content = MeasurementTermsService.ResolveGarmentName(garment),
+                Tag = garment.Id,
+                IsChecked = _selectedGarmentIds.Contains(garment.Id),
+                Style = (Style)FindResource("SelectionToggleButtonStyle"),
+                Margin = new Thickness(0, 0, 10, 10)
+            };
+            toggle.Click += OnGarmentToggleClick;
+            GarmentSelectorPanel.Children.Add(toggle);
+        }
+    }
+
+    private void OnGarmentToggleClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton { Tag: string garmentId } toggle)
+            return;
+
+        // Persist current inputs first so toggling never loses typed values.
+        PersistAllEditors(updateOppositeUnit: true);
+
+        if (toggle.IsChecked is true)
+        {
+            if (!_selectedGarmentIds.Contains(garmentId))
+                _selectedGarmentIds.Add(garmentId);
+        }
+        else
+        {
+            _selectedGarmentIds.Remove(garmentId);
+        }
+
+        RebuildGarmentMeasurements();
+    }
+
+    // Regenerate the per-garment measurement input cards for the current selection.
+    private void RebuildGarmentMeasurements()
+    {
+        _termEditors.Clear();
+        GarmentMeasurementsPanel.Children.Clear();
+
+        var orderedIds = _terms.Garments
+            .Select(g => g.Id)
+            .Where(id => _selectedGarmentIds.Contains(id))
+            .ToList();
+
+        foreach (var garmentId in orderedIds)
+            GarmentMeasurementsPanel.Children.Add(BuildGarmentCard(garmentId));
+
+        NoGarmentText.Visibility = orderedIds.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        if (_isReadOnly)
+        {
+            foreach (var editor in _termEditors)
+                editor.Box.IsReadOnly = true;
+        }
+    }
+
+    private Border BuildGarmentCard(string garmentId)
+    {
+        var cells = GetOrCreateGarmentCache(garmentId);
+        var terms = _terms.GetGarmentTerms(garmentId);
+
+        var content = new StackPanel();
+        content.Children.Add(new TextBlock
+        {
+            Text = MeasurementTermsService.ResolveGarmentName(_terms.FindGarment(garmentId)!),
+            FontWeight = FontWeights.SemiBold,
+            Foreground = Hex("#2980B9"),
+            Margin = new Thickness(0, 0, 0, 8)
+        });
+
+        if (terms.Count == 0)
+        {
+            content.Children.Add(new TextBlock
+            {
+                Text = _localization["MeasureTerms.EmptyGarment"],
+                Foreground = Hex("#9AA6B2"),
+                FontStyle = FontStyles.Italic
+            });
+        }
+        else
+        {
+            content.Children.Add(BuildTermsGrid(garmentId, terms, cells));
+        }
+
+        return new Border
+        {
+            Margin = new Thickness(0, 0, 0, 12),
+            Padding = new Thickness(12),
+            CornerRadius = new CornerRadius(6),
+            BorderThickness = new Thickness(1),
+            BorderBrush = Hex("#E1E5EA"),
+            Background = Hex("#FAFBFC"),
+            Child = content
+        };
+    }
+
+    private Grid BuildTermsGrid(string garmentId, IReadOnlyList<MeasurementTerm> terms, Dictionary<string, MeasurementCell> cells)
+    {
+        var grid = new Grid();
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var rowCount = (terms.Count + 1) / 2;
+        for (var i = 0; i < rowCount; i++)
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        for (var index = 0; index < terms.Count; index++)
+        {
+            var term = terms[index];
+            var row = index / 2;
+            var columnPair = (index % 2) * 2;
+
+            if (!cells.TryGetValue(term.Id, out var cell))
+            {
+                cell = new MeasurementCell();
+                cells[term.Id] = cell;
+            }
+
+            var label = new TextBlock
+            {
+                Text = MeasurementTermsService.ResolveTermName(term),
+                Margin = new Thickness(0, 4, 8, 4),
+                VerticalAlignment = System.Windows.VerticalAlignment.Center
+            };
+            Grid.SetRow(label, row);
+            Grid.SetColumn(label, columnPair);
+            grid.Children.Add(label);
+
+            var box = CreateMeasurementBox(garmentId, term.Id, cell, columnPair == 0);
+            Grid.SetRow(box, row);
+            Grid.SetColumn(box, columnPair + 1);
+            grid.Children.Add(box);
+        }
+
+        return grid;
+    }
+
+    private TextBox CreateMeasurementBox(string garmentId, string termId, MeasurementCell cell, bool isLeftColumn)
+    {
+        var box = new TextBox
+        {
+            Margin = new Thickness(0, 4, isLeftColumn ? 14 : 0, 4),
+            Padding = new Thickness(6, 4, 6, 4),
+            Text = _isInch ? (cell.In ?? string.Empty) : (cell.Cm ?? string.Empty)
+        };
+        var editor = new TermInputEditor { GarmentId = garmentId, TermId = termId, Box = box, Cell = cell };
+        box.Tag = editor;
+        box.PreviewTextInput += OnMeasurementPreviewTextInput;
+        box.TextChanged += OnMeasurementValueChanged;
+        DataObject.AddPastingHandler(box, (s, e) => HandlePaste(s, e, MeasurementInputPattern));
+        _termEditors.Add(editor);
+        return box;
+    }
+
+    private void ApplyEditorsForUnit()
     {
         _isApplyingMeasurementView = true;
         try
         {
-            JacketLengthBox.Text = PickMeasurementForCurrentUnit(_workingRecord.JacketLengthCm, _workingRecord.JacketLengthIn);
-            JacketChestBox.Text = PickMeasurementForCurrentUnit(_workingRecord.JacketChestCm, _workingRecord.JacketChestIn);
-            JacketSitAroundBox.Text = PickMeasurementForCurrentUnit(_workingRecord.JacketSitAroundCm, _workingRecord.JacketSitAroundIn);
-            JacketSleevesBox.Text = PickMeasurementForCurrentUnit(_workingRecord.JacketSleevesCm, _workingRecord.JacketSleevesIn);
-            ShirtLengthBox.Text = PickMeasurementForCurrentUnit(_workingRecord.ShirtLengthCm, _workingRecord.ShirtLengthIn);
-            ShirtChestBox.Text = PickMeasurementForCurrentUnit(_workingRecord.ShirtChestCm, _workingRecord.ShirtChestIn);
-            ShirtSitAroundBox.Text = PickMeasurementForCurrentUnit(_workingRecord.ShirtSitAroundCm, _workingRecord.ShirtSitAroundIn);
-            ShirtSleevesBox.Text = PickMeasurementForCurrentUnit(_workingRecord.ShirtSleevesCm, _workingRecord.ShirtSleevesIn);
+            foreach (var editor in _termEditors)
+                editor.Box.Text = _isInch ? (editor.Cell.In ?? string.Empty) : (editor.Cell.Cm ?? string.Empty);
         }
         finally
         {
@@ -782,74 +1015,55 @@ public partial class CustomMadeServiceWindow : Window
         }
     }
 
-    private void PersistMeasurementCachesFromCurrentView(bool updateOppositeUnit)
+    private void PersistAllEditors(bool updateOppositeUnit)
     {
-        (_workingRecord.JacketLengthCm, _workingRecord.JacketLengthIn) = BuildMeasurementPairFromDisplay(
-            JacketLengthBox.Text,
-            _isInch,
-            _workingRecord.JacketLengthCm,
-            _workingRecord.JacketLengthIn,
-            updateOppositeUnit);
-        (_workingRecord.JacketChestCm, _workingRecord.JacketChestIn) = BuildMeasurementPairFromDisplay(
-            JacketChestBox.Text,
-            _isInch,
-            _workingRecord.JacketChestCm,
-            _workingRecord.JacketChestIn,
-            updateOppositeUnit);
-        (_workingRecord.JacketSitAroundCm, _workingRecord.JacketSitAroundIn) = BuildMeasurementPairFromDisplay(
-            JacketSitAroundBox.Text,
-            _isInch,
-            _workingRecord.JacketSitAroundCm,
-            _workingRecord.JacketSitAroundIn,
-            updateOppositeUnit);
-        (_workingRecord.JacketSleevesCm, _workingRecord.JacketSleevesIn) = BuildMeasurementPairFromDisplay(
-            JacketSleevesBox.Text,
-            _isInch,
-            _workingRecord.JacketSleevesCm,
-            _workingRecord.JacketSleevesIn,
-            updateOppositeUnit);
-        (_workingRecord.ShirtLengthCm, _workingRecord.ShirtLengthIn) = BuildMeasurementPairFromDisplay(
-            ShirtLengthBox.Text,
-            _isInch,
-            _workingRecord.ShirtLengthCm,
-            _workingRecord.ShirtLengthIn,
-            updateOppositeUnit);
-        (_workingRecord.ShirtChestCm, _workingRecord.ShirtChestIn) = BuildMeasurementPairFromDisplay(
-            ShirtChestBox.Text,
-            _isInch,
-            _workingRecord.ShirtChestCm,
-            _workingRecord.ShirtChestIn,
-            updateOppositeUnit);
-        (_workingRecord.ShirtSitAroundCm, _workingRecord.ShirtSitAroundIn) = BuildMeasurementPairFromDisplay(
-            ShirtSitAroundBox.Text,
-            _isInch,
-            _workingRecord.ShirtSitAroundCm,
-            _workingRecord.ShirtSitAroundIn,
-            updateOppositeUnit);
-        (_workingRecord.ShirtSleevesCm, _workingRecord.ShirtSleevesIn) = BuildMeasurementPairFromDisplay(
-            ShirtSleevesBox.Text,
-            _isInch,
-            _workingRecord.ShirtSleevesCm,
-            _workingRecord.ShirtSleevesIn,
-            updateOppositeUnit);
-
-        SyncLegacyMeasurementsFromCmCache();
+        foreach (var editor in _termEditors)
+            PersistEditor(editor, updateOppositeUnit);
     }
 
-    private void SyncLegacyMeasurementsFromCmCache()
+    private void PersistEditor(TermInputEditor editor, bool updateOppositeUnit)
     {
-        _workingRecord.JacketLength = _workingRecord.JacketLengthCm;
-        _workingRecord.JacketChest = _workingRecord.JacketChestCm;
-        _workingRecord.JacketSitAround = _workingRecord.JacketSitAroundCm;
-        _workingRecord.JacketSleeves = _workingRecord.JacketSleevesCm;
-        _workingRecord.ShirtLength = _workingRecord.ShirtLengthCm;
-        _workingRecord.ShirtChest = _workingRecord.ShirtChestCm;
-        _workingRecord.ShirtSitAround = _workingRecord.ShirtSitAroundCm;
-        _workingRecord.ShirtSleeves = _workingRecord.ShirtSleevesCm;
+        var (cm, inch) = BuildMeasurementPairFromDisplay(
+            editor.Box.Text, _isInch, editor.Cell.Cm, editor.Cell.In, updateOppositeUnit);
+        editor.Cell.Cm = cm;
+        editor.Cell.In = inch;
     }
 
-    private string PickMeasurementForCurrentUnit(string? cm, string? inch)
-        => _isInch ? (inch ?? string.Empty) : (cm ?? string.Empty);
+    // Build the record's garment list from the cache for the current selection.
+    private void BuildGarmentsIntoRecord()
+    {
+        var garments = new List<GarmentMeasurement>();
+
+        var orderedIds = _terms.Garments
+            .Select(g => g.Id)
+            .Where(id => _selectedGarmentIds.Contains(id))
+            .ToList();
+
+        foreach (var garmentId in orderedIds)
+        {
+            if (!_valueCache.TryGetValue(garmentId, out var cells))
+                continue;
+
+            var values = new List<MeasurementValue>();
+            foreach (var termId in _terms.GetGarmentTerms(garmentId).Select(t => t.Id))
+            {
+                if (!cells.TryGetValue(termId, out var cell))
+                    continue;
+                if (string.IsNullOrWhiteSpace(cell.Cm) && string.IsNullOrWhiteSpace(cell.In))
+                    continue;
+                values.Add(new MeasurementValue { TermId = termId, Cm = cell.Cm, In = cell.In });
+            }
+
+            if (values.Count > 0)
+                garments.Add(new GarmentMeasurement { GarmentId = garmentId, Values = values });
+        }
+
+        _workingRecord.Garments = garments;
+    }
+
+    private static SolidColorBrush Hex(string hex)
+        => (SolidColorBrush)new BrushConverter().ConvertFromString(hex)!;
+
 
     private static (string? Cm, string? In) BuildInitialMeasurementPair(string? cm, string? inch, string? legacyValue)
     {
@@ -902,15 +1116,6 @@ public partial class CustomMadeServiceWindow : Window
     private void RegisterInputFilters()
     {
         DataObject.AddPastingHandler(CustomPriceBox, (s, e) => HandlePaste(s, e, MoneyInputPattern));
-
-        foreach (var box in new[]
-        {
-            JacketLengthBox, JacketChestBox, JacketSitAroundBox, JacketSleevesBox,
-            ShirtLengthBox, ShirtChestBox, ShirtSitAroundBox, ShirtSleevesBox
-        })
-        {
-            DataObject.AddPastingHandler(box, (s, e) => HandlePaste(s, e, MeasurementInputPattern));
-        }
     }
 
     private void OnMoneyPreviewTextInput(object sender, TextCompositionEventArgs e)
@@ -1025,6 +1230,15 @@ public partial class CustomMadeServiceWindow : Window
             ShirtSleevesIn = source.ShirtSleevesIn,
             Price = source.Price,
             TaxRate = source.TaxRate,
+            Garments = source.Garments
+                .Select(g => new GarmentMeasurement
+                {
+                    GarmentId = g.GarmentId,
+                    Values = g.Values
+                        .Select(v => new MeasurementValue { TermId = v.TermId, Cm = v.Cm, In = v.In })
+                        .ToList()
+                })
+                .ToList(),
             Documents = source.Documents
                 .Select(d => new CustomMadeDocument
                 {
@@ -1036,5 +1250,19 @@ public partial class CustomMadeServiceWindow : Window
                 })
                 .ToList()
         };
+
+    private sealed class MeasurementCell
+    {
+        public string? Cm { get; set; }
+        public string? In { get; set; }
+    }
+
+    private sealed class TermInputEditor
+    {
+        public string GarmentId { get; init; } = string.Empty;
+        public string TermId { get; init; } = string.Empty;
+        public TextBox Box { get; init; } = null!;
+        public MeasurementCell Cell { get; init; } = null!;
+    }
 }
 

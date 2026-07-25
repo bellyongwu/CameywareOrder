@@ -313,6 +313,12 @@ public partial class MainWindow : Window
             _viewModel.LoadOrdersCommand.Execute(null);
     }
 
+    private void OnMeasurementTermsClick(object sender, RoutedEventArgs e)
+    {
+        var window = new MeasurementTermsWindow { Owner = this };
+        window.ShowDialog();
+    }
+
     private FlowDocument BuildReceiptDocument(Order order, double pageWidth)
     {
         var symbol = CurrencySettingService.Instance.Symbol;

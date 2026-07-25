@@ -184,6 +184,7 @@
                         </MenuItem.Header>
                         
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CurrencySetting], Mode=OneWay}" Click="OnCurrencySettingClick"/>
+                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.MeasurementTerms], Mode=OneWay}" Click="OnMeasurementTermsClick"/>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick"
                                       IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility}, ConverterParameter=NotNull}"/>

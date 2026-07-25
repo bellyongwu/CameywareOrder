@@ -205,6 +205,72 @@
     <Text key="Measure.SitAround">坐围</Text>
     <Text key="Measure.Sleeves">袖长</Text>
 
+    <!-- Predefined measurement terms (locked) -->
+    <Text key="Measure.Term.length">衣长</Text>
+    <Text key="Measure.Term.chest">胸围</Text>
+    <Text key="Measure.Term.waist">腰围</Text>
+    <Text key="Measure.Term.hip">臀围</Text>
+    <Text key="Measure.Term.shoulder">肩宽</Text>
+    <Text key="Measure.Term.sleeve">袖长</Text>
+    <Text key="Measure.Term.sitAround">坐围</Text>
+    <Text key="Measure.Term.neck">领围</Text>
+    <Text key="Measure.Term.back">背长</Text>
+    <Text key="Measure.Term.bicep">臂围</Text>
+    <Text key="Measure.Term.cuff">袖口</Text>
+    <Text key="Measure.Term.bust">胸围(女)</Text>
+    <Text key="Measure.Term.underBust">下胸围</Text>
+    <Text key="Measure.Term.inseam">内长</Text>
+    <Text key="Measure.Term.outseam">裤长</Text>
+    <Text key="Measure.Term.thigh">大腿围</Text>
+    <Text key="Measure.Term.knee">膝围</Text>
+    <Text key="Measure.Term.bottom">脚口</Text>
+    <Text key="Measure.Term.rise">直裆</Text>
+    <Text key="Measure.Term.frontLength">前身长</Text>
+    <Text key="Measure.Term.armhole">夹圈</Text>
+
+    <!-- Predefined garment types (locked) -->
+    <Text key="Measure.Garment.jacket">外套</Text>
+    <Text key="Measure.Garment.vest">马甲</Text>
+    <Text key="Measure.Garment.shirt">衬衫</Text>
+    <Text key="Measure.Garment.pants">裤子</Text>
+    <Text key="Measure.Garment.blouse">女衬衫</Text>
+    <Text key="Measure.Garment.dress">连衣裙</Text>
+    <Text key="Measure.Garment.qipao">旗袍</Text>
+
+    <!-- Measurement Terms mapping window -->
+    <Text key="Toolbar.MeasurementTerms">量身项目设置</Text>
+    <Text key="MeasureTerms.Title">量身项目设置</Text>
+    <Text key="MeasureTerms.Subtitle">为每种服装类别配置量身项目，可添加自定义项目并设置多语言名称。</Text>
+    <Text key="MeasureTerms.Garments">服装类别</Text>
+    <Text key="MeasureTerms.Assigned">已选量身项目</Text>
+    <Text key="MeasureTerms.AllProps">全部量身项目</Text>
+    <Text key="MeasureTerms.AddGarment">添加服装</Text>
+    <Text key="MeasureTerms.AddProp">添加项目</Text>
+    <Text key="MeasureTerms.Edit">编辑</Text>
+    <Text key="MeasureTerms.Save">保存</Text>
+    <Text key="MeasureTerms.Delete">删除</Text>
+    <Text key="MeasureTerms.Remove">移除</Text>
+    <Text key="MeasureTerms.ViewAltLanguage">多语言名称</Text>
+    <Text key="MeasureTerms.Preset">预设</Text>
+    <Text key="MeasureTerms.DragHint">从右侧拖动量身项目到此处</Text>
+    <Text key="MeasureTerms.EmptyGarment">请选择左侧的服装类别</Text>
+    <Text key="MeasureTerms.DeleteTermConfirm">确定要删除该量身项目吗？它将从所有服装中移除。</Text>
+    <Text key="MeasureTerms.DeleteGarmentConfirm">确定要删除该服装类别吗？</Text>
+    <Text key="MeasureTerms.DeleteTitle">删除</Text>
+    <Text key="MeasureTerms.NameRequired">请输入名称。</Text>
+    <Text key="MeasureTerms.Done">完成</Text>
+
+    <!-- Alternative-language name editor -->
+    <Text key="TermLanguage.Title">多语言名称</Text>
+    <Text key="TermLanguage.Language">语言</Text>
+    <Text key="TermLanguage.Name">名称</Text>
+    <Text key="TermLanguage.Save">保存</Text>
+    <Text key="TermLanguage.Cancel">取消</Text>
+
+    <!-- Custom-made garment selection -->
+    <Text key="Measure.SelectGarments">选择需要量身的服装</Text>
+    <Text key="Measure.NoGarmentSelected">请至少选择一件服装类别以录入量身数据。</Text>
+
     <Text key="DataPath.Label">数据库文件:</Text>
 
     <Text key="CurrencyType.CAD">加元</Text>
@@ -443,6 +509,72 @@
     <Text key="Measure.Chest">Chest</Text>
     <Text key="Measure.SitAround">Sit around</Text>
     <Text key="Measure.Sleeves">Sleeves</Text>
+
+    <!-- Predefined measurement terms (locked) -->
+    <Text key="Measure.Term.length">Length</Text>
+    <Text key="Measure.Term.chest">Chest</Text>
+    <Text key="Measure.Term.waist">Waist</Text>
+    <Text key="Measure.Term.hip">Hip</Text>
+    <Text key="Measure.Term.shoulder">Shoulder</Text>
+    <Text key="Measure.Term.sleeve">Sleeve</Text>
+    <Text key="Measure.Term.sitAround">Sit around</Text>
+    <Text key="Measure.Term.neck">Neck</Text>
+    <Text key="Measure.Term.back">Back length</Text>
+    <Text key="Measure.Term.bicep">Bicep</Text>
+    <Text key="Measure.Term.cuff">Cuff</Text>
+    <Text key="Measure.Term.bust">Bust</Text>
+    <Text key="Measure.Term.underBust">Under bust</Text>
+    <Text key="Measure.Term.inseam">Inseam</Text>
+    <Text key="Measure.Term.outseam">Outseam</Text>
+    <Text key="Measure.Term.thigh">Thigh</Text>
+    <Text key="Measure.Term.knee">Knee</Text>
+    <Text key="Measure.Term.bottom">Bottom opening</Text>
+    <Text key="Measure.Term.rise">Rise</Text>
+    <Text key="Measure.Term.frontLength">Front length</Text>
+    <Text key="Measure.Term.armhole">Armhole</Text>
+
+    <!-- Predefined garment types (locked) -->
+    <Text key="Measure.Garment.jacket">Jacket</Text>
+    <Text key="Measure.Garment.vest">Vest</Text>
+    <Text key="Measure.Garment.shirt">Shirt</Text>
+    <Text key="Measure.Garment.pants">Pants</Text>
+    <Text key="Measure.Garment.blouse">Blouse</Text>
+    <Text key="Measure.Garment.dress">Dress</Text>
+    <Text key="Measure.Garment.qipao">Qipao</Text>
+
+    <!-- Measurement Terms mapping window -->
+    <Text key="Toolbar.MeasurementTerms">Measurement Terms</Text>
+    <Text key="MeasureTerms.Title">Measurement Terms</Text>
+    <Text key="MeasureTerms.Subtitle">Configure the measurements taken for each garment. Add custom measurements and give them names in other languages.</Text>
+    <Text key="MeasureTerms.Garments">Garments</Text>
+    <Text key="MeasureTerms.Assigned">Assigned Measurements</Text>
+    <Text key="MeasureTerms.AllProps">All Measurements</Text>
+    <Text key="MeasureTerms.AddGarment">Add Garment</Text>
+    <Text key="MeasureTerms.AddProp">Add Measurement</Text>
+    <Text key="MeasureTerms.Edit">Edit</Text>
+    <Text key="MeasureTerms.Save">Save</Text>
+    <Text key="MeasureTerms.Delete">Delete</Text>
+    <Text key="MeasureTerms.Remove">Remove</Text>
+    <Text key="MeasureTerms.ViewAltLanguage">Alternative Names</Text>
+    <Text key="MeasureTerms.Preset">Preset</Text>
+    <Text key="MeasureTerms.DragHint">Drag measurements here from the right</Text>
+    <Text key="MeasureTerms.EmptyGarment">Select a garment on the left</Text>
+    <Text key="MeasureTerms.DeleteTermConfirm">Delete this measurement? It will be removed from every garment.</Text>
+    <Text key="MeasureTerms.DeleteGarmentConfirm">Delete this garment type?</Text>
+    <Text key="MeasureTerms.DeleteTitle">Delete</Text>
+    <Text key="MeasureTerms.NameRequired">Please enter a name.</Text>
+    <Text key="MeasureTerms.Done">Done</Text>
+
+    <!-- Alternative-language name editor -->
+    <Text key="TermLanguage.Title">Alternative Names</Text>
+    <Text key="TermLanguage.Language">Language</Text>
+    <Text key="TermLanguage.Name">Name</Text>
+    <Text key="TermLanguage.Save">Save</Text>
+    <Text key="TermLanguage.Cancel">Cancel</Text>
+
+    <!-- Custom-made garment selection -->
+    <Text key="Measure.SelectGarments">Select garments to measure</Text>
+    <Text key="Measure.NoGarmentSelected">Please select at least one garment to record measurements.</Text>
 
     <Text key="DataPath.Label">Database file:</Text>
 

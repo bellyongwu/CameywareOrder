@@ -53,6 +53,12 @@ public class CustomMadeServiceRecord
     public decimal? Price { get; set; }
     public decimal? TaxRate { get; set; }
 
+    // Dynamic, garment-driven measurements. Replaces the static Jacket/Shirt fields
+    // above (kept only for backward compatibility with records saved before the
+    // Measurement Terms system). Each selected garment carries the values for the
+    // measurement terms mapped to it, storing both units so switching is lossless.
+    public List<GarmentMeasurement> Garments { get; set; } = new();
+
     public List<CustomMadeDocument> Documents { get; set; } = new();
 
     public decimal Subtotal => Price ?? 0m;
@@ -82,4 +88,27 @@ public class CustomMadeServiceRecord
 
     private static string? FormatMeasurement(string label, string? value)
         => string.IsNullOrWhiteSpace(value) ? null : $"{label}: {value.Trim()}";
+}
+
+/// <summary>
+/// The measurements captured for one selected garment on a custom-made record.
+/// </summary>
+public class GarmentMeasurement
+{
+    public string GarmentId { get; set; } = string.Empty;
+
+    public List<MeasurementValue> Values { get; set; } = new();
+}
+
+/// <summary>
+/// A single measurement value for a term, stored in both units so that switching
+/// between centimeters and inches never loses the originally entered figure.
+/// </summary>
+public class MeasurementValue
+{
+    public string TermId { get; set; } = string.Empty;
+
+    public string? Cm { get; set; }
+
+    public string? In { get; set; }
 }
