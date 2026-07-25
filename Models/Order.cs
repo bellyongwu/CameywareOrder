@@ -199,6 +199,30 @@ public class Order
     [NotMapped]
     public bool IsPickedUp => Status is OrderStatus.Shipped or OrderStatus.Completed;
 
+    // A cancelled or returned order is treated as refunded (fully or partially): the
+    // remaining balance is no longer collectable, so it drives the 已退款或部分退款
+    // balance status and the refund locking in the editor.
+    [NotMapped]
+    public bool IsRefunded => Status is OrderStatus.Cancelled or OrderStatus.Returned;
+
+    // Single source of truth for the balance-status indicator used by the list, the
+    // detail panel and the receipt (each maps this to its own label + colour).
+    [NotMapped]
+    public BalanceStatusKind PaymentStatusKind
+    {
+        get
+        {
+            if (IsRefunded)
+                return BalanceStatusKind.Refunded;
+            if (!IsBalanceCleared)
+                return BalanceStatusKind.Outstanding;
+            return IsPickedUp
+                ? BalanceStatusKind.ClearedPickedUp
+                : BalanceStatusKind.ClearedNotPickedUp;
+        }
+    }
+
+
     private static bool IsSectionCleared(SectionPayment money, bool balanceCleared)
         => money.Total <= 0m || balanceCleared || money.FinalBase <= 0m;
 
@@ -297,4 +321,14 @@ public enum OrderStatus
     Completed = 3,  // Completed (legacy Delivered)
     Cancelled = 4,  // Cancelled
     Returned = 5    // Returned
+}
+
+// The mutually-exclusive balance-status buckets shown to the shop. Each consumer maps
+// this to its own localized label and colour (green / light green / orange / red).
+public enum BalanceStatusKind
+{
+    Outstanding,        // 未结清
+    ClearedPickedUp,    // 已结清（已取货）
+    ClearedNotPickedUp, // 已结清（未取货）
+    Refunded            // 已退款或部分退款
 }

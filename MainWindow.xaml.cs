@@ -577,9 +577,13 @@ public partial class MainWindow : Window
         document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedFinalBalance"], Money(symbol, order.ReceivedFinalBalance)));
         if (order.TotalTax > 0m)
             document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PaidTax"], Money(symbol, order.TotalTax)));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(symbol, order.FinalBalance)));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.BalanceStatus"],
-            new OrderPaymentSummaryConverter().Convert(order, typeof(string), "Status", CultureInfo.CurrentCulture) as string));
+        // A refunded (cancelled/returned) order no longer owes a final balance, so the
+        // 剩余尾款 line is omitted from its receipt.
+        if (!order.IsRefunded)
+            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(symbol, order.FinalBalance)));
+        var balanceStatusText = new OrderPaymentSummaryConverter().Convert(order, typeof(string), "Status", CultureInfo.CurrentCulture) as string;
+        document.Blocks.Add(ReceiptStatusLine(_localization["Order.Fields.BalanceStatus"],
+            balanceStatusText, BalanceStatusBrush(order.PaymentStatusKind)));
 
         var paymentBreakdown = new OrderPaymentSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
         if (!string.IsNullOrWhiteSpace(paymentBreakdown) && paymentBreakdown != "-")
@@ -649,6 +653,25 @@ public partial class MainWindow : Window
 
         document.Blocks.Add(ReceiptInfoLine(label, value.Trim()));
     }
+
+    // Balance-status line whose value is coloured by status: green / light green /
+    // orange / red (settled-picked-up / settled-not-picked-up / outstanding / refunded).
+    private static Paragraph ReceiptStatusLine(string label, string? value, System.Windows.Media.Brush valueBrush)
+    {
+        var paragraph = new Paragraph { Margin = new Thickness(0, 1, 0, 1) };
+        paragraph.Inlines.Add(new Run($"{label}: ") { Foreground = System.Windows.Media.Brushes.Gray });
+        paragraph.Inlines.Add(new Run(value ?? string.Empty) { Foreground = valueBrush, FontWeight = FontWeights.SemiBold });
+        return paragraph;
+    }
+
+    private static System.Windows.Media.Brush BalanceStatusBrush(BalanceStatusKind status)
+        => status switch
+        {
+            BalanceStatusKind.ClearedPickedUp => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x2E, 0x7D, 0x32)),   // green
+            BalanceStatusKind.ClearedNotPickedUp => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0x66, 0xBB, 0x6A)), // light green
+            BalanceStatusKind.Refunded => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xC6, 0x28, 0x28)),           // red
+            _ => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xEF, 0x6C, 0x00))                                      // orange
+        };
 
     private static Paragraph ReceiptSectionTitle(string title)
         => new(new Bold(new Run(title))) { FontSize = 14, Margin = new Thickness(0, 6, 0, 4) };

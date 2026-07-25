@@ -301,6 +301,7 @@
     <Text key="Payment.Status.ClearedPickedUp">已结清（已取货）</Text>
     <Text key="Payment.Status.ClearedNotPickedUp">已结清（未取货）</Text>
     <Text key="Payment.Status.Outstanding">未结清</Text>
+    <Text key="Payment.Status.Refunded">已退款或部分退款</Text>
 
     <Text key="ClothingItem.Jackets">西装外套</Text>
     <Text key="ClothingItem.TiesBowtie">领带 / 领结</Text>
@@ -616,6 +617,7 @@
     <Text key="Payment.Status.ClearedPickedUp">Cleared (picked up)</Text>
     <Text key="Payment.Status.ClearedNotPickedUp">Cleared (not picked up)</Text>
     <Text key="Payment.Status.Outstanding">Outstanding</Text>
+    <Text key="Payment.Status.Refunded">Refunded or Partially Refunded</Text>
 
     <Text key="ClothingItem.Jackets">Jackets</Text>
     <Text key="ClothingItem.TiesBowtie">Ties / Bowtie</Text>

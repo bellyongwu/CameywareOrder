@@ -23,13 +23,13 @@ public class OrderPaymentSummaryConverter : IValueConverter
 
         if (string.Equals(mode, "Status", StringComparison.OrdinalIgnoreCase))
         {
-            if (!order.IsBalanceCleared)
-                return loc["Payment.Status.Outstanding"];
-
-            // When the balance is settled, indicate whether the order has been picked up.
-            return order.IsPickedUp
-                ? loc["Payment.Status.ClearedPickedUp"]
-                : loc["Payment.Status.ClearedNotPickedUp"];
+            return loc[order.PaymentStatusKind switch
+            {
+                BalanceStatusKind.Refunded => "Payment.Status.Refunded",
+                BalanceStatusKind.ClearedPickedUp => "Payment.Status.ClearedPickedUp",
+                BalanceStatusKind.ClearedNotPickedUp => "Payment.Status.ClearedNotPickedUp",
+                _ => "Payment.Status.Outstanding"
+            }];
         }
 
         var symbol = Services.CurrencySettingService.Instance.Symbol;

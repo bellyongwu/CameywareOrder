@@ -25,6 +25,38 @@
             </Style.Triggers>
         </Style>
 
+        <!-- "Not applicable" checkbox for refunded (cancelled/returned) orders: the box
+             and label turn red with a strikethrough line drawn across the whole control. -->
+        <Style x:Key="NotApplicableCheckBox" TargetType="CheckBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <!-- HorizontalAlignment=Left makes the Grid size to its content so the
+                             strikethrough Line spans only the box + label, not the whole row. -->
+                        <Grid Background="Transparent" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Border Width="15" Height="15" CornerRadius="2"
+                                        BorderBrush="#C62828" BorderThickness="1.5" Background="#FDECEA"
+                                        VerticalAlignment="Center"/>
+                                <ContentPresenter Margin="6,0,0,0" VerticalAlignment="Center"
+                                                  TextElement.Foreground="#C62828">
+                                    <ContentPresenter.Resources>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="#C62828"/>
+                                            <Setter Property="TextDecorations" Value="Strikethrough"/>
+                                        </Style>
+                                    </ContentPresenter.Resources>
+                                </ContentPresenter>
+                            </StackPanel>
+                            <Line Stretch="Fill" X1="0" Y1="0" X2="1" Y2="0"
+                                  Stroke="#C62828" StrokeThickness="1.5"
+                                  VerticalAlignment="Center" IsHitTestVisible="False"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Card container for a top-level form section. -->
         <Style x:Key="SectionCard" TargetType="Border">
             <Setter Property="Margin" Value="0,14,0,0"/>

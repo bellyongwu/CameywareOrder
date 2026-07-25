@@ -21,6 +21,7 @@
         <conv:CustomMadeRecordSummaryConverter x:Key="CustomMadeRecordSummaryConverter"/>
         <conv:CurrencyAmountConverter x:Key="CurrencyAmountConverter"/>
         <conv:OrderPaymentSummaryConverter x:Key="OrderPaymentSummaryConverter"/>
+        <conv:BalanceStatusColorConverter x:Key="BalanceStatusColorConverter"/>
         <conv:LastItemBorderThicknessConverter x:Key="LastItemBorderThickness"/>
         <conv:OrderServicesSummaryConverter x:Key="OrderServicesSummaryConverter"/>
         <conv:PositiveAmountToVisibilityConverter x:Key="PositiveAmountToVisibility"/>
@@ -124,8 +125,13 @@
                             </Trigger>
                             <!-- Gray out completed records; shipped counts as completed/picked up (Accessibility B) -->
                             <DataTrigger Binding="{Binding IsPickedUp}" Value="True">
-                                <Setter TargetName="Bd" Property="TextElement.Foreground" Value="#9AA3AB"/>
-                                <Setter TargetName="Bd" Property="Opacity" Value="0.7"/>
+                                <Setter TargetName="Bd" Property="TextElement.Foreground" Value="#6C7783"/>
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </DataTrigger>
+                            <!-- Cancelled / returned records are more faded than completed (lighter gray, but still legible). -->
+                            <DataTrigger Binding="{Binding IsRefunded}" Value="True">
+                                <Setter TargetName="Bd" Property="TextElement.Foreground" Value="#98A1AB"/>
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.85"/>
                             </DataTrigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -476,7 +482,7 @@
                     </Grid>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Foreground="#777" FontSize="11"/>
-                    <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}" Margin="0,2,0,10" FontSize="13" FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}" Foreground="{Binding SelectedOrder, Converter={StaticResource BalanceStatusColorConverter}}" Margin="0,2,0,10" FontSize="13" FontWeight="SemiBold"/>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PaymentBreakdown], Mode=OneWay}" Foreground="#777" FontSize="11"/>
                     <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderPaymentSummaryConverter}}" Margin="0,2,0,10" FontSize="12" TextWrapping="Wrap"/>

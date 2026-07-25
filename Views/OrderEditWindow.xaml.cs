@@ -35,6 +35,7 @@ public partial class OrderEditWindow : Window
     private readonly LocalizationService _localization;
     private readonly Order? _existing;
     private readonly bool _isReadOnly;
+    private bool _isRefunded;
     private readonly ObservableCollection<CustomMadeServiceRecord> _customMadeRecords = new();
     private readonly List<ClothingItemEditorRow> _clothingItemRows = new();
     private bool _suppressLanguageRefresh;
@@ -119,6 +120,7 @@ public partial class OrderEditWindow : Window
         _localization = localization;
         _existing = existing;
         _isReadOnly = IsReadOnlyStatus(existing.Status);
+        _isRefunded = existing.IsRefunded;
 
         InitializeCommonControls();
 
@@ -182,6 +184,10 @@ public partial class OrderEditWindow : Window
 
         if (_isReadOnly)
             ApplyReadOnlyMode();
+
+        // Mark the "not applicable" checkboxes for an already cancelled/returned order.
+        if (_isRefunded)
+            ApplyNotApplicableCheckboxStyle(true);
     }
 
     private static bool IsReadOnlyStatus(OrderStatus status)
@@ -230,17 +236,80 @@ public partial class OrderEditWindow : Window
     }
 
     private static void SetReadOnlyPaymentSection(PaymentSectionControls section)
+        => SetPaymentSectionEnabled(section, false);
+
+    private static void SetPaymentSectionEnabled(PaymentSectionControls section, bool enabled)
     {
-        section.DownNone.IsEnabled = false;
-        section.DownEtransfer.IsEnabled = false;
-        section.DownCard.IsEnabled = false;
-        section.DownCash.IsEnabled = false;
-        section.DownCompletedCheck.IsEnabled = false;
-        section.FinalEtransfer.IsEnabled = false;
-        section.FinalCard.IsEnabled = false;
-        section.FinalCash.IsEnabled = false;
-        section.BalanceClearedCheck.IsEnabled = false;
-        section.DownpaymentBox.IsReadOnly = true;
+        section.DownNone.IsEnabled = enabled;
+        section.DownEtransfer.IsEnabled = enabled;
+        section.DownCard.IsEnabled = enabled;
+        section.DownCash.IsEnabled = enabled;
+        section.DownCompletedCheck.IsEnabled = enabled;
+        section.FinalEtransfer.IsEnabled = enabled;
+        section.FinalCard.IsEnabled = enabled;
+        section.FinalCash.IsEnabled = enabled;
+        section.BalanceClearedCheck.IsEnabled = enabled;
+        section.DownpaymentBox.IsReadOnly = !enabled;
+    }
+
+    // Locks (or restores) every service / payment editing control when an order is
+    // toggled to / from a refunded (cancelled/returned) status while still editable.
+    // Customer fields stay editable; only the services are locked, and the custom-made
+    // records list stays viewable so measurements can still be inspected.
+    private void SetServiceControlsEnabled(bool enabled)
+    {
+        SetPaymentSectionEnabled(_alterationControls, enabled);
+        SetPaymentSectionEnabled(_customMadeControls, enabled);
+        SetPaymentSectionEnabled(_clothingControls, enabled);
+
+        AlterationCategoryBox.IsEnabled = enabled;
+        AlterationAdditionalNotesBox.IsReadOnly = !enabled;
+        AlterationPriceBox.IsReadOnly = !enabled;
+        AlterationTaxBox.IsReadOnly = !enabled;
+        CustomMadeTaxBox.IsReadOnly = !enabled;
+        ClothingTaxBox.IsReadOnly = !enabled;
+
+        AddItemButton.IsEnabled = enabled;
+        AddCustomMadeButton.IsEnabled = enabled;
+        RemoveCustomMadeButton.IsEnabled = enabled;
+        ClearAllBalancesCheck.IsEnabled = enabled;
+        SetClothingRowsLocked(!enabled);
+    }
+
+    // Applies / removes the red strikethrough "not applicable" styling on every service
+    // and quick-operation checkbox (including 已取货 and 当前服务尾款已结清).
+    private void ApplyNotApplicableCheckboxStyle(bool notApplicable)
+    {
+        var style = notApplicable ? (Style)FindResource("NotApplicableCheckBox") : null;
+        ClearAllBalancesCheck.Style = style;
+        PickedUpCheck.Style = style;
+        AlterationDownCompletedCheck.Style = style;
+        AlterationBalanceClearedCheck.Style = style;
+        CustomMadeDownCompletedCheck.Style = style;
+        CustomMadeBalanceClearedCheck.Style = style;
+        ClothingDownCompletedCheck.Style = style;
+        ClothingBalanceClearedCheck.Style = style;
+    }
+
+    // Applies or reverts the dynamic refund lock when the status dropdown is switched
+    // to / from 已取消 / 已退货 on an order that is still editable.
+    private void ApplyRefundLockState()
+    {
+        if (_isReadOnly)
+            return;
+
+        if (_isRefunded)
+        {
+            SetServiceControlsEnabled(false);
+        }
+        else
+        {
+            SetServiceControlsEnabled(true);
+            RefreshComputedTotals(runAutoComplete: false);
+        }
+
+        ApplyNotApplicableCheckboxStyle(_isRefunded);
+        RefreshPaymentSummary();
     }
 
     private void ApplyReadOnlyModeToClothingRows()
@@ -1013,17 +1082,17 @@ public partial class OrderEditWindow : Window
 
     private void RefreshPricingLocks()
     {
-        var alterationLocked = _isReadOnly || AlterationBalanceClearedCheck.IsChecked is true;
+        var alterationLocked = _isReadOnly || _isRefunded || AlterationBalanceClearedCheck.IsChecked is true;
         AlterationPriceBox.IsReadOnly = alterationLocked;
         AlterationTaxBox.IsReadOnly = alterationLocked;
 
-        var customMadeLocked = _isReadOnly || CustomMadeBalanceClearedCheck.IsChecked is true;
+        var customMadeLocked = _isReadOnly || _isRefunded || CustomMadeBalanceClearedCheck.IsChecked is true;
         CustomMadeTaxBox.IsReadOnly = customMadeLocked;
         AddCustomMadeButton.IsEnabled = !customMadeLocked;
         RemoveCustomMadeButton.IsEnabled = !customMadeLocked;
         RefreshCustomMadeButtonLabel();
 
-        var clothingLocked = _isReadOnly || ClothingBalanceClearedCheck.IsChecked is true;
+        var clothingLocked = _isReadOnly || _isRefunded || ClothingBalanceClearedCheck.IsChecked is true;
         ClothingTaxBox.IsReadOnly = clothingLocked;
         AddItemButton.IsEnabled = !clothingLocked;
         SetClothingRowsLocked(clothingLocked);
@@ -1251,18 +1320,15 @@ public partial class OrderEditWindow : Window
             : Visibility.Collapsed;
 
         var cleared = IsOrderBalanceCleared();
-        BalanceStatusText.Text = cleared
-            ? _localization["Payment.Status.Cleared"]
-            : _localization["Payment.Status.Outstanding"];
-        BalanceStatusText.Foreground = cleared
-            ? System.Windows.Media.Brushes.Green
-            : System.Windows.Media.Brushes.OrangeRed;
+        UpdateBalanceStatusDisplay(cleared);
 
         // The "picked up" toggle only becomes selectable once the order has at least one
         // charged service and every final balance is cleared (IsOrderBalanceCleared is
         // false while the order total is zero). Keep it enabled while already ticked so a
-        // completed order can still be reverted. Read-only orders stay fully locked.
-        if (!_isReadOnly)
+        // completed order can still be reverted. Read-only or refunded orders stay locked.
+        if (_isReadOnly || _isRefunded)
+            PickedUpCheck.IsEnabled = false;
+        else
             PickedUpCheck.IsEnabled = cleared || PickedUpCheck.IsChecked.GetValueOrDefault();
 
         // Keep the master "clear all balances" checkbox in sync with the overall state
@@ -1295,6 +1361,25 @@ public partial class OrderEditWindow : Window
         if (method is not null && method != PaymentMethod.None)
             text += $"  ·  {_localization[$"PaymentMethod.{method}"]}  {FormatCurrency(amount)}";
         label.Text = text;
+    }
+
+    // Refunded orders show 已退款或部分退款 in red; otherwise the settled/outstanding
+    // label + green/orange colour.
+    private void UpdateBalanceStatusDisplay(bool cleared)
+    {
+        if (_isRefunded)
+        {
+            BalanceStatusText.Text = _localization["Payment.Status.Refunded"];
+            BalanceStatusText.Foreground = System.Windows.Media.Brushes.Red;
+            return;
+        }
+
+        BalanceStatusText.Text = cleared
+            ? _localization["Payment.Status.Cleared"]
+            : _localization["Payment.Status.Outstanding"];
+        BalanceStatusText.Foreground = cleared
+            ? System.Windows.Media.Brushes.Green
+            : System.Windows.Media.Brushes.OrangeRed;
     }
 
     private void AddFinalBalanceDetail(string serviceKey, decimal residual)
@@ -1348,9 +1433,17 @@ public partial class OrderEditWindow : Window
         _syncingStatus = true;
         try
         {
-            var isCompleted = (StatusBox.SelectedItem as ComboBoxItem)?.Tag is OrderStatus.Completed;
+            var tag = (StatusBox.SelectedItem as ComboBoxItem)?.Tag as OrderStatus?;
+            var isCompleted = tag is OrderStatus.Completed;
             PickedUpCheck.IsChecked = isCompleted;
             StatusBox.IsEnabled = !isCompleted;
+
+            var refunded = tag is OrderStatus.Cancelled or OrderStatus.Returned;
+            if (refunded != _isRefunded)
+            {
+                _isRefunded = refunded;
+                ApplyRefundLockState();
+            }
         }
         finally
         {
