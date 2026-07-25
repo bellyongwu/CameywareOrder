@@ -170,10 +170,6 @@
                                         ConverterParameter=NotNull}"/>
                 <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Command="{Binding DeleteOrderCommand}" Padding="10,4" Margin="2"/>
             <Separator/>
-                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick" Padding="10,4" Margin="2"
-                    IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility},
-                                        ConverterParameter=NotNull}"/>
-            <Separator/>
                 <Menu Background="Transparent" VerticalAlignment="Center">
                     <MenuItem Padding="10,4"
                               AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalConfig], Mode=OneWay}"
@@ -188,7 +184,11 @@
                         </MenuItem.Header>
                         
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CurrencySetting], Mode=OneWay}" Click="OnCurrencySettingClick"/>
-                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}" Click="OnEditBrandingClick"/>
+                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick"
+                                      IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility}, ConverterParameter=NotNull}"/>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}" Click="OnEditBrandingClick"/>
+                        </MenuItem>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalDatabase], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyDataPath], Mode=OneWay}" Click="OnCopyDataPathClick"/>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.RevealDataFile], Mode=OneWay}" Click="OnRevealDataFileClick"/>

@@ -12,6 +12,7 @@
     <Text key="Toolbar.CopyOrder">复制订单</Text>
     <Text key="Toolbar.PrintReceipt">打印小票</Text>
     <Text key="Toolbar.LocalConfig">本地配置</Text>
+    <Text key="Toolbar.Print">打印</Text>
     <Text key="Toolbar.HeaderFooter">添加或更改页眉页脚</Text>
     <Text key="Toolbar.CurrencySetting">货币设置</Text>
     <Text key="Toolbar.LocalDatabase">本地数据库</Text>
@@ -250,6 +251,7 @@
     <Text key="Toolbar.CopyOrder">Copy Order</Text>
     <Text key="Toolbar.PrintReceipt">Print Receipt</Text>
     <Text key="Toolbar.LocalConfig">Local Configuration</Text>
+    <Text key="Toolbar.Print">Print</Text>
     <Text key="Toolbar.HeaderFooter">Add or Change Header &amp; Footer</Text>
     <Text key="Toolbar.CurrencySetting">Currency Setup</Text>
     <Text key="Toolbar.LocalDatabase">Local Database</Text>
