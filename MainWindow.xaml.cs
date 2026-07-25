@@ -263,6 +263,12 @@ public partial class MainWindow : Window
     private void OnContextPrintClick(object sender, RoutedEventArgs e)
         => OnPrintReceiptClick(sender, e);
 
+    private void OnContextPrintMeasurementsClick(object sender, RoutedEventArgs e)
+        => OnPrintMeasurementsClick(sender, e);
+
+    private void OnContextPrintReceiptAndMeasurementsClick(object sender, RoutedEventArgs e)
+        => OnPrintReceiptAndMeasurementsClick(sender, e);
+
     private void OnAddOrderClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OrderEditWindow(_scopeFactory, _localization) { Owner = this };
@@ -297,6 +303,117 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             _viewModel.StatusMessage = _localization.Format("Status.PrintFailed", ex.Message);
+        }
+    }
+
+    private void OnPrintMeasurementsClick(object sender, RoutedEventArgs e)
+        => PrintMeasurements(includeReceipt: false);
+
+    private void OnPrintReceiptAndMeasurementsClick(object sender, RoutedEventArgs e)
+        => PrintMeasurements(includeReceipt: true);
+
+    // Shared entry point for the two measurement print actions. Asks the user for the
+    // measurement language and unit, then prints either a measurements-only document or a
+    // receipt followed (on a new page) by all garment measurements.
+    private void PrintMeasurements(bool includeReceipt)
+    {
+        var order = _viewModel.SelectedOrder;
+        if (order is null || !order.HasCustomMadeService)
+            return;
+
+        var optionsWindow = new MeasurementPrintOptionsWindow(_localization) { Owner = this };
+        if (optionsWindow.ShowDialog() != true)
+            return;
+
+        var languageCode = optionsWindow.SelectedLanguageCode;
+        var isInch = optionsWindow.IsInch;
+
+        try
+        {
+            var printDialog = new PrintDialog();
+            if (printDialog.ShowDialog() != true)
+                return;
+
+            FlowDocument document;
+            if (includeReceipt)
+            {
+                document = BuildReceiptDocument(order, printDialog.PrintableAreaWidth);
+                AddMeasurementSections(document, order, languageCode, isInch, pageBreakBefore: true);
+            }
+            else
+            {
+                document = BuildMeasurementDocument(order, languageCode, isInch, printDialog.PrintableAreaWidth);
+            }
+
+            printDialog.PrintDocument(
+                ((IDocumentPaginatorSource)document).DocumentPaginator,
+                _localization["Customer.Measurements.PrintTitle"]);
+            _viewModel.StatusMessage = _localization["Status.PrintSucceeded"];
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.PrintFailed", ex.Message);
+        }
+    }
+
+    // A standalone measurements-only document: shop branding, the order's key info, then
+    // every garment's measurements in the chosen language and unit.
+    private FlowDocument BuildMeasurementDocument(Order order, string languageCode, bool isInch, double pageWidth)
+    {
+        var document = new FlowDocument
+        {
+            FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
+            FontSize = 12,
+            PagePadding = new Thickness(40),
+            PageWidth = pageWidth,
+            ColumnWidth = pageWidth
+        };
+
+        var brandingSettings = ReceiptBrandingStore.Load();
+        var branding = brandingSettings.ForLanguage(_localization.CurrentLanguageCode);
+
+        AddMeasurementSections(document, order, languageCode, isInch, pageBreakBefore: false);
+
+        InjectReceiptBranding(document, brandingSettings, branding);
+
+        return document;
+    }
+
+    // Renders the measurement content into an existing document. When pageBreakBefore is
+    // true (receipt + measurements) the first block starts on a fresh page.
+    private void AddMeasurementSections(FlowDocument document, Order order, string languageCode, bool isInch, bool pageBreakBefore)
+    {
+        var title = ReceiptSectionTitle(_localization.GetText("Customer.Measurements.PrintTitle", languageCode));
+        if (pageBreakBefore)
+            title.BreakPageBefore = true;
+        document.Blocks.Add(title);
+
+        document.Blocks.Add(ReceiptInfoLine(
+            _localization.GetText("Order.Fields.OrderNumber", languageCode), order.OrderNumber));
+        AddReceiptInfoLineIfHasValue(document,
+            _localization.GetText("Order.Fields.CustomerName", languageCode), order.CustomerName);
+
+        var unitLabel = _localization.GetText("Measure.Unit.Label", languageCode);
+        var unitValue = _localization.GetText(isInch ? "Measure.Unit.Inch" : "Measure.Unit.Cm", languageCode);
+        document.Blocks.Add(ReceiptInfoLine(unitLabel, unitValue));
+
+        document.Blocks.Add(ReceiptServiceDivider());
+
+        foreach (var record in order.CustomMadeRecords)
+        {
+            foreach (var (garmentTitle, rows) in CustomMadeMeasurementReader.BuildSections(record, languageCode, isInch))
+            {
+                document.Blocks.Add(new Paragraph(new Bold(new Run(garmentTitle)))
+                {
+                    FontSize = 13,
+                    Margin = new Thickness(0, 6, 0, 4)
+                });
+
+                foreach (var (label, value) in rows)
+                    document.Blocks.Add(ReceiptInfoLine(label, value));
+
+                document.Blocks.Add(ReceiptServiceDivider());
+            }
         }
     }
 

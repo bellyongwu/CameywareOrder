@@ -24,6 +24,7 @@
         <conv:LastItemBorderThicknessConverter x:Key="LastItemBorderThickness"/>
         <conv:OrderServicesSummaryConverter x:Key="OrderServicesSummaryConverter"/>
         <conv:PositiveAmountToVisibilityConverter x:Key="PositiveAmountToVisibility"/>
+        <conv:CustomMadeServiceFlagConverter x:Key="CustomMadeServiceFlagConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
         <!-- Right-click context menu styling -->
@@ -188,6 +189,10 @@
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick"
                                       IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility}, ConverterParameter=NotNull}"/>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnPrintMeasurementsClick"
+                                      Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}"/>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnPrintReceiptAndMeasurementsClick"
+                                      Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}"/>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}" Click="OnEditBrandingClick"/>
                         </MenuItem>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalDatabase], Mode=OneWay}">
@@ -295,11 +300,23 @@
                                     <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE749;" FontSize="13" Foreground="#2980B9"/>
                                 </MenuItem.Icon>
                             </MenuItem>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnContextPrintMeasurementsClick" Style="{StaticResource OrderMenuItemStyle}"
+                                      Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}">
+                                <MenuItem.Icon>
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE1D3;" FontSize="13" Foreground="#2980B9"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnContextPrintReceiptAndMeasurementsClick" Style="{StaticResource OrderMenuItemStyle}"
+                                      Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}">
+                                <MenuItem.Icon>
+                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE749;" FontSize="13" Foreground="#2980B9"/>
+                                </MenuItem.Icon>
+                            </MenuItem>
                         </ContextMenu>
                     </ListView.ContextMenu>
                     <ListView.View>
                         <GridView ColumnHeaderContainerStyle="{StaticResource OrderListHeaderStyle}">
-                            <GridViewColumn local:OrderColumnSort.SortKey="OrderNumber" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Width="150" DisplayMemberBinding="{Binding OrderNumber}"/>
+                            <GridViewColumn local:OrderColumnSort.SortKey="OrderNumber" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Width="200" DisplayMemberBinding="{Binding OrderNumber}"/>
                             <GridViewColumn local:OrderColumnSort.SortKey="CustomerName" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Width="170" DisplayMemberBinding="{Binding CustomerName}"/>
                             <GridViewColumn local:OrderColumnSort.SortKey="PhoneNumber" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" Width="150" DisplayMemberBinding="{Binding PhoneNumber}"/>
                             <GridViewColumn local:OrderColumnSort.SortKey="OrderDate" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Width="130" DisplayMemberBinding="{Binding OrderDate, StringFormat=yyyy-MM-dd}"/>
@@ -318,8 +335,20 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn local:OrderColumnSort.SortKey="BalanceStatus" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Width="140" DisplayMemberBinding="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}"/>
-                            <GridViewColumn local:OrderColumnSort.SortKey="LastModifiedDate" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.LastModifiedDate], Mode=OneWay}" Width="170" DisplayMemberBinding="{Binding LastModifiedDate, StringFormat=yyyy-MM-dd HH:mm}"/>
+                            <GridViewColumn local:OrderColumnSort.SortKey="BalanceStatus" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Width="180" DisplayMemberBinding="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}"/>
+                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomMadeFlag], Mode=OneWay}" Width="170">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Flag}"
+                                                       HorizontalAlignment="Center" TextAlignment="Center" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Names}"
+                                                       Visibility="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=NamesVisibility}"
+                                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontSize="11" Foreground="#666"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                         </GridView>
                     </ListView.View>
                 </ListView>
@@ -364,6 +393,10 @@
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Foreground="#777" FontSize="11"/>
                     <TextBlock Text="{Binding SelectedOrder.OrderDate, StringFormat='yyyy-MM-dd  HH:mm'}"
+                               Margin="0,2,0,10" FontSize="13"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.LastModifiedDate], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.LastModifiedDate, StringFormat='yyyy-MM-dd  HH:mm'}"
                                Margin="0,2,0,10" FontSize="13"/>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Foreground="#777" FontSize="11"/>

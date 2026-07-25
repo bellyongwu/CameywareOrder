@@ -135,6 +135,15 @@ public class Order
     [NotMapped]
     public bool CustomMadeAddedToReceipt => CustomMadeTotal > 0m && CustomMadeDownpaymentMethod is not null;
 
+    // True when the order carries at least one custom-made record that has captured
+    // garment measurements. Drives the "定制服务" list flag and gates the measurement
+    // print actions (measurement printing only makes sense when there are measurements).
+    [NotMapped]
+    public bool HasCustomMadeService
+        => CustomMadeRecords.Any(record => record.Garments.Any(garment =>
+            garment.Values.Any(value =>
+                !string.IsNullOrWhiteSpace(value.Cm) || !string.IsNullOrWhiteSpace(value.In))));
+
     // A section is cleared when it carries no charge, has been explicitly marked
     // cleared, or its deposit already covers the full section total.
     [NotMapped]

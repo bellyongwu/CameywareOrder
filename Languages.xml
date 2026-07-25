@@ -11,6 +11,8 @@
     <Text key="Toolbar.DeleteOrder">删除订单</Text>
     <Text key="Toolbar.CopyOrder">复制订单</Text>
     <Text key="Toolbar.PrintReceipt">打印小票</Text>
+    <Text key="Toolbar.PrintMeasurements">打印量身尺寸</Text>
+    <Text key="Toolbar.PrintReceiptAndMeasurements">打印小票和所有尺寸</Text>
     <Text key="Toolbar.LocalConfig">本地配置</Text>
     <Text key="Toolbar.Print">打印</Text>
     <Text key="Toolbar.HeaderFooter">添加或更改页眉页脚</Text>
@@ -95,6 +97,14 @@
     <Text key="Order.Fields.ItemCategory">品类</Text>
     <Text key="Order.Fields.OrderDate">订单日期</Text>
     <Text key="Order.Fields.LastModifiedDate">最后修改时间</Text>
+    <Text key="Order.Fields.CustomMadeFlag">定制服务</Text>
+    <Text key="CustomMade.Flag.Yes">有</Text>
+    <Text key="CustomMade.Flag.No">无</Text>
+    <Text key="MeasurePrint.Title">打印尺寸选项</Text>
+    <Text key="MeasurePrint.LanguagePrompt">尺寸语言</Text>
+    <Text key="MeasurePrint.UnitPrompt">尺寸单位</Text>
+    <Text key="MeasurePrint.Print">打印</Text>
+    <Text key="MeasurePrint.Cancel">取消</Text>
     <Text key="Order.Fields.Status">状态</Text>
     <Text key="Order.Fields.TotalAmount">总金额</Text>
     <Text key="Order.Fields.AllServicesTotalAmount">全部服务总金额</Text>
@@ -316,6 +326,8 @@
     <Text key="Toolbar.DeleteOrder">Delete Order</Text>
     <Text key="Toolbar.CopyOrder">Copy Order</Text>
     <Text key="Toolbar.PrintReceipt">Print Receipt</Text>
+    <Text key="Toolbar.PrintMeasurements">Print Measurements</Text>
+    <Text key="Toolbar.PrintReceiptAndMeasurements">Print Receipt &amp; All Measurements</Text>
     <Text key="Toolbar.LocalConfig">Local Configuration</Text>
     <Text key="Toolbar.Print">Print</Text>
     <Text key="Toolbar.HeaderFooter">Add or Change Header &amp; Footer</Text>
@@ -400,6 +412,14 @@
     <Text key="Order.Fields.ItemCategory">Item Category</Text>
     <Text key="Order.Fields.OrderDate">Order Date</Text>
     <Text key="Order.Fields.LastModifiedDate">Last Modified</Text>
+    <Text key="Order.Fields.CustomMadeFlag">Custom Service</Text>
+    <Text key="CustomMade.Flag.Yes">Yes</Text>
+    <Text key="CustomMade.Flag.No">None</Text>
+    <Text key="MeasurePrint.Title">Measurement Print Options</Text>
+    <Text key="MeasurePrint.LanguagePrompt">Measurement Language</Text>
+    <Text key="MeasurePrint.UnitPrompt">Measurement Unit</Text>
+    <Text key="MeasurePrint.Print">Print</Text>
+    <Text key="MeasurePrint.Cancel">Cancel</Text>
     <Text key="Order.Fields.Status">Status</Text>
     <Text key="Order.Fields.TotalAmount">Total Amount</Text>
     <Text key="Order.Fields.AllServicesTotalAmount">All Services Total Amount</Text>
