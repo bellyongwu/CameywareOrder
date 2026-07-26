@@ -103,11 +103,14 @@ public partial class OrderEditWindow : Window
         PhoneNumberBox.Text = string.Empty;
         EmailBox.Text = string.Empty;
         AddressBox.Text = string.Empty;
+        StatusReasonBox.Text = string.Empty;
+        StatusReasonCategoryBox.SelectedIndex = 0;
         TotalAmountText.Text = FormatCurrency(0m);
         AlterationTaxBox.Text = DefaultTaxRate.ToString("0.##");
         ClothingTaxBox.Text = DefaultTaxRate.ToString("0.##");
         CustomMadeTaxBox.Text = DefaultTaxRate.ToString("0.##");
         StatusBox.SelectedIndex = 0;
+        UpdateStatusReasonVisibility();
         AlterationCategoryBox.SelectedIndex = 0;
         AlterationsRadio.IsChecked = true;
         _syncingPayment = true;
@@ -140,6 +143,8 @@ public partial class OrderEditWindow : Window
         PhoneNumberBox.Text = existing.PhoneNumber;
         EmailBox.Text = existing.Email;
         AddressBox.Text = existing.Address;
+        StatusReasonBox.Text = existing.StatusReason;
+        LoadStatusReasonCategory(existing.StatusReasonCategory);
         TotalAmountText.Text = FormatCurrency(existing.TotalAmount);
         NotesBox.Text = existing.Notes;
         var matchedCategory = false;
@@ -184,6 +189,7 @@ public partial class OrderEditWindow : Window
                 break;
             }
         }
+        UpdateStatusReasonVisibility();
 
         RefreshComputedTotals();
 
@@ -214,6 +220,8 @@ public partial class OrderEditWindow : Window
         PhoneNumberBox.IsReadOnly = true;
         EmailBox.IsReadOnly = true;
         AddressBox.IsReadOnly = true;
+        StatusReasonBox.IsReadOnly = true;
+        StatusReasonCategoryBox.IsEnabled = false;
         NotesBox.IsReadOnly = true;
 
         AlterationCategoryBox.IsEnabled = false;
@@ -433,6 +441,7 @@ public partial class OrderEditWindow : Window
         RefreshServicePanels();
         RefreshCustomMadeEmptyState();
         RefreshPaymentLabels();
+        UpdateStatusReasonVisibility();
         RefreshComputedTotals();
     }
 
@@ -598,7 +607,46 @@ public partial class OrderEditWindow : Window
             return false;
         }
 
+        if (selectedStatus == OrderStatus.Shipped && string.IsNullOrWhiteSpace(AddressBox.Text))
+        {
+            var addressMessage = _localization["OrderEdit.Validate.AddressRequired"];
+            ErrorText.Text = addressMessage;
+            MessageBox.Show(addressMessage, _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
+            AddressBox.Focus();
+            return false;
+        }
+
+        if (selectedStatus is OrderStatus.Cancelled or OrderStatus.Returned && !ValidateStatusReason())
+            return false;
+
         status = selectedStatus;
+        return true;
+    }
+
+    // A cancelled/returned order must always carry a reason: a preset category is required
+    // (defaulted so this only fails if somehow cleared), and choosing "Other" additionally
+    // requires the free-text detail to be filled in.
+    private bool ValidateStatusReason()
+    {
+        var category = (StatusReasonCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string;
+        if (string.IsNullOrWhiteSpace(category))
+        {
+            var message = _localization["OrderEdit.Validate.StatusReasonRequired"];
+            ErrorText.Text = message;
+            MessageBox.Show(message, _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
+            StatusReasonCategoryBox.Focus();
+            return false;
+        }
+
+        if (category == "Other" && string.IsNullOrWhiteSpace(StatusReasonBox.Text))
+        {
+            var message = _localization["OrderEdit.Validate.StatusReasonOtherRequired"];
+            ErrorText.Text = message;
+            MessageBox.Show(message, _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
+            StatusReasonBox.Focus();
+            return false;
+        }
+
         return true;
     }
 
@@ -637,6 +685,7 @@ public partial class OrderEditWindow : Window
         order.PhoneNumber = PhoneNumberBox.Text.Trim();
         order.Email = string.IsNullOrWhiteSpace(EmailBox.Text) ? null : EmailBox.Text.Trim();
         order.Address = string.IsNullOrWhiteSpace(AddressBox.Text) ? null : AddressBox.Text.Trim();
+        ApplyStatusReasonFields(order, data.Status);
         order.ServiceType = data.ServiceType;
         order.ServiceDetails = (AlterationCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string;
         order.AdditionalNotes = NullIfWhiteSpace(AlterationAdditionalNotesBox.Text);
@@ -650,6 +699,23 @@ public partial class OrderEditWindow : Window
         order.Notes = NullIfWhiteSpace(NotesBox.Text);
         order.LastModifiedDate = DateTime.UtcNow;
         ApplyPaymentFields(order);
+    }
+
+    // Persists the preset category (only meaningful for cancelled/returned orders) and the
+    // free-text detail (only meaningful when that category is "Other"); both are cleared
+    // once the order is no longer cancelled/returned.
+    private void ApplyStatusReasonFields(Order order, OrderStatus status)
+    {
+        if (status is not (OrderStatus.Cancelled or OrderStatus.Returned))
+        {
+            order.StatusReasonCategory = null;
+            order.StatusReason = null;
+            return;
+        }
+
+        var category = (StatusReasonCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string;
+        order.StatusReasonCategory = category;
+        order.StatusReason = category == "Other" ? NullIfWhiteSpace(StatusReasonBox.Text) : null;
     }
 
     private void OnServiceTypeChanged(object sender, RoutedEventArgs e)
@@ -1492,12 +1558,73 @@ public partial class OrderEditWindow : Window
                 _isRefunded = refunded;
                 ApplyRefundLockState();
             }
+
+            UpdateStatusReasonVisibility();
         }
         finally
         {
             _syncingStatus = false;
         }
     }
+
+    // Shows/hides the return/cancel reason category picker for Cancelled/Returned statuses,
+    // swaps its placeholder + label between the return and cancel wording, and defaults the
+    // category to the first preset (per the convention: never leave a picker unselected).
+    private void UpdateStatusReasonVisibility()
+    {
+        var tag = (StatusBox.SelectedItem as ComboBoxItem)?.Tag as OrderStatus?;
+        var show = tag is OrderStatus.Cancelled or OrderStatus.Returned;
+
+        StatusReasonLabelPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        StatusReasonCategoryBox.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+
+        if (show && StatusReasonCategoryBox.SelectedIndex < 0)
+            StatusReasonCategoryBox.SelectedIndex = 0;
+
+        StatusReasonHint.Text = _localization[tag == OrderStatus.Cancelled
+            ? "OrderEdit.Placeholder.CancelReason"
+            : "OrderEdit.Placeholder.ReturnReason"];
+
+        UpdateOtherReasonRowVisibility(show);
+    }
+
+    // The free-text "Other" reason row only shows alongside the category picker AND only
+    // when the selected preset category is "Other".
+    private void UpdateOtherReasonRowVisibility(bool categoryRowVisible)
+    {
+        var isOther = categoryRowVisible
+            && (StatusReasonCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string == "Other";
+
+        StatusReasonContainer.Visibility = isOther ? Visibility.Visible : Visibility.Collapsed;
+        if (isOther)
+            StatusReasonHint.Visibility = string.IsNullOrEmpty(StatusReasonBox.Text) ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void OnStatusReasonCategoryChanged(object sender, SelectionChangedEventArgs e)
+        => UpdateOtherReasonRowVisibility(StatusReasonCategoryBox.Visibility == Visibility.Visible);
+
+    // Selects the matching preset ComboBoxItem for a loaded order. Legacy records saved
+    // before the preset picker existed (or an unrecognized/blank category) fall back to
+    // "Other" so their existing free-text StatusReason stays visible and editable.
+    private void LoadStatusReasonCategory(string? category)
+    {
+        var matched = false;
+        foreach (var item in StatusReasonCategoryBox.Items.OfType<ComboBoxItem>())
+        {
+            var isMatch = string.Equals(item.Tag as string, category, StringComparison.Ordinal);
+            item.IsSelected = isMatch;
+            matched |= isMatch;
+        }
+
+        if (!matched)
+        {
+            foreach (var item in StatusReasonCategoryBox.Items.OfType<ComboBoxItem>())
+                item.IsSelected = string.Equals(item.Tag as string, "Other", StringComparison.Ordinal);
+        }
+    }
+
+    private void OnStatusReasonTextChanged(object sender, TextChangedEventArgs e)
+        => StatusReasonHint.Visibility = string.IsNullOrEmpty(StatusReasonBox.Text) ? Visibility.Visible : Visibility.Collapsed;
 
     private void SelectStatus(OrderStatus status)
     {

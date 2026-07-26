@@ -26,6 +26,7 @@
         <conv:OrderServicesSummaryConverter x:Key="OrderServicesSummaryConverter"/>
         <conv:PositiveAmountToVisibilityConverter x:Key="PositiveAmountToVisibility"/>
         <conv:CustomMadeServiceFlagConverter x:Key="CustomMadeServiceFlagConverter"/>
+        <conv:ReturnReasonSummaryConverter x:Key="ReturnReasonSummaryConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
         <!-- Right-click context menu styling -->
@@ -498,8 +499,33 @@
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Foreground="#777" FontSize="11"/>
                     <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}" Foreground="{Binding SelectedOrder, Converter={StaticResource BalanceStatusColorConverter}}" Margin="0,2,0,10" FontSize="13" FontWeight="SemiBold"/>
 
-                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PaymentBreakdown], Mode=OneWay}" Foreground="#777" FontSize="11"/>
-                    <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderPaymentSummaryConverter}}" Margin="0,2,0,10" FontSize="12" TextWrapping="Wrap"/>
+                    <!-- Payment breakdown: only meaningful for orders that still owe/collect money.
+                         Cancelled/returned orders show the cancellation/return reason instead. -->
+                    <StackPanel>
+                        <StackPanel.Style>
+                            <Style TargetType="StackPanel">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding SelectedOrder.IsRefunded}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </StackPanel.Style>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PaymentBreakdown], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                        <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderPaymentSummaryConverter}}" Margin="0,2,0,10" FontSize="12" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding SelectedOrder.IsRefunded, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.StatusReason], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                        <TextBlock Margin="0,2,0,10" FontSize="13" TextWrapping="Wrap">
+                            <TextBlock.Text>
+                                <MultiBinding Converter="{StaticResource ReturnReasonSummaryConverter}">
+                                    <Binding Path="SelectedOrder.StatusReasonCategory"/>
+                                    <Binding Path="SelectedOrder.StatusReason"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+                    </StackPanel>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Notes], Mode=OneWay}" Foreground="#777" FontSize="11"/>
                     <TextBlock Text="{Binding SelectedOrder.Notes}"         Margin="0,2,0,10"

@@ -23,6 +23,14 @@ public class Order
     public string? JacketLength { get; set; }
     public string? CustomMadeRecordsJson { get; set; }
     public OrderStatus Status { get; set; } = OrderStatus.Processing;
+    // Free-text reason entered by the shop when the order is cancelled or returned
+    // (取消理由 / 退货理由, same underlying field with a status-driven placeholder/label).
+    public string? StatusReason { get; set; }
+    // Stable key for the selected preset reason category (CustomerDoesNotWant /
+    // ServiceUnsatisfactory / ProductIssue / PriceTooHigh / Other). Only meaningful when
+    // Status is Cancelled/Returned. When the category is "Other", StatusReason holds the
+    // free-text detail; for every other category StatusReason is unused/null.
+    public string? StatusReasonCategory { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal? Downpayment { get; set; }
     public PaymentMethod? DownpaymentMethod { get; set; }

@@ -787,19 +787,33 @@ public partial class MainWindow : Window
         document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedFinalBalance"], Money(symbol, order.ReceivedFinalBalance)));
         if (order.TotalTax > 0m)
             document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PaidTax"], Money(symbol, order.TotalTax)));
-        // A refunded (cancelled/returned) order no longer owes a final balance, so the
-        // 剩余尾款 line is omitted from its receipt.
-        if (!order.IsRefunded)
-            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(symbol, order.FinalBalance)));
+        // AddReceiptTotals runs for every order regardless of refund status (full parity
+        // with the on-screen detail panel), so 剩余尾款 is always shown here too.
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(symbol, order.FinalBalance)));
         var balanceStatusText = new OrderPaymentSummaryConverter().Convert(order, typeof(string), "Status", CultureInfo.CurrentCulture) as string;
         document.Blocks.Add(ReceiptStatusLine(_localization["Order.Fields.BalanceStatus"],
             balanceStatusText, BalanceStatusBrush(order.PaymentStatusKind)));
 
-        var paymentBreakdown = new OrderPaymentSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
-        if (!string.IsNullOrWhiteSpace(paymentBreakdown) && paymentBreakdown != "-")
+        // Cancelled/returned orders no longer have a meaningful payment-method breakdown;
+        // the receipt shows the cancellation/return reason there instead (mirrors the
+        // on-screen order-details panel).
+        if (order.IsRefunded)
         {
-            document.Blocks.Add(ReceiptSectionTitle(_localization["Order.Fields.PaymentBreakdown"]));
-            document.Blocks.Add(ReceiptMultilineParagraph(paymentBreakdown));
+            var reasonLabelKey = order.Status == OrderStatus.Cancelled
+                ? "Order.Fields.CancelReason"
+                : "Order.Fields.ReturnReason";
+            document.Blocks.Add(ReceiptSectionTitle(_localization[reasonLabelKey]));
+            document.Blocks.Add(ReceiptMultilineParagraph(
+                ReturnReasonSummaryConverter.Resolve(order.StatusReasonCategory, order.StatusReason)));
+        }
+        else
+        {
+            var paymentBreakdown = new OrderPaymentSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
+            if (!string.IsNullOrWhiteSpace(paymentBreakdown) && paymentBreakdown != "-")
+            {
+                document.Blocks.Add(ReceiptSectionTitle(_localization["Order.Fields.PaymentBreakdown"]));
+                document.Blocks.Add(ReceiptMultilineParagraph(paymentBreakdown));
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(order.Notes))

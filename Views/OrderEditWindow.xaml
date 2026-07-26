@@ -131,6 +131,21 @@
             <Setter Property="Margin" Value="0,0,10,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
+
+        <!-- Small glyph shown before a basic-info field label. -->
+        <Style x:Key="FieldIcon" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#2980B9"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+        </Style>
+
+        <!-- Basic-info field label (paired with a FieldIcon glyph). -->
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Foreground" Value="#3B4859"/>
+        </Style>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -146,51 +161,95 @@
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="FormRoot">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="120"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="120"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                <Border Style="{StaticResource SectionCard}" Margin="0">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeading}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.BasicInfo], Mode=OneWay}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="140"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                    <TextBox Grid.Row="0" Grid.Column="1" x:Name="OrderNumberBox" Margin="0,8,14,8" Padding="6,4"/>
+                            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Margin="0,8">
+                                <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE8EC;"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}"/>
+                            </StackPanel>
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="OrderNumberBox" Margin="0,8,14,8" Padding="6,4"/>
 
-                    <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                    <ComboBox Grid.Row="0" Grid.Column="3" x:Name="StatusBox" Margin="0,8" Padding="6,4" SelectionChanged="OnStatusChanged">
-                        <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Processing], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Processing}"/>
-                        <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Shipped], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Shipped}"/>
-                        <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Completed], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Completed}"/>
-                        <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Cancelled], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Cancelled}"/>
-                        <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Returned], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Returned}"/>
-                    </ComboBox>
+                            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Margin="0,8">
+                                <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE7C1;"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}"/>
+                            </StackPanel>
+                            <ComboBox Grid.Row="0" Grid.Column="3" x:Name="StatusBox" Margin="0,8" Padding="6,4" SelectionChanged="OnStatusChanged">
+                                <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Processing], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Processing}"/>
+                                <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Shipped], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Shipped}"/>
+                                <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Completed], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Completed}"/>
+                                <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Cancelled], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Cancelled}"/>
+                                <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Returned], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Returned}"/>
+                            </ComboBox>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" x:Name="CustomerNameBox" Margin="0,8,14,8" Padding="6,4"/>
+                            <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" Margin="0,8">
+                                <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE77B;"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}"/>
+                            </StackPanel>
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="CustomerNameBox" Margin="0,8,14,8" Padding="6,4"/>
 
-                    <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                    <StackPanel Grid.Row="1" Grid.Column="3" Margin="0,8">
-                        <TextBox x:Name="PhoneNumberBox" Padding="6,4" LostFocus="OnPhoneNumberBoxLostFocus"/>
-                        <TextBlock x:Name="PhoneErrorText" Foreground="#E74C3C" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0" Visibility="Collapsed"/>
+                            <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Margin="0,8">
+                                <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE717;"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="3" Margin="0,8">
+                                <TextBox x:Name="PhoneNumberBox" Padding="6,4" LostFocus="OnPhoneNumberBoxLostFocus"/>
+                                <TextBlock x:Name="PhoneErrorText" Foreground="#E74C3C" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0" Visibility="Collapsed"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,8">
+                                <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE715;"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Email], Mode=OneWay}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,8,14,8">
+                                <TextBox x:Name="EmailBox" Padding="6,4" LostFocus="OnEmailBoxLostFocus"/>
+                                <TextBlock x:Name="EmailErrorText" Foreground="#E74C3C" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0" Visibility="Collapsed"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" Margin="0,10,0,8" VerticalAlignment="Top">
+                                <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE707;" Margin="0,2,6,0"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Address], Mode=OneWay}"/>
+                            </StackPanel>
+                            <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" x:Name="AddressBox" Margin="0,8" Padding="6,4"
+                                     Height="68" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
+
+                            <StackPanel Grid.Row="4" Grid.Column="0" x:Name="StatusReasonLabelPanel" Orientation="Horizontal" Margin="0,10,0,8" VerticalAlignment="Top" Visibility="Collapsed">
+                                <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE7C1;" Margin="0,2,6,0"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.StatusReason], Mode=OneWay}"/>
+                            </StackPanel>
+                            <ComboBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" x:Name="StatusReasonCategoryBox" Margin="0,8" Padding="6,4"
+                                      HorizontalAlignment="Left" MinWidth="260" Visibility="Collapsed" SelectionChanged="OnStatusReasonCategoryChanged">
+                                <ComboBoxItem Tag="CustomerDoesNotWant" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.CustomerDoesNotWant], Mode=OneWay}"/>
+                                <ComboBoxItem Tag="ServiceUnsatisfactory" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.ServiceUnsatisfactory], Mode=OneWay}"/>
+                                <ComboBoxItem Tag="ProductIssue" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.ProductIssue], Mode=OneWay}"/>
+                                <ComboBoxItem Tag="PriceTooHigh" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.PriceTooHigh], Mode=OneWay}"/>
+                                <ComboBoxItem Tag="Other" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.Other], Mode=OneWay}"/>
+                            </ComboBox>
+
+                            <Grid Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" x:Name="StatusReasonContainer" Margin="0,8" Visibility="Collapsed">
+                                <TextBox x:Name="StatusReasonBox" Padding="6,4" Height="60" TextWrapping="Wrap" AcceptsReturn="True"
+                                         VerticalScrollBarVisibility="Auto" TextChanged="OnStatusReasonTextChanged"/>
+                                <TextBlock x:Name="StatusReasonHint" IsHitTestVisible="False" Foreground="#9FB0C0" Margin="9,7,0,0" VerticalAlignment="Top"/>
+                            </Grid>
+                        </Grid>
                     </StackPanel>
-
-                    <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Email], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,8,14,8">
-                        <TextBox x:Name="EmailBox" Padding="6,4" LostFocus="OnEmailBoxLostFocus"/>
-                        <TextBlock x:Name="EmailErrorText" Foreground="#E74C3C" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0" Visibility="Collapsed"/>
-                    </StackPanel>
-
-                    <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Address], Mode=OneWay}" VerticalAlignment="Top" Margin="0,10,0,8"/>
-                    <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" x:Name="AddressBox" Margin="0,8" Padding="6,4"
-                             Height="68" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
-                </Grid>
+                </Border>
 
                 <!-- Order totals summary -->
                 <Border Style="{StaticResource SummaryCard}">
