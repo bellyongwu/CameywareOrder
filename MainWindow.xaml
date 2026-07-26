@@ -208,12 +208,16 @@
                         </MenuItem>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ImportExport], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.MeasurementTerms], Mode=OneWay}">
-                                <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Export], Mode=OneWay}" Click="OnExportMeasurementTermsClick"/>
-                                <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Import], Mode=OneWay}" Click="OnImportMeasurementTermsClick"/>
+                                 <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Import], Mode=OneWay}" Click="OnImportMeasurementTermsClick"/>
+                                 <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Export], Mode=OneWay}" Click="OnExportMeasurementTermsClick"/>
                             </MenuItem>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalDatabase], Mode=OneWay}">
-                                <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Export], Mode=OneWay}" Click="OnExportDatabaseClick"/>
                                 <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Import], Mode=OneWay}" Click="OnImportDatabaseClick"/>
+                                <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Export], Mode=OneWay}" Click="OnExportDatabaseClick"/>                                
+                            </MenuItem>
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}">
+                                <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Import], Mode=OneWay}" Click="OnImportBrandingClick"/>
+                                <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Export], Mode=OneWay}" Click="OnExportBrandingClick"/>                                
                             </MenuItem>
                         </MenuItem>
                     </MenuItem>

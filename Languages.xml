@@ -14,7 +14,7 @@
     <Text key="Toolbar.PrintMeasurements">打印量身尺寸</Text>
     <Text key="Toolbar.PrintReceiptAndMeasurements">打印小票和所有尺寸</Text>
     <Text key="Toolbar.LocalConfig">本地配置</Text>
-    <Text key="Toolbar.Print">打印</Text>
+    <Text key="Toolbar.Print">打印及设置页眉页脚</Text>
     <Text key="Toolbar.HeaderFooter">添加或更改页眉页脚</Text>
     <Text key="Toolbar.CurrencySetting">货币设置</Text>
     <Text key="Toolbar.LocalDatabase">本地数据库</Text>
@@ -71,8 +71,14 @@
     <Text key="Status.ExportDatabaseFailed">导出数据库失败: {0}</Text>
     <Text key="Status.ImportDatabaseSucceeded">数据库已导入，原数据库已自动备份</Text>
     <Text key="Status.ImportDatabaseFailed">导入数据库失败: {0}</Text>
+    <Text key="Status.ExportBrandingSucceeded">页眉页脚设置已导出</Text>
+    <Text key="Status.ExportBrandingFailed">导出页眉页脚设置失败: {0}</Text>
+    <Text key="Status.ImportBrandingSucceeded">页眉页脚设置已导入</Text>
+    <Text key="Status.ImportBrandingFailed">导入页眉页脚设置失败: {0}</Text>
+    <Text key="Status.ImportBrandingInvalid">所选文件不是有效的页眉页脚设置文件。</Text>
     <Text key="ImportExport.MeasurementTermsConfirm">导入将覆盖当前的量身项目设置，确定要继续吗？</Text>
     <Text key="ImportExport.DatabaseConfirm">导入将替换当前所有订单数据，此操作不可撤销（系统会自动备份当前数据库）。确定要继续吗？</Text>
+    <Text key="ImportExport.BrandingConfirm">导入将覆盖当前的页眉页脚（含徽标）设置，确定要继续吗？</Text>
     <Text key="Receipt.Title">销售小票</Text>
     <Text key="Receipt.PrintedAt">打印时间</Text>
     <Text key="Receipt.SectionTotal">合计</Text>
@@ -365,7 +371,7 @@
     <Text key="Toolbar.PrintMeasurements">Print Measurements</Text>
     <Text key="Toolbar.PrintReceiptAndMeasurements">Print Receipt &amp; All Measurements</Text>
     <Text key="Toolbar.LocalConfig">Local Configuration</Text>
-    <Text key="Toolbar.Print">Print</Text>
+    <Text key="Toolbar.Print">Print and Set Header &amp; Footer</Text>
     <Text key="Toolbar.HeaderFooter">Add or Change Header &amp; Footer</Text>
     <Text key="Toolbar.CurrencySetting">Currency Setup</Text>
     <Text key="Toolbar.LocalDatabase">Local Database</Text>
@@ -422,8 +428,14 @@
     <Text key="Status.ExportDatabaseFailed">Export database failed: {0}</Text>
     <Text key="Status.ImportDatabaseSucceeded">Database imported (the previous database was automatically backed up)</Text>
     <Text key="Status.ImportDatabaseFailed">Import database failed: {0}</Text>
+    <Text key="Status.ExportBrandingSucceeded">Header &amp; footer settings exported</Text>
+    <Text key="Status.ExportBrandingFailed">Export header &amp; footer settings failed: {0}</Text>
+    <Text key="Status.ImportBrandingSucceeded">Header &amp; footer settings imported</Text>
+    <Text key="Status.ImportBrandingFailed">Import header &amp; footer settings failed: {0}</Text>
+    <Text key="Status.ImportBrandingInvalid">The selected file is not a valid header &amp; footer settings file.</Text>
     <Text key="ImportExport.MeasurementTermsConfirm">Importing will overwrite the current measurement terms configuration. Continue?</Text>
     <Text key="ImportExport.DatabaseConfirm">Importing will replace all current order data. This cannot be undone (the current database will be automatically backed up). Continue?</Text>
+    <Text key="ImportExport.BrandingConfirm">Importing will overwrite the current header &amp; footer (including the logo) settings. Continue?</Text>
     <Text key="Receipt.Title">Sales Receipt</Text>
     <Text key="Receipt.PrintedAt">Printed at</Text>
     <Text key="Receipt.SectionTotal">Total</Text>

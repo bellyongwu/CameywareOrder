@@ -565,6 +565,77 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnExportBrandingClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            FileName = "header-footer-branding.json",
+            Filter = "JSON (*.json)|*.json"
+        };
+
+        if (dialog.ShowDialog(this) is not true)
+            return;
+
+        try
+        {
+            System.IO.File.WriteAllText(dialog.FileName, ReceiptBrandingStore.ExportConfigJson());
+            _viewModel.StatusMessage = _localization["Status.ExportBrandingSucceeded"];
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.ExportBrandingFailed", ex.Message);
+        }
+    }
+
+    private void OnImportBrandingClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "JSON (*.json)|*.json",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog(this) is not true)
+            return;
+
+        BrandingExport? imported;
+        try
+        {
+            imported = ReceiptBrandingStore.TryParseConfigJson(System.IO.File.ReadAllText(dialog.FileName));
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.ImportBrandingFailed", ex.Message);
+            return;
+        }
+
+        if (imported is null)
+        {
+            MessageBox.Show(
+                _localization["Status.ImportBrandingInvalid"],
+                _localization["Toolbar.HeaderFooter"],
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            _localization["ImportExport.BrandingConfirm"],
+            _localization["Toolbar.HeaderFooter"],
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            ReceiptBrandingStore.ImportConfig(imported);
+            _viewModel.StatusMessage = _localization["Status.ImportBrandingSucceeded"];
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.ImportBrandingFailed", ex.Message);
+        }
+    }
+
     private FlowDocument BuildReceiptDocument(Order order, double pageWidth)
     {
         var symbol = CurrencySettingService.Instance.Symbol;

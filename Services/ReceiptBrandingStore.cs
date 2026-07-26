@@ -155,4 +155,66 @@ public static class ReceiptBrandingStore
             // Non-fatal: a stale logo file left behind is harmless.
         }
     }
+
+    /// <summary>
+    /// Serializes the current settings plus the logo image bytes (base64) into a single
+    /// self-contained JSON document, so an export/import round-trip restores the logo too.
+    /// </summary>
+    public static string ExportConfigJson()
+    {
+        var settings = Load();
+        var logoBytes = GetLogoBytes(settings);
+        var export = new BrandingExport
+        {
+            Settings = settings,
+            LogoFileName = logoBytes is not null ? settings.LogoFileName : null,
+            LogoBase64 = logoBytes is not null ? Convert.ToBase64String(logoBytes) : null
+        };
+
+        return JsonSerializer.Serialize(export, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    /// <summary>Parses an export document, returning null when the JSON is invalid/corrupt.</summary>
+    public static BrandingExport? TryParseConfigJson(string json)
+    {
+        try
+        {
+            var export = JsonSerializer.Deserialize<BrandingExport>(json);
+            return export?.Settings is null ? null : export;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Replaces the persisted settings and logo image with the imported ones.</summary>
+    public static void ImportConfig(BrandingExport export)
+    {
+        Directory.CreateDirectory(BrandingDirectory);
+        RemoveExistingLogoFiles();
+
+        var settings = export.Settings ?? new ReceiptBrandingSettings();
+
+        if (!string.IsNullOrWhiteSpace(export.LogoBase64) && !string.IsNullOrWhiteSpace(export.LogoFileName))
+        {
+            var bytes = Convert.FromBase64String(export.LogoBase64);
+            File.WriteAllBytes(Path.Combine(BrandingDirectory, export.LogoFileName), bytes);
+            settings.LogoFileName = export.LogoFileName;
+        }
+        else
+        {
+            settings.LogoFileName = null;
+        }
+
+        Save(settings);
+    }
+}
+
+/// <summary>Self-contained export/import payload for <see cref="ReceiptBrandingSettings"/>.</summary>
+public sealed class BrandingExport
+{
+    public ReceiptBrandingSettings? Settings { get; set; }
+    public string? LogoFileName { get; set; }
+    public string? LogoBase64 { get; set; }
 }
