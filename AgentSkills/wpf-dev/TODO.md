@@ -21,6 +21,21 @@ _(none)_
 
 ## Completed
 
+### 2026-07-26 14:00 — Doc maintenance: bring Architecture.md back in sync with the code  [DONE]
+- Ask: "Analyze the architecture.md file under the agent skills, and then checking what does this project do" → then "yes go ahead" (update the drifted docs).
+- Findings: `Architecture.md` had fallen behind several sessions of work — components that only ever got recorded in `context.md`/`TODO.md` were never promoted into the component map, and one cross-cutting rule had become factually wrong.
+- Done (`AgentSkills/wpf-dev/Architecture.md`):
+  - [x] **Services/**: added `CurrencySettingService`, `ReceiptBrandingStore` (+ `LogoPlacement`/`BrandingExport`), `BrandingRenderer`; expanded `MeasurementTermsService` with `MeasurementGender`, `EnableCustomMeasurements`/`RestoreDefaultMeasurements`, and the export/import trio.
+  - [x] **Data/**: documented `DatabasePathProvider.ExportDatabaseTo`/`ImportDatabaseFrom` (zip package incl. the `Documents/` tree, zip-slip guard, legacy raw-`.db` fallback).
+  - [x] **Models/**: `Order.StatusReasonCategory` + `StatusReason` pair, `IsPickedUp` = Shipped or Completed; `MeasurementTerm.Gender` + `GarmentType.UseCustomMeasurements`.
+  - [x] **Converters/**: added the 4 undocumented ones — `BalanceStatusColorConverter`, `OrderServicesSummaryConverter`, `ReturnReasonSummaryConverter`, `DocumentThumbnailConverter` (and named `LastItemBorderThicknessConverter`).
+  - [x] **Views/**: added `ReceiptBrandingWindow` and `CurrencySettingWindow`.
+  - [x] **Migrations/**: was "InitialCreate + snapshot"; there are two (`AddOrderPaymentFields`), with later columns arriving via the runtime guards.
+  - [x] **MainWindow**: documented the 本地配置 menu incl. the 导入/导出 submenu (3 export/import pairs, confirm dialogs, dated file names).
+  - [x] **Cross-cutting**: corrected the refunded-receipt rule (it no longer omits 剩余尾款 — only the 收款明细 breakdown is swapped for the reason); recorded that read-only status = Completed/Shipped/Cancelled/Returned across the three predicates that must change together; added the self-contained Import/Export rule.
+- Done (`AgentSkills/wpf-dev/context.md`): workspace path corrected `c:\` → `d:\Projects\LeeYongeOrdering`.
+- Notes: docs only — no source files touched, so no build/Sonar run applies.
+
 ### 2026-07-26 13:30 — Real fix: red strikethrough still spanned full row (previous fix was ineffective)  [DONE]
 - Ask: "之前提的 checkbox strok 横贯整个 row 的问题依旧没有修改。我觉得在 checkbox 外增加一层 block 正好长度跟它一样，这样对这个层直接 covered by red cross line。当然要有相应的逻辑去控制什么时候添加这个带 crossline 的层。应该可以解决。"
 - Real root cause (the previous session's `HorizontalAlignment="Left"` fix on the checkboxes did NOT work): the `NotApplicableCheckBox` style's `ControlTemplate` drew the strike with a `Line Stretch="Fill"`. A `Stretch="Fill"` shape measures itself against whatever available width its parent offers (not the sibling content's actual size), so it always inflated to roughly the row width during Measure — `HorizontalAlignment="Left"` on the checkbox only affects Arrange positioning, not that inflated Measure-time DesiredSize, so it had no visible effect.

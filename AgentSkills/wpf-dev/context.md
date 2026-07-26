@@ -5,7 +5,8 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Workspace
 
-- Repo: `c:\Projects\LeeYongeOrdering`
+- Repo: `d:\Projects\LeeYongeOrdering` (moved from `c:\` — older TODO entries
+  still quote the old path)
 - App process name (kill before building): `LeeYongeOrdering`
 - Build/verify command:
   ```powershell

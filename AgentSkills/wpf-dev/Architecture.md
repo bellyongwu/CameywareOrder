@@ -31,7 +31,12 @@ components are added/renamed or the way pieces fit together changes.
   - `AppDbContextFactory` — `IDesignTimeDbContextFactory<AppDbContext>` for EF
     tooling; also writes a legacy migrations-history baseline.
   - `DatabasePathProvider` — resolves DB file path / connection string, ensures
-    the folder exists.
+    the folder exists; also owns the database **export/import** used by the
+    导入/导出 menu: `ExportDatabaseTo` writes a **zip package** (`orders.db` +
+    `-wal`/`-shm` sidecars + the whole `Documents/` tree, so attached images
+    migrate with the data), and `ImportDatabaseFrom` restores it (zip-slip
+    guarded via `ExtractPackageSafely`, falls back to the legacy raw-`.db` copy
+    for older exports, backs up the current db + Documents folder first).
 - **Services/**
   - `DocumentStorageService` — static global helper for custom-made record
     images: import/export/delete under
@@ -43,8 +48,32 @@ components are added/renamed or the way pieces fit together changes.
     `MeasurementTermsConfig` (terms + garments + garment→term maps); resolves
     localized names (predefined → `Measure.Term.*`/`Measure.Garment.*` string
     table, custom → per-language Names dict); add/edit/delete custom terms &
-    garments; add/remove term↔garment mapping (blocks locked predefined pairs);
-    `LoadOrSeed`+`MergePredefined` seed/upgrade; `ConfigChanged` event.
+    garments (with a `MeasurementGender` classification + `IsDuplicateTermName`
+    guard); add/remove term↔garment mapping (blocks locked predefined pairs
+    unless the garment has `EnableCustomMeasurements`, undone by
+    `RestoreDefaultMeasurements`); `LoadOrSeed`+`MergePredefined` seed/upgrade;
+    `ExportConfigJson` / `TryParseConfigJson` / `ImportConfig` back the
+    量身项目设置 import/export; `ConfigChanged` event.
+  - `CurrencySettingService` — singleton `Instance` (`INotifyPropertyChanged`)
+    owning the **global** currency (`Current` + `Symbol`: ￥ for CNY else $),
+    persisted to `currency-setting.json` under LocalAppData. Currency is an app
+    setting, not per-order — the `Orders.CurrencyType` column is retained but
+    unused.
+  - `ReceiptBrandingStore` — static store for the receipt/measurement branding:
+    `receipt-branding.json` + a `logo.*` file under
+    `%LocalAppData%\LeeYongeOrdering\Branding`. `ReceiptBrandingSettings` holds
+    per-language `LocalizedBranding` (`HeaderXaml`/`FooterXaml`) plus
+    `LogoFileName` + `LogoPlacement` (Left/Center/Right, default Center).
+    `ExportConfigJson` / `TryParseConfigJson` / `ImportConfig` (+ `BrandingExport`
+    DTO) make the 页眉页脚 export **self-contained** — the logo travels as base64
+    inside the JSON.
+  - `BrandingRenderer` — static renderer that round-trips branding content
+    between a `RichTextBox` FlowDocument and its XAML string
+    (`XamlWriter.Save` / `XamlReader.Parse`), appends it to a printed receipt
+    (`AppendToFlowDocument`, `CreateLogoBlock`), and renders the same XAML into
+    QuestPDF spans for the measurements PDF (`RenderToPdf`, `AlignLogo`).
+    `IsEmpty(headerXaml)` is the gate that decides whether the built-in document
+    title is printed.
   - `CustomMadeMeasurementReader` — static read-only helper that projects an
     order's saved `CustomMadeRecords` into print/UI shapes: `GetGarmentNames`
     (distinct, order-preserving garment display names in a given language) and
@@ -70,7 +99,10 @@ components are added/renamed or the way pieces fit together changes.
     `PaymentStatusKind` (`BalanceStatusKind` enum: Outstanding / ClearedPickedUp /
     ClearedNotPickedUp / Refunded) are the single source of truth for the
     balance-status indicator (label + colour) across the list, detail panel and
-    receipt.
+    receipt; `IsPickedUp` covers **Shipped or Completed**. Cancel/return reason is
+    stored as a pair: `StatusReasonCategory` (stable key — CustomerDoesNotWant /
+    ServiceUnsatisfactory / ProductIssue / PriceTooHigh / Other) plus
+    `StatusReason` (free text, only meaningful for `Other`).
   - `SectionPayment` — immutable `readonly record struct`
     (Subtotal, Deposit, FinalBase, ReceivedDownpayment, FinalCharge, Total, Tax)
     holding one section's money split.
@@ -84,11 +116,15 @@ components are added/renamed or the way pieces fit together changes.
     migrate into `Garments` on next save.
   - `MeasurementTerm` / `GarmentType` / `MeasurementTermsConfig` /
     `MeasurementTermDefaults` (`Models/MeasurementTerm.cs`) — the Measurement
-    Terms domain: a term has an id + `IsPredefined` + per-language `Names`; a
-    garment has an id + `IsPredefined` + `Names` + ordered `TermIds`. Defaults
-    seed 21 predefined term ids and 7 predefined locked garments
-    (jacket/vest/shirt/pants/blouse/dress/qipao) with default garment→term maps;
-    `IsTermLockedInGarment` enforces predefined pairs.
+    Terms domain: a term has an id + `IsPredefined` + per-language `Names` + a
+    `MeasurementGender` (Common/Male/Female, used to filter the "all measurements"
+    list; predefined classifications come from
+    `MeasurementTermDefaults.GetPredefinedTermGender`); a garment has an id +
+    `IsPredefined` + `Names` + ordered `TermIds` + `UseCustomMeasurements` (when
+    set, a predefined garment's locked default mapping is released so any term may
+    be added/removed). Defaults seed 21 predefined term ids and 7 predefined locked
+    garments (jacket/vest/shirt/pants/blouse/dress/qipao) with default garment→term
+    maps; `IsTermLockedInGarment` enforces predefined pairs.
   - `CustomMadeDocument` — reference to an uploaded image attached to a
     custom-made record (`Category` enum: HandwritingReceipt/Fabric/Photo/Other,
     `FileName`, `StoredFileName`). Image bytes live on disk in the document
@@ -106,8 +142,16 @@ components are added/renamed or the way pieces fit together changes.
   `PositiveAmountToVisibilityConverter`, `CustomMadeServiceFlagConverter`
   (binds the whole `Order` row; ConverterParameter `Flag` → localized 有/无,
   `Names` → bracketed garment names with a zh 、 / en ", " separator,
-  `NamesVisibility` → Visible/Collapsed), and a last-item border-thickness
-  `IMultiValueConverter`. The built-in `BooleanToVisibilityConverter` is also
+  `NamesVisibility` → Visible/Collapsed), `BalanceStatusColorConverter`
+  (`Order.PaymentStatusKind` → brush: green #2E7D32 / light green #66BB6A /
+  orange #EF6C00 / red #C62828), `OrderServicesSummaryConverter` (lists every
+  service actually present in the order, not just the stored primary
+  `ServiceType`), `ReturnReasonSummaryConverter` (`IMultiValueConverter` over
+  category + free text; its `public static Resolve(category, freeText)` is reused
+  by the receipt code-behind), `DocumentThumbnailConverter` (stored file name →
+  128px `BitmapImage`, decoded `OnLoad` so the file is never locked), and
+  `LastItemBorderThicknessConverter` (last-item border-thickness
+  `IMultiValueConverter`). The built-in `BooleanToVisibilityConverter` is also
   registered in `MainWindow.xaml` (`BoolToVisibility`) for the section gates.
 - **ViewModels/**
   - `MainViewModel` — order list, paging, search, delete, **copy order**
@@ -142,6 +186,14 @@ components are added/renamed or the way pieces fit together changes.
     language. Detail-panel service sections are shown/hidden via
     the `Order.XxxAddedToReceipt` gates, and show the 定金/实收定金 and
     剩余尾款/实收尾款 pairs.
+    The toolbar carries a `本地配置` (`Toolbar.LocalConfig`) `Menu` holding
+    添加或更改页眉页脚, 货币设置, 测量术语, a `本地数据库` submenu (copy path / reveal
+    file / open folder) and a **导入/导出** (`Toolbar.ImportExport`) submenu with
+    Export+Import pairs for 量身项目设置 (JSON via `MeasurementTermsService`),
+    本地数据库 (zip package via `DatabasePathProvider`) and 页眉页脚 (JSON+base64
+    logo via `ReceiptBrandingStore`). Every import confirms with a Yes/No warning
+    dialog first and reports through `MainViewModel.StatusMessage`; export file
+    names get a date suffix via `BuildDatedExportFileName`.
   - `OrderColumnSort` (static, in `MainWindow.xaml.cs`) — attached properties
     `SortKey` (per-column sort member) and `SortGlyph` (header arrow), consumed by
     the header `ContentTemplate` and `UpdateSortGlyphs`.
@@ -184,10 +236,20 @@ components are added/renamed or the way pieces fit together changes.
     default = current) and **unit** (cm default / inch); exposes
     `SelectedLanguageCode` + `IsInch` (set on Print). Feeds the 打印量身尺寸 /
     打印小票和所有尺寸 print paths (a print method, not save-to-PDF).
+  - `ReceiptBrandingWindow` — the 页眉页脚 rich-text editor: a logo card
+    (choose/remove + Left/Center/Right placement radios), a formatting ribbon
+    (B/I/U, font size, align, colour swatches), and one tab per language each
+    holding a header + footer `RichTextBox`. Persists via `ReceiptBrandingStore`;
+    content is injected into the printed receipt and the measurements PDF by
+    `BrandingRenderer`.
+  - `CurrencySettingWindow` — small 货币设置 dialog (currency ComboBox +
+    Save/Cancel) writing through `CurrencySettingService`.
   - `DocumentPreviewWindow` — in-app image viewer (loads via `BitmapImage`
     `OnLoad` so the file is not locked).
   - `LanguageSelectionWindow` — first-run language picker.
-- **Migrations/** — `InitialCreate` + model snapshot.
+- **Migrations/** — `InitialCreate`, `AddOrderPaymentFields`, and the model
+  snapshot. Columns added after those two migrations arrive through the runtime
+  guards in `App.xaml.cs` instead (see Startup above).
 - **Languages.xml** (project root) — the single source string table (Chinese
   block first, English block second).
 
@@ -206,14 +268,27 @@ components are added/renamed or the way pieces fit together changes.
 - Order "picked up" state is represented purely by `OrderStatus.Completed`
   (no separate column); the "已取货" checkbox is only enabled once the order has a
   charge and every final balance is cleared, and read-only statuses relabel the
-  open action to "查看订单 / View Order".
+  open action to "查看订单 / View Order". **Read-only statuses are
+  Completed / Shipped / Cancelled / Returned** — kept in sync across three
+  `IsReadOnlyStatus`-style predicates (`MainWindow.xaml.cs` label,
+  `OrderEditWindow.xaml.cs` `_isReadOnly`, and `MainViewModel.IsClosedStatus`
+  which resets a copied order back to `Processing`); change all three together.
+- Anything with an Import/Export must export **self-contained**, so the whole app
+  can be migrated to another PC: base64-in-JSON for a single small asset (the
+  branding logo), a bundled zip package for many/large files (the database plus
+  its `Documents/` image tree). Imports confirm before overwriting and back up
+  what they replace.
 - A service section is "added" only when it carries a charge **and** a deposit
   method is selected; the `Order.XxxAddedToReceipt` gate is the single source of
   truth for both the printed receipt and the on-screen detail panel.
 - Balance status is derived, never stored: `Order.PaymentStatusKind` /
   `IsRefunded` are computed from the order's money + `Status`, and each surface
   (list column, detail panel, receipt, editor) maps that to its own label +
-  colour (green / light green / orange / red). Cancelled/returned orders are
-  "refunded": their receipt omits 剩余尾款 and shows 已退款或部分退款.
+  colour (green / light green / orange / red, via `BalanceStatusColorConverter` /
+  `BalanceStatusBrush`). Cancelled/returned orders are "refunded": they show
+  已退款或部分退款, and on both the receipt and the detail panel the
+  **收款明细 / payment-method breakdown is replaced by the 取消原因/退货原因**
+  (`ReturnReasonSummaryConverter`) — the charge lines, totals and 剩余尾款 still
+  print, so a refunded receipt keeps full parity with a normal one.
 - Destructive actions (delete) own their confirm dialog inside the command, so
   toolbar, context menu, and the `Delete` key share one prompt.
