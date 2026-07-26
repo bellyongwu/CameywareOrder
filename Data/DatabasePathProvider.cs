@@ -56,4 +56,49 @@ public static class DatabasePathProvider
 
         System.IO.File.Copy(sourcePath, targetPath, overwrite: true);
     }
+
+    // --- Import / export ---------------------------------------------------------
+
+    /// <summary>Copies the live database (plus any WAL/SHM sidecars) to <paramref name="targetPath"/>.</summary>
+    public static void ExportDatabaseTo(string targetPath)
+    {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+
+        System.IO.File.Copy(DatabaseFilePath, targetPath, overwrite: true);
+        CopySidecarIfExists(DatabaseFilePath + "-wal", targetPath + "-wal");
+        CopySidecarIfExists(DatabaseFilePath + "-shm", targetPath + "-shm");
+    }
+
+    /// <summary>
+    /// Replaces the live database with <paramref name="sourcePath"/> (plus any matching
+    /// WAL/SHM sidecars). The current database is first backed up alongside it with a
+    /// timestamped filename so the replaced data can be recovered if needed. Returns the
+    /// backup file path, or null if there was no existing database to back up.
+    /// </summary>
+    public static string? ImportDatabaseFrom(string sourcePath)
+    {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+
+        string? backupPath = null;
+        if (System.IO.File.Exists(DatabaseFilePath))
+        {
+            backupPath = System.IO.Path.Combine(AppDataDirectory, $"orders.db.bak-{DateTime.Now:yyyyMMddHHmmss}");
+            System.IO.File.Copy(DatabaseFilePath, backupPath, overwrite: true);
+        }
+
+        System.IO.File.Copy(sourcePath, DatabaseFilePath, overwrite: true);
+
+        DeleteSidecarIfExists(DatabaseFilePath + "-wal");
+        DeleteSidecarIfExists(DatabaseFilePath + "-shm");
+        CopySidecarIfExists(sourcePath + "-wal", DatabaseFilePath + "-wal");
+        CopySidecarIfExists(sourcePath + "-shm", DatabaseFilePath + "-shm");
+
+        return backupPath;
+    }
+
+    private static void DeleteSidecarIfExists(string path)
+    {
+        if (System.IO.File.Exists(path))
+            System.IO.File.Delete(path);
+    }
 }
