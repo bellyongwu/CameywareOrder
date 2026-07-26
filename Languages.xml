@@ -77,7 +77,7 @@
     <Text key="Status.ImportBrandingFailed">导入页眉页脚设置失败: {0}</Text>
     <Text key="Status.ImportBrandingInvalid">所选文件不是有效的页眉页脚设置文件。</Text>
     <Text key="ImportExport.MeasurementTermsConfirm">导入将覆盖当前的量身项目设置，确定要继续吗？</Text>
-    <Text key="ImportExport.DatabaseConfirm">导入将替换当前所有订单数据，此操作不可撤销（系统会自动备份当前数据库）。确定要继续吗？</Text>
+    <Text key="ImportExport.DatabaseConfirm">导入将替换当前所有订单数据及相关图片资料，此操作不可撤销（系统会自动备份当前数据库和图片）。确定要继续吗？</Text>
     <Text key="ImportExport.BrandingConfirm">导入将覆盖当前的页眉页脚（含徽标）设置，确定要继续吗？</Text>
     <Text key="Receipt.Title">销售小票</Text>
     <Text key="Receipt.PrintedAt">打印时间</Text>
@@ -434,7 +434,7 @@
     <Text key="Status.ImportBrandingFailed">Import header &amp; footer settings failed: {0}</Text>
     <Text key="Status.ImportBrandingInvalid">The selected file is not a valid header &amp; footer settings file.</Text>
     <Text key="ImportExport.MeasurementTermsConfirm">Importing will overwrite the current measurement terms configuration. Continue?</Text>
-    <Text key="ImportExport.DatabaseConfirm">Importing will replace all current order data. This cannot be undone (the current database will be automatically backed up). Continue?</Text>
+    <Text key="ImportExport.DatabaseConfirm">Importing will replace all current order data and attached document images. This cannot be undone (the current database and images will be automatically backed up). Continue?</Text>
     <Text key="ImportExport.BrandingConfirm">Importing will overwrite the current header &amp; footer (including the logo) settings. Continue?</Text>
     <Text key="Receipt.Title">Sales Receipt</Text>
     <Text key="Receipt.PrintedAt">Printed at</Text>

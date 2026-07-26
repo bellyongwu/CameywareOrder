@@ -439,11 +439,16 @@ public partial class MainWindow : Window
 
     // --- Import / export (本地配置 → 导入/导出) ----------------------------------
 
+    // Appends today's date (yyyyMMdd) before the extension so exported files sort/archive
+    // cleanly by date, e.g. "measurement-terms-20260726.json".
+    private static string BuildDatedExportFileName(string baseName, string extension) =>
+        $"{baseName}-{DateTime.Now:yyyyMMdd}.{extension}";
+
     private void OnExportMeasurementTermsClick(object sender, RoutedEventArgs e)
     {
         var dialog = new SaveFileDialog
         {
-            FileName = "measurement-terms.json",
+            FileName = BuildDatedExportFileName("measurement-terms", "json"),
             Filter = "JSON (*.json)|*.json"
         };
 
@@ -512,10 +517,13 @@ public partial class MainWindow : Window
 
     private void OnExportDatabaseClick(object sender, RoutedEventArgs e)
     {
+        // The exported package is a zip containing orders.db plus every attached
+        // custom-made document image, so the export is self-contained and can be
+        // copied to another PC without leaving image references dangling.
         var dialog = new SaveFileDialog
         {
-            FileName = "orders-backup.db",
-            Filter = "SQLite Database (*.db)|*.db"
+            FileName = BuildDatedExportFileName("orders-backup", "zip"),
+            Filter = "Backup Package (*.zip)|*.zip"
         };
 
         if (dialog.ShowDialog(this) is not true)
@@ -534,9 +542,11 @@ public partial class MainWindow : Window
 
     private void OnImportDatabaseClick(object sender, RoutedEventArgs e)
     {
+        // Accepts the zip package produced by export (db + document images) as well as a
+        // legacy raw .db file exported before document packaging existed.
         var dialog = new OpenFileDialog
         {
-            Filter = "SQLite Database (*.db)|*.db",
+            Filter = "Backup Package (*.zip)|*.zip|SQLite Database (*.db)|*.db|All files (*.*)|*.*",
             CheckFileExists = true
         };
 
@@ -569,7 +579,7 @@ public partial class MainWindow : Window
     {
         var dialog = new SaveFileDialog
         {
-            FileName = "header-footer-branding.json",
+            FileName = BuildDatedExportFileName("header-footer-branding", "json"),
             Filter = "JSON (*.json)|*.json"
         };
 

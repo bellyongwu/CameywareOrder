@@ -21,6 +21,21 @@ _(none)_
 
 ## Completed
 
+### 2026-07-26 10:00 — Dated export file names (archiving)  [DONE]
+- Ask: "导出的文件名称需要自动加上日期作为结尾，方便做归档" (exported file names should automatically append a date suffix, for easier archiving)
+- Done:
+  - [x] `MainWindow.xaml.cs`: new `BuildDatedExportFileName(baseName, extension)` helper (`"{baseName}-{yyyyMMdd}.{extension}"`); applied to all 3 export `SaveFileDialog` defaults — `measurement-terms-<date>.json`, `orders-backup-<date>.zip`, `header-footer-branding-<date>.json`.
+- Notes: build succeeded 0 warnings / 0 errors; SonarQube clean on `MainWindow.xaml.cs`. Date-only suffix (no time) per the request's wording; user can still rename in the save dialog.
+
+### 2026-07-26 09:30 — Audit: media assets in Import/Export must migrate cleanly  [DONE]
+- Ask: "Analyze all Import/export feature. Make sure any records or configs which has media resources related and have Import/export, the media assets(images), should be base64 saving to DB or if you have already implemented differently, its fine. The purpose is that we could migrate the whole application easily to another PC. Please verify if it follows the same business rules."
+- Findings: 3 Import/Export features exist (量身项目设置 JSON, 本地数据库, 页眉页脚 JSON). Measurement terms has no media. Branding logo was already self-contained (base64 in JSON, from the prior session). **Gap found:** custom-made document images (`CustomMadeDocument`/`DocumentStorageService`) live as files under `LocalAppData/LeeYongeOrdering/Documents/CustomMade`, referenced only by `StoredFileName` inside `Order.CustomMadeRecordsJson` — the DB export/import only copied `orders.db` (+wal/shm), so migrating the DB to another PC left every attached image reference dangling.
+- Done:
+  - [x] `Data/DatabasePathProvider.cs`: `ExportDatabaseTo` now writes a zip package (`orders.db` + wal/shm sidecars + the entire `Documents/` folder tree) instead of a raw `.db` copy. `ImportDatabaseFrom` tries the zip package first (validates it contains an `orders.db` entry, extracts with zip-slip path-containment guarding via `ExtractPackageSafely`), and falls back to the legacy raw-`.db`-copy path (catches `InvalidDataException` from `ZipFile.OpenRead`) for backward compatibility with previously-exported plain `.db` files. Both the current db AND the current `Documents/` folder are backed up (`orders.db.bak-<ts>`, `Documents.bak-<ts>`) before being overwritten.
+  - [x] `MainWindow.xaml.cs`: export/import dialogs now default to `.zip` (`orders-backup.zip`, filter "Backup Package (*.zip)"), import dialog also still accepts legacy `.db`/`*.*`.
+  - [x] `Languages.xml` (zh-CN + en-US): reworded `ImportExport.DatabaseConfirm` to mention attached images are included/backed up too.
+- Notes: build succeeded 0 warnings / 0 errors; SonarQube clean on `DatabasePathProvider.cs` and `MainWindow.xaml.cs`. No DB schema change (images stay file-based, not blobbed into SQLite — bundling via zip achieves the same "self-contained migration" goal without an invasive schema/perf tradeoff). See `/memories/repo/startup.md` for the durable rule going forward: any future Import/Export of a record/config with attached media must keep the export self-contained (base64-in-JSON for small single assets like the logo, or a bundled zip package for larger/many files like custom-made document images).
+
 ### 2026-07-26 09:00 — Import/Export for 页眉页脚 (header/footer branding)  [DONE]
 - Ask: "agent skill: wpf-dev, Previous features: Add a new tab on navigation called Import/Export under the local configuration... TODO: Add Import/export for 添加或更改页眉页脚. Make 页眉页脚 -> 导入导出"
 - Done:
