@@ -18,6 +18,45 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **"Cleared" is not the same as "settled" — always pair it with a charge**: a section with
+  no charge reports cleared because nothing is owed (`IsSectionCleared` returns true on
+  `total <= 0`). Locking on that tick alone disabled the deposit radios, deposit box, tax box
+  and item editors, so the section stopped responding and could never be given a price to
+  un-clear it. `OrderEditWindow.IsSettled(c)` = `BalanceClearedCheck.IsChecked is true &&
+  SectionTotal() > 0m` is now the single test behind every settlement lock
+  (`ApplySectionLock`, `ApplySectionInputLocks`, both blocks in `RefreshPricingLocks`,
+  `RefreshCustomMadeButtonLabel`, `OnEditCustomMadeRecordClick`). Never re-introduce a bare
+  `BalanceClearedCheck.IsChecked` lock test.
+- **Persist on `HasItems()`, never on `SumTotal > 0`**: `ApplyPaymentFields` used to drop a
+  zero-charge section into `ClearSectionPaymentFields`, nulling its downpayment method,
+  deposit-received and cleared flags. On reload the null method leaves every deposit radio
+  unchecked, and `UpdateSectionVisibility` collapses `PricingPanel` when nothing is selected —
+  the deposit box, breakdown and final block all vanish and the section looks broken. All
+  three gates now use `HasItems()`. This also makes `AlterationSubtotal` persist as `0`
+  rather than `null`, so a zero-priced section survives a save/reopen round-trip.
+  - Still open: `Order.IsBalanceCleared` early-returns on `TotalAmount <= 0m`, so an order
+    whose services are ALL zero-priced still reads Outstanding once saved.
+
+- **One tax label, not two**: `Order.Fields.DepositTax` was deleted and all six tax rows
+  in `OrderEditWindow.xaml` (3 deposit-stage + 3 final-stage panels) now bind
+  `Order.Fields.ServiceTotalTax`. Both had displayed the identical `money.Tax`; because the
+  two panels are mutually exclusive, the same figure was just called two different things
+  depending on stage. Do not reintroduce a stage-specific label for a section-wide value —
+  the stage-specific keys are `Order.Fields.DepositTaxRate`/`FinalTaxRate` (the editable
+  rate) and `Order.Fields.DepositTaxLine`/`FinalTaxLine` (the per-portion split lines).
+- **String table is orphan-free as of 2026-07-26**: 330 keys per block, both blocks
+  identical. 23 dead keys were pruned. To re-audit: extract every `<Text key>` and grep the
+  source for each, EXCLUDING the interpolated families — `Measure.Term.{id}`,
+  `Measure.Garment.{id}`, `ClothingItem.{key}`, `PaymentMethod.{m}`, `AgeType.{t}`,
+  `CurrencyType.{c}`, `ReturnReason.{c}`, `ServiceType.{t}`, `Alteration.Category.{t}`,
+  `OrderEdit.Panel.{enum}` — which are live despite having no literal reference.
+- **Dead but DB-backed (left in place deliberately)**: `Order.ChestSize` /
+  `Order.JacketLength` are written as `null` on every save and never read (superseded by the
+  Measurement Terms system); `Order.CurrencyType` is unused (currency is global). They
+  survive only as field copies in `MainViewModel.CopyOrderAsync`. Removing them is a
+  migration decision. By contrast `Order.Subtotal`/`TaxRate`/`Downpayment`/
+  `DownpaymentMethod`/`FinalBalanceMethod` DO still participate as legacy fallbacks.
+
 - **"Order items", not money, decide whether a service takes part**: `PaymentSectionControls`
   carries `HasItems()` (custom-made records exist / clothing rows exist / for Alterations a
   non-empty price box, since it has no item list), `SectionTotal()` and `HasMissingPrice`
@@ -88,6 +127,22 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     over to the final rate and must become editable again. Price/deposit boxes still use
     `inputsLocked`.
 
+- **Inheritance must be kept live, not just resolved at read time**: because
+  `ApplyPaymentFields` persists the final method through `EffectiveFinalMethod`, an
+  *inherited* method is indistinguishable from a *chosen* one once reloaded — so a saved
+  card deposit kept taxing the balance at the card rate even after the deposit was switched
+  to cash. `PaymentSectionControls.FinalMethodUserChosen` now tracks the difference: set when
+  the user clicks a final-method radio, and `ApplyDepositMethodChange` re-mirrors the final
+  method onto every deposit-method change while it is false. `LoadPaymentFields` recovers the
+  flag with `InferFinalMethodWasChosen` — a stored final method that DIFFERS from the deposit
+  must have been deliberate; an equal one counts as inherited.
+  - GENERAL LESSON: whenever a derived value is persisted, persist or reconstruct the fact
+    that it was derived. Otherwise the next load promotes it to user intent.
+  - NOT A BUG (expect this question again): when both portions share a method AND a rate, the
+    section's total tax is invariant to the deposit split —
+    `deposit×r + (subtotal−deposit)×r ≡ subtotal×r` — so the deposit-stage breakdown rows do
+    not move when the deposit amount changes. They only move when the two portions differ in
+    method or rate.
 - **Final balance inherits the deposit's payment method until explicitly chosen**:
   `OrderEditWindow.EffectiveFinalMethod(PaymentSectionControls)` resolves the final
   method as `explicit selection ?? deposit method` (`None` never inherits). It is used by

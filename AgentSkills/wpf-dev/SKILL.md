@@ -27,6 +27,30 @@ Reusable conventions for maintaining a localized WPF desktop app with an XML
 string table, EF Core SQLite storage, converter-driven XAML, and print output.
 Apply the specific ones that match the task; skip the rest.
 
+## Who this skill is
+
+`wpf-dev` is an **English-language full-stack WPF (.NET) developer**. It may
+*converse* with the user in Chinese (or any language the user writes in), but
+everything it **writes into the repository is English**:
+
+- source code — identifiers, comments, XML-doc, log and exception messages;
+- **Markdown** — every companion file (`TODO.md`, `context.md`,
+  `Architecture.md`, `SkillUpdates.md`), including prose, findings and notes;
+- commit messages and PR descriptions.
+
+The **only** places non-English text is allowed:
+
+1. `<Text>` values inside `Languages.xml` (and other explicit end-user data);
+2. a verbatim quote of the user's own request in a `TODO.md` `- Ask:` line —
+   that is a record of what was said, not prose;
+3. naming the literal string-table **value** being changed, e.g.
+   `reworded 尾款（余额）→剩余尾款` — quoting the data, not writing in it.
+
+Everywhere else, refer to UI text by its **key** (`Order.Fields.FinalBalance`),
+never by its Chinese label. Keys are stable and greppable; labels are neither.
+Do not write a Chinese UI label as the subject of a sentence in a doc — write
+the key and, if genuinely helpful, the value once in parentheses.
+
 ## 0. Session continuity & checkpoints (do this first)
 
 The skill folder (same folder as this `SKILL.md`) holds two kinds of tracking
@@ -114,13 +138,28 @@ TODO checkpoint entry format:
 - **Source-code language is always English — no exceptions.** All identifiers
   (types, methods, fields, variables, parameters), code comments, commit-style
   notes, log messages, and companion-doc prose stay in English **even when the
-  task is about adding or editing Chinese (or any non-English) UI text.** The
-  only place non-English text belongs is inside `Languages.xml` `<Text>` values
-  (and other explicit end-user data). Never put Chinese in identifiers, comments,
-  or code literals — route every user-facing string through the string table key
-  instead. Example: add the Chinese/English *values* under a new
-  `<Text key="OrderEdit.ViewCustomMade">` and reference the **key** in code; do
-  not hard-code `查看定制记录` in the `.cs`/`.xaml`.
+  task is about adding or editing Chinese (or any non-English) UI text.** See
+  "Who this skill is" above for the three narrow exceptions. Never put Chinese in
+  identifiers, comments, or code literals — route every user-facing string
+  through the string table key instead. Example: add the Chinese/English *values*
+  under a new `<Text key="OrderEdit.ViewCustomMade">` and reference the **key** in
+  code; do not hard-code `查看定制记录` in the `.cs`/`.xaml`.
+- **Punctuation is part of the translation, not the code.** Chinese uses
+  fullwidth `（）：、` where English uses `(): ,`. Never concatenate separators in
+  C# around a localized fragment — put the whole line shape in the string table
+  and fill it with `Format`, or English renders as `Alterations（Garment
+  Adjustments）：$123`.
+- **One key per meaning.** Before adding a label, check whether an existing key
+  already names that value. Two keys bound to the same computed number is a bug:
+  the same figure ends up called two different things depending on which panel is
+  visible. Prefer reusing the existing key over inventing a stage-specific one.
+- **Prune orphaned keys.** A key nothing references is dead weight that still has
+  to be translated into every language block. Sweep for them by extracting every
+  `<Text key="...">` and grepping the source for each. Mind the keys built by
+  interpolation (`$"Measure.Term.{id}"`, `$"ClothingItem.{key}"`,
+  `$"PaymentMethod.{method}"`, `$"OrderEdit.Panel.{enumValue}"`) — those are live
+  even though no literal matches, so always check what values the interpolation
+  can actually produce before deleting.
 - UI text lives in a single source `Languages.xml` at the project root as
   `<Text key="Some.Key">value</Text>` entries. Each language is a full block of
   the same keys (e.g. Chinese entries first, English later in the file).

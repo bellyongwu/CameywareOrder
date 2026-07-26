@@ -13,6 +13,23 @@ Entry format:
 - Why: <reason / triggering request>
 ```
 
+### 2026-07-26 — Persona statement + English-only Markdown; string-table hygiene rules
+- Changed: `SKILL.md` — new "Who this skill is" section stating that `wpf-dev` is an
+  English-language full-stack WPF developer that may *converse* in Chinese but writes
+  English into the repository, explicitly including **Markdown companion files**; it
+  lists the only three exceptions (`Languages.xml` values, a verbatim `- Ask:` quote,
+  and naming a string-table value being changed) and requires referring to UI text by
+  **key** rather than by its Chinese label. §1 reworded to point at that section and
+  gained three new rules: punctuation belongs in the translation (never concatenate
+  separators around a localized fragment); **one key per meaning** (two keys bound to
+  the same computed value is a bug); and **prune orphaned keys**, with a warning to
+  check interpolated key patterns before deleting.
+- Why: User directive — "wpf-dev is a English full stack wpf application developer,
+  although it may communicate in Chinese. All comments should be coding using English
+  language, including the markdown updates." The hygiene rules come from the same
+  session's finding that `Order.Fields.DepositTax` and `Order.Fields.ServiceTotalTax`
+  labelled the identical computed value, alongside ~20 orphaned keys.
+
 ### 2026-07-25 — Roslyn/C# Dev Kit false positives + two-gate pre-build sanity check
 - Changed: `SKILL.md` §9 (replaced the "run Sonar before build" bullet with a
   two-gate pre-build sanity check covering BOTH IDE/Roslyn diagnostics and

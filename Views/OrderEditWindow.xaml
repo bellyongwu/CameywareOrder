@@ -414,7 +414,7 @@
                                             </Grid.RowDefinitions>
                                             <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxSubtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
                                             <TextBlock Grid.Row="0" Grid.Column="1" x:Name="AlterationSubtotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.DepositTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ServiceStageTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
                                             <TextBlock Grid.Row="1" Grid.Column="1" x:Name="AlterationDepositTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                             <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PostTaxTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
                                             <TextBlock Grid.Row="2" Grid.Column="1" x:Name="AlterationSumTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -558,7 +558,7 @@
                                             </Grid.RowDefinitions>
                                             <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxSubtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
                                             <TextBlock Grid.Row="0" Grid.Column="1" x:Name="CustomMadeSubtotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.DepositTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ServiceStageTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
                                             <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CustomMadeDepositTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                             <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PostTaxTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
                                             <TextBlock Grid.Row="2" Grid.Column="1" x:Name="CustomMadeSumTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -689,7 +689,7 @@
                                             </Grid.RowDefinitions>
                                             <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxSubtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
                                             <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ClothingSubtotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
-                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.DepositTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ServiceStageTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
                                             <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ClothingDepositTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                             <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PostTaxTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
                                             <TextBlock Grid.Row="2" Grid.Column="1" x:Name="ClothingSumTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>

@@ -43,7 +43,6 @@
     <Text key="Branding.Color">颜色</Text>
     <Text key="Branding.Save">保存</Text>
     <Text key="Branding.Cancel">取消</Text>
-    <Text key="LanguageSelection.Confirm">确认</Text>
     <Text key="LanguageSelection.Welcome">欢迎</Text>
     <Text key="LanguageSelection.WelcomeMessage">欢迎使用 LeeYonge 订单管理系统</Text>
     <Text key="LanguageSelection.Enter">进入系统</Text>
@@ -80,7 +79,6 @@
     <Text key="ImportExport.DatabaseConfirm">导入将替换当前所有订单数据及相关图片资料，此操作不可撤销（系统会自动备份当前数据库和图片）。确定要继续吗？</Text>
     <Text key="ImportExport.BrandingConfirm">导入将覆盖当前的页眉页脚（含徽标）设置，确定要继续吗？</Text>
     <Text key="Receipt.Title">销售小票</Text>
-    <Text key="Receipt.PrintedAt">打印时间</Text>
     <Text key="Receipt.SectionTotal">合计</Text>
     <Text key="Search.Label">搜索</Text>
     <Text key="Filter.Status.Label">状态</Text>
@@ -120,13 +118,12 @@
     <Text key="Order.Fields.TaxAmount">税额</Text>
     <Text key="Order.Fields.Subtotal">小计</Text>
     <Text key="Order.Fields.PreTaxServiceTotal">税前服务总价</Text>
-    <Text key="Order.Fields.CurrentTaxRate">当前税率 (%)</Text>
     <Text key="Order.Fields.DepositTaxRate">定金税率 (%)</Text>
     <Text key="Order.Fields.FinalTaxRate">尾款税率 (%)</Text>
     <Text key="Order.Fields.PreTaxDownpayment">税前定金</Text>
     <Text key="Order.Fields.PreTaxSubtotal">税前小计</Text>
-    <Text key="Order.Fields.DepositTax">当前计税</Text>
     <Text key="Order.Fields.PostTaxTotal">税后总价</Text>
+    <Text key="Order.Fields.ServiceStageTax">此服务计税</Text>
     <Text key="Order.Fields.ServiceTotalTax">此服务总计税</Text>
     <Text key="Order.Fields.DepositTaxLine">定金（{0}）税收：{1}</Text>
     <Text key="Order.Fields.FinalTaxLine">尾款（{0}）税收：{1}</Text>
@@ -134,9 +131,6 @@
     <Text key="Order.Fields.ServiceTotalLineNoDetail">·  {0}</Text>
     <Text key="Order.Fields.ServiceTotalUnpriced">（价格有误）</Text>
     <Text key="OrderEdit.Warn.UnpricedServices">以下服务有项目但价格为 0：{0}。已按原价结清，如非有意请检查价格。</Text>
-    <Text key="Order.Fields.SumTotal">合计</Text>
-    <Text key="Order.Fields.ChestSize">胸围</Text>
-    <Text key="Order.Fields.JacketLength">衣长</Text>
     <Text key="Order.Fields.UnitPrice">原价</Text>
     <Text key="Order.Fields.PromotionalPrice">优惠价</Text>
     <Text key="Order.Fields.ItemCategory">品类</Text>
@@ -154,12 +148,8 @@
     <Text key="Order.Fields.TotalAmount">总金额</Text>
     <Text key="Order.Fields.AllServicesTotalAmount">全部服务总金额</Text>
     <Text key="Order.Fields.Downpayment">定金</Text>
-    <Text key="Order.Fields.TotalPrice">总价</Text>
     <Text key="Order.Fields.FinalBalance">剩余尾款</Text>
     <Text key="Order.Fields.FinalBalanceShort">尾款</Text>
-    <Text key="Order.Fields.DownpaymentMethod">定金支付方式</Text>
-    <Text key="Order.Fields.FinalBalanceMethod">尾款支付方式</Text>
-    <Text key="Order.Fields.PrepaidDownpayment">已收定金</Text>
     <Text key="Order.Fields.ReceivedDownpayment">实收定金</Text>
     <Text key="Order.Fields.ReceivedFinalBalance">实收尾款</Text>
     <Text key="Order.Fields.PaidTax">已收税额</Text>
@@ -202,7 +192,6 @@
     <Text key="OrderEdit.Panel.CustomMade">定制服务</Text>
     <Text key="OrderEdit.Panel.ReadyMade">成衣或配饰</Text>
     <Text key="OrderEdit.Panel.ReadyMadeHint">点击添加项目以录入成衣或配饰订单。</Text>
-    <Text key="OrderEdit.Panel.Currency">币种</Text>
     <Text key="OrderEdit.Panel.MeasurementMode">定制方式</Text>
     <Text key="OrderEdit.Panel.MeasurementsOnly">只量身</Text>
     <Text key="OrderEdit.Panel.CustomFromScratch">量身加定制</Text>
@@ -218,14 +207,12 @@
     <Text key="CustomMade.Documents.Category.Fabric">选用面料</Text>
     <Text key="CustomMade.Documents.Category.Photo">照片</Text>
     <Text key="CustomMade.Documents.Category.Other">其他</Text>
-    <Text key="CustomMade.Documents.Upload">上传</Text>
     <Text key="CustomMade.Documents.StartUpload">开始上传</Text>
     <Text key="CustomMade.Documents.AddMore">添加更多图片</Text>
     <Text key="CustomMade.Documents.View">查看</Text>
     <Text key="CustomMade.Documents.Download">下载</Text>
     <Text key="CustomMade.Documents.Replace">替换</Text>
     <Text key="CustomMade.Documents.Delete">删除</Text>
-    <Text key="CustomMade.Documents.Empty">暂无文件</Text>
     <Text key="CustomMade.Documents.DeleteConfirm">确定要删除该文件吗？</Text>
     <Text key="CustomMade.Documents.DeleteTitle">删除文件</Text>
     <Text key="CustomMade.Documents.InvalidImage">请选择有效的图片文件。</Text>
@@ -238,7 +225,6 @@
     <Text key="Download.Language.Chinese">简体中文</Text>
     <Text key="Download.Language.English">英文</Text>
     <Text key="OrderEdit.DownloadSubmit">下载</Text>
-    <Text key="OrderEdit.PrintMeasurements">下载量身尺寸</Text>
     <Text key="OrderEdit.PaymentTitle">{0}付款</Text>
     <Text key="OrderEdit.DownpaymentMethod">定金支付方式</Text>
     <Text key="OrderEdit.FinalBalanceMethod">尾款支付方式</Text>
@@ -257,12 +243,6 @@
     <Text key="AgeType.TeenGirl">女孩</Text>
     <Text key="AgeType.ChildBoy">男童</Text>
     <Text key="AgeType.ChildGirl">女童</Text>
-    <Text key="Measure.Section.Jacket">外套</Text>
-    <Text key="Measure.Section.Shirt">衬衫</Text>
-    <Text key="Measure.Length">长度</Text>
-    <Text key="Measure.Chest">胸围</Text>
-    <Text key="Measure.SitAround">坐围</Text>
-    <Text key="Measure.Sleeves">袖长</Text>
 
     <!-- Predefined measurement terms (locked) -->
     <Text key="Measure.Term.length">衣长</Text>
@@ -331,8 +311,6 @@
 
     <!-- Alternative-language name editor -->
     <Text key="TermLanguage.Title">多语言名称</Text>
-    <Text key="TermLanguage.Language">语言</Text>
-    <Text key="TermLanguage.Name">名称</Text>
     <Text key="TermLanguage.Save">保存</Text>
     <Text key="TermLanguage.Cancel">取消</Text>
     <Text key="TermLanguage.Gender">性别分类</Text>
@@ -422,7 +400,6 @@
     <Text key="Branding.Color">Color</Text>
     <Text key="Branding.Save">Save</Text>
     <Text key="Branding.Cancel">Cancel</Text>
-    <Text key="LanguageSelection.Confirm">Confirm</Text>
     <Text key="LanguageSelection.Welcome">Welcome</Text>
     <Text key="LanguageSelection.WelcomeMessage">Welcome to the LeeYonge Ordering System</Text>
     <Text key="LanguageSelection.Enter">Enter System</Text>
@@ -459,7 +436,6 @@
     <Text key="ImportExport.DatabaseConfirm">Importing will replace all current order data and attached document images. This cannot be undone (the current database and images will be automatically backed up). Continue?</Text>
     <Text key="ImportExport.BrandingConfirm">Importing will overwrite the current header &amp; footer (including the logo) settings. Continue?</Text>
     <Text key="Receipt.Title">Sales Receipt</Text>
-    <Text key="Receipt.PrintedAt">Printed at</Text>
     <Text key="Receipt.SectionTotal">Total</Text>
     <Text key="Search.Label">Search</Text>
     <Text key="Filter.Status.Label">Status</Text>
@@ -499,13 +475,12 @@
     <Text key="Order.Fields.TaxAmount">Tax</Text>
     <Text key="Order.Fields.Subtotal">Subtotal</Text>
     <Text key="Order.Fields.PreTaxServiceTotal">Pre-Tax Service Total</Text>
-    <Text key="Order.Fields.CurrentTaxRate">Current Tax Rate (%)</Text>
     <Text key="Order.Fields.DepositTaxRate">Deposit Tax Rate (%)</Text>
     <Text key="Order.Fields.FinalTaxRate">Final Balance Tax Rate (%)</Text>
     <Text key="Order.Fields.PreTaxDownpayment">Pre-Tax Deposit</Text>
     <Text key="Order.Fields.PreTaxSubtotal">Pre-Tax Subtotal</Text>
-    <Text key="Order.Fields.DepositTax">Current Tax</Text>
     <Text key="Order.Fields.PostTaxTotal">Post-Tax Total</Text>
+    <Text key="Order.Fields.ServiceStageTax">Tax for This Service</Text>
     <Text key="Order.Fields.ServiceTotalTax">Total Tax for Service</Text>
     <Text key="Order.Fields.DepositTaxLine">Deposit ({0}) tax: {1}</Text>
     <Text key="Order.Fields.FinalTaxLine">Final balance ({0}) tax: {1}</Text>
@@ -513,9 +488,6 @@
     <Text key="Order.Fields.ServiceTotalLineNoDetail">·  {0}</Text>
     <Text key="Order.Fields.ServiceTotalUnpriced"> (price missing)</Text>
     <Text key="OrderEdit.Warn.UnpricedServices">These services have items but no charge: {0}. They were settled as-is — please check the price if that was not intended.</Text>
-    <Text key="Order.Fields.SumTotal">Sum Total</Text>
-    <Text key="Order.Fields.ChestSize">Chest Size</Text>
-    <Text key="Order.Fields.JacketLength">Jacket Length</Text>
     <Text key="Order.Fields.UnitPrice">Unit Price</Text>
     <Text key="Order.Fields.PromotionalPrice">Promotional Price</Text>
     <Text key="Order.Fields.ItemCategory">Item Category</Text>
@@ -533,12 +505,8 @@
     <Text key="Order.Fields.TotalAmount">Total Amount</Text>
     <Text key="Order.Fields.AllServicesTotalAmount">All Services Total Amount</Text>
     <Text key="Order.Fields.Downpayment">Downpayment</Text>
-    <Text key="Order.Fields.TotalPrice">Total Price</Text>
     <Text key="Order.Fields.FinalBalance">Final Balance (Residual)</Text>
     <Text key="Order.Fields.FinalBalanceShort">Final Balance</Text>
-    <Text key="Order.Fields.DownpaymentMethod">Downpayment Method</Text>
-    <Text key="Order.Fields.FinalBalanceMethod">Balance Method</Text>
-    <Text key="Order.Fields.PrepaidDownpayment">Received Downpayment</Text>
     <Text key="Order.Fields.ReceivedDownpayment">Received Downpayment</Text>
     <Text key="Order.Fields.ReceivedFinalBalance">Received Final Balance</Text>
     <Text key="Order.Fields.PaidTax">Received Tax</Text>
@@ -581,7 +549,6 @@
     <Text key="OrderEdit.Panel.CustomMade">Custom Made Service</Text>
     <Text key="OrderEdit.Panel.ReadyMade">Clothing or Accessory</Text>
     <Text key="OrderEdit.Panel.ReadyMadeHint">Click Add Item to add clothing or accessory lines.</Text>
-    <Text key="OrderEdit.Panel.Currency">Currency</Text>
     <Text key="OrderEdit.Panel.MeasurementMode">Service Mode</Text>
     <Text key="OrderEdit.Panel.MeasurementsOnly">Measure Only</Text>
     <Text key="OrderEdit.Panel.CustomFromScratch">Full Custom</Text>
@@ -597,14 +564,12 @@
     <Text key="CustomMade.Documents.Category.Fabric">Fabrics Selected</Text>
     <Text key="CustomMade.Documents.Category.Photo">Photos</Text>
     <Text key="CustomMade.Documents.Category.Other">Others</Text>
-    <Text key="CustomMade.Documents.Upload">Upload</Text>
     <Text key="CustomMade.Documents.StartUpload">Start Upload</Text>
     <Text key="CustomMade.Documents.AddMore">Add More Images</Text>
     <Text key="CustomMade.Documents.View">View</Text>
     <Text key="CustomMade.Documents.Download">Download</Text>
     <Text key="CustomMade.Documents.Replace">Replace</Text>
     <Text key="CustomMade.Documents.Delete">Delete</Text>
-    <Text key="CustomMade.Documents.Empty">No documents yet</Text>
     <Text key="CustomMade.Documents.DeleteConfirm">Delete this document?</Text>
     <Text key="CustomMade.Documents.DeleteTitle">Delete Document</Text>
     <Text key="CustomMade.Documents.InvalidImage">Please choose a valid image file.</Text>
@@ -617,7 +582,6 @@
     <Text key="Download.Language.Chinese">Chinese (Simplified)</Text>
     <Text key="Download.Language.English">English</Text>
     <Text key="OrderEdit.DownloadSubmit">Download</Text>
-    <Text key="OrderEdit.PrintMeasurements">Download Measurements</Text>
     <Text key="OrderEdit.PaymentTitle">{0} Payment</Text>
     <Text key="OrderEdit.DownpaymentMethod">Downpayment Method</Text>
     <Text key="OrderEdit.FinalBalanceMethod">Balance Method</Text>
@@ -636,12 +600,6 @@
     <Text key="AgeType.TeenGirl">Girl</Text>
     <Text key="AgeType.ChildBoy">Boy</Text>
     <Text key="AgeType.ChildGirl">Girl</Text>
-    <Text key="Measure.Section.Jacket">Jacket</Text>
-    <Text key="Measure.Section.Shirt">Shirt</Text>
-    <Text key="Measure.Length">Length</Text>
-    <Text key="Measure.Chest">Chest</Text>
-    <Text key="Measure.SitAround">Sit around</Text>
-    <Text key="Measure.Sleeves">Sleeves</Text>
 
     <!-- Predefined measurement terms (locked) -->
     <Text key="Measure.Term.length">Length</Text>
@@ -710,8 +668,6 @@
 
     <!-- Alternative-language name editor -->
     <Text key="TermLanguage.Title">Alternative Names</Text>
-    <Text key="TermLanguage.Language">Language</Text>
-    <Text key="TermLanguage.Name">Name</Text>
     <Text key="TermLanguage.Save">Save</Text>
     <Text key="TermLanguage.Cancel">Cancel</Text>
     <Text key="TermLanguage.Gender">Gender</Text>
