@@ -21,6 +21,18 @@ _(none)_
 
 ## Completed
 
+### 2026-07-26 18:45 — Project README  [DONE]
+- Ask: "Add a Readme markdown file for this project"
+- Done: new `README.md` at the repository root — what the app is, the three service sections,
+  requirements and build/run (including the kill-before-build note for the self-locking exe),
+  a table of every `%LOCALAPPDATA%\LeeYongeOrdering\` storage path (all verified against the
+  source), backup/migration via the global-settings package, project layout, architecture
+  notes (runtime column guards, the single `CalculateSectionPayment` money path, per-portion
+  tax, derived status state, the embedded GraphQL endpoint), the localization workflow, and a
+  contributing section pointing at the `AgentSkills/wpf-dev` companion files.
+- Notes: docs only, no build impact. Written in English per the skill's persona rule; the one
+  menu path a reader needs to follow is given in both languages since the UI is bilingual.
+
 ### 2026-07-26 18:30 — One-click global settings export/import + Import/Export menu reorder  [DONE]
 - Ask: "添加导入导出新功能 — 一键导出全局设置，包括货币，量身，数据库.....等等；添加导入一件恢复所有本地设置功能。UI navigation reordering: 在本地配置中的导入导出 submenu reorder 成为 -> 添加或更改页眉页脚....量身项目设置....本地数据库....全局设置"
 - Done:
