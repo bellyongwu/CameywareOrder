@@ -157,22 +157,26 @@ public static class ReceiptBrandingStore
     }
 
     /// <summary>
-    /// Serializes the current settings plus the logo image bytes (base64) into a single
-    /// self-contained JSON document, so an export/import round-trip restores the logo too.
+    /// Builds the self-contained export payload: the current settings plus the logo image
+    /// bytes as base64, so an export/import round-trip restores the logo too. Shared by the
+    /// standalone branding export and the global-settings package, which embeds the object
+    /// directly rather than nesting a JSON string inside its own JSON.
     /// </summary>
-    public static string ExportConfigJson()
+    public static BrandingExport BuildExport()
     {
         var settings = Load();
         var logoBytes = GetLogoBytes(settings);
-        var export = new BrandingExport
+        return new BrandingExport
         {
             Settings = settings,
             LogoFileName = logoBytes is not null ? settings.LogoFileName : null,
             LogoBase64 = logoBytes is not null ? Convert.ToBase64String(logoBytes) : null
         };
-
-        return JsonSerializer.Serialize(export, new JsonSerializerOptions { WriteIndented = true });
     }
+
+    /// <summary>Serializes <see cref="BuildExport"/> for the standalone branding export file.</summary>
+    public static string ExportConfigJson()
+        => JsonSerializer.Serialize(BuildExport(), new JsonSerializerOptions { WriteIndented = true });
 
     /// <summary>Parses an export document, returning null when the JSON is invalid/corrupt.</summary>
     public static BrandingExport? TryParseConfigJson(string json)

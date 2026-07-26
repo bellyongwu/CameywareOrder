@@ -18,6 +18,19 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **One-click global settings backup**: `Services/GlobalSettingsPackage` bundles everything
+  local into a single zip — `settings.json` (currency, language code, `MeasurementTermsConfig`,
+  `BrandingExport`, version + timestamp) plus a **nested** `database.zip`. Nesting
+  `DatabasePathProvider.ExportDatabaseTo` rather than re-implementing it keeps ONE code path
+  for the db + WAL/SHM sidecars + `Documents/` tree, and restore reuses `ImportDatabaseFrom`
+  with its auto-backup and zip-slip guarding. `TryRead` validates with no side effects so the
+  destructive confirm is only offered for a real package; `Import` applies only the sections
+  present, so an older/partial package never blanks out what it does not know about.
+  `ReceiptBrandingStore.BuildExport()` was extracted so the package embeds the export OBJECT
+  rather than nesting a JSON string inside its own JSON.
+  - 导入/导出 submenu order is now HeaderFooter → MeasurementTerms → LocalDatabase →
+    (separator) → GlobalSettings.
+
 - **"Cleared" is not the same as "settled" — always pair it with a charge**: a section with
   no charge reports cleared because nothing is owed (`IsSectionCleared` returns true on
   `total <= 0`). Locking on that tick alone disabled the deposit radios, deposit box, tax box

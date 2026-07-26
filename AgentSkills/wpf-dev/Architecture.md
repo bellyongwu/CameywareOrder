@@ -67,6 +67,13 @@ components are added/renamed or the way pieces fit together changes.
     `ExportConfigJson` / `TryParseConfigJson` / `ImportConfig` (+ `BrandingExport`
     DTO) make the 页眉页脚 export **self-contained** — the logo travels as base64
     inside the JSON.
+  - `GlobalSettingsPackage` — static one-file backup of everything held locally: a zip
+    with `settings.json` (currency, language code, `MeasurementTermsConfig`,
+    `BrandingExport`, version + timestamp) plus a **nested** `database.zip` produced by
+    `DatabasePathProvider.ExportDatabaseTo`. `ExportTo` / `TryRead` (validates with no
+    side effects) / `Import` (applies only the sections present; database first, since it
+    is the one destructive step and the one that self-backs-up). Backs the 全局设置
+    entry in the 导入/导出 menu.
   - `BrandingRenderer` — static renderer that round-trips branding content
     between a `RichTextBox` FlowDocument and its XAML string
     (`XamlWriter.Save` / `XamlReader.Parse`), appends it to a printed receipt
@@ -191,11 +198,13 @@ components are added/renamed or the way pieces fit together changes.
     The toolbar carries a `本地配置` (`Toolbar.LocalConfig`) `Menu` holding
     添加或更改页眉页脚, 货币设置, 测量术语, a `本地数据库` submenu (copy path / reveal
     file / open folder) and a **导入/导出** (`Toolbar.ImportExport`) submenu with
-    Export+Import pairs for 量身项目设置 (JSON via `MeasurementTermsService`),
-    本地数据库 (zip package via `DatabasePathProvider`) and 页眉页脚 (JSON+base64
-    logo via `ReceiptBrandingStore`). Every import confirms with a Yes/No warning
-    dialog first and reports through `MainViewModel.StatusMessage`; export file
-    names get a date suffix via `BuildDatedExportFileName`.
+    Export+Import pairs, in order: `Toolbar.HeaderFooter` (JSON + base64 logo via
+    `ReceiptBrandingStore`), `Toolbar.MeasurementTerms` (JSON via
+    `MeasurementTermsService`), `Toolbar.LocalDatabase` (zip package via
+    `DatabasePathProvider`), then a separator and `Toolbar.GlobalSettings`
+    (everything at once via `GlobalSettingsPackage`). Every import confirms with a
+    Yes/No warning dialog first and reports through `MainViewModel.StatusMessage`;
+    export file names get a date suffix via `BuildDatedExportFileName`.
   - `OrderColumnSort` (static, in `MainWindow.xaml.cs`) — attached properties
     `SortKey` (per-column sort member) and `SortGlyph` (header arrow), consumed by
     the header `ContentTemplate` and `UpdateSortGlyphs`.

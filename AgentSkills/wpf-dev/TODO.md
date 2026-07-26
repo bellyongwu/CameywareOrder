@@ -21,6 +21,19 @@ _(none)_
 
 ## Completed
 
+### 2026-07-26 18:30 — One-click global settings export/import + Import/Export menu reorder  [DONE]
+- Ask: "添加导入导出新功能 — 一键导出全局设置，包括货币，量身，数据库.....等等；添加导入一件恢复所有本地设置功能。UI navigation reordering: 在本地配置中的导入导出 submenu reorder 成为 -> 添加或更改页眉页脚....量身项目设置....本地数据库....全局设置"
+- Done:
+  - [x] `Services/GlobalSettingsPackage.cs` (NEW, static): one zip holding `settings.json` (currency, language code, `MeasurementTermsConfig`, `BrandingExport`, version + timestamp) plus a nested `database.zip`. `ExportTo` / `TryRead` / `Import`.
+    - The database package is **nested rather than re-implemented** — `DatabasePathProvider.ExportDatabaseTo` is written to a temp file and embedded, so the db + WAL/SHM sidecars + the whole `Documents/` tree keep one code path, and restore reuses `ImportDatabaseFrom` with its existing auto-backup and zip-slip guarding.
+    - `TryRead` validates without side effects (returns null for anything unreadable, catching InvalidData/Json/IO/UnauthorizedAccess/NotSupported) so the destructive confirm is only offered for a real package.
+    - `Import` applies only the sections the package actually carries, so an older or partial package never blanks out settings it knows nothing about. Database first — it is the only destructive step and the only one that takes its own backup. An unknown language code is skipped rather than failing the whole restore.
+  - [x] `Services/ReceiptBrandingStore.cs`: extracted `BuildExport()` (returns the `BrandingExport` object); `ExportConfigJson()` now just serializes it. The package embeds the object directly instead of nesting a JSON string inside its own JSON.
+  - [x] `MainWindow.xaml.cs`: `OnExportGlobalSettingsClick` / `OnImportGlobalSettingsClick`, following the existing dialog + confirm + status-bar pattern; reloads the order grid after a restore. `DescribePackageContents` lists only the parts present in the file, so the confirmation never promises to restore something the package lacks.
+  - [x] `MainWindow.xaml`: Import/Export submenu reordered to HeaderFooter → MeasurementTerms → LocalDatabase, then a `Separator` and the new `Toolbar.GlobalSettings` entry (Import/Export pair), matching the requested order.
+  - [x] `Languages.xml` (zh-CN + en-US): `Toolbar.GlobalSettings`, `ImportExport.GlobalSettingsConfirm`, `Status.ExportGlobalSettings{Succeeded,Failed}`, `Status.ImportGlobalSettings{Succeeded,Failed}`, `Status.ImportGlobalSettingsInvalid`.
+- Notes: build succeeded 0 warnings / 0 errors; both language blocks verified at 338 keys with identical sets. No DB/schema change. Verified by build and code review only — the export/import round-trip has not been exercised interactively, so it needs a real round-trip test (export, change a few settings, import, confirm everything comes back). As with the standalone database import, a restart is still the safest way to guarantee every open view reflects the swapped data.
+
 ### 2026-07-26 18:00 — Bug: final-balance method stays on Card after switching the deposit to Cash  [DONE]
 - Ask (follow-up with concrete figures): with a custom-made pre-tax service total of 1234 and the deposit method set to Cash — deposit 234 gave tax 130 / total 1364, deposit 0 gave tax 160.42 / total 1394.42. Cash should not be taxed at all.
 - Diagnosis, confirmed arithmetically against those figures: 130 = (1234−234) × 13% and 160.42 = 1234 × 13%. Both are the FINAL portion taxed at the card rate while the deposit portion is untaxed — i.e. `depositRate = 0` (Cash, correct) but `finalRate = 13` (Card, wrong). The final-balance method was stuck on Card.

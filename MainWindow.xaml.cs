@@ -648,6 +648,93 @@ public partial class MainWindow : Window
         }
     }
 
+    // One-click backup of everything this machine holds: the order database with its attached
+    // images, measurement terms, receipt branding (logo included), currency and language.
+    private void OnExportGlobalSettingsClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            FileName = BuildDatedExportFileName("leeyonge-global-settings", "zip"),
+            Filter = "Backup Package (*.zip)|*.zip"
+        };
+
+        if (dialog.ShowDialog(this) is not true)
+            return;
+
+        try
+        {
+            GlobalSettingsPackage.ExportTo(dialog.FileName);
+            _viewModel.StatusMessage = _localization["Status.ExportGlobalSettingsSucceeded"];
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.ExportGlobalSettingsFailed", ex.Message);
+        }
+    }
+
+    private void OnImportGlobalSettingsClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "Backup Package (*.zip)|*.zip|All Files (*.*)|*.*",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog(this) is not true)
+            return;
+
+        // Read and validate before touching anything, so an unreadable file changes nothing.
+        var payload = GlobalSettingsPackage.TryRead(dialog.FileName);
+        if (payload is null)
+        {
+            MessageBox.Show(
+                _localization["Status.ImportGlobalSettingsInvalid"],
+                _localization["Toolbar.GlobalSettings"],
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // This is the most destructive import in the app — it replaces the order data as well
+        // as every local setting — so the confirmation spells out what the package will apply.
+        var confirm = MessageBox.Show(
+            _localization.Format("ImportExport.GlobalSettingsConfirm", DescribePackageContents(payload)),
+            _localization["Toolbar.GlobalSettings"],
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            GlobalSettingsPackage.Import(dialog.FileName, payload);
+            _viewModel.LoadOrdersCommand.Execute(null);
+            _viewModel.StatusMessage = _localization["Status.ImportGlobalSettingsSucceeded"];
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.ImportGlobalSettingsFailed", ex.Message);
+        }
+    }
+
+    // Lists only the parts the package actually carries, so the confirmation never promises to
+    // restore something the file does not contain.
+    private string DescribePackageContents(GlobalSettingsExport payload)
+    {
+        var parts = new List<string>();
+        if (payload.ContainsDatabase)
+            parts.Add(_localization["Toolbar.LocalDatabase"]);
+        if (payload.MeasurementTerms is not null)
+            parts.Add(_localization["Toolbar.MeasurementTerms"]);
+        if (payload.Branding is not null)
+            parts.Add(_localization["Toolbar.HeaderFooter"]);
+        if (payload.Currency is not null)
+            parts.Add(_localization["Toolbar.CurrencySetting"]);
+        if (!string.IsNullOrWhiteSpace(payload.LanguageCode))
+            parts.Add(_localization["Toolbar.Language"]);
+
+        var separator = _localization.CurrentLanguageCode.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "、" : ", ";
+        return string.Join(separator, parts);
+    }
+
     private FlowDocument BuildReceiptDocument(Order order, double pageWidth)
     {
         var symbol = CurrencySettingService.Instance.Symbol;
