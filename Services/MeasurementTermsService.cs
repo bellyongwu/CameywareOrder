@@ -103,27 +103,46 @@ public sealed class MeasurementTermsService
 
     // --- Mutations (each persists + notifies) -----------------------------------
 
-    public MeasurementTerm AddCustomTerm(Dictionary<string, string> names)
+    public MeasurementTerm AddCustomTerm(Dictionary<string, string> names, MeasurementGender gender = MeasurementGender.Common)
     {
         var term = new MeasurementTerm
         {
             Id = "custom-" + Guid.NewGuid().ToString("N"),
             IsPredefined = false,
-            Names = names
+            Names = names,
+            Gender = gender
         };
         _config.Terms.Add(term);
         Persist();
         return term;
     }
 
-    public void UpdateCustomTermNames(string termId, Dictionary<string, string> names)
+    public void UpdateCustomTermNames(string termId, Dictionary<string, string> names, MeasurementGender gender)
     {
         var term = FindTerm(termId);
         if (term is null || term.IsPredefined)
             return;
 
         term.Names = names;
+        term.Gender = gender;
         Persist();
+    }
+
+    /// <summary>
+    /// True when every provided language name matches (trimmed, case-insensitive) the
+    /// resolved name of some existing term (predefined or custom, other than
+    /// <paramref name="excludeTermId"/>) for that same language — i.e. the exact same
+    /// measurement already exists under a different id.
+    /// </summary>
+    public bool IsDuplicateTermName(IReadOnlyDictionary<string, string> names, string? excludeTermId = null)
+    {
+        if (names.Count == 0)
+            return false;
+
+        return _config.Terms
+            .Where(term => !string.Equals(term.Id, excludeTermId, StringComparison.Ordinal))
+            .Any(term => names.All(pair =>
+                string.Equals(ResolveTermName(term, pair.Key).Trim(), pair.Value.Trim(), StringComparison.OrdinalIgnoreCase)));
     }
 
     public void DeleteCustomTerm(string termId)
@@ -199,6 +218,39 @@ public sealed class MeasurementTermsService
         Persist();
     }
 
+    /// <summary>
+    /// Switches a predefined garment into "customized measurements" mode: its default
+    /// term mapping stops being locked, so terms can be freely added or removed from
+    /// it. Its current terms are kept as the starting point. No-op for user-added
+    /// garments, which are already fully editable.
+    /// </summary>
+    public void EnableCustomMeasurements(string garmentId)
+    {
+        var garment = FindGarment(garmentId);
+        if (garment is null || !garment.IsPredefined || garment.UseCustomMeasurements)
+            return;
+
+        garment.UseCustomMeasurements = true;
+        Persist();
+    }
+
+    /// <summary>
+    /// Discards a predefined garment's customization and restores its original default
+    /// term mapping. No-op for user-added garments.
+    /// </summary>
+    public void RestoreDefaultMeasurements(string garmentId)
+    {
+        var garment = FindGarment(garmentId);
+        if (garment is null || !garment.IsPredefined || !garment.UseCustomMeasurements)
+            return;
+
+        garment.UseCustomMeasurements = false;
+        garment.TermIds = MeasurementTermDefaults.DefaultGarmentTerms.TryGetValue(garment.Id, out var terms)
+            ? new List<string>(terms)
+            : new List<string>();
+        Persist();
+    }
+
     // --- Persistence ------------------------------------------------------------
 
     private void Persist()
@@ -239,7 +291,27 @@ public sealed class MeasurementTermsService
         foreach (var termId in MeasurementTermDefaults.PredefinedTermIds
                      .Where(termId => config.Terms.All(t => !string.Equals(t.Id, termId, StringComparison.Ordinal))))
         {
-            config.Terms.Add(new MeasurementTerm { Id = termId, IsPredefined = true });
+            config.Terms.Add(new MeasurementTerm
+            {
+                Id = termId,
+                IsPredefined = true,
+                Gender = MeasurementTermDefaults.GetPredefinedTermGender(termId)
+            });
+            changed = true;
+        }
+
+        // A predefined term's gender is fixed data owned by MeasurementTermDefaults, not
+        // a user edit — so keep it in sync even for terms that were already persisted
+        // before this field existed (or before a term's classification was refined).
+        // Without this, existing configs would keep every predefined term at its
+        // deserialized default (Common) forever, making the gender filter a no-op.
+        foreach (var term in config.Terms.Where(t => t.IsPredefined))
+        {
+            var expectedGender = MeasurementTermDefaults.GetPredefinedTermGender(term.Id);
+            if (term.Gender == expectedGender)
+                continue;
+
+            term.Gender = expectedGender;
             changed = true;
         }
 

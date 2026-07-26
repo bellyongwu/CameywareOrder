@@ -268,6 +268,16 @@
     <Text key="MeasureTerms.DeleteGarmentConfirm">确定要删除该服装类别吗？</Text>
     <Text key="MeasureTerms.DeleteTitle">删除</Text>
     <Text key="MeasureTerms.NameRequired">请输入名称。</Text>
+    <Text key="MeasureTerms.DefaultStatus">当前使用默认量身项目</Text>
+    <Text key="MeasureTerms.CustomizedStatus">当前使用自定义量身项目</Text>
+    <Text key="MeasureTerms.Customize">自定义测量项目</Text>
+    <Text key="MeasureTerms.RestoreDefault">恢复默认设置</Text>
+    <Text key="MeasureTerms.RestoreDefaultConfirm">恢复默认设置后，此服装的自定义量身项目将被清除，确定要恢复吗？</Text>
+    <Text key="MeasureTerms.FilterAll">全部</Text>
+    <Text key="MeasureTerms.FilterMale">男装</Text>
+    <Text key="MeasureTerms.FilterFemale">女装</Text>
+    <Text key="MeasureTerms.SearchPlaceholder">搜索量身项目...</Text>
+    <Text key="MeasureTerms.DuplicateTermWarning">该量身项目已存在（各语言名称均相同），请勿重复添加。</Text>
     <Text key="MeasureTerms.Done">完成</Text>
 
     <!-- Alternative-language name editor -->
@@ -276,6 +286,10 @@
     <Text key="TermLanguage.Name">名称</Text>
     <Text key="TermLanguage.Save">保存</Text>
     <Text key="TermLanguage.Cancel">取消</Text>
+    <Text key="TermLanguage.Gender">性别分类</Text>
+    <Text key="TermLanguage.GenderCommon">通用（男女均适用）</Text>
+    <Text key="TermLanguage.GenderMale">仅男装</Text>
+    <Text key="TermLanguage.GenderFemale">仅女装</Text>
 
     <!-- Custom-made garment selection -->
     <Text key="Measure.SelectGarments">选择需要量身的服装</Text>
@@ -584,6 +598,16 @@
     <Text key="MeasureTerms.DeleteGarmentConfirm">Delete this garment type?</Text>
     <Text key="MeasureTerms.DeleteTitle">Delete</Text>
     <Text key="MeasureTerms.NameRequired">Please enter a name.</Text>
+    <Text key="MeasureTerms.DefaultStatus">Currently using the default measurements</Text>
+    <Text key="MeasureTerms.CustomizedStatus">Currently using customized measurements</Text>
+    <Text key="MeasureTerms.Customize">Customize Measurements</Text>
+    <Text key="MeasureTerms.RestoreDefault">Restore Default</Text>
+    <Text key="MeasureTerms.RestoreDefaultConfirm">Restoring defaults will discard this garment's customized measurements. Continue?</Text>
+    <Text key="MeasureTerms.FilterAll">All</Text>
+    <Text key="MeasureTerms.FilterMale">Menswear</Text>
+    <Text key="MeasureTerms.FilterFemale">Womenswear</Text>
+    <Text key="MeasureTerms.SearchPlaceholder">Search measurements...</Text>
+    <Text key="MeasureTerms.DuplicateTermWarning">This measurement already exists (all language names match) — it cannot be added again.</Text>
     <Text key="MeasureTerms.Done">Done</Text>
 
     <!-- Alternative-language name editor -->
@@ -592,6 +616,10 @@
     <Text key="TermLanguage.Name">Name</Text>
     <Text key="TermLanguage.Save">Save</Text>
     <Text key="TermLanguage.Cancel">Cancel</Text>
+    <Text key="TermLanguage.Gender">Gender</Text>
+    <Text key="TermLanguage.GenderCommon">Common (both genders)</Text>
+    <Text key="TermLanguage.GenderMale">Menswear only</Text>
+    <Text key="TermLanguage.GenderFemale">Womenswear only</Text>
 
     <!-- Custom-made garment selection -->
     <Text key="Measure.SelectGarments">Select garments to measure</Text>

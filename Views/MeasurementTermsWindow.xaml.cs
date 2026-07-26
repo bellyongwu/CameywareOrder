@@ -27,7 +27,11 @@ public partial class MeasurementTermsWindow : Window
     private readonly MeasurementTermsService _service = MeasurementTermsService.Instance;
     private readonly ObservableCollection<GarmentRow> _garmentRows = new();
     private readonly ObservableCollection<TermRow> _termRows = new();
+    private readonly ObservableCollection<TermRow> _filteredTermRows = new();
     private readonly ObservableCollection<AssignedRow> _assignedRows = new();
+
+    private MeasurementGender? _termGenderFilter;
+    private string _termSearchText = string.Empty;
 
     private Point _dragStartPoint;
     private TermRow? _dragCandidate;
@@ -37,8 +41,13 @@ public partial class MeasurementTermsWindow : Window
         InitializeComponent();
 
         GarmentList.ItemsSource = _garmentRows;
-        AllTermsList.ItemsSource = _termRows;
+        AllTermsList.ItemsSource = _filteredTermRows;
         AssignedList.ItemsSource = _assignedRows;
+
+        // Set here (not via XAML IsChecked="True") so the Checked handler only runs once
+        // every field in this window has been assigned by InitializeComponent — setting it
+        // in XAML fires the event mid-parse, before the sibling Male/Female radios exist.
+        GenderFilterAllRadio.IsChecked = true;
 
         RefreshGarmentRows();
         RefreshTermRows();
@@ -73,6 +82,51 @@ public partial class MeasurementTermsWindow : Window
         _termRows.Clear();
         foreach (var term in _service.Terms)
             _termRows.Add(new TermRow(term, MeasurementTermsService.ResolveTermName(term, CurrentLanguage)));
+
+        ApplyTermFilter();
+    }
+
+    // Common terms always show (they apply to every garment); Male/Female narrows the
+    // list to that gender's specific terms in addition to the common ones. The search
+    // box further narrows by name within whatever gender filter is active.
+    private void ApplyTermFilter()
+    {
+        _filteredTermRows.Clear();
+
+        var query = _termSearchText.Trim();
+        foreach (var row in _termRows)
+        {
+            if (_termGenderFilter.HasValue
+                && row.Term.Gender != MeasurementGender.Common
+                && row.Term.Gender != _termGenderFilter.Value)
+            {
+                continue;
+            }
+
+            if (query.Length > 0 && row.Name.IndexOf(query, StringComparison.CurrentCultureIgnoreCase) < 0)
+                continue;
+
+            _filteredTermRows.Add(row);
+        }
+    }
+
+    private void OnTermGenderFilterChanged(object sender, RoutedEventArgs e)
+    {
+        if (GenderFilterMaleRadio.IsChecked is true)
+            _termGenderFilter = MeasurementGender.Male;
+        else if (GenderFilterFemaleRadio.IsChecked is true)
+            _termGenderFilter = MeasurementGender.Female;
+        else
+            _termGenderFilter = null;
+
+        ApplyTermFilter();
+    }
+
+    private void OnTermSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        _termSearchText = AllTermsSearchBox.Text;
+        AllTermsSearchHint.Visibility = string.IsNullOrEmpty(_termSearchText) ? Visibility.Visible : Visibility.Collapsed;
+        ApplyTermFilter();
     }
 
     private void RefreshAssigned()
@@ -85,10 +139,12 @@ public partial class MeasurementTermsWindow : Window
             AssignedGarmentText.Text = string.Empty;
             AssignedHintText.Text = LocalizationService.Instance["MeasureTerms.EmptyGarment"];
             AssignedHintPanel.Visibility = Visibility.Visible;
+            MeasurementModePanel.Visibility = Visibility.Collapsed;
             return;
         }
 
         AssignedGarmentText.Text = MeasurementTermsService.ResolveGarmentName(garment, CurrentLanguage);
+        RefreshMeasurementModePanel(garment);
 
         foreach (var term in _service.GetGarmentTerms(garment.Id))
         {
@@ -98,6 +154,49 @@ public partial class MeasurementTermsWindow : Window
 
         AssignedHintText.Text = LocalizationService.Instance["MeasureTerms.DragHint"];
         AssignedHintPanel.Visibility = _assignedRows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    // Only predefined garments have a locked default set to opt out of; user-added
+    // garments are always fully editable, so the mode switch stays hidden for them.
+    private void RefreshMeasurementModePanel(GarmentType garment)
+    {
+        if (!garment.IsPredefined)
+        {
+            MeasurementModePanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        MeasurementModePanel.Visibility = Visibility.Visible;
+        var isCustomized = garment.UseCustomMeasurements;
+        MeasurementModeStatusText.Text = LocalizationService.Instance[
+            isCustomized ? "MeasureTerms.CustomizedStatus" : "MeasureTerms.DefaultStatus"];
+        MeasurementModeActionButton.Content = LocalizationService.Instance[
+            isCustomized ? "MeasureTerms.RestoreDefault" : "MeasureTerms.Customize"];
+    }
+
+    private void OnMeasurementModeActionClick(object sender, RoutedEventArgs e)
+    {
+        var garment = SelectedGarment?.Garment;
+        if (garment is null || !garment.IsPredefined)
+            return;
+
+        if (garment.UseCustomMeasurements)
+        {
+            var confirm = MessageBox.Show(
+                LocalizationService.Instance["MeasureTerms.RestoreDefaultConfirm"],
+                LocalizationService.Instance["MeasureTerms.DeleteTitle"],
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (confirm != MessageBoxResult.Yes)
+                return;
+
+            _service.RestoreDefaultMeasurements(garment.Id);
+        }
+        else
+        {
+            _service.EnableCustomMeasurements(garment.Id);
+        }
+
+        RefreshAssigned();
     }
 
     private void OnGarmentSelectionChanged(object sender, SelectionChangedEventArgs e) => RefreshAssigned();
@@ -172,16 +271,31 @@ public partial class MeasurementTermsWindow : Window
     {
         var dialog = new MeasurementTermLanguageWindow(
             LocalizationService.Instance["MeasureTerms.AddProp"],
-            new Dictionary<string, string>())
+            new Dictionary<string, string>(),
+            MeasurementGender.Common)
         {
             Owner = this
         };
 
-        if (dialog.ShowDialog().GetValueOrDefault())
+        if (!dialog.ShowDialog().GetValueOrDefault())
+            return;
+
+        if (_service.IsDuplicateTermName(dialog.Result))
         {
-            _service.AddCustomTerm(dialog.Result);
-            RefreshTermRows();
+            ShowDuplicateTermWarning();
+            return;
         }
+
+        _service.AddCustomTerm(dialog.Result, dialog.GenderResult);
+        RefreshTermRows();
+    }
+
+    private void ShowDuplicateTermWarning()
+    {
+        MessageBox.Show(
+            LocalizationService.Instance["MeasureTerms.DuplicateTermWarning"],
+            LocalizationService.Instance["MeasureTerms.Title"],
+            MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     private void OnTermEditClick(object sender, RoutedEventArgs e)
@@ -206,7 +320,13 @@ public partial class MeasurementTermsWindow : Window
         }
 
         var names = new Dictionary<string, string>(row.Term.Names) { [CurrentLanguage] = newName };
-        _service.UpdateCustomTermNames(row.Term.Id, names);
+        if (_service.IsDuplicateTermName(names, row.Term.Id))
+        {
+            ShowDuplicateTermWarning();
+            return;
+        }
+
+        _service.UpdateCustomTermNames(row.Term.Id, names, row.Term.Gender);
         RefreshTermRows();
         RefreshAssigned();
     }
@@ -217,17 +337,23 @@ public partial class MeasurementTermsWindow : Window
             return;
 
         var dialog = new MeasurementTermLanguageWindow(
-            MeasurementTermsService.ResolveTermName(row.Term, CurrentLanguage), row.Term.Names)
+            MeasurementTermsService.ResolveTermName(row.Term, CurrentLanguage), row.Term.Names, row.Term.Gender)
         {
             Owner = this
         };
 
-        if (dialog.ShowDialog().GetValueOrDefault())
+        if (!dialog.ShowDialog().GetValueOrDefault())
+            return;
+
+        if (_service.IsDuplicateTermName(dialog.Result, row.Term.Id))
         {
-            _service.UpdateCustomTermNames(row.Term.Id, dialog.Result);
-            RefreshTermRows();
-            RefreshAssigned();
+            ShowDuplicateTermWarning();
+            return;
         }
+
+        _service.UpdateCustomTermNames(row.Term.Id, dialog.Result, dialog.GenderResult);
+        RefreshTermRows();
+        RefreshAssigned();
     }
 
     private void OnTermDeleteClick(object sender, RoutedEventArgs e)
@@ -361,6 +487,28 @@ public partial class MeasurementTermsWindow : Window
         public bool IsCustom => !Term.IsPredefined;
 
         public bool ShowEditButton => IsCustom && !IsEditing;
+
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members should be removed",
+            Justification = "Bound in MeasurementTermsWindow.xaml (gender badge visibility/tooltip); not visible to single-file analysis.")]
+        public bool ShowGenderGlyph => Term.Gender != MeasurementGender.Common;
+
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members should be removed",
+            Justification = "Bound in MeasurementTermsWindow.xaml (gender badge text); not visible to single-file analysis.")]
+        public string GenderGlyph => Term.Gender switch
+        {
+            MeasurementGender.Male => "\u2642",
+            MeasurementGender.Female => "\u2640",
+            _ => string.Empty
+        };
+
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members should be removed",
+            Justification = "Bound in MeasurementTermsWindow.xaml (gender badge tooltip); not visible to single-file analysis.")]
+        public string GenderTooltip => Term.Gender switch
+        {
+            MeasurementGender.Male => LocalizationService.Instance["MeasureTerms.FilterMale"],
+            MeasurementGender.Female => LocalizationService.Instance["MeasureTerms.FilterFemale"],
+            _ => string.Empty
+        };
 
         public bool IsEditing
         {

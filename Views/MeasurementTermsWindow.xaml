@@ -79,6 +79,33 @@
             </Setter>
         </Style>
 
+        <!-- Pill-shaped filter chip (gender filter radio buttons) -->
+        <Style x:Key="FilterChip" TargetType="RadioButton">
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground" Value="#5D6D7E"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Bd" Background="#F0F3F6" CornerRadius="14" BorderBrush="#E1E6EC" BorderThickness="1" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#E3E9EE"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#2980B9"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#2980B9"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Garment list row -->
         <Style x:Key="GarmentItemStyle" TargetType="ListBoxItem">
             <Setter Property="Padding" Value="0"/>
@@ -115,6 +142,11 @@
                                Foreground="#B0BAC4" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- Gender badge -->
+                        <TextBlock FontSize="13" Foreground="#2980B9" VerticalAlignment="Center" Margin="0,0,8,0"
+                                   Text="{Binding GenderGlyph}"
+                                   Visibility="{Binding ShowGenderGlyph, Converter={StaticResource BoolToVis}}"
+                                   ToolTip="{Binding GenderTooltip}"/>
                         <!-- Preset lock -->
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72E;" FontSize="13" Foreground="#B0BAC4"
                                    VerticalAlignment="Center"
@@ -261,6 +293,7 @@
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
@@ -268,7 +301,21 @@
                         <TextBlock Style="{StaticResource ColumnTitle}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Assigned], Mode=OneWay}"/>
                         <TextBlock x:Name="AssignedGarmentText" Style="{StaticResource ColumnTitle}" Foreground="#2980B9" Margin="8,0,0,0"/>
                     </StackPanel>
-                    <Grid Grid.Row="1">
+
+                    <!-- Default-vs-customized mode switch: only shown for predefined garments, since
+                         user-added garments are already fully editable with no locked default set. -->
+                    <Border Grid.Row="1" x:Name="MeasurementModePanel" Background="#F7F9FB" CornerRadius="8" Padding="12,9" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" x:Name="MeasurementModeStatusText" Foreground="#5D6D7E" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <Button Grid.Column="1" x:Name="MeasurementModeActionButton" Style="{StaticResource AddButton}" Click="OnMeasurementModeActionClick"/>
+                        </Grid>
+                    </Border>
+
+                    <Grid Grid.Row="2">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
                             <ItemsControl x:Name="AssignedList" ItemTemplate="{StaticResource AssignedRowTemplate}"/>
                         </ScrollViewer>
@@ -285,6 +332,8 @@
                 <Grid Margin="16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
@@ -292,10 +341,28 @@
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71D;" FontSize="16" Foreground="#2980B9" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Style="{StaticResource ColumnTitle}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.AllProps], Mode=OneWay}"/>
                     </StackPanel>
-                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+
+                    <!-- Gender filter: Common terms always show; Male/Female narrows to that gender's specific terms too -->
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+                        <RadioButton x:Name="GenderFilterAllRadio" Style="{StaticResource FilterChip}" GroupName="TermGenderFilter" Checked="OnTermGenderFilterChanged"
+                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.FilterAll], Mode=OneWay}"/>
+                        <RadioButton x:Name="GenderFilterMaleRadio" Style="{StaticResource FilterChip}" GroupName="TermGenderFilter" Checked="OnTermGenderFilterChanged"
+                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.FilterMale], Mode=OneWay}"/>
+                        <RadioButton x:Name="GenderFilterFemaleRadio" Style="{StaticResource FilterChip}" GroupName="TermGenderFilter" Checked="OnTermGenderFilterChanged"
+                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.FilterFemale], Mode=OneWay}"/>
+                    </StackPanel>
+
+                    <!-- Search box -->
+                    <Grid Grid.Row="2" Margin="0,0,0,10">
+                        <TextBox x:Name="AllTermsSearchBox" Padding="8,6" BorderBrush="#CBD3DA" BorderThickness="1" TextChanged="OnTermSearchTextChanged"/>
+                        <TextBlock x:Name="AllTermsSearchHint" IsHitTestVisible="False" Foreground="#9FB0C0" Margin="10,0,0,0" VerticalAlignment="Center"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.SearchPlaceholder], Mode=OneWay}"/>
+                    </Grid>
+
+                    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
                         <ItemsControl x:Name="AllTermsList" ItemTemplate="{StaticResource TermRowTemplate}"/>
                     </ScrollViewer>
-                    <Button Grid.Row="2" Style="{StaticResource AddButton}" Margin="0,12,0,0" Click="OnAddPropClick" HorizontalAlignment="Stretch">
+                    <Button Grid.Row="4" Style="{StaticResource AddButton}" Margin="0,12,0,0" Click="OnAddPropClick" HorizontalAlignment="Stretch">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" FontSize="13" Margin="0,0,7,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.AddProp], Mode=OneWay}" VerticalAlignment="Center"/>

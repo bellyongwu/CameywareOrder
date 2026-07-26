@@ -1,6 +1,19 @@
 namespace LeeYongeOrdering.Models;
 
 /// <summary>
+/// Whether a measurement term is commonly used regardless of gender, or specific to
+/// one. Predefined terms have a fixed classification (see
+/// <see cref="MeasurementTermDefaults.GetPredefinedTermGender"/>); user-added terms
+/// declare it explicitly when created (and it may be changed later).
+/// </summary>
+public enum MeasurementGender
+{
+    Common,
+    Male,
+    Female
+}
+
+/// <summary>
 /// A single measurement term used when taking bespoke measurements (e.g. Chest,
 /// Waist, Sleeve). Predefined terms are locked: their names come from the string
 /// table (key <c>Measure.Term.&lt;Id&gt;</c>) and cannot be edited or deleted.
@@ -15,6 +28,9 @@ public class MeasurementTerm
 
     /// <summary>Language code → display name. Only used for user-added terms.</summary>
     public Dictionary<string, string> Names { get; set; } = new();
+
+    /// <summary>Gender classification used to filter the "all measurements" list.</summary>
+    public MeasurementGender Gender { get; set; } = MeasurementGender.Common;
 }
 
 /// <summary>
@@ -34,6 +50,13 @@ public class GarmentType
 
     /// <summary>Ordered ids of the measurement terms mapped to this garment.</summary>
     public List<string> TermIds { get; set; } = new();
+
+    /// <summary>
+    /// When true, a predefined garment's original default term mapping is no longer
+    /// locked, so any term may be added or removed for it. Meaningless for user-added
+    /// garments, which are always fully editable regardless of this flag.
+    /// </summary>
+    public bool UseCustomMeasurements { get; set; }
 }
 
 /// <summary>
@@ -96,12 +119,51 @@ public static class MeasurementTermDefaults
             ["qipao"] = new[] { Length, Bust, UnderBust, Waist, Hip, Shoulder, Neck, Sleeve }
         };
 
+    /// <summary>
+    /// Gender classification for every predefined term, derived from the default
+    /// garment mappings above: a term used only by the menswear-leaning garments
+    /// (jacket/vest/shirt) is Male, a term used only by the womenswear-leaning
+    /// garments (blouse/dress/qipao) is Female, and a term shared by both — or only
+    /// used by the unisex pants garment, or not part of any default mapping at all —
+    /// is Common. Every predefined term id is listed explicitly (none are left to an
+    /// implicit default) so the classification is easy to audit and extend.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, MeasurementGender> PredefinedTermGenders =
+        new Dictionary<string, MeasurementGender>
+        {
+            [Length] = MeasurementGender.Common,
+            [Chest] = MeasurementGender.Male,
+            [Waist] = MeasurementGender.Common,
+            [Hip] = MeasurementGender.Common,
+            [Shoulder] = MeasurementGender.Common,
+            [Sleeve] = MeasurementGender.Common,
+            [SitAround] = MeasurementGender.Male,
+            [Neck] = MeasurementGender.Common,
+            ["back"] = MeasurementGender.Common,
+            ["bicep"] = MeasurementGender.Common,
+            ["cuff"] = MeasurementGender.Male,
+            [Bust] = MeasurementGender.Female,
+            [UnderBust] = MeasurementGender.Female,
+            ["inseam"] = MeasurementGender.Common,
+            ["outseam"] = MeasurementGender.Common,
+            ["thigh"] = MeasurementGender.Common,
+            ["knee"] = MeasurementGender.Common,
+            ["bottom"] = MeasurementGender.Common,
+            ["rise"] = MeasurementGender.Common,
+            ["frontLength"] = MeasurementGender.Common,
+            ["armhole"] = MeasurementGender.Common
+        };
+
+    /// <summary>Resolves a predefined term's fixed gender classification.</summary>
+    public static MeasurementGender GetPredefinedTermGender(string termId)
+        => PredefinedTermGenders.TryGetValue(termId, out var gender) ? gender : MeasurementGender.Common;
+
     public static MeasurementTermsConfig CreateDefaultConfig()
     {
         var config = new MeasurementTermsConfig();
 
         foreach (var termId in PredefinedTermIds)
-            config.Terms.Add(new MeasurementTerm { Id = termId, IsPredefined = true });
+            config.Terms.Add(new MeasurementTerm { Id = termId, IsPredefined = true, Gender = GetPredefinedTermGender(termId) });
 
         foreach (var garmentId in PredefinedGarmentIds)
         {
@@ -120,10 +182,13 @@ public static class MeasurementTermDefaults
 
     /// <summary>
     /// True when the term is part of a predefined garment's original locked mapping,
-    /// so it must not be removed from that garment in the mapping UI.
+    /// so it must not be removed from that garment in the mapping UI. A predefined
+    /// garment with <see cref="GarmentType.UseCustomMeasurements"/> set opts out of
+    /// this lock entirely, making every term on it freely removable.
     /// </summary>
     public static bool IsTermLockedInGarment(GarmentType garment, string termId)
         => garment.IsPredefined
+           && !garment.UseCustomMeasurements
            && DefaultGarmentTerms.TryGetValue(garment.Id, out var terms)
            && terms.Contains(termId);
 }
