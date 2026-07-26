@@ -37,7 +37,6 @@ public sealed class MeasurementTermsService
 
     public MeasurementTerm? FindTerm(string termId)
         => _config.Terms.FirstOrDefault(t => string.Equals(t.Id, termId, StringComparison.Ordinal));
-
     public GarmentType? FindGarment(string garmentId)
         => _config.Garments.FirstOrDefault(g => string.Equals(g.Id, garmentId, StringComparison.Ordinal));
 
@@ -248,6 +247,47 @@ public sealed class MeasurementTermsService
         garment.TermIds = MeasurementTermDefaults.DefaultGarmentTerms.TryGetValue(garment.Id, out var terms)
             ? new List<string>(terms)
             : new List<string>();
+        Persist();
+    }
+
+    // --- Import / export ---------------------------------------------------------
+
+    private static readonly JsonSerializerOptions ExportOptions = new() { WriteIndented = true };
+
+    /// <summary>Serializes the current configuration to indented JSON for backup/export.</summary>
+    public string ExportConfigJson() => JsonSerializer.Serialize(_config, ExportOptions);
+
+    /// <summary>
+    /// Attempts to parse a previously-exported configuration. Returns null (instead of
+    /// throwing) on invalid/corrupt JSON so callers can show a friendly "invalid file"
+    /// message rather than crashing.
+    /// </summary>
+    public static MeasurementTermsConfig? TryParseConfigJson(string json)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<MeasurementTermsConfig>(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Replaces the current configuration with an imported one (see
+    /// <see cref="ExportConfigJson"/>). Re-runs the predefined merge so a config
+    /// exported from an older app version still ends up with today's predefined term
+    /// ids / gender classifications, then persists and notifies listeners.
+    /// </summary>
+    public void ImportConfig(MeasurementTermsConfig config)
+    {
+        _config.Terms.Clear();
+        _config.Terms.AddRange(config.Terms ?? new List<MeasurementTerm>());
+        _config.Garments.Clear();
+        _config.Garments.AddRange(config.Garments ?? new List<GarmentType>());
+
+        MergePredefined(_config);
         Persist();
     }
 

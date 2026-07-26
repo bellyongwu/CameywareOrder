@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Win32;
 using System.Diagnostics;
 using System.Globalization;
 using System.ComponentModel;
@@ -434,6 +435,134 @@ public partial class MainWindow : Window
     {
         var window = new MeasurementTermsWindow { Owner = this };
         window.ShowDialog();
+    }
+
+    // --- Import / export (本地配置 → 导入/导出) ----------------------------------
+
+    private void OnExportMeasurementTermsClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            FileName = "measurement-terms.json",
+            Filter = "JSON (*.json)|*.json"
+        };
+
+        if (dialog.ShowDialog(this) is not true)
+            return;
+
+        try
+        {
+            System.IO.File.WriteAllText(dialog.FileName, MeasurementTermsService.Instance.ExportConfigJson());
+            _viewModel.StatusMessage = _localization["Status.ExportMeasurementTermsSucceeded"];
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.ExportMeasurementTermsFailed", ex.Message);
+        }
+    }
+
+    private void OnImportMeasurementTermsClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "JSON (*.json)|*.json",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog(this) is not true)
+            return;
+
+        MeasurementTermsConfig? imported;
+        try
+        {
+            imported = MeasurementTermsService.TryParseConfigJson(System.IO.File.ReadAllText(dialog.FileName));
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.ImportMeasurementTermsFailed", ex.Message);
+            return;
+        }
+
+        if (imported is null)
+        {
+            MessageBox.Show(
+                _localization["Status.ImportMeasurementTermsInvalid"],
+                _localization["MeasureTerms.Title"],
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var confirm = MessageBox.Show(
+            _localization["ImportExport.MeasurementTermsConfirm"],
+            _localization["MeasureTerms.Title"],
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            MeasurementTermsService.Instance.ImportConfig(imported);
+            _viewModel.StatusMessage = _localization["Status.ImportMeasurementTermsSucceeded"];
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.ImportMeasurementTermsFailed", ex.Message);
+        }
+    }
+
+    private void OnExportDatabaseClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            FileName = "orders-backup.db",
+            Filter = "SQLite Database (*.db)|*.db"
+        };
+
+        if (dialog.ShowDialog(this) is not true)
+            return;
+
+        try
+        {
+            DatabasePathProvider.ExportDatabaseTo(dialog.FileName);
+            _viewModel.StatusMessage = _localization["Status.ExportDatabaseSucceeded"];
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.ExportDatabaseFailed", ex.Message);
+        }
+    }
+
+    private void OnImportDatabaseClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = "SQLite Database (*.db)|*.db",
+            CheckFileExists = true
+        };
+
+        if (dialog.ShowDialog(this) is not true)
+            return;
+
+        // Destructive: replaces every order currently in the app. Requires explicit
+        // confirmation; the current database is still auto-backed-up as an extra safety
+        // net (see DatabasePathProvider.ImportDatabaseFrom).
+        var confirm = MessageBox.Show(
+            _localization["ImportExport.DatabaseConfirm"],
+            _localization["Toolbar.LocalDatabase"],
+            MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            DatabasePathProvider.ImportDatabaseFrom(dialog.FileName);
+            _viewModel.LoadOrdersCommand.Execute(null);
+            _viewModel.StatusMessage = _localization["Status.ImportDatabaseSucceeded"];
+        }
+        catch (Exception ex)
+        {
+            _viewModel.StatusMessage = _localization.Format("Status.ImportDatabaseFailed", ex.Message);
+        }
     }
 
     private FlowDocument BuildReceiptDocument(Order order, double pageWidth)
