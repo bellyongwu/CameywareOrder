@@ -59,11 +59,17 @@ public class Order
 
     // Per-service pricing (each service section is priced independently so its
     // charge and cleared status can be evaluated without touching the others).
+    // XxxTaxRate is the DEPOSIT-stage rate and XxxFinalTaxRate the FINAL-BALANCE-stage
+    // rate: the shop can charge a different card rate on each portion. A null final rate
+    // means the order predates the split, so the single stored rate applies to both.
     public decimal? AlterationSubtotal { get; set; }
     public decimal? AlterationTaxRate { get; set; }
+    public decimal? AlterationFinalTaxRate { get; set; }
     public decimal? ClothingSubtotal { get; set; }
     public decimal? ClothingTaxRate { get; set; }
+    public decimal? ClothingFinalTaxRate { get; set; }
     public decimal? CustomMadeTaxRate { get; set; }
+    public decimal? CustomMadeFinalTaxRate { get; set; }
 
     public string? Notes { get; set; }
     public List<OrderItem> Items { get; set; } = new();
@@ -80,11 +86,13 @@ public class Order
     [NotMapped]
     public SectionPayment AlterationMoney
         => CalculateSectionPayment(AlterationSubtotal ?? 0m, AlterationDownpayment ?? 0m, AlterationTaxRate ?? 0m,
+            AlterationFinalTaxRate ?? AlterationTaxRate ?? 0m,
             AlterationDownpaymentMethod, AlterationFinalBalanceMethod);
 
     [NotMapped]
     public SectionPayment ClothingMoney
         => CalculateSectionPayment(ClothingSubtotal ?? 0m, ClothingDownpayment ?? 0m, ClothingTaxRate ?? 0m,
+            ClothingFinalTaxRate ?? ClothingTaxRate ?? 0m,
             ClothingDownpaymentMethod, ClothingFinalBalanceMethod);
 
     // Custom-made pricing mirrors the other sections: the base charge is the sum of the
@@ -95,6 +103,7 @@ public class Order
     [NotMapped]
     public SectionPayment CustomMadeMoney
         => CalculateSectionPayment(CustomMadeSubtotal, CustomMadeDownpayment ?? 0m, CustomMadeTaxRate ?? 0m,
+            CustomMadeFinalTaxRate ?? CustomMadeTaxRate ?? 0m,
             CustomMadeDownpaymentMethod, CustomMadeFinalBalanceMethod);
 
     // Per-section totals (deposit charge + final-balance charge, each taxed by its own method).
@@ -123,10 +132,17 @@ public class Order
     public decimal TotalTax => AlterationTax + ClothingTax + CustomMadeTax;
 
     // Actually-received deposits across sections (received deposit): each nominal deposit
-    // plus its tax when that deposit was paid by card.
+    // plus its tax when that deposit was paid by card. A deposit only counts once the shop
+    // has confirmed it with the section's "deposit received" tick — an amount typed into
+    // the form is what is expected, not yet what is in hand.
     [NotMapped]
     public decimal ReceivedDownpayment
-        => AlterationMoney.ReceivedDownpayment + CustomMadeMoney.ReceivedDownpayment + ClothingMoney.ReceivedDownpayment;
+        => SectionReceivedDeposit(AlterationMoney, AlterationDownpaymentCompleted)
+            + SectionReceivedDeposit(CustomMadeMoney, CustomMadeDownpaymentCompleted)
+            + SectionReceivedDeposit(ClothingMoney, ClothingDownpaymentCompleted);
+
+    private static decimal SectionReceivedDeposit(SectionPayment money, bool depositCompleted)
+        => depositCompleted ? money.ReceivedDownpayment : 0m;
 
     [NotMapped]
     public decimal ComputedSectionsTotal => AlterationTotal + CustomMadeTotal + ClothingTotal;
@@ -241,21 +257,22 @@ public class Order
         => (balanceCleared && money.FinalBase > 0m) ? money.FinalCharge : 0m;
 
     // Splits a service section into its deposit and final-balance money, applying tax to
-    // each portion only when that portion is settled by card. The deposit is the pre-tax
-    // amount entered by the shop and ReceivedDownpayment is that deposit after any card
-    // tax. FinalBase is the pre-tax remainder and FinalCharge is that remainder after any
-    // card tax. The deposit is capped at the subtotal so the final balance never goes below zero.
+    // each portion only when that portion is settled by card. Each portion carries its own
+    // rate, so the shop can charge e.g. 5% on a card deposit and 7% on the card final
+    // balance. The deposit is the pre-tax amount entered by the shop and ReceivedDownpayment
+    // is that deposit after any card tax. FinalBase is the pre-tax remainder and FinalCharge
+    // is that remainder after any card tax. The deposit is capped at the subtotal so the
+    // final balance never goes below zero.
     public static SectionPayment CalculateSectionPayment(
-        decimal subtotal, decimal deposit, decimal ratePercent,
+        decimal subtotal, decimal deposit, decimal depositRatePercent, decimal finalRatePercent,
         PaymentMethod? downpaymentMethod, PaymentMethod? finalBalanceMethod)
     {
         var safeSubtotal = subtotal < 0m ? 0m : subtotal;
         var safeDeposit = Math.Clamp(deposit, 0m, safeSubtotal);
         var finalBase = safeSubtotal - safeDeposit;
-        var rate = ratePercent < 0m ? 0m : ratePercent;
 
-        var depositRate = downpaymentMethod == PaymentMethod.Card ? rate : 0m;
-        var finalRate = finalBalanceMethod == PaymentMethod.Card ? rate : 0m;
+        var depositRate = downpaymentMethod == PaymentMethod.Card && depositRatePercent > 0m ? depositRatePercent : 0m;
+        var finalRate = finalBalanceMethod == PaymentMethod.Card && finalRatePercent > 0m ? finalRatePercent : 0m;
 
         var receivedDownpayment = safeDeposit + (safeDeposit * depositRate / 100m);
         var finalCharge = finalBase + (finalBase * finalRate / 100m);

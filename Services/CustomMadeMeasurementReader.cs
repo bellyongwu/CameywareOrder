@@ -11,11 +11,16 @@ public static class CustomMadeMeasurementReader
     // Distinct garment display names across every custom-made record on the order,
     // preserving first-seen order. Only garments that actually carry a value are listed.
     public static List<string> GetGarmentNames(Order order, string languageCode)
+        => GetGarmentNames(order.CustomMadeRecords, languageCode);
+
+    // Same, straight off a record list — used by the order editor, which holds unsaved
+    // records rather than an Order.
+    public static List<string> GetGarmentNames(IEnumerable<CustomMadeServiceRecord> records, string languageCode)
     {
         var service = MeasurementTermsService.Instance;
         var names = new List<string>();
 
-        foreach (var record in order.CustomMadeRecords)
+        foreach (var record in records)
         {
             foreach (var garment in record.Garments)
             {

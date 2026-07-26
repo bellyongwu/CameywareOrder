@@ -134,6 +134,12 @@ public partial class App : Application
         ("ClothingSubtotal", "ALTER TABLE Orders ADD COLUMN ClothingSubtotal TEXT NULL; "),
         ("ClothingTaxRate", "ALTER TABLE Orders ADD COLUMN ClothingTaxRate TEXT NULL; "),
         ("CustomMadeTaxRate", "ALTER TABLE Orders ADD COLUMN CustomMadeTaxRate TEXT NULL; "),
+        // Per-stage tax rates: the XxxTaxRate columns above hold the deposit-stage rate and
+        // these hold the final-balance-stage rate. Null on an existing row means the order
+        // predates the split, so its single stored rate keeps applying to both portions.
+        ("AlterationFinalTaxRate", "ALTER TABLE Orders ADD COLUMN AlterationFinalTaxRate TEXT NULL; "),
+        ("ClothingFinalTaxRate", "ALTER TABLE Orders ADD COLUMN ClothingFinalTaxRate TEXT NULL; "),
+        ("CustomMadeFinalTaxRate", "ALTER TABLE Orders ADD COLUMN CustomMadeFinalTaxRate TEXT NULL; "),
         ("ChestSize", "ALTER TABLE Orders ADD COLUMN ChestSize TEXT NULL; "),
         ("JacketLength", "ALTER TABLE Orders ADD COLUMN JacketLength TEXT NULL; "),
         ("CustomMadeRecordsJson", "ALTER TABLE Orders ADD COLUMN CustomMadeRecordsJson TEXT NULL; "),

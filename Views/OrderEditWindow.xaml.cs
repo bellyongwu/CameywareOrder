@@ -21,6 +21,15 @@ public partial class OrderEditWindow : Window
     private const string FinalBalanceMethodKey = "OrderEdit.FinalBalanceMethod";
     private const string ValidationTitleKey = "OrderEdit.ValidationTitle";
     private static readonly Regex DecimalInputPattern = new("^\\d*(\\.\\d{0,2})?$");
+    // Muted grey used by the small-print breakdown lines; matches the TaxBreakdownLine XAML
+    // style. Frozen and shared so the per-line TextBlocks don't each allocate a brush.
+    // System.Windows.Media is fully qualified here: under ImplicitUsings, QuestPDF and
+    // HotChocolate also define Color, so an unqualified name is ambiguous.
+    private static readonly System.Windows.Media.SolidColorBrush BreakdownLineBrush =
+        CreateFrozenBrush(0x7A, 0x86, 0x98);
+    // Amber, for a service that carries items but no charge — a flag, not an error.
+    private static readonly System.Windows.Media.SolidColorBrush UnpricedLineBrush =
+        CreateFrozenBrush(0xC1, 0x7A, 0x0B);
     private static readonly Regex EmailPattern = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
     private static readonly string[] ClothingItemKeys =
     {
@@ -84,8 +93,36 @@ public partial class OrderEditWindow : Window
         public required StackPanel FinalBreakdownPanel { get; init; }
         // Tax-rate input for this section (owned here so locking is fully centralized).
         public required TextBox TaxBox { get; init; }
-        // True when any payment portion of this section uses a card method (drives tax applicability).
-        public bool CardUsed => DownCard.IsChecked is true || FinalCard.IsChecked is true;
+        // Label above TaxBox; its text names the stage the box is currently editing.
+        public required TextBlock TaxLabel { get; init; }
+        // Small print under the final-stage total tax: one line per payment portion.
+        public required TextBlock DepositTaxLine { get; init; }
+        public required TextBlock FinalTaxLine { get; init; }
+
+        // True when the section carries order items, which is what makes the service part of
+        // this order at all. A section without items sits out the payment flow entirely; one
+        // WITH items takes part even when it is priced at zero.
+        public required Func<bool> HasItems { get; init; }
+        // The section's current post-tax total (read live — the Refresh*Totals passes own it).
+        public required Func<decimal> SectionTotal { get; init; }
+        // Localization key naming this service.
+        public required string ServiceNameKey { get; init; }
+
+        // Priced at nothing despite carrying items: allowed, but worth flagging.
+        public bool HasMissingPrice => HasItems() && SectionTotal() <= 0m;
+
+        // The single TaxBox edits one stage at a time, so both rates are kept here and the
+        // box is swapped when the section moves between stages. ShowingFinalRate records
+        // which one the box currently holds, so a stage flip can bank the typed value
+        // against the stage the user was actually editing.
+        public decimal DepositTaxRate { get; set; }
+        public decimal FinalTaxRate { get; set; }
+        public bool ShowingFinalRate { get; set; }
+
+        // The deposit is settled and the outstanding balance is what the shop is now
+        // charging: either the deposit was marked received, or "None" means no deposit was
+        // taken at all. This is the stage the TaxBox edits.
+        public bool IsFinalStage => DownNone.IsChecked is true || DownCompletedCheck.IsChecked is true;
     }
 
     public OrderEditWindow(IServiceScopeFactory scopeFactory, LocalizationService localization)
@@ -158,13 +195,12 @@ public partial class OrderEditWindow : Window
             AlterationCategoryBox.SelectedIndex = 0;
         AlterationAdditionalNotesBox.Text = existing.AdditionalNotes;
         AlterationPriceBox.Text = (existing.AlterationSubtotal ?? existing.Subtotal)?.ToString("0.##") ?? string.Empty;
-        AlterationTaxBox.Text = (existing.AlterationTaxRate ?? existing.TaxRate)?.ToString("0.##") ?? DefaultTaxRate.ToString("0.##");
-        ClothingTaxBox.Text = (existing.ClothingTaxRate ?? existing.TaxRate)?.ToString("0.##") ?? DefaultTaxRate.ToString("0.##");
-        CustomMadeTaxBox.Text = existing.CustomMadeTaxRate?.ToString("0.##") ?? DefaultTaxRate.ToString("0.##");
 
         if (existing.ServiceType == OrderServiceType.Alterations && string.IsNullOrWhiteSpace(AlterationPriceBox.Text))
         {
-            var effectiveTaxRate = ParseDecimalOrZero(AlterationTaxBox.Text);
+            // Read the stored rate directly: the tax boxes are only populated further down
+            // (after LoadPaymentFields), so they are still empty at this point.
+            var effectiveTaxRate = existing.AlterationTaxRate ?? existing.TaxRate ?? DefaultTaxRate;
             var subtotalFromTotal = effectiveTaxRate > 0m
                 ? existing.TotalAmount / (1m + (effectiveTaxRate / 100m))
                 : existing.TotalAmount;
@@ -180,6 +216,7 @@ public partial class OrderEditWindow : Window
         SelectServiceType(existing.ServiceType);
 
         LoadPaymentFields(existing);
+        LoadStageTaxRates(existing);
 
         foreach (ComboBoxItem item in StatusBox.Items)
         {
@@ -379,7 +416,15 @@ public partial class OrderEditWindow : Window
             FinalBlock = AlterationFinalBlock,
             DepositBreakdownPanel = AlterationDepositBreakdownPanel,
             FinalBreakdownPanel = AlterationFinalBreakdownPanel,
-            TaxBox = AlterationTaxBox
+            TaxBox = AlterationTaxBox,
+            TaxLabel = AlterationTaxLabel,
+            DepositTaxLine = AlterationDepositTaxLineText,
+            FinalTaxLine = AlterationFinalTaxLineText,
+            // Alterations has no item list of its own, so a typed price — even "0" — is what
+            // marks the service as present on this order.
+            HasItems = () => !string.IsNullOrWhiteSpace(AlterationPriceBox.Text),
+            SectionTotal = () => _alterationSumTotal,
+            ServiceNameKey = "ServiceType.Alterations"
         };
         _customMadeControls = new PaymentSectionControls
         {
@@ -397,7 +442,13 @@ public partial class OrderEditWindow : Window
             FinalBlock = CustomMadeFinalBlock,
             DepositBreakdownPanel = CustomMadeDepositBreakdownPanel,
             FinalBreakdownPanel = CustomMadeFinalBreakdownPanel,
-            TaxBox = CustomMadeTaxBox
+            TaxBox = CustomMadeTaxBox,
+            TaxLabel = CustomMadeTaxLabel,
+            DepositTaxLine = CustomMadeDepositTaxLineText,
+            FinalTaxLine = CustomMadeFinalTaxLineText,
+            HasItems = () => _customMadeRecords.Count > 0,
+            SectionTotal = () => _customMadeSumTotal,
+            ServiceNameKey = "ServiceType.CustomMade"
         };
         _clothingControls = new PaymentSectionControls
         {
@@ -415,7 +466,13 @@ public partial class OrderEditWindow : Window
             FinalBlock = ClothingFinalBlock,
             DepositBreakdownPanel = ClothingDepositBreakdownPanel,
             FinalBreakdownPanel = ClothingFinalBreakdownPanel,
-            TaxBox = ClothingTaxBox
+            TaxBox = ClothingTaxBox,
+            TaxLabel = ClothingTaxLabel,
+            DepositTaxLine = ClothingDepositTaxLineText,
+            FinalTaxLine = ClothingFinalTaxLineText,
+            HasItems = () => _clothingItemRows.Count > 0,
+            SectionTotal = () => _clothingSumTotal,
+            ServiceNameKey = "ServiceType.ReadyMade"
         };
     }
 
@@ -740,6 +797,11 @@ public partial class OrderEditWindow : Window
     private void OnAlterationValuesChanged(object sender, TextChangedEventArgs e)
         => RefreshComputedTotals(runAutoComplete: false);
 
+    // A service category carries no money, so it only needs to refresh the small-print
+    // breakdown under the order total — the one place the category is displayed.
+    private void OnServiceCategoryChanged(object sender, SelectionChangedEventArgs e)
+        => RefreshServicesTotalBreakdown();
+
     private void OnClothingValuesChanged(object sender, TextChangedEventArgs e)
         => RefreshComputedTotals(runAutoComplete: false);
 
@@ -880,7 +942,11 @@ public partial class OrderEditWindow : Window
     private void OnAddClothingItemClick(object sender, RoutedEventArgs e)
     {
         AddClothingItemRow();
-        RefreshClothingTotals();
+        // Full refresh, not just RefreshClothingTotals: an item price feeds the order's
+        // grand total and payment summary exactly like the other price inputs do.
+        // runAutoComplete stays false because editing a price must never move a payment
+        // method selection (same rule as the price/tax boxes).
+        RefreshComputedTotals(runAutoComplete: false);
     }
 
     private void OnAddCustomMadeRecordClick(object sender, RoutedEventArgs e)
@@ -1192,8 +1258,14 @@ public partial class OrderEditWindow : Window
         if (priceBox is not null)
             priceBox.IsReadOnly = inputsLocked;
 
-        // Tax box: read-only when no card is in use (not applicable), or when inputs are locked.
-        c.TaxBox.IsReadOnly = !c.CardUsed || inputsLocked;
+        // Tax box: read-only when the stage it is currently editing isn't settled by card
+        // (tax not applicable), or when the whole section is settled. It deliberately does
+        // NOT use inputsLocked — marking the deposit received is what hands the box over to
+        // the final-balance rate, so that is when it must become editable again.
+        var stagePaidByCard = c.IsFinalStage
+            ? EffectiveFinalMethod(c) == PaymentMethod.Card
+            : GetSelectedDownMethod(c.DownNone, c.DownEtransfer, c.DownCard, c.DownCash) == PaymentMethod.Card;
+        c.TaxBox.IsReadOnly = !stagePaidByCard || sectionLocked;
         c.DownpaymentBox.IsReadOnly = inputsLocked;
     }
 
@@ -1289,37 +1361,125 @@ public partial class OrderEditWindow : Window
         return false;
     }
 
+    // The final balance inherits the deposit's payment method until the user explicitly
+    // picks one of its own. Without this the section advertises a tax rate it never
+    // applies: choosing Card for the deposit shows a rate on the outstanding balance while
+    // the untouched final method stays null, leaving that balance untaxed. Mirrors the same
+    // "default the final method from the deposit" convention already used by
+    // AutoCompleteSection and ApplyClearAllToSection, and an explicit selection always wins.
+    private static PaymentMethod? EffectiveFinalMethod(PaymentSectionControls c)
+    {
+        var chosen = GetSelectedPaymentMethod(c.FinalEtransfer, c.FinalCard, c.FinalCash);
+        if (chosen is not null)
+            return chosen;
+
+        var downMethod = GetSelectedDownMethod(c.DownNone, c.DownEtransfer, c.DownCard, c.DownCash);
+        return downMethod == PaymentMethod.None ? null : downMethod;
+    }
+
+    // Seeds both stage rates for every section from a saved order. A null final rate means
+    // the order predates the per-stage split, so its single stored rate keeps applying to
+    // both portions. Must run AFTER LoadPaymentFields: the card/cash rule reads the payment
+    // radios, and with none selected yet it would zero a stored rate before it is ever used.
+    private void LoadStageTaxRates(Order existing)
+    {
+        LoadSectionTaxRates(_alterationControls, existing.AlterationTaxRate ?? existing.TaxRate, existing.AlterationFinalTaxRate);
+        LoadSectionTaxRates(_clothingControls, existing.ClothingTaxRate ?? existing.TaxRate, existing.ClothingFinalTaxRate);
+        LoadSectionTaxRates(_customMadeControls, existing.CustomMadeTaxRate, existing.CustomMadeFinalTaxRate);
+    }
+
+    private static void LoadSectionTaxRates(PaymentSectionControls c, decimal? depositRate, decimal? finalRate)
+    {
+        c.DepositTaxRate = depositRate ?? DefaultTaxRate;
+        c.FinalTaxRate = finalRate ?? c.DepositTaxRate;
+        // Point the box at whichever stage the loaded order is already in, so the very next
+        // refresh attributes the text to the right rate.
+        c.ShowingFinalRate = c.IsFinalStage;
+        c.TaxBox.Text = (c.ShowingFinalRate ? c.FinalTaxRate : c.DepositTaxRate).ToString("0.##");
+    }
+
     // Business rule: Cash and Etransfer are always taxed at 0%; only Card is taxable.
-    // Forces the tax box text to reflect the effective rate (so the displayed value never
-    // lies about what's actually charged) and returns the rate to use in the calculation.
-    private decimal ApplyTaxRateRule(TextBox taxBox, bool cardUsed)
+    // A card portion that has no rate yet falls back to `fallback` — the standard rate for
+    // the deposit, the deposit's own rate for the final balance so a shop that charges 5%
+    // on the deposit keeps 5% on the balance unless it says otherwise.
+    private static decimal ResolveStageRate(bool cardUsed, decimal current, decimal fallback)
     {
         if (!cardUsed)
-        {
-            if (taxBox.Text != "0")
-                taxBox.Text = "0";
             return 0m;
-        }
 
-        // First time card is selected for this section, default to the standard rate.
-        if (ParseDecimalOrZero(taxBox.Text) == 0m)
-            taxBox.Text = DefaultTaxRate.ToString("0.##");
-
-        return ParseDecimalOrZero(taxBox.Text);
+        return current == 0m ? fallback : current;
     }
+
+    // Keeps the section's single 当前税率 box pointed at the stage it is editing: the
+    // deposit rate until the deposit is received, the final-balance rate afterwards. Both
+    // rates live on the section state, so switching stage never discards the other one.
+    // Returns nothing — callers read c.DepositTaxRate / c.FinalTaxRate.
+    private void ApplyStageTaxRates(PaymentSectionControls c)
+    {
+        var typed = ParseDecimalOrZero(c.TaxBox.Text);
+
+        // Whatever is in the box belongs to the stage the box is currently showing.
+        if (c.ShowingFinalRate)
+            c.FinalTaxRate = typed;
+        else
+            c.DepositTaxRate = typed;
+
+        var depositCard = GetSelectedDownMethod(c.DownNone, c.DownEtransfer, c.DownCard, c.DownCash) == PaymentMethod.Card;
+        var finalCard = EffectiveFinalMethod(c) == PaymentMethod.Card;
+
+        c.DepositTaxRate = ResolveStageRate(depositCard, c.DepositTaxRate, DefaultTaxRate);
+        c.FinalTaxRate = ResolveStageRate(finalCard, c.FinalTaxRate,
+            c.DepositTaxRate > 0m ? c.DepositTaxRate : DefaultTaxRate);
+
+        var stageChanged = c.IsFinalStage != c.ShowingFinalRate;
+        c.ShowingFinalRate = c.IsFinalStage;
+        var stageRate = c.ShowingFinalRate ? c.FinalTaxRate : c.DepositTaxRate;
+
+        // Only rewrite the box when the stage flipped or the rule actually forced a
+        // different rate, so a half-typed value such as "5." is never normalised away
+        // from under the caret.
+        if (stageChanged || stageRate != typed)
+            c.TaxBox.Text = stageRate.ToString("0.##");
+
+        UpdateTaxLabel(c);
+    }
+
+    // Small print under 此服务总计税: how the section's tax splits across the two portions
+    // and which method settled each, so a $0 line reads as "that portion wasn't card"
+    // rather than as a missing charge.
+    private void UpdateTaxBreakdownLines(PaymentSectionControls c, SectionPayment money)
+    {
+        var depositMethod = GetSelectedDownMethod(c.DownNone, c.DownEtransfer, c.DownCard, c.DownCash);
+        c.DepositTaxLine.Text = _localization.Format("Order.Fields.DepositTaxLine",
+            PaymentMethodName(depositMethod),
+            FormatCurrency(money.ReceivedDownpayment - money.Deposit));
+        c.FinalTaxLine.Text = _localization.Format("Order.Fields.FinalTaxLine",
+            PaymentMethodName(EffectiveFinalMethod(c)),
+            FormatCurrency(money.FinalCharge - money.FinalBase));
+    }
+
+    private string PaymentMethodName(PaymentMethod? method)
+        => _localization[$"PaymentMethod.{method ?? PaymentMethod.None}"];
+
+    // Names the stage the tax box is editing, so a rate typed here is never mistaken for
+    // the other portion's rate.
+    private void UpdateTaxLabel(PaymentSectionControls c)
+        => c.TaxLabel.Text = _localization[c.ShowingFinalRate
+            ? "Order.Fields.FinalTaxRate"
+            : "Order.Fields.DepositTaxRate"];
 
     private void RefreshAlterationTotals()
     {
         var price = ParseDecimalOrZero(AlterationPriceBox.Text);
-        var cardUsed = _alterationControls.CardUsed;
-        // Rule: Cash/Etransfer are always 0% tax; Card defaults to the standard rate the
-        // first time it's selected. The box is forced back to "0" whenever no leg uses
-        // card, so the displayed rate always matches what is actually charged.
-        var taxRate = ApplyTaxRateRule(AlterationTaxBox, cardUsed);
+        // Resolves both stage rates and points the shared tax box at the current stage.
+        // Cash/Etransfer portions are forced to 0%, so the displayed rate always matches
+        // what is actually charged.
+        ApplyStageTaxRates(_alterationControls);
         var downpayment = ParseDecimalOrZero(AlterationDownpaymentBox.Text);
-        var money = Order.CalculateSectionPayment(price, downpayment, taxRate,
+        var money = Order.CalculateSectionPayment(price, downpayment,
+            _alterationControls.DepositTaxRate, _alterationControls.FinalTaxRate,
             GetSelectedDownMethod(AlterationDownNone, AlterationDownEtransfer, AlterationDownCard, AlterationDownCash),
-            GetSelectedPaymentMethod(AlterationFinalEtransfer, AlterationFinalCard, AlterationFinalCash));
+            EffectiveFinalMethod(_alterationControls));
         // A cleared balance means nothing is still owed for this section.
         var residual = AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : money.FinalCharge;
 
@@ -1328,11 +1488,14 @@ public partial class OrderEditWindow : Window
         _alterationMoney = money;
 
         AlterationSubtotalText.Text = FormatCurrency(price);
-        AlterationDepositTaxText.Text = FormatCurrency(money.ReceivedDownpayment - money.Deposit);
+        // 当前计税 is the tax charged on the whole section at the current rate (deposit tax
+        // plus final-balance tax), so it pairs with the 税后总价 line below it.
+        AlterationDepositTaxText.Text = FormatCurrency(money.Tax);
         AlterationSumTotalText.Text = FormatCurrency(money.Total);
         AlterationFinalPriceDisplayText.Text = FormatCurrency(price);
         AlterationFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
         AlterationFinalTotalTaxText.Text = FormatCurrency(money.Tax);
+        UpdateTaxBreakdownLines(_alterationControls, money);
         AlterationFinalTotalText.Text = FormatCurrency(money.Total);
         AlterationResidualText.Text = FormatCurrency(residual);
     }
@@ -1347,14 +1510,13 @@ public partial class OrderEditWindow : Window
             subtotal += rowSubtotal;
         }
 
-        var cardUsed = _clothingControls.CardUsed;
-        // Rule: Cash/Etransfer are always 0% tax; Card defaults to the standard rate the
-        // first time it's selected.
-        var taxRate = ApplyTaxRateRule(ClothingTaxBox, cardUsed);
+        // See RefreshAlterationTotals: resolves both stage rates and retargets the tax box.
+        ApplyStageTaxRates(_clothingControls);
         var downpayment = ParseDecimalOrZero(ClothingDownpaymentBox.Text);
-        var money = Order.CalculateSectionPayment(subtotal, downpayment, taxRate,
+        var money = Order.CalculateSectionPayment(subtotal, downpayment,
+            _clothingControls.DepositTaxRate, _clothingControls.FinalTaxRate,
             GetSelectedDownMethod(ClothingDownNone, ClothingDownEtransfer, ClothingDownCard, ClothingDownCash),
-            GetSelectedPaymentMethod(ClothingFinalEtransfer, ClothingFinalCard, ClothingFinalCash));
+            EffectiveFinalMethod(_clothingControls));
         // A cleared balance means nothing is still owed for this section.
         var residual = ClothingBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : money.FinalCharge;
 
@@ -1364,11 +1526,13 @@ public partial class OrderEditWindow : Window
 
         ClothingPriceText.Text = FormatCurrency(subtotal);
         ClothingSubtotalText.Text = FormatCurrency(subtotal);
-        ClothingDepositTaxText.Text = FormatCurrency(money.ReceivedDownpayment - money.Deposit);
+        // 当前计税: whole-section tax at the current rate (see RefreshAlterationTotals).
+        ClothingDepositTaxText.Text = FormatCurrency(money.Tax);
         ClothingSumTotalText.Text = FormatCurrency(money.Total);
         ClothingFinalPriceDisplayText.Text = FormatCurrency(subtotal);
         ClothingFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
         ClothingFinalTotalTaxText.Text = FormatCurrency(money.Tax);
+        UpdateTaxBreakdownLines(_clothingControls, money);
         ClothingFinalTotalText.Text = FormatCurrency(money.Total);
         ClothingResidualText.Text = FormatCurrency(residual);
     }
@@ -1376,14 +1540,13 @@ public partial class OrderEditWindow : Window
     private void RefreshCustomMadeTotals()
     {
         _customMadeSubtotal = _customMadeRecords.Sum(record => record.Subtotal);
-        var cardUsed = _customMadeControls.CardUsed;
-        // Rule: Cash/Etransfer are always 0% tax; Card defaults to the standard rate the
-        // first time it's selected.
-        var taxRate = ApplyTaxRateRule(CustomMadeTaxBox, cardUsed);
+        // See RefreshAlterationTotals: resolves both stage rates and retargets the tax box.
+        ApplyStageTaxRates(_customMadeControls);
         var downpayment = ParseDecimalOrZero(CustomMadeDownpaymentBox.Text);
-        var money = Order.CalculateSectionPayment(_customMadeSubtotal, downpayment, taxRate,
+        var money = Order.CalculateSectionPayment(_customMadeSubtotal, downpayment,
+            _customMadeControls.DepositTaxRate, _customMadeControls.FinalTaxRate,
             GetSelectedDownMethod(CustomMadeDownNone, CustomMadeDownEtransfer, CustomMadeDownCard, CustomMadeDownCash),
-            GetSelectedPaymentMethod(CustomMadeFinalEtransfer, CustomMadeFinalCard, CustomMadeFinalCash));
+            EffectiveFinalMethod(_customMadeControls));
         _customMadeSumTotal = money.Total;
         _customMadeMoney = money;
 
@@ -1392,11 +1555,13 @@ public partial class OrderEditWindow : Window
 
         CustomMadePriceText.Text = FormatCurrency(_customMadeSubtotal);
         CustomMadeSubtotalText.Text = FormatCurrency(_customMadeSubtotal);
-        CustomMadeDepositTaxText.Text = FormatCurrency(money.ReceivedDownpayment - money.Deposit);
+        // 当前计税: whole-section tax at the current rate (see RefreshAlterationTotals).
+        CustomMadeDepositTaxText.Text = FormatCurrency(money.Tax);
         CustomMadeSumTotalText.Text = FormatCurrency(money.Total);
         CustomMadeFinalPriceDisplayText.Text = FormatCurrency(_customMadeSubtotal);
         CustomMadeFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
         CustomMadeFinalTotalTaxText.Text = FormatCurrency(money.Tax);
+        UpdateTaxBreakdownLines(_customMadeControls, money);
         CustomMadeFinalTotalText.Text = FormatCurrency(money.Total);
         CustomMadeResidualText.Text = FormatCurrency(residual);
     }
@@ -1405,8 +1570,13 @@ public partial class OrderEditWindow : Window
     {
         _totalAmount = _alterationSumTotal + _clothingSumTotal + _customMadeSumTotal;
         TotalAmountText.Text = FormatCurrency(_totalAmount);
+        RefreshServicesTotalBreakdown();
         RefreshPaymentSummary();
     }
+
+    // A section's deposit only counts as received once its "deposit received" box is ticked.
+    private static decimal SectionReceivedDeposit(SectionPayment money, PaymentSectionControls c)
+        => c.DownCompletedCheck.IsChecked is true ? money.ReceivedDownpayment : 0m;
 
     private void RefreshPaymentSummary()
     {
@@ -1414,8 +1584,14 @@ public partial class OrderEditWindow : Window
         var customMadeDown = _customMadeMoney.Deposit;
         var clothingDown = _clothingMoney.Deposit;
 
-        // Received deposits: nominal deposits plus tax on any deposit paid by card.
-        var receivedDownpayment = _alterationMoney.ReceivedDownpayment + _customMadeMoney.ReceivedDownpayment + _clothingMoney.ReceivedDownpayment;
+        // Received deposits: nominal deposit plus its card tax, but ONLY for sections whose
+        // "deposit received" box has been ticked. Until then the typed amount is what the
+        // shop expects to take, not what it holds — mirrors Order.ReceivedDownpayment so the
+        // saved order reports the same figure.
+        var receivedDownpayment =
+            SectionReceivedDeposit(_alterationMoney, _alterationControls)
+            + SectionReceivedDeposit(_customMadeMoney, _customMadeControls)
+            + SectionReceivedDeposit(_clothingMoney, _clothingControls);
 
         var alterationCleared = AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault();
         var customMadeCleared = CustomMadeBalanceClearedCheck.IsChecked.GetValueOrDefault();
@@ -1507,6 +1683,138 @@ public partial class OrderEditWindow : Window
         BalanceStatusText.Foreground = cleared
             ? System.Windows.Media.Brushes.Green
             : System.Windows.Media.Brushes.OrangeRed;
+    }
+
+    // Small print under 全部服务总金额: one line per service that is part of this order,
+    // showing what it covers and what it costs, e.g. "修改衣服（服装修改）：$123". A service
+    // qualifies by carrying order items — the same rule the "clear all balances" pass uses —
+    // so a section priced at zero is still listed (flagged) rather than silently dropped.
+    private void RefreshServicesTotalBreakdown()
+    {
+        ServicesTotalBreakdownPanel.Children.Clear();
+        AddServiceTotalDetail(_alterationControls, AlterationDetailText());
+        AddServiceTotalDetail(_customMadeControls, CustomMadeDetailText());
+        AddServiceTotalDetail(_clothingControls, ClothingDetailText());
+        ServicesTotalBreakdownPanel.Visibility = ServicesTotalBreakdownPanel.Children.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+    }
+
+    private void AddServiceTotalDetail(PaymentSectionControls c, string detail)
+    {
+        if (!c.HasItems())
+            return;
+
+        var name = _localization[c.ServiceNameKey];
+        // Punctuation differs per language (fullwidth in Chinese), so the whole label shape
+        // lives in the string table rather than being concatenated here.
+        var label = string.IsNullOrEmpty(detail)
+            ? _localization.Format("Order.Fields.ServiceTotalLineNoDetail", name)
+            : _localization.Format("Order.Fields.ServiceTotalLine", name, detail);
+
+        var missingPrice = c.HasMissingPrice;
+        if (missingPrice)
+            label += _localization["Order.Fields.ServiceTotalUnpriced"];
+
+        ServicesTotalBreakdownPanel.Children.Add(
+            BuildBreakdownRow(label, FormatCurrency(c.SectionTotal()), missingPrice));
+    }
+
+    // One breakdown line laid out as label + amount. Its first column joins the summary
+    // grid's "SummaryLabel" shared-size group, so the label sits under 全部服务总金额 and the
+    // amount under that row's figure.
+    private static Grid BuildBreakdownRow(string label, string amount, bool highlight)
+    {
+        var row = new Grid { Margin = new Thickness(0, 2, 0, 0) };
+        row.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = GridLength.Auto,
+            SharedSizeGroup = "SummaryLabel"
+        });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var brush = highlight ? UnpricedLineBrush : BreakdownLineBrush;
+
+        var labelText = new TextBlock
+        {
+            Text = label,
+            FontSize = 11,
+            Foreground = brush,
+            TextWrapping = TextWrapping.Wrap,
+            // Matches the summary labels' right margin so the amounts line up.
+            Margin = new Thickness(0, 0, 12, 0)
+        };
+        Grid.SetColumn(labelText, 0);
+
+        var amountText = new TextBlock
+        {
+            Text = amount,
+            FontSize = 11,
+            Foreground = brush
+        };
+        Grid.SetColumn(amountText, 1);
+
+        row.Children.Add(labelText);
+        row.Children.Add(amountText);
+        return row;
+    }
+
+    // The alteration section's parenthetical: its selected service category.
+    private string AlterationDetailText()
+    {
+        var category = (AlterationCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string;
+        return string.IsNullOrWhiteSpace(category) ? string.Empty : LocalizeWithFallback("Alteration.Category", category);
+    }
+
+    // The custom-made section's parenthetical: the garments measured across its records,
+    // resolved through the same reader the main list's 定制服务 column uses.
+    private string CustomMadeDetailText()
+    {
+        var languageCode = _localization.CurrentLanguageCode;
+        var names = Services.CustomMadeMeasurementReader.GetGarmentNames(_customMadeRecords, languageCode);
+        return names.Count == 0 ? string.Empty : string.Join(ListSeparator(languageCode), names);
+    }
+
+    // The ready-made section's parenthetical: the distinct item categories priced on it.
+    private string ClothingDetailText()
+    {
+        var names = new List<string>();
+        foreach (var row in _clothingItemRows)
+        {
+            if (GetClothingItemSubtotal(row) <= 0m)
+                continue;
+
+            var key = (row.CategoryBox.SelectedItem as ComboBoxItem)?.Tag as string;
+            if (string.IsNullOrWhiteSpace(key))
+                continue;
+
+            var name = LocalizeWithFallback("ClothingItem", key);
+            if (!names.Contains(name))
+                names.Add(name);
+        }
+
+        return names.Count == 0 ? string.Empty : string.Join(ListSeparator(_localization.CurrentLanguageCode), names);
+    }
+
+    private static System.Windows.Media.SolidColorBrush CreateFrozenBrush(byte r, byte g, byte b)
+    {
+        var brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+        brush.Freeze();
+        return brush;
+    }
+
+    // Chinese joins list items with the ideographic comma; other languages use ", ".
+    // Matches CustomMadeServiceFlagConverter so the garment lists read the same everywhere.
+    private static string ListSeparator(string languageCode)
+        => languageCode.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "、" : ", ";
+
+    // Localizes a token, falling back to the raw token when the key is missing (legacy
+    // free-text values predate the fixed category lists).
+    private string LocalizeWithFallback(string prefix, string token)
+    {
+        var key = $"{prefix}.{token}";
+        var localized = _localization[key];
+        return string.Equals(localized, key, StringComparison.Ordinal) ? token : localized;
     }
 
     private void AddFinalBalanceDetail(string serviceKey, decimal residual)
@@ -1661,15 +1969,9 @@ public partial class OrderEditWindow : Window
         _syncingPayment = true;
         try
         {
-            ApplyClearAllToSection(clearAll, _alterationSumTotal,
-                GetSelectedDownMethod(AlterationDownNone, AlterationDownEtransfer, AlterationDownCard, AlterationDownCash),
-                AlterationFinalEtransfer, AlterationFinalCard, AlterationFinalCash, AlterationBalanceClearedCheck);
-            ApplyClearAllToSection(clearAll, _customMadeSumTotal,
-                GetSelectedDownMethod(CustomMadeDownNone, CustomMadeDownEtransfer, CustomMadeDownCard, CustomMadeDownCash),
-                CustomMadeFinalEtransfer, CustomMadeFinalCard, CustomMadeFinalCash, CustomMadeBalanceClearedCheck);
-            ApplyClearAllToSection(clearAll, _clothingSumTotal,
-                GetSelectedDownMethod(ClothingDownNone, ClothingDownEtransfer, ClothingDownCard, ClothingDownCash),
-                ClothingFinalEtransfer, ClothingFinalCard, ClothingFinalCash, ClothingBalanceClearedCheck);
+            ApplyClearAllToSection(clearAll, _alterationControls);
+            ApplyClearAllToSection(clearAll, _customMadeControls);
+            ApplyClearAllToSection(clearAll, _clothingControls);
         }
         finally
         {
@@ -1678,35 +1980,77 @@ public partial class OrderEditWindow : Window
 
         UpdatePaymentVisibility();
         RefreshComputedTotals(runAutoComplete: false);
+
+        if (clearAll)
+            WarnAboutUnpricedServices();
     }
 
-    private static void ApplyClearAllToSection(bool clearAll, decimal sectionTotal, PaymentMethod? downMethod,
-        RadioButton finalEtransfer, RadioButton finalCard, RadioButton finalCash, CheckBox balanceClearedCheck)
+    // Settling every balance marks each participating service BOTH deposit-received and
+    // balance-cleared. A service takes part only when it carries order items: an empty
+    // section stays out of the payment flow entirely, while a section that has items but no
+    // chosen payment method falls back to cash, and one priced at zero still takes part
+    // (flagged afterwards, never blocked — a zero price is sometimes deliberate).
+    private static void ApplyClearAllToSection(bool clearAll, PaymentSectionControls c)
     {
         if (!clearAll)
         {
-            balanceClearedCheck.IsChecked = false;
+            c.BalanceClearedCheck.IsChecked = false;
             return;
         }
 
-        // Nothing is owed on sections without a charge, so leave them untouched.
-        if (sectionTotal <= 0m)
+        if (!c.HasItems())
             return;
 
-        // Default the final balance to the deposit method ONLY when the user hasn't
-        // already picked one. A manually forced final method (e.g. deposit by card,
-        // final by cash) must be respected instead of being reset to the deposit way.
-        if (GetSelectedPaymentMethod(finalEtransfer, finalCard, finalCash) is null
-            && downMethod is not null && downMethod != PaymentMethod.None)
-            SetSelectedPaymentMethod(finalEtransfer, finalCard, finalCash, downMethod);
+        var downMethod = GetSelectedDownMethod(c.DownNone, c.DownEtransfer, c.DownCard, c.DownCash);
+        if (downMethod is null)
+        {
+            downMethod = PaymentMethod.Cash;
+            SetSelectedDownMethod(c.DownNone, c.DownEtransfer, c.DownCard, c.DownCash, PaymentMethod.Cash);
+        }
 
-        balanceClearedCheck.IsChecked = true;
+        // "None" means no deposit was taken, so there is nothing to confirm as received and
+        // the whole charge falls to the final balance.
+        var noDeposit = downMethod == PaymentMethod.None;
+        if (!noDeposit)
+            c.DownCompletedCheck.IsChecked = true;
+
+        // Default the final balance to the deposit method ONLY when the user hasn't already
+        // picked one. A manually forced final method (e.g. deposit by card, final by cash)
+        // must be respected instead of being reset to the deposit's way.
+        if (GetSelectedPaymentMethod(c.FinalEtransfer, c.FinalCard, c.FinalCash) is null)
+            SetSelectedPaymentMethod(c.FinalEtransfer, c.FinalCard, c.FinalCash,
+                noDeposit ? PaymentMethod.Cash : downMethod);
+
+        c.BalanceClearedCheck.IsChecked = true;
+    }
+
+    // A service carrying items but no charge is allowed — shops zero-rate one on purpose
+    // often enough — so this only tells the user, it never blocks settling the order.
+    private void WarnAboutUnpricedServices()
+    {
+        var unpriced = new[] { _alterationControls, _customMadeControls, _clothingControls }
+            .Where(c => c.HasMissingPrice)
+            .Select(c => _localization[c.ServiceNameKey])
+            .ToList();
+
+        if (unpriced.Count == 0)
+            return;
+
+        MessageBox.Show(
+            _localization.Format("OrderEdit.Warn.UnpricedServices",
+                string.Join(ListSeparator(_localization.CurrentLanguageCode), unpriced)),
+            _localization[ValidationTitleKey],
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
     }
 
     private bool IsOrderBalanceCleared()
     {
-        // A brand-new/empty order (no charges anywhere) starts as outstanding.
-        if (_totalAmount <= 0m)
+        // A brand-new/empty order starts as outstanding. The gate is order ITEMS, not money:
+        // a service priced at zero still takes part, so an order made only of zero-priced
+        // items can still be settled (it is flagged as unpriced, not blocked). Gating on
+        // _totalAmount here would make the "clear all balances" tick spring straight back off.
+        if (!_alterationControls.HasItems() && !_customMadeControls.HasItems() && !_clothingControls.HasItems())
             return false;
 
         // Cleared only when every charged section is settled; empty sections count as cleared.
@@ -1809,11 +2153,14 @@ public partial class OrderEditWindow : Window
             _ => null
         };
 
+    // Feeds the legacy single-rate Orders.TaxRate column, which predates the per-stage
+    // split: it carries the deposit rate, matching how the model reads it back
+    // (XxxTaxRate ?? TaxRate).
     private decimal? GetTaxRateForServiceType(OrderServiceType serviceType)
         => serviceType switch
         {
-            OrderServiceType.Alterations => ParseNullableDecimal(AlterationTaxBox.Text),
-            OrderServiceType.ReadyMade => ParseNullableDecimal(ClothingTaxBox.Text),
+            OrderServiceType.Alterations => _alterationControls.DepositTaxRate,
+            OrderServiceType.ReadyMade => _clothingControls.DepositTaxRate,
             _ => null
         };
 
@@ -1865,20 +2212,27 @@ public partial class OrderEditWindow : Window
         // Only persist payment details for sections that actually carry a charge.
         // Unused sections (zero total) keep the UI's default Cash selection, which would
         // otherwise make Order.IsBalanceCleared demand a "balance cleared" flag they never get.
+        // The final-balance method is persisted through EffectiveFinalMethod, the same
+        // resolution the on-screen totals use, so the saved order recomputes to exactly the
+        // amounts the editor displayed.
         if (_alterationSumTotal > 0m)
         {
             order.AlterationSubtotal = _alterationSubtotal;
-            order.AlterationTaxRate = ParseNullableDecimal(AlterationTaxBox.Text);
+            // Both stage rates are persisted from the section state, not from the tax box —
+            // the box only ever holds the stage currently being edited.
+            order.AlterationTaxRate = _alterationControls.DepositTaxRate;
+            order.AlterationFinalTaxRate = _alterationControls.FinalTaxRate;
             order.AlterationDownpayment = ParseNullableDecimal(AlterationDownpaymentBox.Text);
             order.AlterationDownpaymentMethod = GetSelectedDownMethod(AlterationDownNone, AlterationDownEtransfer, AlterationDownCard, AlterationDownCash);
             order.AlterationDownpaymentCompleted = AlterationDownCompletedCheck.IsChecked.GetValueOrDefault();
-            order.AlterationFinalBalanceMethod = GetSelectedPaymentMethod(AlterationFinalEtransfer, AlterationFinalCard, AlterationFinalCash);
+            order.AlterationFinalBalanceMethod = EffectiveFinalMethod(_alterationControls);
             order.AlterationBalanceCleared = AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault();
         }
         else
         {
             order.AlterationSubtotal = null;
             order.AlterationTaxRate = null;
+            order.AlterationFinalTaxRate = null;
             ClearSectionPaymentFields(
                 value => order.AlterationDownpayment = value,
                 method => order.AlterationDownpaymentMethod = method,
@@ -1889,16 +2243,18 @@ public partial class OrderEditWindow : Window
 
         if (_customMadeSumTotal > 0m)
         {
-            order.CustomMadeTaxRate = ParseNullableDecimal(CustomMadeTaxBox.Text);
+            order.CustomMadeTaxRate = _customMadeControls.DepositTaxRate;
+            order.CustomMadeFinalTaxRate = _customMadeControls.FinalTaxRate;
             order.CustomMadeDownpayment = ParseNullableDecimal(CustomMadeDownpaymentBox.Text);
             order.CustomMadeDownpaymentMethod = GetSelectedDownMethod(CustomMadeDownNone, CustomMadeDownEtransfer, CustomMadeDownCard, CustomMadeDownCash);
             order.CustomMadeDownpaymentCompleted = CustomMadeDownCompletedCheck.IsChecked.GetValueOrDefault();
-            order.CustomMadeFinalBalanceMethod = GetSelectedPaymentMethod(CustomMadeFinalEtransfer, CustomMadeFinalCard, CustomMadeFinalCash);
+            order.CustomMadeFinalBalanceMethod = EffectiveFinalMethod(_customMadeControls);
             order.CustomMadeBalanceCleared = CustomMadeBalanceClearedCheck.IsChecked.GetValueOrDefault();
         }
         else
         {
             order.CustomMadeTaxRate = null;
+            order.CustomMadeFinalTaxRate = null;
             ClearSectionPaymentFields(
                 value => order.CustomMadeDownpayment = value,
                 method => order.CustomMadeDownpaymentMethod = method,
@@ -1910,17 +2266,19 @@ public partial class OrderEditWindow : Window
         if (_clothingSumTotal > 0m)
         {
             order.ClothingSubtotal = _clothingSubtotal;
-            order.ClothingTaxRate = ParseNullableDecimal(ClothingTaxBox.Text);
+            order.ClothingTaxRate = _clothingControls.DepositTaxRate;
+            order.ClothingFinalTaxRate = _clothingControls.FinalTaxRate;
             order.ClothingDownpayment = ParseNullableDecimal(ClothingDownpaymentBox.Text);
             order.ClothingDownpaymentMethod = GetSelectedDownMethod(ClothingDownNone, ClothingDownEtransfer, ClothingDownCard, ClothingDownCash);
             order.ClothingDownpaymentCompleted = ClothingDownCompletedCheck.IsChecked.GetValueOrDefault();
-            order.ClothingFinalBalanceMethod = GetSelectedPaymentMethod(ClothingFinalEtransfer, ClothingFinalCard, ClothingFinalCash);
+            order.ClothingFinalBalanceMethod = EffectiveFinalMethod(_clothingControls);
             order.ClothingBalanceCleared = ClothingBalanceClearedCheck.IsChecked.GetValueOrDefault();
         }
         else
         {
             order.ClothingSubtotal = null;
             order.ClothingTaxRate = null;
+            order.ClothingFinalTaxRate = null;
             ClearSectionPaymentFields(
                 value => order.ClothingDownpayment = value,
                 method => order.ClothingDownpaymentMethod = method,
@@ -2060,13 +2418,16 @@ public partial class OrderEditWindow : Window
 
         var row = new ClothingItemEditorRow(rowGrid, categoryBox, unitPriceBox, promotionalPriceBox, subtotalText, removeButton);
 
-        unitPriceBox.TextChanged += (_, _) => RefreshClothingTotals();
-        promotionalPriceBox.TextChanged += (_, _) => RefreshClothingTotals();
+        unitPriceBox.TextChanged += (_, _) => RefreshComputedTotals(runAutoComplete: false);
+        promotionalPriceBox.TextChanged += (_, _) => RefreshComputedTotals(runAutoComplete: false);
+        // The item category is money-free but names the ready-made line in the breakdown
+        // under the order total, so it has to refresh that.
+        categoryBox.SelectionChanged += (_, _) => RefreshServicesTotalBreakdown();
         removeButton.Click += (_, _) =>
         {
             ClothingItemsPanel.Children.Remove(row.Container);
             _clothingItemRows.Remove(row);
-            RefreshClothingTotals();
+            RefreshComputedTotals(runAutoComplete: false);
         };
 
         rowGrid.Children.Add(categoryBox);

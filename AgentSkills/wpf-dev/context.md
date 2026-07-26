@@ -18,6 +18,98 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **"Order items", not money, decide whether a service takes part**: `PaymentSectionControls`
+  carries `HasItems()` (custom-made records exist / clothing rows exist / for Alterations a
+  non-empty price box, since it has no item list), `SectionTotal()` and `HasMissingPrice`
+  (has items but total ≤ 0). Used by BOTH `ApplyClearAllToSection` and the 全部服务总金额
+  breakdown, so the two agree. 结清所有尾款 now ticks **已收定金 as well as 尾款结清** on every
+  participating section, defaults a null deposit method to Cash, skips item-less sections,
+  and treats an explicit "None" deposit as nothing-to-confirm. A zero-priced service still
+  participates: it is flagged amber （价格有误） in the breakdown and named in a
+  non-blocking warning dialog (`OrderEdit.Warn.UnpricedServices`).
+  - GOTCHA: `IsOrderBalanceCleared` used to early-return false on `_totalAmount <= 0m`.
+    Because `RefreshPaymentSummary` writes `ClearAllBalancesCheck.IsChecked = cleared` from
+    derived state, that made the clear-all tick spring straight back off for an all-zero
+    order. It now gates on "no section has items".
+  - KNOWN LIMITATION: `Order.IsBalanceCleared` still gates on `TotalAmount <= 0m`, and
+    `ApplyPaymentFields` persists a zero-total section as absent (`XxxSubtotal = null`), so an
+    order whose services are ALL zero-priced reads Outstanding once saved. Aligning that
+    reaches into `XxxAddedToReceipt` and the printed receipt.
+- **实收定金 / 实收尾款 only count after their checkbox**: `Order.ReceivedDownpayment` sums
+  through `SectionReceivedDeposit(money, XxxDownpaymentCompleted)` and the editor mirrors it —
+  a typed deposit is what the shop EXPECTS, not what it holds. 实收尾款 was already gated on
+  `BalanceCleared`. Both model and editor were changed together so a saved order reports the
+  same figures the editor showed.
+
+- **Small-print breakdowns in the order editor**: two code-filled panels now explain the
+  headline figures. `ServicesTotalBreakdownPanel` (under 全部服务总金额) lists one line per
+  charged section with a parenthetical — Alterations → service category, CustomMade →
+  measured garment names, ReadyMade → the item categories actually priced — built by
+  `RefreshServicesTotalBreakdown`/`AddServiceTotalDetail`. In each section's final
+  breakdown, `*DepositTaxLineText`/`*FinalTaxLineText` split 此服务总计税 into
+  定金（现金）税收 / 尾款（银行卡）税收 via `UpdateTaxBreakdownLines`.
+  - RULE: put the **whole line shape** in `Languages.xml`, not just the words. Chinese uses
+    fullwidth `（）：` and English ASCII `(): ` — concatenating punctuation in C# produces
+    `Alterations（Garment Adjustments）：$123` in English. Keys:
+    `Order.Fields.ServiceTotalLine(NoDetail)`, `Order.Fields.DepositTaxLine`/`FinalTaxLine`.
+  - `CustomMadeMeasurementReader.GetGarmentNames` gained an `IEnumerable<CustomMadeServiceRecord>`
+    overload (the editor holds unsaved records, not an `Order`); the `Order` overload delegates.
+  - GOTCHA: the category ComboBoxes (`AlterationCategoryBox` and each clothing row's
+    `categoryBox`) had **no change handler at all** — anything newly displaying a category
+    must wire one or it goes stale. They call `RefreshServicesTotalBreakdown()` only, since a
+    category carries no money.
+  - GOTCHA: a brush created in code needs `System.Windows.Media.` qualification (bare
+    `Color`/`SolidColorBrush` is ambiguous under ImplicitUsings vs QuestPDF/HotChocolate);
+    build it once via `CreateFrozenBrush`, not per line.
+
+- **Tax rate is per PAYMENT STAGE, edited through one shared box**: each section stores TWO
+  rates — `Orders.XxxTaxRate` (deposit stage) and the new `Orders.XxxFinalTaxRate` (final
+  stage), so a shop can charge e.g. 5% on a card deposit and 7% on the card balance.
+  `Order.CalculateSectionPayment` now takes `depositRatePercent` + `finalRatePercent`;
+  each `XxxMoney` passes `XxxFinalTaxRate ?? XxxTaxRate ?? 0m`, so legacy single-rate
+  orders compute exactly as before (no data fix-up, 3 runtime column guards only).
+  - UI: ONE 税率 box per section (user's choice over two side-by-side boxes). It edits the
+    deposit rate until the deposit is received, the final rate afterwards, and its **label**
+    says which (`Order.Fields.DepositTaxRate` 定金税率 / `Order.Fields.FinalTaxRate` 尾款税率).
+    `PaymentSectionControls` holds `DepositTaxRate`/`FinalTaxRate`/`ShowingFinalRate`/
+    `IsFinalStage`; `ApplyStageTaxRates` banks the typed value against the stage the box was
+    showing, then resolves both via `ResolveStageRate` (non-card → 0; card with no rate yet →
+    deposit falls back to 13%, final falls back to the **deposit's** rate).
+  - `IsFinalStage` = `DownNone` checked OR deposit marked received (None = no deposit taken,
+    so the outstanding balance is the whole charge).
+  - GOTCHA 1: only rewrite the tax box on a stage flip or a rule-forced change. Normalising
+    it on every refresh eats a half-typed "5." from under the caret.
+  - GOTCHA 2: seed the rates AFTER `LoadPaymentFields` (`LoadStageTaxRates` is called from
+    the edit ctor at that point). With no payment radio selected yet, the card/cash rule
+    zeroes the rate before it is ever used — which would silently reset a saved 5% to 13%
+    on reopen. The pre-existing `ApplyTaxRateRule` had the same latent flaw.
+  - GOTCHA 3: the tax box's read-only rule keys off `sectionLocked`, NOT `inputsLocked`.
+    `inputsLocked` includes "deposit received", but that is exactly the moment the box hands
+    over to the final rate and must become editable again. Price/deposit boxes still use
+    `inputsLocked`.
+
+- **Final balance inherits the deposit's payment method until explicitly chosen**:
+  `OrderEditWindow.EffectiveFinalMethod(PaymentSectionControls)` resolves the final
+  method as `explicit selection ?? deposit method` (`None` never inherits). It is used by
+  all 3 `Refresh*Totals` AND by `ApplyPaymentFields` on save, so persisted and on-screen
+  amounts stay identical. WHY: `CardUsed` (= deposit card OR final card) drives the tax-rate
+  display, but `Order.CalculateSectionPayment` taxes each portion by *its own* method — so
+  picking Card for the deposit advertised 13% while the untouched (null) final method left
+  the whole outstanding balance untaxed (entering a 124 price showed 税后总价 124 instead of
+  140.12). The calculation engine itself was NOT changed.
+  - The 当前计税 row (`*DepositTaxText`) now shows the section's whole tax (`money.Tax`),
+    not just the deposit's tax, so it pairs with the 税后总价 line under it. English value of
+    `Order.Fields.DepositTax` reworded "Tax on Deposit" → "Current Tax".
+  - The final-method **label** deliberately still reads the raw radio selection:
+    `FinalBlock` only becomes visible once the deposit is marked received, and by then
+    `AutoCompleteSection` has already set that radio explicitly — so it can never
+    contradict the displayed money.
+  - Gotcha found alongside: the clothing item rows (add / unit price / promo price /
+    remove) called only `RefreshClothingTotals()`, so editing a ready-made line item left
+    the order grand total + payment summary stale. Any input that feeds a section subtotal
+    must go through `RefreshComputedTotals(runAutoComplete: false)` — the section-only
+    refresh never reaches `RefreshAllServicesTotalAmount`/`RefreshPaymentSummary`.
+
 - **Cancelled/returned = refunded state**: `Order.IsRefunded` (Status Cancelled/Returned)
   plus `Order.PaymentStatusKind` (`BalanceStatusKind` enum: Outstanding /
   ClearedPickedUp / ClearedNotPickedUp / Refunded) are the single source of truth for

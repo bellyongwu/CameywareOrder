@@ -83,11 +83,13 @@ components are added/renamed or the way pieces fit together changes.
     used by the 定制服务 list column and the measurement print paths.
 - **Models/**
   - `Order` — customer + per-section (Alteration / CustomMade / Clothing) money
-    fields, **a payment method per portion** (deposit + final balance), cleared
-    flags, status; many `[NotMapped]` computed totals/residuals. Money is derived
-    through the static `Order.CalculateSectionPayment(...)` → `SectionPayment`
+    fields, **a payment method per portion** (deposit + final balance), **a tax rate
+    per portion** (`XxxTaxRate` = deposit stage, `XxxFinalTaxRate` = final stage;
+    a null final rate means a pre-split order whose single rate applies to both),
+    cleared flags, status; many `[NotMapped]` computed totals/residuals. Money is
+    derived through the static `Order.CalculateSectionPayment(...)` → `SectionPayment`
     record struct (per-**portion** tax: a portion is taxed only when its own
-    method is Card; deposit is pre-tax and clamped to subtotal). Per-section
+    method is Card, at its own rate; deposit is pre-tax and clamped to subtotal). Per-section
     `XxxMoney` accessors feed `XxxTotal`/`XxxTax`, `ReceivedDownpayment` (实收定金),
     `TotalTax`, `FinalBalance` (剩余尾款), `ReceivedFinalBalance` (实收尾款), and
     the `IsSectionCleared`/`SectionResidual`/`SectionReceivedFinal` helpers.
@@ -198,7 +200,12 @@ components are added/renamed or the way pieces fit together changes.
     `SortKey` (per-column sort member) and `SortGlyph` (header arrow), consumed by
     the header `ContentTemplate` and `UpdateSortGlyphs`.
   - `OrderEditWindow` — the large create/edit form: per-section pricing &
-    payment, computed summary, "clear all balances" master checkbox, and the
+    payment, a **stage-aware tax-rate box** (one box per section that edits the
+    deposit rate until the deposit is marked received and the final-balance rate
+    afterwards, with a label naming the stage — `PaymentSectionControls` holds both
+    rates plus `ShowingFinalRate`/`IsFinalStage`, resolved by `ApplyStageTaxRates` /
+    `ResolveStageRate` and seeded by `LoadStageTaxRates`), computed summary,
+    "clear all balances" master checkbox, and the
     "已取货 / Picked up" quick-complete checkbox that locks the status dropdown.
     Switching the status to 已取消/已退货 puts the editor in a **refund lock**
     state (`_isRefunded`): every service/payment control (incl. 当前服务尾款已结清)
@@ -259,7 +266,10 @@ components are added/renamed or the way pieces fit together changes.
 - Per-section money math is centralized in `Order.CalculateSectionPayment` and
   reused by the model and the live editor summary so persisted and on-screen
   values match; tax is applied **per payment portion** (deposit vs. final) based
-  on that portion's method.
+  on that portion's method **and its own rate**. The editor persists whatever it
+  displayed — both stage rates, and the final method resolved through
+  `EffectiveFinalMethod` — so a reloaded order never recomputes to different
+  amounts than the ones the shop saw when saving.
 - The paged order list is sorted in `MainViewModel` over the whole filtered set
   before `Skip/Take`, driven by per-column `OrderColumnSort.SortKey` attached
   properties (never `Items.SortDescriptions`, which would sort one page only).
