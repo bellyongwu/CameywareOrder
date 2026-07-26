@@ -21,6 +21,43 @@ _(none)_
 
 ## Completed
 
+### 2026-07-25 — Reorder pricing UI: service total + tax rate above deposit method  [DONE]
+- Ask: "还有一个比较难解决的bug... 当前税率应该是基于支付方式的...如果在定金支付阶段，radio group的切换只会影响当前的tax rate...同样如果在尾款支付阶段...那么在修改之前，为了方便价格展示可以这样：把税前服务总价，和当前税率至于定金支付方式UI之上。然后定金支付方式保留税前定金这个input。之后我在测试一下 看看bug应该如何描述。"
+- Done:
+  - [x] OrderEditWindow.xaml: in all 3 sections (Alteration, CustomMade, Clothing), moved 税前服务总价 (price input/display) + 当前税率 (tax rate box) into a new always-visible `Grid` placed ABOVE the deposit-method radio group (previously both were inside the `xxxPricingPanel`, gated behind `Visibility=Collapsed` until a deposit method was selected).
+  - [x] `xxxPricingPanel` now only contains the 税前定金 (deposit amount) input, still gated behind deposit-method selection as before, plus the unchanged deposit breakdown / DownCompletedCheck / FinalBlock.
+  - [x] All control x:Names unchanged (`AlterationPriceBox`, `AlterationTaxBox`, `CustomMadePriceText`, `ClothingPriceText`, etc.) — zero code-behind changes needed.
+- Notes: build succeeded 0 errors / 0 warnings. This is a preparatory UI change only — user is still investigating/describing the actual "tax rate should be scoped per payment stage" bug and will follow up with a precise repro after testing. NEXT: wait for user's bug description before touching calculation/locking logic again.
+
+### 2026-07-25 — Tax rate 0% rule for Cash/Etransfer (bug fix)  [DONE]
+- Ask: "For Cash payment, the tax rate was locked as 0% initially. This is a rule. Etransfer payment type is also 0%. Bug: When i untick the deposit, and switch the deposit payment, the tax rate didn't change. 税后总价didn't update. 当前计税也没有更改。"
+- Done:
+  - [x] Restored the business rule that was mistakenly removed in the prior "modular refactor" pass: the tax rate box must always visually show `0` when neither leg uses Card (Cash/Etransfer ⇒ 0% is a hard rule, not just an ignored calculation input).
+  - [x] New shared helper `ApplyTaxRateRule(TextBox taxBox, bool cardUsed)`: forces text to `"0"` when `!cardUsed`; auto-defaults to `DefaultTaxRate` the first time Card is selected (text was `"0"`); otherwise returns the parsed rate. Used by `RefreshAlterationTotals`/`RefreshClothingTotals`/`RefreshCustomMadeTotals` (removed the 3x duplicated inline logic).
+  - [x] Kept the earlier deposit-preservation fix intact (deposit amount is only zeroed when "None" is selected, not on every method switch) — this bug fix is orthogonal and still correct.
+- Notes: build succeeded 0 errors / 0 warnings. Root cause: previous session over-corrected by removing the tax-box auto-reset-to-0, assuming it was the bug; the actual prior bug was the deposit being wiped to $0 on any method switch (already fixed separately). Cash/Etransfer forcing tax to 0 is confirmed by the user as intended business behavior and is now restored via a single shared helper instead of 3x duplicated logic.
+
+### 2026-07-25 — Payment locking + modular refactor (bug fix)  [DONE]
+- Ask: "定金已收的checkbox只要勾上所有之上的东西都不允许改变，包括税率的input. 现在有bug，当我把定金已收的tick去掉之后，试图再去更改此前的定金支付方式时: 1.更改支付选项可以更改税率, 2.当前计税和总价也应该改变。应该有简单而且更modularize的办法去做。"
+- Done:
+  - [x] `PaymentSectionControls`: added `TaxBox` (required TextBox) and `CardUsed` (computed bool = DownCard || FinalCard); wired for all 3 sections in `InitializePaymentSectionControls`.
+  - [x] `Refresh*Totals` (Alteration/Clothing/CustomMade): removed `xxxTaxBox.IsEnabled = cardUsed` and the `else { taxBox.Text = "0"; }` auto-reset. Now only auto-defaults from 0 → DefaultTaxRate the FIRST time card is selected. Tax calculation still uses `0m` when no card is active. Tax box visual lock is fully owned by `RefreshPricingLocks`.
+  - [x] `ApplySectionInputLocks(PaymentSectionControls c, TextBox? priceBox)` — new private helper: computes `sectionLocked` + `inputsLocked`; sets `priceBox.IsReadOnly`, `c.TaxBox.IsReadOnly = !c.CardUsed || inputsLocked`, `c.DownpaymentBox.IsReadOnly`. Single source of truth for ALL IsReadOnly state.
+  - [x] `RefreshPricingLocks` — rewritten to call `ApplySectionInputLocks` for each of the 3 sections plus the extra section-level buttons/rows. ~30 lines of repeated logic collapsed to 3 calls.
+  - [x] `TryGetDownMethodResetTargets` — added `out bool isNoneMethod` output parameter (true only when the matched radio == DownNone).
+  - [x] `OnPaymentOptionChanged` — deposit amount is now zeroed ONLY when None is selected; switching between Cash/Card/Etransfer preserves the deposit amount. DownCompletedCheck is still always unchecked on any deposit radio change.
+- Notes: build succeeded 0 errors / 0 warnings. Root causes fixed: (1) no more auto-reset of tax rate on method switch — box is just grayed via IsReadOnly; (2) deposit amount preserved across method switches so 当前计税 = deposit × rate reflects the actual entered deposit, not $0.
+
+### 2026-07-25 16:00 — Payment section price breakdown transparency  [DONE]
+- Ask: "UI Improvement: For Payment section for each service. To make a better understanding on how price is calculated. The price breakdown should appear differently. First: Update UI in deposit stage: 价格→税前服务总价, 税率→当前税率, 定金→税前定金. Add price breakdown: 小计→税前小计, add 当前计税, 总价→税后总价. Secondly: when 定金已收 is ticked, the deposit breakdown is hidden; in FinalBlock (above 当前服务尾款已结清) show: 税前服务总价/税前定金 locked/grayed, 此服务总计税, 税后总价, 剩余尾款."
+- Done:
+  - [x] Languages.xml (zh-CN + en-US): `Order.Fields.PreTaxServiceTotal`, `CurrentTaxRate`, `PreTaxDownpayment`, `PreTaxSubtotal`, `DepositTax`, `PostTaxTotal`, `ServiceTotalTax`.
+  - [x] OrderEditWindow.xaml: all 3 service PricingPanels restructured — input grid (2 rows: price+tax, deposit), DepositBreakdownPanel (税前小计/当前计税/税后总价, visible when payment selected and deposit not received), FinalBreakdownPanel inside FinalBlock (5-row grid: grayed 税前服务总价+税前定金, 此服务总计税, 税后总价, 剩余尾款; visible only when DownCompletedCheck checked). AlterationResidualText/CustomMadeResidualText/ClothingResidualText moved into FinalBreakdownPanel.
+  - [x] OrderEditWindow.xaml.cs: `PaymentSectionControls` extended with `DepositBreakdownPanel` + `FinalBreakdownPanel`; wired in `InitializePaymentSectionControls`; `UpdateSectionVisibility` updated to show/hide both panels based on `anyDownSelected` and `depositCompleted`; `RefreshAlterationTotals`/`RefreshClothingTotals`/`RefreshCustomMadeTotals` updated to set deposit-tax, final-price-display, final-downpayment-display, total-tax, total-text; `RefreshPricingLocks` updated to also lock price + downpayment inputs when `DownCompletedCheck.IsChecked`.
+- Notes: build succeeded 0 errors / 0 warnings. Calculation logic unchanged (Order.CalculateSectionPayment). DepositTax = `money.ReceivedDownpayment - money.Deposit`; TotalTax = `money.Tax`. Source English-only; non-English only in Languages.xml.
+
+### 2026-07-25 — Cancelled/returned refund state (UI + receipt + editor lock)  [DONE]
+
 ### 2026-07-25 — Cancelled/returned refund state (UI + receipt + editor lock)  [DONE]
 - Ask: "UI: gray out Cancelled/Returned records (lightest gray) and Completed records (a bit darker). Receipt: colour the balance status (已结清（已取货）green / 已结清（未取货）light green / 未结清 orange / 已退款或部分退款 red). Business logic for 已取消/已退货: in edit order, changing status to 已取消/已退货 sets 余额状态 to 已退款或部分退款, locks all services incl. 当前服务尾款已结清, marks all checkboxes (incl. 已取货) red with a stroke across the whole checkbox (not applicable) — but service details (e.g. custom measurement records) stay viewable. In the receipt, remove 剩余尾款 and show 余额状态 = 已退款或部分退款."
 - Done:

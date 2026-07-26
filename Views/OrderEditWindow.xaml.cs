@@ -78,6 +78,14 @@ public partial class OrderEditWindow : Window
         public required CheckBox BalanceClearedCheck { get; init; }
         public required UIElement PricingPanel { get; init; }
         public required UIElement FinalBlock { get; init; }
+        // Deposit-stage breakdown panel (tax on deposit + post-tax total; hidden once deposit received).
+        public required StackPanel DepositBreakdownPanel { get; init; }
+        // Final-stage complete breakdown (shown inside FinalBlock once deposit is received).
+        public required StackPanel FinalBreakdownPanel { get; init; }
+        // Tax-rate input for this section (owned here so locking is fully centralized).
+        public required TextBox TaxBox { get; init; }
+        // True when any payment portion of this section uses a card method (drives tax applicability).
+        public bool CardUsed => DownCard.IsChecked is true || FinalCard.IsChecked is true;
     }
 
     public OrderEditWindow(IServiceScopeFactory scopeFactory, LocalizationService localization)
@@ -347,7 +355,10 @@ public partial class OrderEditWindow : Window
             FinalCash = AlterationFinalCash,
             BalanceClearedCheck = AlterationBalanceClearedCheck,
             PricingPanel = AlterationPricingPanel,
-            FinalBlock = AlterationFinalBlock
+            FinalBlock = AlterationFinalBlock,
+            DepositBreakdownPanel = AlterationDepositBreakdownPanel,
+            FinalBreakdownPanel = AlterationFinalBreakdownPanel,
+            TaxBox = AlterationTaxBox
         };
         _customMadeControls = new PaymentSectionControls
         {
@@ -362,7 +373,10 @@ public partial class OrderEditWindow : Window
             FinalCash = CustomMadeFinalCash,
             BalanceClearedCheck = CustomMadeBalanceClearedCheck,
             PricingPanel = CustomMadePricingPanel,
-            FinalBlock = CustomMadeFinalBlock
+            FinalBlock = CustomMadeFinalBlock,
+            DepositBreakdownPanel = CustomMadeDepositBreakdownPanel,
+            FinalBreakdownPanel = CustomMadeFinalBreakdownPanel,
+            TaxBox = CustomMadeTaxBox
         };
         _clothingControls = new PaymentSectionControls
         {
@@ -377,7 +391,10 @@ public partial class OrderEditWindow : Window
             FinalCash = ClothingFinalCash,
             BalanceClearedCheck = ClothingBalanceClearedCheck,
             PricingPanel = ClothingPricingPanel,
-            FinalBlock = ClothingFinalBlock
+            FinalBlock = ClothingFinalBlock,
+            DepositBreakdownPanel = ClothingDepositBreakdownPanel,
+            FinalBreakdownPanel = ClothingFinalBreakdownPanel,
+            TaxBox = ClothingTaxBox
         };
     }
 
@@ -678,15 +695,16 @@ public partial class OrderEditWindow : Window
         if (_syncingPayment)
             return;
 
-        // Switching a section's deposit payment method resets that section's downpayment
-        // to 0 (and clears its receipt confirmation, since the amount changed).
+        // When a deposit method radio is selected, always clear the deposit-received flag.
+        // Only zero the deposit amount when "None" is chosen — switching between real methods
+        // (Cash / Card / Etransfer) preserves the entered amount so the breakdown stays accurate.
         if (sender is RadioButton radio
-            && TryGetDownMethodResetTargets(radio, out var downpaymentBox, out var completedCheck))
+            && TryGetDownMethodResetTargets(radio, out var downpaymentBox, out var completedCheck, out var isNoneMethod))
         {
             _syncingPayment = true;
             try
             {
-                if (downpaymentBox.Text != "0")
+                if (isNoneMethod && downpaymentBox.Text != "0")
                     downpaymentBox.Text = "0";
                 completedCheck.IsChecked = false;
             }
@@ -712,29 +730,33 @@ public partial class OrderEditWindow : Window
         return null;
     }
 
-    private bool TryGetDownMethodResetTargets(RadioButton radio, out TextBox downpaymentBox, out CheckBox completedCheck)
+    private bool TryGetDownMethodResetTargets(RadioButton radio, out TextBox downpaymentBox, out CheckBox completedCheck, out bool isNoneMethod)
     {
         if (radio == AlterationDownCash || radio == AlterationDownCard || radio == AlterationDownEtransfer || radio == AlterationDownNone)
         {
             downpaymentBox = AlterationDownpaymentBox;
             completedCheck = AlterationDownCompletedCheck;
+            isNoneMethod = radio == AlterationDownNone;
             return true;
         }
         if (radio == CustomMadeDownCash || radio == CustomMadeDownCard || radio == CustomMadeDownEtransfer || radio == CustomMadeDownNone)
         {
             downpaymentBox = CustomMadeDownpaymentBox;
             completedCheck = CustomMadeDownCompletedCheck;
+            isNoneMethod = radio == CustomMadeDownNone;
             return true;
         }
         if (radio == ClothingDownCash || radio == ClothingDownCard || radio == ClothingDownEtransfer || radio == ClothingDownNone)
         {
             downpaymentBox = ClothingDownpaymentBox;
             completedCheck = ClothingDownCompletedCheck;
+            isNoneMethod = radio == ClothingDownNone;
             return true;
         }
 
         downpaymentBox = null!;
         completedCheck = null!;
+        isNoneMethod = false;
         return false;
     }
 
@@ -1080,22 +1102,37 @@ public partial class OrderEditWindow : Window
         RefreshPricingLocks();
     }
 
+    // Centralized lock manager for a single payment section's input controls.
+    // All IsReadOnly decisions live here; no Refresh*Totals method touches lock state.
+    private void ApplySectionInputLocks(PaymentSectionControls c, TextBox? priceBox)
+    {
+        var downCompleted = c.DownCompletedCheck.IsChecked is true;
+        var sectionLocked = _isReadOnly || _isRefunded || c.BalanceClearedCheck.IsChecked is true;
+        var inputsLocked = sectionLocked || downCompleted;
+
+        if (priceBox is not null)
+            priceBox.IsReadOnly = inputsLocked;
+
+        // Tax box: read-only when no card is in use (not applicable), or when inputs are locked.
+        c.TaxBox.IsReadOnly = !c.CardUsed || inputsLocked;
+        c.DownpaymentBox.IsReadOnly = inputsLocked;
+    }
+
     private void RefreshPricingLocks()
     {
-        var alterationLocked = _isReadOnly || _isRefunded || AlterationBalanceClearedCheck.IsChecked is true;
-        AlterationPriceBox.IsReadOnly = alterationLocked;
-        AlterationTaxBox.IsReadOnly = alterationLocked;
+        ApplySectionInputLocks(_alterationControls, AlterationPriceBox);
+        ApplySectionInputLocks(_customMadeControls, priceBox: null);
+        ApplySectionInputLocks(_clothingControls, priceBox: null);
 
-        var customMadeLocked = _isReadOnly || _isRefunded || CustomMadeBalanceClearedCheck.IsChecked is true;
-        CustomMadeTaxBox.IsReadOnly = customMadeLocked;
-        AddCustomMadeButton.IsEnabled = !customMadeLocked;
-        RemoveCustomMadeButton.IsEnabled = !customMadeLocked;
+        // Section-level controls not captured inside PaymentSectionControls.
+        var customMadeSectionLocked = _isReadOnly || _isRefunded || CustomMadeBalanceClearedCheck.IsChecked is true;
+        AddCustomMadeButton.IsEnabled = !customMadeSectionLocked;
+        RemoveCustomMadeButton.IsEnabled = !customMadeSectionLocked;
         RefreshCustomMadeButtonLabel();
 
-        var clothingLocked = _isReadOnly || _isRefunded || ClothingBalanceClearedCheck.IsChecked is true;
-        ClothingTaxBox.IsReadOnly = clothingLocked;
-        AddItemButton.IsEnabled = !clothingLocked;
-        SetClothingRowsLocked(clothingLocked);
+        var clothingSectionLocked = _isReadOnly || _isRefunded || ClothingBalanceClearedCheck.IsChecked is true;
+        AddItemButton.IsEnabled = !clothingSectionLocked;
+        SetClothingRowsLocked(clothingSectionLocked);
     }
 
     private void SetClothingRowsLocked(bool locked)
@@ -1173,21 +1210,33 @@ public partial class OrderEditWindow : Window
         return false;
     }
 
+    // Business rule: Cash and Etransfer are always taxed at 0%; only Card is taxable.
+    // Forces the tax box text to reflect the effective rate (so the displayed value never
+    // lies about what's actually charged) and returns the rate to use in the calculation.
+    private decimal ApplyTaxRateRule(TextBox taxBox, bool cardUsed)
+    {
+        if (!cardUsed)
+        {
+            if (taxBox.Text != "0")
+                taxBox.Text = "0";
+            return 0m;
+        }
+
+        // First time card is selected for this section, default to the standard rate.
+        if (ParseDecimalOrZero(taxBox.Text) == 0m)
+            taxBox.Text = DefaultTaxRate.ToString("0.##");
+
+        return ParseDecimalOrZero(taxBox.Text);
+    }
+
     private void RefreshAlterationTotals()
     {
         var price = ParseDecimalOrZero(AlterationPriceBox.Text);
-        var cardUsed = AlterationDownCard.IsChecked is true || AlterationFinalCard.IsChecked is true;
-        AlterationTaxBox.IsEnabled = cardUsed;
-        if (cardUsed)
-        {
-            if (ParseDecimalOrZero(AlterationTaxBox.Text) == 0m)
-                AlterationTaxBox.Text = DefaultTaxRate.ToString("0.##");
-        }
-        else if (AlterationTaxBox.Text != "0")
-        {
-            AlterationTaxBox.Text = "0";
-        }
-        var taxRate = cardUsed ? ParseDecimalOrZero(AlterationTaxBox.Text) : 0m;
+        var cardUsed = _alterationControls.CardUsed;
+        // Rule: Cash/Etransfer are always 0% tax; Card defaults to the standard rate the
+        // first time it's selected. The box is forced back to "0" whenever no leg uses
+        // card, so the displayed rate always matches what is actually charged.
+        var taxRate = ApplyTaxRateRule(AlterationTaxBox, cardUsed);
         var downpayment = ParseDecimalOrZero(AlterationDownpaymentBox.Text);
         var money = Order.CalculateSectionPayment(price, downpayment, taxRate,
             GetSelectedDownMethod(AlterationDownNone, AlterationDownEtransfer, AlterationDownCard, AlterationDownCash),
@@ -1200,7 +1249,12 @@ public partial class OrderEditWindow : Window
         _alterationMoney = money;
 
         AlterationSubtotalText.Text = FormatCurrency(price);
+        AlterationDepositTaxText.Text = FormatCurrency(money.ReceivedDownpayment - money.Deposit);
         AlterationSumTotalText.Text = FormatCurrency(money.Total);
+        AlterationFinalPriceDisplayText.Text = FormatCurrency(price);
+        AlterationFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
+        AlterationFinalTotalTaxText.Text = FormatCurrency(money.Tax);
+        AlterationFinalTotalText.Text = FormatCurrency(money.Total);
         AlterationResidualText.Text = FormatCurrency(residual);
     }
 
@@ -1214,18 +1268,10 @@ public partial class OrderEditWindow : Window
             subtotal += rowSubtotal;
         }
 
-        var cardUsed = ClothingDownCard.IsChecked is true || ClothingFinalCard.IsChecked is true;
-        ClothingTaxBox.IsEnabled = cardUsed;
-        if (cardUsed)
-        {
-            if (ParseDecimalOrZero(ClothingTaxBox.Text) == 0m)
-                ClothingTaxBox.Text = DefaultTaxRate.ToString("0.##");
-        }
-        else if (ClothingTaxBox.Text != "0")
-        {
-            ClothingTaxBox.Text = "0";
-        }
-        var taxRate = cardUsed ? ParseDecimalOrZero(ClothingTaxBox.Text) : 0m;
+        var cardUsed = _clothingControls.CardUsed;
+        // Rule: Cash/Etransfer are always 0% tax; Card defaults to the standard rate the
+        // first time it's selected.
+        var taxRate = ApplyTaxRateRule(ClothingTaxBox, cardUsed);
         var downpayment = ParseDecimalOrZero(ClothingDownpaymentBox.Text);
         var money = Order.CalculateSectionPayment(subtotal, downpayment, taxRate,
             GetSelectedDownMethod(ClothingDownNone, ClothingDownEtransfer, ClothingDownCard, ClothingDownCash),
@@ -1239,25 +1285,22 @@ public partial class OrderEditWindow : Window
 
         ClothingPriceText.Text = FormatCurrency(subtotal);
         ClothingSubtotalText.Text = FormatCurrency(subtotal);
+        ClothingDepositTaxText.Text = FormatCurrency(money.ReceivedDownpayment - money.Deposit);
         ClothingSumTotalText.Text = FormatCurrency(money.Total);
+        ClothingFinalPriceDisplayText.Text = FormatCurrency(subtotal);
+        ClothingFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
+        ClothingFinalTotalTaxText.Text = FormatCurrency(money.Tax);
+        ClothingFinalTotalText.Text = FormatCurrency(money.Total);
         ClothingResidualText.Text = FormatCurrency(residual);
     }
 
     private void RefreshCustomMadeTotals()
     {
         _customMadeSubtotal = _customMadeRecords.Sum(record => record.Subtotal);
-        var cardUsed = CustomMadeDownCard.IsChecked is true || CustomMadeFinalCard.IsChecked is true;
-        CustomMadeTaxBox.IsEnabled = cardUsed;
-        if (cardUsed)
-        {
-            if (ParseDecimalOrZero(CustomMadeTaxBox.Text) == 0m)
-                CustomMadeTaxBox.Text = DefaultTaxRate.ToString("0.##");
-        }
-        else if (CustomMadeTaxBox.Text != "0")
-        {
-            CustomMadeTaxBox.Text = "0";
-        }
-        var taxRate = cardUsed ? ParseDecimalOrZero(CustomMadeTaxBox.Text) : 0m;
+        var cardUsed = _customMadeControls.CardUsed;
+        // Rule: Cash/Etransfer are always 0% tax; Card defaults to the standard rate the
+        // first time it's selected.
+        var taxRate = ApplyTaxRateRule(CustomMadeTaxBox, cardUsed);
         var downpayment = ParseDecimalOrZero(CustomMadeDownpaymentBox.Text);
         var money = Order.CalculateSectionPayment(_customMadeSubtotal, downpayment, taxRate,
             GetSelectedDownMethod(CustomMadeDownNone, CustomMadeDownEtransfer, CustomMadeDownCard, CustomMadeDownCash),
@@ -1270,7 +1313,12 @@ public partial class OrderEditWindow : Window
 
         CustomMadePriceText.Text = FormatCurrency(_customMadeSubtotal);
         CustomMadeSubtotalText.Text = FormatCurrency(_customMadeSubtotal);
+        CustomMadeDepositTaxText.Text = FormatCurrency(money.ReceivedDownpayment - money.Deposit);
         CustomMadeSumTotalText.Text = FormatCurrency(money.Total);
+        CustomMadeFinalPriceDisplayText.Text = FormatCurrency(_customMadeSubtotal);
+        CustomMadeFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
+        CustomMadeFinalTotalTaxText.Text = FormatCurrency(money.Tax);
+        CustomMadeFinalTotalText.Text = FormatCurrency(money.Total);
         CustomMadeResidualText.Text = FormatCurrency(residual);
     }
 
@@ -1556,19 +1604,23 @@ public partial class OrderEditWindow : Window
     // edited, so lock the whole payment section. The "balance cleared" checkbox itself
     // stays enabled (unless the entire order is read-only) so the user can un-clear the
     // section to make it editable again.
+    // Additionally, once the deposit is marked received the deposit method radios are
+    // frozen — the received payment type must not change after confirmation.
     private void ApplySectionLock(PaymentSectionControls c)
     {
-        var locked = _isReadOnly || c.BalanceClearedCheck.IsChecked is true;
+        var sectionLocked = _isReadOnly || c.BalanceClearedCheck.IsChecked is true;
+        // Deposit method radios are frozen once the deposit is marked received OR the whole section is locked.
+        var depositMethodLocked = sectionLocked || c.DownCompletedCheck.IsChecked is true;
 
-        c.DownNone.IsEnabled = !locked;
-        c.DownEtransfer.IsEnabled = !locked;
-        c.DownCard.IsEnabled = !locked;
-        c.DownCash.IsEnabled = !locked;
-        c.DownCompletedCheck.IsEnabled = !locked;
-        c.FinalEtransfer.IsEnabled = !locked;
-        c.FinalCard.IsEnabled = !locked;
-        c.FinalCash.IsEnabled = !locked;
-        if (locked)
+        c.DownNone.IsEnabled = !depositMethodLocked;
+        c.DownEtransfer.IsEnabled = !depositMethodLocked;
+        c.DownCard.IsEnabled = !depositMethodLocked;
+        c.DownCash.IsEnabled = !depositMethodLocked;
+        c.DownCompletedCheck.IsEnabled = !sectionLocked;
+        c.FinalEtransfer.IsEnabled = !sectionLocked;
+        c.FinalCard.IsEnabled = !sectionLocked;
+        c.FinalCash.IsEnabled = !sectionLocked;
+        if (sectionLocked)
             c.DownpaymentBox.IsEnabled = false;
     }
 
@@ -1592,7 +1644,19 @@ public partial class OrderEditWindow : Window
             c.DownpaymentBox.IsEnabled = true;
         }
 
-        c.FinalBlock.Visibility = (isNone || c.DownCompletedCheck.IsChecked is true)
+        var depositCompleted = c.DownCompletedCheck.IsChecked is true;
+        c.FinalBlock.Visibility = (isNone || depositCompleted)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        // Deposit breakdown: visible whenever a payment method is chosen and deposit is not yet received.
+        // This covers both "normal" deposit flow and the DownNone case so tax/total are always visible.
+        c.DepositBreakdownPanel.Visibility = (anyDownSelected && !depositCompleted)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        // Final breakdown: visible only when deposit is explicitly marked received (inside FinalBlock).
+        c.FinalBreakdownPanel.Visibility = depositCompleted
             ? Visibility.Visible
             : Visibility.Collapsed;
     }

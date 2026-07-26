@@ -89,6 +89,13 @@
     <Text key="Order.Fields.Tax">税率 (%)</Text>
     <Text key="Order.Fields.TaxAmount">税额</Text>
     <Text key="Order.Fields.Subtotal">小计</Text>
+    <Text key="Order.Fields.PreTaxServiceTotal">税前服务总价</Text>
+    <Text key="Order.Fields.CurrentTaxRate">当前税率 (%)</Text>
+    <Text key="Order.Fields.PreTaxDownpayment">税前定金</Text>
+    <Text key="Order.Fields.PreTaxSubtotal">税前小计</Text>
+    <Text key="Order.Fields.DepositTax">当前计税</Text>
+    <Text key="Order.Fields.PostTaxTotal">税后总价</Text>
+    <Text key="Order.Fields.ServiceTotalTax">此服务总计税</Text>
     <Text key="Order.Fields.SumTotal">合计</Text>
     <Text key="Order.Fields.ChestSize">胸围</Text>
     <Text key="Order.Fields.JacketLength">衣长</Text>
@@ -405,6 +412,13 @@
     <Text key="Order.Fields.Tax">Tax (%)</Text>
     <Text key="Order.Fields.TaxAmount">Tax</Text>
     <Text key="Order.Fields.Subtotal">Subtotal</Text>
+    <Text key="Order.Fields.PreTaxServiceTotal">Pre-Tax Service Total</Text>
+    <Text key="Order.Fields.CurrentTaxRate">Current Tax Rate (%)</Text>
+    <Text key="Order.Fields.PreTaxDownpayment">Pre-Tax Deposit</Text>
+    <Text key="Order.Fields.PreTaxSubtotal">Pre-Tax Subtotal</Text>
+    <Text key="Order.Fields.DepositTax">Tax on Deposit</Text>
+    <Text key="Order.Fields.PostTaxTotal">Post-Tax Total</Text>
+    <Text key="Order.Fields.ServiceTotalTax">Total Tax for Service</Text>
     <Text key="Order.Fields.SumTotal">Sum Total</Text>
     <Text key="Order.Fields.ChestSize">Chest Size</Text>
     <Text key="Order.Fields.JacketLength">Jacket Length</Text>

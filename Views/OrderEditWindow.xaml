@@ -262,6 +262,23 @@
                                     <TextBlock x:Name="AlterationPaymentTitle" Style="{StaticResource PaymentTitle}"/>
                                 </StackPanel>
 
+                                <!-- Always-visible service pricing: pre-tax total + current tax rate. Moved above
+                                     the deposit payment method so both are visible before a deposit method is chosen. -->
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                    <TextBox Grid.Column="1" x:Name="AlterationPriceBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnAlterationValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
+
+                                    <TextBlock Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CurrentTaxRate], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                    <TextBox Grid.Column="3" x:Name="AlterationTaxBox" Margin="0,8" Padding="6,4" TextChanged="OnAlterationValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
+                                </Grid>
+
                                 <TextBlock x:Name="AlterationDownMethodLabel" Style="{StaticResource StepLabel}"/>
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton x:Name="AlterationDownCash" Style="{StaticResource MethodRadio}" GroupName="AlterationDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
@@ -271,37 +288,38 @@
                                 </StackPanel>
 
                                 <StackPanel x:Name="AlterationPricingPanel" Margin="0,14,0,0" Visibility="Collapsed">
+                                    <!-- Input field: pre-tax deposit -->
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
 
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Price], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="AlterationPriceBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnAlterationValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
-
-                                        <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Tax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBox Grid.Row="0" Grid.Column="3" x:Name="AlterationTaxBox" Margin="0,8" Padding="6,4" TextChanged="OnAlterationValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
-
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Subtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="AlterationSubtotalText" Margin="0,8,14,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
-
-                                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TotalPrice], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="3" x:Name="AlterationSumTotalText" Margin="0,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
-
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Downpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="AlterationDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
-
-                                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="3" x:Name="AlterationResidualText" Margin="0,8" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#C0392B"/>
+                                        <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                        <TextBox Grid.Column="1" x:Name="AlterationDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
                                     </Grid>
+
+                                    <!-- Deposit-stage price breakdown (hidden once deposit is marked received) -->
+                                    <StackPanel x:Name="AlterationDepositBreakdownPanel" Margin="0,8,0,0">
+                                        <Border Height="1" Background="#E4E9F0" Margin="0,4,0,8"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxSubtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="AlterationSubtotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.DepositTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="AlterationDepositTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PostTaxTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="AlterationSumTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        </Grid>
+                                    </StackPanel>
 
                                     <CheckBox x:Name="AlterationDownCompletedCheck" Margin="0,12,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownpaymentCompleted], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
 
@@ -312,6 +330,33 @@
                                             <RadioButton x:Name="AlterationFinalCash" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="AlterationFinalCard" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Card], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="AlterationFinalEtransfer" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Etransfer], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                        </StackPanel>
+                                        <!-- Full price breakdown shown once deposit is received -->
+                                        <StackPanel x:Name="AlterationFinalBreakdownPanel" Margin="0,10,0,4" Visibility="Collapsed">
+                                            <Border Height="1" Background="#E4E9F0" Margin="0,0,0,8"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="AlterationFinalPriceDisplayText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="AlterationFinalDownpaymentDisplayText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ServiceTotalTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="AlterationFinalTotalTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PostTaxTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="AlterationFinalTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="AlterationResidualText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#C0392B"/>
+                                            </Grid>
                                         </StackPanel>
                                         <CheckBox x:Name="AlterationBalanceClearedCheck" Margin="0,10,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
                                     </StackPanel>
@@ -348,6 +393,23 @@
                                     <TextBlock x:Name="CustomMadePaymentTitle" Style="{StaticResource PaymentTitle}"/>
                                 </StackPanel>
 
+                                <!-- Always-visible service pricing: pre-tax total (computed from records) + current tax rate.
+                                     Moved above the deposit payment method so both are visible before a deposit method is chosen. -->
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                    <TextBlock Grid.Column="1" x:Name="CustomMadePriceText" Margin="0,8,14,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
+
+                                    <TextBlock Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CurrentTaxRate], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                    <TextBox Grid.Column="3" x:Name="CustomMadeTaxBox" Margin="0,8" Padding="6,4" TextChanged="OnCustomMadeValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
+                                </Grid>
+
                                 <TextBlock x:Name="CustomMadeDownMethodLabel" Style="{StaticResource StepLabel}"/>
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton x:Name="CustomMadeDownCash" Style="{StaticResource MethodRadio}" GroupName="CustomMadeDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
@@ -357,37 +419,38 @@
                                 </StackPanel>
 
                                 <StackPanel x:Name="CustomMadePricingPanel" Margin="0,14,0,0" Visibility="Collapsed">
+                                    <!-- Input field: pre-tax deposit -->
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
 
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Price], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="CustomMadePriceText" Margin="0,8,14,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
-
-                                        <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Tax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBox Grid.Row="0" Grid.Column="3" x:Name="CustomMadeTaxBox" Margin="0,8" Padding="6,4" TextChanged="OnCustomMadeValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
-
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Subtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CustomMadeSubtotalText" Margin="0,8,14,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
-
-                                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TotalPrice], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="3" x:Name="CustomMadeSumTotalText" Margin="0,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
-
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Downpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="CustomMadeDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
-
-                                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="3" x:Name="CustomMadeResidualText" Margin="0,8" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#C0392B"/>
+                                        <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                        <TextBox Grid.Column="1" x:Name="CustomMadeDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
                                     </Grid>
+
+                                    <!-- Deposit-stage price breakdown (hidden once deposit is marked received) -->
+                                    <StackPanel x:Name="CustomMadeDepositBreakdownPanel" Margin="0,8,0,0">
+                                        <Border Height="1" Background="#E4E9F0" Margin="0,4,0,8"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxSubtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="CustomMadeSubtotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.DepositTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CustomMadeDepositTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PostTaxTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="CustomMadeSumTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        </Grid>
+                                    </StackPanel>
 
                                     <CheckBox x:Name="CustomMadeDownCompletedCheck" Margin="0,12,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownpaymentCompleted], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
 
@@ -398,6 +461,33 @@
                                             <RadioButton x:Name="CustomMadeFinalCash" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="CustomMadeFinalCard" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Card], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="CustomMadeFinalEtransfer" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Etransfer], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                        </StackPanel>
+                                        <!-- Full price breakdown shown once deposit is received -->
+                                        <StackPanel x:Name="CustomMadeFinalBreakdownPanel" Margin="0,10,0,4" Visibility="Collapsed">
+                                            <Border Height="1" Background="#E4E9F0" Margin="0,0,0,8"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="CustomMadeFinalPriceDisplayText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CustomMadeFinalDownpaymentDisplayText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ServiceTotalTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="CustomMadeFinalTotalTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PostTaxTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="CustomMadeFinalTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="CustomMadeResidualText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#C0392B"/>
+                                            </Grid>
                                         </StackPanel>
                                         <CheckBox x:Name="CustomMadeBalanceClearedCheck" Margin="0,10,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
                                     </StackPanel>
@@ -421,6 +511,23 @@
                                     <TextBlock x:Name="ClothingPaymentTitle" Style="{StaticResource PaymentTitle}"/>
                                 </StackPanel>
 
+                                <!-- Always-visible service pricing: pre-tax total (computed from items) + current tax rate.
+                                     Moved above the deposit payment method so both are visible before a deposit method is chosen. -->
+                                <Grid Margin="0,0,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                    <TextBlock Grid.Column="1" x:Name="ClothingPriceText" Margin="0,8,14,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
+
+                                    <TextBlock Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CurrentTaxRate], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                    <TextBox Grid.Column="3" x:Name="ClothingTaxBox" Margin="0,8" Padding="6,4" TextChanged="OnClothingValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
+                                </Grid>
+
                                 <TextBlock x:Name="ClothingDownMethodLabel" Style="{StaticResource StepLabel}"/>
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton x:Name="ClothingDownCash" Style="{StaticResource MethodRadio}" GroupName="ClothingDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
@@ -430,37 +537,38 @@
                                 </StackPanel>
 
                                 <StackPanel x:Name="ClothingPricingPanel" Margin="0,14,0,0" Visibility="Collapsed">
+                                    <!-- Input field: pre-tax deposit -->
                                     <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="120"/>
                                             <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="120"/>
-                                            <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
 
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Price], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ClothingPriceText" Margin="0,8,14,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
-
-                                        <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Tax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBox Grid.Row="0" Grid.Column="3" x:Name="ClothingTaxBox" Margin="0,8" Padding="6,4" TextChanged="OnClothingValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
-
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Subtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ClothingSubtotalText" Margin="0,8,14,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
-
-                                        <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TotalPrice], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="1" Grid.Column="3" x:Name="ClothingSumTotalText" Margin="0,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
-
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Downpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="ClothingDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
-
-                                        <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                                        <TextBlock Grid.Row="2" Grid.Column="3" x:Name="ClothingResidualText" Margin="0,8" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#C0392B"/>
+                                        <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                        <TextBox Grid.Column="1" x:Name="ClothingDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
                                     </Grid>
+
+                                    <!-- Deposit-stage price breakdown (hidden once deposit is marked received) -->
+                                    <StackPanel x:Name="ClothingDepositBreakdownPanel" Margin="0,8,0,0">
+                                        <Border Height="1" Background="#E4E9F0" Margin="0,4,0,8"/>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="120"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxSubtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ClothingSubtotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.DepositTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ClothingDepositTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PostTaxTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#516074"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="1" x:Name="ClothingSumTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                        </Grid>
+                                    </StackPanel>
 
                                     <CheckBox x:Name="ClothingDownCompletedCheck" Margin="0,12,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownpaymentCompleted], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
 
@@ -471,6 +579,33 @@
                                             <RadioButton x:Name="ClothingFinalCash" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="ClothingFinalCard" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Card], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="ClothingFinalEtransfer" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Etransfer], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                        </StackPanel>
+                                        <!-- Full price breakdown shown once deposit is received -->
+                                        <StackPanel x:Name="ClothingFinalBreakdownPanel" Margin="0,10,0,4" Visibility="Collapsed">
+                                            <Border Height="1" Background="#E4E9F0" Margin="0,0,0,8"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ClothingFinalPriceDisplayText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ClothingFinalDownpaymentDisplayText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#808080"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ServiceTotalTax], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="ClothingFinalTotalTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PostTaxTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="ClothingFinalTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="ClothingResidualText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#C0392B"/>
+                                            </Grid>
                                         </StackPanel>
                                         <CheckBox x:Name="ClothingBalanceClearedCheck" Margin="0,10,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
                                     </StackPanel>
