@@ -3,13 +3,16 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using LeeYongeOrdering.Localization;
+using LeeYongeOrdering.Models;
 
 namespace LeeYongeOrdering.Views;
 
 /// <summary>
 /// Small editor that lets the user provide a name for a custom measurement term (or
 /// garment) in every available language. This is the "afterwords overriding" popup:
-/// the same measurement can be named differently per region/language.
+/// the same measurement can be named differently per region/language. When editing a
+/// term (not a garment), an optional gender picker is also shown so the term can be
+/// declared common or gender-specific.
 /// </summary>
 public partial class MeasurementTermLanguageWindow : Window
 {
@@ -18,11 +21,30 @@ public partial class MeasurementTermLanguageWindow : Window
     /// <summary>Language code → entered name, populated when the dialog is accepted.</summary>
     public Dictionary<string, string> Result { get; private set; } = new();
 
-    public MeasurementTermLanguageWindow(string headerName, IReadOnlyDictionary<string, string> currentNames)
+    /// <summary>
+    /// Selected gender classification, populated when the dialog is accepted. Only
+    /// meaningful when the gender picker was shown (i.e. <c>initialGender</c> was
+    /// provided); otherwise stays at its default (<see cref="MeasurementGender.Common"/>)
+    /// and callers editing a garment simply ignore it.
+    /// </summary>
+    public MeasurementGender GenderResult { get; private set; } = MeasurementGender.Common;
+
+    /// <param name="initialGender">
+    /// Pass a value to show the gender picker (editing a measurement term) pre-selected
+    /// to this value; pass <c>null</c> to hide it (editing a garment, which has no
+    /// gender concept).
+    /// </param>
+    public MeasurementTermLanguageWindow(string headerName, IReadOnlyDictionary<string, string> currentNames, MeasurementGender? initialGender = null)
     {
         InitializeComponent();
 
         TermNameText.Text = headerName;
+
+        if (initialGender.HasValue)
+        {
+            GenderPanel.Visibility = Visibility.Visible;
+            SetGenderRadio(initialGender.Value);
+        }
 
         foreach (var language in LocalizationService.Instance.AvailableLanguages)
         {
@@ -31,6 +53,22 @@ public partial class MeasurementTermLanguageWindow : Window
         }
 
         LanguageRows.ItemsSource = _rows;
+    }
+
+    private void SetGenderRadio(MeasurementGender gender)
+    {
+        GenderCommonRadio.IsChecked = gender == MeasurementGender.Common;
+        GenderMaleRadio.IsChecked = gender == MeasurementGender.Male;
+        GenderFemaleRadio.IsChecked = gender == MeasurementGender.Female;
+    }
+
+    private MeasurementGender ReadSelectedGender()
+    {
+        if (GenderMaleRadio.IsChecked is true)
+            return MeasurementGender.Male;
+        if (GenderFemaleRadio.IsChecked is true)
+            return MeasurementGender.Female;
+        return MeasurementGender.Common;
     }
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
@@ -49,6 +87,7 @@ public partial class MeasurementTermLanguageWindow : Window
         }
 
         Result = result;
+        GenderResult = ReadSelectedGender();
         DialogResult = true;
     }
 

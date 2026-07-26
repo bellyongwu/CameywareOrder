@@ -13,6 +13,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
@@ -25,7 +26,19 @@
 
             <TextBlock Grid.Row="1" x:Name="TermNameText" Foreground="#7F8C8D" Margin="0,0,0,14"/>
 
-            <ItemsControl Grid.Row="2" x:Name="LanguageRows">
+            <!-- Gender classification: shown only when editing a measurement term (not a garment) -->
+            <StackPanel Grid.Row="2" x:Name="GenderPanel" Orientation="Horizontal" Margin="0,0,0,14" Visibility="Collapsed">
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.Gender], Mode=OneWay}"
+                           VerticalAlignment="Center" Foreground="#2C3E50" Margin="0,0,10,0"/>
+                <RadioButton x:Name="GenderCommonRadio" GroupName="TermGender" Margin="0,0,14,0" VerticalAlignment="Center"
+                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.GenderCommon], Mode=OneWay}"/>
+                <RadioButton x:Name="GenderMaleRadio" GroupName="TermGender" Margin="0,0,14,0" VerticalAlignment="Center"
+                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.GenderMale], Mode=OneWay}"/>
+                <RadioButton x:Name="GenderFemaleRadio" GroupName="TermGender" VerticalAlignment="Center"
+                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.GenderFemale], Mode=OneWay}"/>
+            </StackPanel>
+
+            <ItemsControl Grid.Row="3" x:Name="LanguageRows">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <Grid Margin="0,0,0,10">
@@ -41,7 +54,7 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
-            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
                 <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.Cancel], Mode=OneWay}"
                         Width="90" Height="32" Margin="0,0,10,0" IsCancel="True" Click="OnCancelClick"/>
                 <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.Save], Mode=OneWay}"
