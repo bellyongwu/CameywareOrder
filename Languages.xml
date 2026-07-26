@@ -238,7 +238,7 @@
     <Text key="OrderEdit.BalanceCleared">当前服务尾款已结清</Text>
     <Text key="OrderEdit.ClearAllBalances">结清所有尾款</Text>
     <Text key="OrderEdit.PickedUp">已取货</Text>
-    <Text key="OrderEdit.ReadOnlyNotice">该订单已完成／取消／退货，不可再编辑。</Text>
+    <Text key="OrderEdit.ReadOnlyNotice">该订单已完成／已发货／取消／退货，不可再编辑。</Text>
 
     <Text key="Customer.Measurements.Title">客户量体信息</Text>
     <Text key="Customer.Measurements.Context">当前选择：{0} / {1}</Text>
@@ -609,7 +609,7 @@
     <Text key="OrderEdit.BalanceCleared">Current service balance cleared</Text>
     <Text key="OrderEdit.ClearAllBalances">Clear all final balances</Text>
     <Text key="OrderEdit.PickedUp">Picked up</Text>
-    <Text key="OrderEdit.ReadOnlyNotice">This order is finalized (completed/cancelled/returned) and can no longer be edited.</Text>
+    <Text key="OrderEdit.ReadOnlyNotice">This order is finalized (completed/shipped/cancelled/returned) and can no longer be edited.</Text>
 
     <Text key="Customer.Measurements.Title">Customer's Measurements</Text>
     <Text key="Customer.Measurements.Context">Selected: {0} / {1}</Text>

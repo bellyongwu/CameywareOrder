@@ -352,11 +352,12 @@ public class MainViewModel : INotifyPropertyChanged
         }
     }
 
-    // Statuses that represent a finished order. Copying such an order starts a fresh
+    // Statuses that represent a finished order (Shipped is now also read-only/finalized,
+    // same as Completed/Cancelled/Returned). Copying such an order starts a fresh
     // active order, so its status is reset to Processing (which also removes the
     // "picked up" tick, since that flag is derived from the Completed status).
     private static bool IsClosedStatus(OrderStatus status)
-        => status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned;
+        => status is OrderStatus.Shipped or OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned;
 
     private async Task CopyOrderAsync()
     {

@@ -21,6 +21,14 @@ _(none)_
 
 ## Completed
 
+### 2026-07-26 12:30 — Bug fix: Shipped orders are now read-only (view-only)  [DONE]
+- Ask: "bug fix: If the order is shipped, the order record is considered as completed, shouldnot be modifed anymore but can view."
+- Done:
+  - [x] `MainWindow.xaml.cs` `IsReadOnlyStatus` (drives the toolbar/context-menu 编辑/查看 label): added `OrderStatus.Shipped` alongside Completed/Cancelled/Returned.
+  - [x] `Views/OrderEditWindow.xaml.cs` `IsReadOnlyStatus` (drives `_isReadOnly` → `ApplyReadOnlyMode()`): same addition, so opening a Shipped order now locks every field/control and hides Save, same as Completed/Cancelled/Returned.
+  - [x] `ViewModels/MainViewModel.cs` `IsClosedStatus` (used by Copy Order to reset the new copy's status back to Processing): added `OrderStatus.Shipped` too — otherwise copying a Shipped order would have produced an immediately-locked duplicate, a new bug flowing directly from the same change.
+- Notes: build succeeded 0 warnings/errors; SonarQube clean on all 3 changed files. No DB/schema change — purely status-classification logic. `Order.IsPickedUp` already treated Shipped same as Completed for list styling/balance semantics, so this aligns the edit-lock with that existing convention.
+
 ### 2026-07-26 12:00 — Preset return/cancel reason picker + detail-panel/receipt payment-breakdown bug fix  [DONE]
 - Ask: "1. 订单页面中,退货理由的退货理由必须要有,可以提供几个common的选项 (客户不想要/服务不满意/购买的产品有问题/价格太贵/其他;选择其他时需要给出理由,保存订单时此理由不能为空,设置default). bug修复: 已退货/已取消时 UI 收款明细仍显示,应改为显示退货/取消理由;打印PDF除已有内容外,所有UI页面内容都要展现出来。"
 - Clarified via question: for the printed receipt of a cancelled/returned order, show full parity with a normal receipt (item names + prices + totals); only the payment-method breakdown line is replaced by the reason (not a wholesale "hide all charges" receipt).

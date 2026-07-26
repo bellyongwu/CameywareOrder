@@ -204,8 +204,10 @@ public partial class OrderEditWindow : Window
             ApplyNotApplicableCheckboxStyle(true);
     }
 
+    // Shipped is treated as a finalized/completed state (the order has already been
+    // delivered to the customer), so it is read-only just like Completed/Cancelled/Returned.
     private static bool IsReadOnlyStatus(OrderStatus status)
-        => status is OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned;
+        => status is OrderStatus.Shipped or OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned;
 
     private void ApplyReadOnlyMode()
     {
