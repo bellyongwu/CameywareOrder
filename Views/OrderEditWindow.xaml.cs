@@ -295,18 +295,29 @@ public partial class OrderEditWindow : Window
     }
 
     // Applies / removes the red strikethrough "not applicable" styling on every service
-    // and quick-operation checkbox (including 已取货 and 当前服务尾款已结清).
+    // and quick-operation checkbox (including 已取货 and 当前服务尾款已结清). Each checkbox's
+    // strike line is a sibling Border (bound to that checkbox's own ActualWidth — see
+    // NotApplicableCheckBoxStrike in XAML) toggled alongside the Style swap, so the line
+    // always matches the checkbox + label width instead of the whole row.
     private void ApplyNotApplicableCheckboxStyle(bool notApplicable)
     {
         var style = notApplicable ? (Style)FindResource("NotApplicableCheckBox") : null;
-        ClearAllBalancesCheck.Style = style;
-        PickedUpCheck.Style = style;
-        AlterationDownCompletedCheck.Style = style;
-        AlterationBalanceClearedCheck.Style = style;
-        CustomMadeDownCompletedCheck.Style = style;
-        CustomMadeBalanceClearedCheck.Style = style;
-        ClothingDownCompletedCheck.Style = style;
-        ClothingBalanceClearedCheck.Style = style;
+        var strikeVisibility = notApplicable ? Visibility.Visible : Visibility.Collapsed;
+
+        SetNotApplicableCheckbox(ClearAllBalancesCheck, ClearAllBalancesStrike, style, strikeVisibility);
+        SetNotApplicableCheckbox(PickedUpCheck, PickedUpStrike, style, strikeVisibility);
+        SetNotApplicableCheckbox(AlterationDownCompletedCheck, AlterationDownCompletedStrike, style, strikeVisibility);
+        SetNotApplicableCheckbox(AlterationBalanceClearedCheck, AlterationBalanceClearedStrike, style, strikeVisibility);
+        SetNotApplicableCheckbox(CustomMadeDownCompletedCheck, CustomMadeDownCompletedStrike, style, strikeVisibility);
+        SetNotApplicableCheckbox(CustomMadeBalanceClearedCheck, CustomMadeBalanceClearedStrike, style, strikeVisibility);
+        SetNotApplicableCheckbox(ClothingDownCompletedCheck, ClothingDownCompletedStrike, style, strikeVisibility);
+        SetNotApplicableCheckbox(ClothingBalanceClearedCheck, ClothingBalanceClearedStrike, style, strikeVisibility);
+    }
+
+    private static void SetNotApplicableCheckbox(CheckBox checkbox, Border strike, Style? style, Visibility strikeVisibility)
+    {
+        checkbox.Style = style;
+        strike.Visibility = strikeVisibility;
     }
 
     // Applies or reverts the dynamic refund lock when the status dropdown is switched

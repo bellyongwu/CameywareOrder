@@ -26,13 +26,16 @@
         </Style>
 
         <!-- "Not applicable" checkbox for refunded (cancelled/returned) orders: the box
-             and label turn red with a strikethrough line drawn across the whole control. -->
+             and label turn red. The strikethrough LINE itself is NOT drawn here — see
+             NotApplicableCheckBoxStrike below and its usages, which bind Width to this
+             checkbox's own ActualWidth via ElementName so it only ever spans the box +
+             label, never the whole row (a Line with Stretch="Fill" inside this template
+             used to measure itself against the available width of the whole row instead
+             of the checkbox's own content, which is what made the strike span too wide). -->
         <Style x:Key="NotApplicableCheckBox" TargetType="CheckBox">
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="CheckBox">
-                        <!-- HorizontalAlignment=Left makes the Grid size to its content so the
-                             strikethrough Line spans only the box + label, not the whole row. -->
                         <Grid Background="Transparent" VerticalAlignment="Center" HorizontalAlignment="Left">
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <Border Width="15" Height="15" CornerRadius="2"
@@ -48,13 +51,25 @@
                                     </ContentPresenter.Resources>
                                 </ContentPresenter>
                             </StackPanel>
-                            <Line Stretch="Fill" X1="0" Y1="0" X2="1" Y2="0"
-                                  Stroke="#C62828" StrokeThickness="1.5"
-                                  VerticalAlignment="Center" IsHitTestVisible="False"/>
                         </Grid>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
+        </Style>
+
+        <!-- Overlay "strike" line for a not-applicable checkbox. Placed as a sibling of the
+             checkbox inside a shared wrapper Grid (see usages), with Width bound to that
+             checkbox's ActualWidth — an explicit numeric Width is measured/arranged at
+             exactly that size regardless of how much room the row offers, unlike
+             Stretch="Fill" which inflates to the available width. Toggled by
+             OrderEditWindow.ApplyNotApplicableCheckboxStyle alongside the Style swap above. -->
+        <Style x:Key="NotApplicableCheckBoxStrike" TargetType="Border">
+            <Setter Property="Height" Value="1.5"/>
+            <Setter Property="Background" Value="#C62828"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="IsHitTestVisible" Value="False"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
         </Style>
 
         <!-- Card container for a top-level form section. -->
@@ -271,8 +286,14 @@
                         <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TotalAmountText" FontWeight="Bold" FontSize="15" Foreground="#1A1A1A" VerticalAlignment="Center" Margin="0,4"/>
 
                         <StackPanel Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Orientation="Horizontal" VerticalAlignment="Center">
-                            <CheckBox x:Name="ClearAllBalancesCheck" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.ClearAllBalances], Mode=OneWay}" FontWeight="Bold" Foreground="#1F6F43" VerticalAlignment="Center" Margin="0,4" Checked="OnClearAllBalancesChanged" Unchecked="OnClearAllBalancesChanged"/>
-                            <CheckBox x:Name="PickedUpCheck" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.PickedUp], Mode=OneWay}" FontWeight="Bold" Foreground="#1F6F43" VerticalAlignment="Center" Margin="22,4,0,4" Checked="OnPickedUpChanged" Unchecked="OnPickedUpChanged"/>
+                            <Grid Margin="0,4" HorizontalAlignment="Left">
+                                <CheckBox x:Name="ClearAllBalancesCheck" HorizontalAlignment="Left" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.ClearAllBalances], Mode=OneWay}" FontWeight="Bold" Foreground="#1F6F43" VerticalAlignment="Center" Checked="OnClearAllBalancesChanged" Unchecked="OnClearAllBalancesChanged"/>
+                                <Border x:Name="ClearAllBalancesStrike" Style="{StaticResource NotApplicableCheckBoxStrike}" Width="{Binding ActualWidth, ElementName=ClearAllBalancesCheck}"/>
+                            </Grid>
+                            <Grid Margin="22,4,0,4" HorizontalAlignment="Left">
+                                <CheckBox x:Name="PickedUpCheck" HorizontalAlignment="Left" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.PickedUp], Mode=OneWay}" FontWeight="Bold" Foreground="#1F6F43" VerticalAlignment="Center" Checked="OnPickedUpChanged" Unchecked="OnPickedUpChanged"/>
+                                <Border x:Name="PickedUpStrike" Style="{StaticResource NotApplicableCheckBoxStrike}" Width="{Binding ActualWidth, ElementName=PickedUpCheck}"/>
+                            </Grid>
                         </StackPanel>
 
                         <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedDownpayment], Mode=OneWay}" FontWeight="Bold" Foreground="Black" VerticalAlignment="Center" Margin="0,4,12,4"/>
@@ -380,7 +401,10 @@
                                         </Grid>
                                     </StackPanel>
 
-                                    <CheckBox x:Name="AlterationDownCompletedCheck" Margin="0,12,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownpaymentCompleted], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                    <Grid Margin="0,12,0,0" HorizontalAlignment="Left">
+                                        <CheckBox x:Name="AlterationDownCompletedCheck" HorizontalAlignment="Left" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownpaymentCompleted], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                        <Border x:Name="AlterationDownCompletedStrike" Style="{StaticResource NotApplicableCheckBoxStrike}" Width="{Binding ActualWidth, ElementName=AlterationDownCompletedCheck}"/>
+                                    </Grid>
 
                                     <StackPanel x:Name="AlterationFinalBlock" Visibility="Collapsed">
                                         <Border Style="{StaticResource StepDivider}"/>
@@ -417,7 +441,10 @@
                                                 <TextBlock Grid.Row="4" Grid.Column="1" x:Name="AlterationResidualText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#C0392B"/>
                                             </Grid>
                                         </StackPanel>
-                                        <CheckBox x:Name="AlterationBalanceClearedCheck" Margin="0,10,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                        <Grid Margin="0,10,0,0" HorizontalAlignment="Left">
+                                            <CheckBox x:Name="AlterationBalanceClearedCheck" HorizontalAlignment="Left" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                            <Border x:Name="AlterationBalanceClearedStrike" Style="{StaticResource NotApplicableCheckBoxStrike}" Width="{Binding ActualWidth, ElementName=AlterationBalanceClearedCheck}"/>
+                                        </Grid>
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>
@@ -511,7 +538,10 @@
                                         </Grid>
                                     </StackPanel>
 
-                                    <CheckBox x:Name="CustomMadeDownCompletedCheck" Margin="0,12,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownpaymentCompleted], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                    <Grid Margin="0,12,0,0" HorizontalAlignment="Left">
+                                        <CheckBox x:Name="CustomMadeDownCompletedCheck" HorizontalAlignment="Left" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownpaymentCompleted], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                        <Border x:Name="CustomMadeDownCompletedStrike" Style="{StaticResource NotApplicableCheckBoxStrike}" Width="{Binding ActualWidth, ElementName=CustomMadeDownCompletedCheck}"/>
+                                    </Grid>
 
                                     <StackPanel x:Name="CustomMadeFinalBlock" Visibility="Collapsed">
                                         <Border Style="{StaticResource StepDivider}"/>
@@ -548,7 +578,10 @@
                                                 <TextBlock Grid.Row="4" Grid.Column="1" x:Name="CustomMadeResidualText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#C0392B"/>
                                             </Grid>
                                         </StackPanel>
-                                        <CheckBox x:Name="CustomMadeBalanceClearedCheck" Margin="0,10,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                        <Grid Margin="0,10,0,0" HorizontalAlignment="Left">
+                                            <CheckBox x:Name="CustomMadeBalanceClearedCheck" HorizontalAlignment="Left" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                            <Border x:Name="CustomMadeBalanceClearedStrike" Style="{StaticResource NotApplicableCheckBoxStrike}" Width="{Binding ActualWidth, ElementName=CustomMadeBalanceClearedCheck}"/>
+                                        </Grid>
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>
@@ -629,7 +662,10 @@
                                         </Grid>
                                     </StackPanel>
 
-                                    <CheckBox x:Name="ClothingDownCompletedCheck" Margin="0,12,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownpaymentCompleted], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                    <Grid Margin="0,12,0,0" HorizontalAlignment="Left">
+                                        <CheckBox x:Name="ClothingDownCompletedCheck" HorizontalAlignment="Left" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownpaymentCompleted], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                        <Border x:Name="ClothingDownCompletedStrike" Style="{StaticResource NotApplicableCheckBoxStrike}" Width="{Binding ActualWidth, ElementName=ClothingDownCompletedCheck}"/>
+                                    </Grid>
 
                                     <StackPanel x:Name="ClothingFinalBlock" Visibility="Collapsed">
                                         <Border Style="{StaticResource StepDivider}"/>
@@ -666,7 +702,10 @@
                                                 <TextBlock Grid.Row="4" Grid.Column="1" x:Name="ClothingResidualText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#C0392B"/>
                                             </Grid>
                                         </StackPanel>
-                                        <CheckBox x:Name="ClothingBalanceClearedCheck" Margin="0,10,0,0" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                        <Grid Margin="0,10,0,0" HorizontalAlignment="Left">
+                                            <CheckBox x:Name="ClothingBalanceClearedCheck" HorizontalAlignment="Left" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
+                                            <Border x:Name="ClothingBalanceClearedStrike" Style="{StaticResource NotApplicableCheckBoxStrike}" Width="{Binding ActualWidth, ElementName=ClothingBalanceClearedCheck}"/>
+                                        </Grid>
                                     </StackPanel>
                                 </StackPanel>
                             </StackPanel>

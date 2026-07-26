@@ -21,6 +21,21 @@ _(none)_
 
 ## Completed
 
+### 2026-07-26 13:30 — Real fix: red strikethrough still spanned full row (previous fix was ineffective)  [DONE]
+- Ask: "之前提的 checkbox strok 横贯整个 row 的问题依旧没有修改。我觉得在 checkbox 外增加一层 block 正好长度跟它一样，这样对这个层直接 covered by red cross line。当然要有相应的逻辑去控制什么时候添加这个带 crossline 的层。应该可以解决。"
+- Real root cause (the previous session's `HorizontalAlignment="Left"` fix on the checkboxes did NOT work): the `NotApplicableCheckBox` style's `ControlTemplate` drew the strike with a `Line Stretch="Fill"`. A `Stretch="Fill"` shape measures itself against whatever available width its parent offers (not the sibling content's actual size), so it always inflated to roughly the row width during Measure — `HorizontalAlignment="Left"` on the checkbox only affects Arrange positioning, not that inflated Measure-time DesiredSize, so it had no visible effect.
+- Done (implements the user's own suggested design — a same-sized wrapper layer with a controlled strike overlay):
+  - [x] `Views/OrderEditWindow.xaml`: `NotApplicableCheckBox` ControlTemplate no longer draws the `Line` at all (keeps only the red box + strikethrough label). New `NotApplicableCheckBoxStrike` `Border` style (Height 1.5, red background, `HorizontalAlignment="Left"`, `Visibility="Collapsed"` by default). All 8 refund-lock checkboxes (`ClearAllBalancesCheck`, `PickedUpCheck`, and the Alterations/CustomMade/Clothing `*DownCompletedCheck`/`*BalanceClearedCheck` pairs) are now each wrapped in a `Grid` alongside a sibling `Border` using that style, with `Width="{Binding ActualWidth, ElementName=<checkbox>}"` — an explicit numeric Width binding is always respected regardless of available space, unlike `Stretch="Fill"`.
+  - [x] `Views/OrderEditWindow.xaml.cs` `ApplyNotApplicableCheckboxStyle`: now toggles each strike Border's `Visibility` alongside the existing `Style` swap, via a new `SetNotApplicableCheckbox(checkbox, strike, style, visibility)` helper (keeps the method's cognitive complexity low, matches the existing `SetPaymentSectionEnabled`-style helper convention).
+- Notes: build succeeded 0 warnings/errors; SonarQube clean. Recorded the underlying `Stretch="Fill"`-in-template gotcha in `/memories/repo/startup.md` to avoid repeating it.
+
+### 2026-07-26 13:00 — UI fix: red strikethrough on payment checkboxes spanned the full row  [DONE]
+- Ask: "查看订单或者修改订单 > 订单在已取消/已退货的情况下我们有 red stroke 会划掉 checkbox。但是修改衣服付款的component里: checkbox 应该是 inline block 的，此 stroke 横贯了整个 row。看一下什么原因。只需要横贯当前所占的checkbox长度就行了。"
+- Root cause: the 6 payment "已收定金"/"当前服务尾款已结清" checkboxes (Alterations/CustomMade/Clothing × deposit-completed + balance-cleared) sit directly inside **vertical** `StackPanel`s, where children default to `HorizontalAlignment="Stretch"` (fill the row width) — unlike the working `已取货`/`结清所有尾款` checkboxes, which sit in a **horizontal** `StackPanel` (children auto-sized, not stretched). The shared `NotApplicableCheckBox` style's strikethrough `Line` (`Stretch="Fill"`) then filled the checkbox's full stretched render width instead of just its content.
+- Done:
+  - [x] `Views/OrderEditWindow.xaml`: added `HorizontalAlignment="Left"` to `AlterationDownCompletedCheck`, `AlterationBalanceClearedCheck`, `CustomMadeDownCompletedCheck`, `CustomMadeBalanceClearedCheck`, `ClothingDownCompletedCheck`, `ClothingBalanceClearedCheck` — content-sized ("inline-block") like the other checkboxes, so the red strikethrough now only spans the checkbox + label.
+- Notes: build succeeded 0 warnings/errors. XAML-only fix; no code-behind/Sonar-relevant changes (style itself unchanged).
+
 ### 2026-07-26 12:30 — Bug fix: Shipped orders are now read-only (view-only)  [DONE]
 - Ask: "bug fix: If the order is shipped, the order record is considered as completed, shouldnot be modifed anymore but can view."
 - Done:
