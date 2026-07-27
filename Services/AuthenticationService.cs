@@ -104,6 +104,13 @@ public sealed class AuthenticationService
         return CurrentUser;
     }
 
+    /// <summary>
+    /// Ends the session. Every capability gate reads <see cref="CurrentUser"/>, so clearing it
+    /// immediately revokes them — which is why the caller must take down the main window before
+    /// calling this, not after.
+    /// </summary>
+    public void SignOut() => CurrentUser = null;
+
     private static bool Verify(string password, CredentialRecord record)
     {
         byte[] expected;

@@ -151,8 +151,8 @@ public partial class App : Application
         // Open a shop before anything shop-scoped can run.
         ShopContext.Instance.Initialize(_host.Services.GetRequiredService<IServiceScopeFactory>());
 
-        var configureTerms = await OpenInitialShopAsync();
-        if (!ShopContext.Instance.HasShop)
+        var shopSelection = await OpenInitialShopAsync();
+        if (!shopSelection.Opened)
         {
             // No shop was opened — the user cancelled the picker, or there is nothing they may
             // open. Same reasoning as the login window: ShutdownMode is still OnExplicitShutdown,
@@ -164,7 +164,60 @@ public partial class App : Application
         // Start Kestrel + all hosted services
         await _host.StartAsync();
 
-        var mainWindow = _host.Services.GetRequiredService<MainWindow>();
+        ShowMainWindow(shopSelection.ConfigureTerms);
+    }
+
+    /// <summary>
+    /// Ends the session and runs sign-in again, without restarting the process. The generic host
+    /// and Kestrel keep running throughout: they are not session state, and tearing them down would
+    /// mean rebuilding the whole DI container to hand the next user an identical one.
+    /// </summary>
+    internal async Task SignOutAsync()
+    {
+        // ORDER MATTERS. ShutdownMode has to be relaxed BEFORE the main window closes, or WPF
+        // treats that close as the end of the application and the login window never appears.
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        var previousWindow = MainWindow;
+        MainWindow = null;
+        previousWindow?.Close();
+
+        // After the window is gone, never before: every capability gate reads CurrentUser, and
+        // revoking it under a live window would leave admin-only controls on screen.
+        AuthenticationService.Instance.SignOut();
+
+        var localization = LocalizationService.Instance;
+
+        // The user name is deliberately NOT pre-filled here. Signing out is overwhelmingly "let
+        // somebody else take over", and a pre-filled name invites typing the next person's
+        // password against the previous person's account.
+        var loginWindow = new LoginWindow(localization, seedDefaultUserName: false);
+        if (loginWindow.ShowDialog() is not true)
+        {
+            Shutdown();
+            return;
+        }
+
+        // The previous session's shop stays bound until the next one is chosen. Clearing it here
+        // would open a window in which the GraphQL server — still running — hits RequireCurrent and
+        // throws. It is never observable: the only way past this point without choosing a shop is
+        // the shutdown below.
+        var shopSelection = await OpenInitialShopAsync();
+        if (!shopSelection.Opened)
+        {
+            Shutdown();
+            return;
+        }
+
+        ShowMainWindow(shopSelection.ConfigureTerms);
+    }
+
+    private void ShowMainWindow(bool configureTerms)
+    {
+        // Resolved fresh each time. MainViewModel is transient and the window caches the signed-in
+        // user's capabilities at construction, so reusing an instance across sign-ins would show
+        // the new user the previous user's toolbar.
+        var mainWindow = _host!.Services.GetRequiredService<MainWindow>();
         MainWindow = mainWindow;
         ShutdownMode = ShutdownMode.OnMainWindowClose;
         mainWindow.Show();
@@ -278,9 +331,14 @@ public partial class App : Application
     /// <summary>
     /// Selects the shop to work in and applies its settings. Shop-scoped services are bound here,
     /// before any of them is read, so none of them can ever resolve against "no shop".
-    /// Returns true when the user asked to configure a newly created shop's measurement terms.
     /// </summary>
-    private async Task<bool> OpenInitialShopAsync()
+    /// <remarks>
+    /// Reports whether a shop was opened rather than letting the caller test
+    /// <c>ShopContext.HasShop</c>: on the sign-out path the PREVIOUS session's shop is still bound,
+    /// so that test would read true after a cancelled picker and drop the new user into the old
+    /// user's shop.
+    /// </remarks>
+    private async Task<ShopSelection> OpenInitialShopAsync()
     {
         var shops = await LoadSelectableShopsAsync();
 
@@ -290,7 +348,7 @@ public partial class App : Application
         if (shops.Count == 1 && !AuthenticationService.Instance.CanManageShops)
         {
             ApplyActiveShop(shops[0]);
-            return false;
+            return ShopSelection.Success();
         }
 
         // Only reachable when every shop has been archived — the bootstrap always creates one on a
@@ -304,20 +362,30 @@ public partial class App : Application
                 localization["Shop.Picker.Title"],
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
-            return false;
+            return ShopSelection.Cancelled;
         }
 
         var picker = new ShopPickerWindow(
             LocalizationService.Instance,
             _host!.Services.GetRequiredService<IServiceScopeFactory>(),
             AuthenticationService.Instance.CurrentUser,
-            currentShop: null);
+            // Null at startup; on the sign-out path this preselects whatever was open, which is
+            // usually where the next person is working too.
+            currentShop: ShopContext.Instance.Current);
 
         if (picker.ShowDialog() is not true || picker.SelectedShop is null)
-            return false;
+            return ShopSelection.Cancelled;
 
         ApplyActiveShop(picker.SelectedShop);
-        return picker.ConfigureTermsRequested;
+        return ShopSelection.Success(picker.ConfigureTermsRequested);
+    }
+
+    /// <summary>Outcome of choosing a shop: whether one was opened, and what to do next.</summary>
+    private readonly record struct ShopSelection(bool Opened, bool ConfigureTerms)
+    {
+        public static ShopSelection Cancelled => new(false, false);
+
+        public static ShopSelection Success(bool configureTerms = false) => new(true, configureTerms);
     }
 
     private async Task<List<Shop>> LoadSelectableShopsAsync()

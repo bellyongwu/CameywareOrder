@@ -83,6 +83,71 @@ public partial class MainWindow : Window
         LanguageSwitchBox.Visibility = languageVisibility;
 
         ShopSettingsMenuItem.Visibility = auth.CanManageShops ? Visibility.Visible : Visibility.Collapsed;
+
+        RefreshSignedInUser();
+    }
+
+    private void RefreshSignedInUser()
+    {
+        var user = AuthenticationService.Instance.CurrentUser;
+        if (user is null)
+        {
+            SignedInUserText.Text = string.Empty;
+            return;
+        }
+
+        var role = _localization[RoleKey(user.Role)];
+        SignedInUserText.Text = _localization.Format("Toolbar.SignedInAs", user.UserName, role);
+        SignedInUserText.ToolTip = _localization.Format("Shop.Picker.SignedInAs", user.UserName, role);
+    }
+
+    private static string RoleKey(UserRole role) => role switch
+    {
+        UserRole.Admin => "Shop.Role.Admin",
+        UserRole.Manager => "Shop.Role.Manager",
+        _ => "Shop.Role.Staff"
+    };
+
+    /// <summary>
+    /// Drops the subscriptions this window and its view model hold on the localization singleton.
+    /// Signing out builds a NEW MainWindow, so without this each sign-out would leave a dead
+    /// window listening for language changes and updating controls nobody can see.
+    /// </summary>
+    protected override void OnClosed(EventArgs e)
+    {
+        _localization.LanguageChanged -= OnLanguageChangedGlobally;
+        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _viewModel.Detach();
+
+        base.OnClosed(e);
+    }
+
+    private async void OnSignOutClick(object sender, RoutedEventArgs e)
+    {
+        if (!EnsureNoOpenOrderWindows("SignOut.CloseEditors", "Toolbar.SignOut"))
+            return;
+
+        var answer = MessageBox.Show(
+            this,
+            _localization["SignOut.Confirm"],
+            _localization["Toolbar.SignOut"],
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+
+        if (answer != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            await ((App)Application.Current).SignOutAsync();
+        }
+        catch (Exception ex)
+        {
+            // This handler is async void and the window it belongs to is already closing, so an
+            // exception here would otherwise take the whole dispatcher down with no explanation.
+            // No owner window: by this point there may not be one.
+            MessageBox.Show(ex.ToString(), "LeeYonge Ordering", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void InitializeLanguageSwitcher()
@@ -462,7 +527,7 @@ public partial class MainWindow : Window
 
     private void OnSwitchShopClick(object sender, RoutedEventArgs e)
     {
-        if (!EnsureNoOpenOrderWindows())
+        if (!EnsureNoOpenOrderWindows("Shop.Switch.CloseEditors", "Toolbar.SwitchShop"))
             return;
 
         var picker = new ShopPickerWindow(
@@ -509,11 +574,12 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Blocks a shop switch while an order editor is open. The editor holds an order belonging to
-    /// the shop being left; once the active shop changes, AppDbContext filters that order out, so
-    /// saving would fail to find its own row. Cheaper to refuse than to explain afterwards.
+    /// Blocks a shop switch or sign-out while an order editor is open. The editor holds an order
+    /// belonging to the shop being left; once the active shop changes, AppDbContext filters that
+    /// order out, so saving would fail to find its own row. Sign-out has the same problem plus an
+    /// orphaned window outliving its main window. Cheaper to refuse than to explain afterwards.
     /// </summary>
-    private bool EnsureNoOpenOrderWindows()
+    private bool EnsureNoOpenOrderWindows(string messageKey, string titleKey)
     {
         var openEditor = Application.Current.Windows.OfType<OrderEditWindow>().FirstOrDefault();
         if (openEditor is null)
@@ -521,8 +587,8 @@ public partial class MainWindow : Window
 
         MessageBox.Show(
             this,
-            _localization["Shop.Switch.CloseEditors"],
-            _localization["Toolbar.SwitchShop"],
+            _localization[messageKey],
+            _localization[titleKey],
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
 

@@ -17,17 +17,30 @@ public partial class LoginWindow : Window
     private readonly LocalizationService _localization;
     private bool _isLoadingLanguages;
 
-    public LoginWindow(LocalizationService localization)
+    /// <param name="seedDefaultUserName">
+    /// True on the startup path, false when signing back in after a sign-out — see the comment
+    /// below on why a returning user gets an empty box.
+    /// </param>
+    public LoginWindow(LocalizationService localization, bool seedDefaultUserName = true)
     {
         InitializeComponent();
         _localization = localization;
 
         PopulateLanguages();
 
-        // Seeded so the very first sign-in on a new installation needs no guesswork; the password
-        // is still typed, so this is a convenience rather than a bypass.
-        UserNameBox.Text = "admin";
-        Loaded += (_, _) => PasswordBox.Focus();
+        if (seedDefaultUserName)
+        {
+            // Seeded so the very first sign-in on a new installation needs no guesswork; the
+            // password is still typed, so this is a convenience rather than a bypass.
+            UserNameBox.Text = "admin";
+            Loaded += (_, _) => PasswordBox.Focus();
+        }
+        else
+        {
+            // Signing out is overwhelmingly "somebody else takes over", so the name is theirs to
+            // enter and the caret starts there.
+            Loaded += (_, _) => UserNameBox.Focus();
+        }
     }
 
     /// <summary>The account that signed in, or null when the window was closed without signing in.</summary>

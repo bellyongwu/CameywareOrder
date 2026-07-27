@@ -35,11 +35,7 @@ public class MainViewModel : INotifyPropertyChanged
         _statusMessage = _localization["Status.Ready"];
         _selectedStatusFilter = StatusFilterOptions[0];
 
-        _localization.LanguageChanged += (_, _) =>
-        {
-            StatusMessage = _localization["Status.Ready"];
-            OnPropertyChanged(nameof(PageSummary));
-        };
+        _localization.LanguageChanged += OnLanguageChanged;
 
         LoadOrdersCommand = new RelayCommand(async _ => await LoadOrdersAsync());
         NextPageCommand = new RelayCommand(_ => GoToNextPage(), _ => CanGoToNextPage);
@@ -51,6 +47,20 @@ public class MainViewModel : INotifyPropertyChanged
             async _ => await CopyOrderAsync(),
             _ => SelectedOrder is not null);
     }
+
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        StatusMessage = _localization["Status.Ready"];
+        OnPropertyChanged(nameof(PageSummary));
+    }
+
+    /// <summary>
+    /// Releases the singleton subscriptions this view model holds. Called when its window closes.
+    /// Signing out builds a fresh MainWindow and view model, so without this every sign-out would
+    /// leave another dead listener on the localization singleton, and a language switch would
+    /// update view models nothing is showing.
+    /// </summary>
+    public void Detach() => _localization.LanguageChanged -= OnLanguageChanged;
 
     // ── Bindable properties ────────────────────────────────────────────────────
 

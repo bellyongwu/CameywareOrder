@@ -244,6 +244,28 @@
                      is configured for. -->
                 <TextBlock x:Name="LanguageSwitchLabel" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Language], Mode=OneWay}" VerticalAlignment="Center" Margin="8,0,4,0"/>
             <ComboBox x:Name="LanguageSwitchBox" Width="130" Margin="2" VerticalAlignment="Center" SelectionChanged="OnLanguageChanged"/>
+            <Separator/>
+                <!-- Signed-in user, then sign out. The glyph is a vector rather than an image so it
+                     stays crisp at any DPI and needs no asset. -->
+                <TextBlock x:Name="SignedInUserText" VerticalAlignment="Center" Margin="6,0,4,0"
+                           Foreground="#4B5563" FontSize="12"/>
+                <Button Click="OnSignOutClick" Padding="8,4" Margin="2"
+                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}"
+                        AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal">
+                        <!-- Door with an arrow leaving it. -->
+                        <Canvas Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <Path Stroke="#B45309" StrokeThickness="1.6" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Data="M 9.5 2.5 L 3 2.5 L 3 13.5 L 9.5 13.5"/>
+                            <Path Stroke="#B45309" StrokeThickness="1.6" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Data="M 7.5 8 L 14 8 M 11.2 5.2 L 14 8 L 11.2 10.8"/>
+                        </Canvas>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
         </ToolBar>
 
         <!-- ── Main area ───────────────────────────────────────────────── -->

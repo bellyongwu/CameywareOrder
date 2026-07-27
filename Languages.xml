@@ -58,6 +58,12 @@
 
     <Text key="Toolbar.SwitchShop">切换店铺</Text>
     <Text key="Toolbar.ShopSettings">店铺设置</Text>
+    <Text key="Toolbar.SignOut">退出登录</Text>
+    <!-- Punctuation differs by language (full-width vs half-width brackets), so this is a
+         translated format string rather than a hard-coded one. -->
+    <Text key="Toolbar.SignedInAs">{0}（{1}）</Text>
+    <Text key="SignOut.Confirm">确定要退出登录吗？</Text>
+    <Text key="SignOut.CloseEditors">请先关闭所有订单窗口，再退出登录。</Text>
     <Text key="Shop.Picker.Title">选择店铺</Text>
     <Text key="Shop.Picker.Prompt">请选择要进入的店铺。</Text>
     <Text key="Shop.Picker.SignedInAs">当前用户：{0}（{1}）</Text>
@@ -465,6 +471,10 @@
 
     <Text key="Toolbar.SwitchShop">Switch Shop</Text>
     <Text key="Toolbar.ShopSettings">Shop Settings</Text>
+    <Text key="Toolbar.SignOut">Sign Out</Text>
+    <Text key="Toolbar.SignedInAs">{0} ({1})</Text>
+    <Text key="SignOut.Confirm">Sign out of the application?</Text>
+    <Text key="SignOut.CloseEditors">Close all order windows before signing out.</Text>
     <Text key="Shop.Picker.Title">Select Shop</Text>
     <Text key="Shop.Picker.Prompt">Choose the shop you want to work in.</Text>
     <Text key="Shop.Picker.SignedInAs">Signed in as {0} ({1})</Text>
