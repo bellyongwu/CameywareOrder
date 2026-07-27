@@ -24,6 +24,29 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **Activation is per MEMBERSHIP, not per account (2026-07-27).** `ShopMembership` (one record per person
+  per shop) carries `Roles`, `IsActive`, `JoinedOn`, `DeactivatedOn` and a `TimeOnly?` shift. It replaced
+  the flat `ShopAssignment` (shop, role) pairs, because activation and shift are facts about a person AT A
+  SHOP and would have had to be duplicated across each role row.
+  - **The rule that forced this shape:** deactivating someone at one branch must not cost them their job at
+    another. So sign-in is refused only when the account belongs to ≥1 shop and EVERY membership is
+    inactive. `Authenticate` returns `SignInResult` with a `SignInFailure` so the login window can say
+    "your account has been deactivated" instead of "wrong password" — the credential WAS right, and
+    retyping it will never help.
+  - An account with **no memberships at all is not "deactivated"** — that is a new hire nobody has posted
+    yet. They sign in and get the accurate "no shop is available" message. Do not collapse these two.
+  - `DeactivatedOn` is stamped by `ApplyProfile` on the active→inactive TRANSITION and cleared on the way
+    back. It is never typed: "when were they delisted" is a record of what happened.
+  - Account-level vs membership-level is a real line: **name and birthday are account-level** (a person has
+    one birthday), **shift, join date and activation are membership-level** (the same person can work
+    different hours at two branches).
+  - `UserManagementWindow`'s matrix sends **roles only** (`SetShopRoles`), so an administrator editing
+    roles there cannot silently reset the roster's activation, start date or shift. Any new writer of
+    memberships must preserve the fields it does not own.
+  - Guards that exist for a reason: a manager cannot deactivate their OWN membership of the shop they are
+    standing in (they would revoke the screen they are on), and `CanSetPasswordFor` lets a manager reset a
+    password only when the target works exclusively in shops that manager runs — otherwise a branch
+    manager could take over an account belonging to a branch they have nothing to do with.
 - **Authorization is PER SHOP, and the answer changes when the shop does (2026-07-27).** An account is
   either an administrator (everything, everywhere — an account-level `IsAdministrator` flag, never a shop
   assignment) or it holds a set of `ShopAssignment`s: one or more roles per shop. Holding Manager AND Staff
@@ -143,6 +166,12 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     Kit reloads the project on such a change. **Expect an IDE model refresh to be needed
     after any csproj edit**, including temporary analyzer packages.
 
+- **NEVER round-trip a project file through `Get-Content -Raw` / `Set-Content` in Windows PowerShell 5.1
+  (2026-07-27).** `Get-Content` decodes with the ANSI codepage (1252 here), so every UTF-8 byte becomes a
+  mojibake char, and `Set-Content -Encoding utf8` then writes that back double-encoded — 本地配置 came back
+  as `æœ¬åœ°é…ç½®` in two XAML files. It also adds a BOM. Recovery is byte-level: read the file, decode
+  UTF-8, re-encode with codepage 1252, write the raw bytes (verify the result contains a known string
+  first). Use the Edit/Write tools for file content; keep PowerShell for running commands.
 - **S2325 on a WPF status/message helper has an honest fix, not just a suppression (2026-07-27).** Four
   helpers in `UserManagementWindow` that only wrote to `x:Name` controls were flagged "make static" — the
   documented false positive, and making them static would not compile. Rather than suppress, they were

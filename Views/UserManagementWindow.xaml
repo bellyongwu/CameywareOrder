@@ -12,114 +12,11 @@
          Accounts live in credentials.json, outside the database, but the SHOPS they are assigned to
          are read from it — hence the scope factory. -->
     <Window.Resources>
-        <Style x:Key="RoundedButton" TargetType="Button">
-            <Setter Property="Foreground" Value="#374151"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" CornerRadius="6"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="1"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.88"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.75"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.45"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource RoundedButton}">
-            <Setter Property="Background" Value="#4F46E5"/>
-            <Setter Property="BorderBrush" Value="#4F46E5"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="24,8"/>
-        </Style>
-
-        <!-- Deleting an account is the one irreversible action here, so it is the one control that
-             does not look like the others. -->
-        <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource RoundedButton}">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#FCA5A5"/>
-            <Setter Property="Foreground" Value="#B91C1C"/>
-        </Style>
-
-        <Style x:Key="CardBorder" TargetType="Border">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="18,16"/>
-        </Style>
-
-        <Style x:Key="CardHeading" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#4F46E5"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-        </Style>
-
-        <Style x:Key="FieldLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#6B7280"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
-        </Style>
-
-        <Style x:Key="InputBox" TargetType="Control">
-            <Setter Property="Padding" Value="9,7"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
-            <Setter Property="Background" Value="White"/>
-        </Style>
-
-        <!-- Account rows are cards, so the whole row is the hit target and the selected one reads
-             as an accent rather than the system highlight colour. -->
-        <Style x:Key="UserCardContainer" TargetType="ListBoxItem">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0,0,0,7"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Card" CornerRadius="8" Background="White"
-                                BorderBrush="#E5E7EB" BorderThickness="1"
-                                Padding="11,9" SnapsToDevicePixels="True">
-                            <ContentPresenter/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Card" Property="BorderBrush" Value="#A5B4FC"/>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Card" Property="BorderBrush" Value="#4F46E5"/>
-                                <Setter TargetName="Card" Property="BorderThickness" Value="2"/>
-                                <Setter TargetName="Card" Property="Background" Value="#EEF2FF"/>
-                                <Setter TargetName="Card" Property="Padding" Value="10,8"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ManagementStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Window.Resources>
 
     <Grid>
@@ -188,7 +85,7 @@
                     </Grid>
 
                     <ListBox Grid.Row="2" x:Name="UserList" Background="Transparent" BorderThickness="0"
-                             ItemContainerStyle="{StaticResource UserCardContainer}"
+                             ItemContainerStyle="{StaticResource RosterCardContainer}"
                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                              SelectionChanged="OnUserSelectionChanged">
                         <ListBox.ItemTemplate>

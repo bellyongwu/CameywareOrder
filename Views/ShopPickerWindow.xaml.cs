@@ -99,8 +99,10 @@ public partial class ShopPickerWindow : Window
             : _localization.Format("Users.ShopCount", shopCount);
     }
 
+    // Active memberships only: a shop that has delisted this person is not one they can open, so
+    // counting it here would promise access the list below does not offer.
     private static int CountAccessibleShops(UserAccount user)
-        => user.Assignments.Select(assignment => assignment.ShopPublicId).Distinct().Count();
+        => user.Memberships.Count(membership => membership.IsActive);
 
     private void LoadShops(int? preselectShopId)
     {

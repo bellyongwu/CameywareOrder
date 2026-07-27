@@ -77,20 +77,24 @@ public partial class LoginWindow : Window
 
     private void OnSignInClick(object sender, RoutedEventArgs e)
     {
-        var user = AuthenticationService.Instance.Authenticate(UserNameBox.Text.Trim(), PasswordBox.Password);
+        var result = AuthenticationService.Instance.Authenticate(UserNameBox.Text.Trim(), PasswordBox.Password);
 
-        if (user is null)
+        if (result.User is null)
         {
             // One message for both an unknown user name and a wrong password: saying which would
-            // turn this dialog into a way to discover valid account names.
-            ErrorText.Text = _localization["Login.Failed"];
+            // turn this dialog into a way to discover valid account names. A deactivated account is
+            // the exception — the credential WAS right, and retyping it will never help; the person
+            // needs to be told to talk to their manager.
+            ErrorText.Text = _localization[result.Failure == SignInFailure.Deactivated
+                ? "Login.Deactivated"
+                : "Login.Failed"];
             ErrorText.Visibility = Visibility.Visible;
             PasswordBox.Clear();
             PasswordBox.Focus();
             return;
         }
 
-        SignedInUser = user;
+        SignedInUser = result.User;
         DialogResult = true;
     }
 }

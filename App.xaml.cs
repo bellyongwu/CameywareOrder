@@ -180,7 +180,7 @@ public partial class App : Application
             await EnsureSchemaCompatibilityAsync(db);
             await EnsureShopSchemaAsync(db);
             await EnsureShopBootstrapAsync(db, localization);
-            await MigrateLegacyUserRolesAsync(db);
+            await MigrateLegacyUserMembershipsAsync(db);
         }
 
         // Open a shop before anything shop-scoped can run.
@@ -567,7 +567,7 @@ public partial class App : Application
 
     /// <summary>
     /// Completes the upgrade of <c>credentials.json</c> from one global role per account to per-shop
-    /// assignments, which needs a shop list and therefore cannot run when the service is first
+    /// memberships, which needs a shop list and therefore cannot run when the service is first
     /// constructed for the login window.
     /// </summary>
     /// <remarks>
@@ -575,14 +575,14 @@ public partial class App : Application
     /// migrating afterwards would show them "no shop is available" and then grant the access a
     /// moment later, with nothing on screen to reflect it.
     /// </remarks>
-    private static async Task MigrateLegacyUserRolesAsync(AppDbContext db)
+    private static async Task MigrateLegacyUserMembershipsAsync(AppDbContext db)
     {
         var shopIds = await db.Shops
             .AsNoTracking()
             .Select(shop => shop.PublicId)
             .ToListAsync();
 
-        AuthenticationService.Instance.ApplyLegacyShopAssignments(shopIds);
+        AuthenticationService.Instance.ApplyLegacyShopMemberships(shopIds);
     }
 
     /// <summary>

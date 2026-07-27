@@ -107,6 +107,7 @@ public partial class MainWindow : Window
         DataPathValueItem.Visibility = dataTools;
 
         UserManagementMenuItem.Visibility = Show(auth.CanManageUsers);
+        StoreMembersButton.Visibility = Show(auth.CanManageStoreMembers);
 
         // Hidden when everything below it is: a separator with nothing under it reads as a menu
         // that failed to load.
@@ -595,6 +596,23 @@ public partial class MainWindow : Window
         // whichever shop is bound, so the new shop has to be open first.
         if (picker.ConfigureTermsRequested)
             new MeasurementTermsWindow { Owner = this }.ShowDialog();
+    }
+
+    private void OnStoreMembersClick(object sender, RoutedEventArgs e)
+    {
+        // Defence in depth: the button is hidden for staff, but the check belongs where the action
+        // happens too.
+        if (!AuthenticationService.Instance.CanManageStoreMembers
+            || ShopContext.Instance.Current is not { } current)
+        {
+            return;
+        }
+
+        new StoreMembersWindow(_localization, current) { Owner = this }.ShowDialog();
+
+        // A manager can deactivate their OWN membership from here — the service refuses it for the
+        // open shop, but they can still change their roles. Re-gate rather than trust the chrome.
+        ApplyRolePermissions();
     }
 
     private void OnUserManagementClick(object sender, RoutedEventArgs e)

@@ -62,17 +62,23 @@ components are added/renamed or the way pieces fit together changes.
   - `AuthenticationService` — singleton `Instance`; sign-in **and** authorization. Accounts live in
     `credentials.json` under LocalAppData (outside the database on purpose: a 导入 → 数据库 replaces the
     whole database file and must not wipe the accounts). An account is either an administrator
-    (`IsAdministrator` — everything, everywhere, never a shop assignment) or holds `ShopAssignment`s,
-    one or more roles per shop, keyed on **`Shop.PublicId`**. `BindShop` supplies the shop the named
-    capabilities resolve against: `CanCreateShops` / `CanManageUsers` / `CanUseDataTools` (administrator,
-    whole-installation) and `CanConfigureShop` (administrator or the open shop's manager).
-    `RoleFor` / `CanAccessShop` / `FilterAccessibleShops` answer per shop; `StrongestRole` takes the
-    MINIMUM `UserRole` because the enum is ordered strongest-first. Account CRUD
-    (`CreateAccount` / `DeleteAccount` / `SetPassword` / `SetAssignments` → `AccountOperationResult`)
-    backs the 用户管理 screen; the administrator cannot be deleted or assigned, and no account can be
-    promoted to administrator. File schema version 2; `ApplyLegacyShopAssignments` completes the
-    version-1 upgrade once shops are readable, and `ProvisionedAccounts` makes deleting a seeded
-    account permanent.
+    (`IsAdministrator` — everything, everywhere, never a shop membership) or holds `ShopMembership`s:
+    **one record per shop**, carrying the role(s) held there, `IsActive`, `JoinedOn`, `DeactivatedOn`
+    and a `TimeOnly?` shift, keyed on **`Shop.PublicId`**. `BindShop` supplies the shop the named
+    capabilities resolve against: `CanCreateShops` / `CanManageUsers` / `CanUseDataTools` /
+    `CanDeleteAccounts` (administrator, whole-installation) and `CanConfigureShop` /
+    `CanManageStoreMembers` (administrator or the open shop's manager).
+    `RoleFor` / `CanAccessShop` / `FilterAccessibleShops` answer per shop and ignore deactivated
+    memberships; `StrongestRole` takes the MINIMUM `UserRole` because the enum is ordered
+    strongest-first. `Authenticate` returns a `SignInResult` whose `SignInFailure` distinguishes bad
+    credentials from an account deactivated in EVERY shop it belongs to. Roster CRUD
+    (`ListMembers` / `AddMember` / `UpdateMember` / `CanSetPasswordFor` → `AccountOperationResult`)
+    backs 店铺成员; installation-wide CRUD (`CreateAccount` / `DeleteAccount` / `SetPassword` /
+    `SetShopRoles`) backs 用户管理. The administrator cannot be deleted or given memberships, and no
+    account can be promoted to administrator. File schema version 3: the version-2 fold (flat
+    assignments → memberships) runs on load, `ApplyLegacyShopMemberships` completes the version-1
+    upgrade once shops are readable, and `ProvisionedAccounts` makes deleting a seeded account
+    permanent.
   - `CurrencySettingService` — singleton `Instance` (`INotifyPropertyChanged`)
     owning the **global** currency (`Current` + `Symbol`: ￥ for CNY else $),
     persisted to `currency-setting.json` under LocalAppData. Currency is an app
@@ -316,9 +322,21 @@ components are added/renamed or the way pieces fit together changes.
     **shop × role checkbox matrix** — the shape that makes "manager AND staff in the same shop"
     expressible. Archived shops are still listed, or saving would silently strip an assignment to one.
     Writes on 保存修改 rather than per tick, so a re-assignment cannot revoke access halfway through.
+  - `StoreMembersWindow` — the OPEN shop's roster, opened from the main toolbar by a manager or an
+    administrator. Header carries the head-count tiles (total / active / deactivated); the list shows
+    each member's role and shift with an Active/Deactivated badge (delisted members stay, dimmed); the
+    editor covers person (name, birthday), role in THIS shop (manager and/or staff), activation, start
+    date, a read-only delisting stamp and a 15-minute shift picker. 添加成员 creates the account and its
+    membership together. 删除账户 is administrator-only — deletion reaches every shop, whereas a
+    manager's tool for "they left" is deactivation, which records when. Needs no database: members come
+    from `AuthenticationService` and the shop is passed in.
+  - `ManagementStyles.xaml` (`Views/`) — the shared `ResourceDictionary` behind 选择店铺 / 用户管理 /
+    店铺成员: `RoundedButton` / `PrimaryButton` / `DangerButton`, `CardBorder` / `CardHeading` /
+    `FieldLabel` / `InputBox`, and `RosterCardContainer`. Merged rather than copied so the three
+    screens cannot drift apart silently.
   - `UserPresentation` (static, `Views/`) — localized role name (including "no role") and the stable
-    name-hashed avatar brush/initial, shared by the picker, the user manager and the main toolbar so
-    the role-name switch is not copied a third time.
+    name-hashed avatar brush/initial, shared by the picker, the user manager, the roster and the main
+    toolbar so the role-name switch is not copied a fourth time.
   - `ShopSetupWindow` — creates a shop and edits one (本地配置 → 店铺设置). A scrolling card
     layout: shop identity (per-language names, preferred language, currency), the **payment /
     tax matrix** (one row per `PaymentTaxRules.ConfigurableMethods` entry — tax free vs. charge at
@@ -342,6 +360,12 @@ components are added/renamed or the way pieces fit together changes.
   in the handler — a hidden menu is a fact about the UI, not a permission. `App.ApplyActiveShop`
   binds the shop before publishing it, and `MainWindow` re-gates from `ShopContext.ShopChanged`,
   because the same person can be a manager in one branch and staff in the next.
+- **Membership is the unit of access, and it can be switched off.** A person's standing at a shop —
+  role(s), activation, start date, shift — is one `ShopMembership`; deactivating it removes that shop
+  from their view without touching any other. Sign-in is refused only when EVERY membership is
+  inactive, so a suspension at one branch never costs someone their job at another. Anything that
+  writes memberships must preserve the fields it does not own: the administrator's role matrix sends
+  roles only, precisely so it cannot reset a roster's activation or shift.
 - Per-section money math is centralized in `Order.CalculateSectionPayment` and
   reused by the model and the live editor summary so persisted and on-screen
   values match; tax is applied **per payment portion** (deposit vs. final) based

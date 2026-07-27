@@ -14,81 +14,39 @@
          at the first call site) and is constructed by hand, like LoginWindow.
          CenterScreen rather than CenterOwner because there is no owner on the startup path. -->
     <Window.Resources>
-        <!-- One rounded-button shape, recoloured per role. Built as a template rather than a
-             Background setter because the WPF default button chrome paints its own gradient over
-             any Background you set, and hover would otherwise revert to the system blue. -->
-        <Style x:Key="RoundedButton" TargetType="Button">
-            <Setter Property="Foreground" Value="#374151"/>
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#D1D5DB"/>
-            <Setter Property="Padding" Value="18,9"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Chrome" CornerRadius="6"
-                                Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="1"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.88"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.75"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Chrome" Property="Opacity" Value="0.45"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="ManagementStyles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
 
-        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource RoundedButton}">
-            <Setter Property="Background" Value="#4F46E5"/>
-            <Setter Property="BorderBrush" Value="#4F46E5"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="26,9"/>
-        </Style>
-
-        <!-- Shop rows are cards, not list lines: the whole card is the hit target, and selection
-             reads as a raised accent rather than the system highlight colour. -->
-        <Style x:Key="ShopCardContainer" TargetType="ListBoxItem">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Card" CornerRadius="10" Background="White"
-                                BorderBrush="#E5E7EB" BorderThickness="1"
-                                Padding="16,13" SnapsToDevicePixels="True">
-                            <ContentPresenter/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Card" Property="BorderBrush" Value="#A5B4FC"/>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Card" Property="BorderBrush" Value="#4F46E5"/>
-                                <Setter TargetName="Card" Property="BorderThickness" Value="2"/>
-                                <Setter TargetName="Card" Property="Background" Value="#EEF2FF"/>
-                                <Setter TargetName="Card" Property="Padding" Value="15,12"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+            <!-- Shop rows are taller than the roster rows the shared style is sized for: a shop card
+                 carries a 42px avatar and two lines of detail. -->
+            <Style x:Key="ShopCardContainer" TargetType="ListBoxItem" BasedOn="{StaticResource RosterCardContainer}">
+                <Setter Property="Margin" Value="0,0,0,10"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="Card" CornerRadius="10" Background="White"
+                                    BorderBrush="#E5E7EB" BorderThickness="1"
+                                    Padding="16,13" SnapsToDevicePixels="True">
+                                <ContentPresenter/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Card" Property="BorderBrush" Value="#A5B4FC"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Card" Property="BorderBrush" Value="#4F46E5"/>
+                                    <Setter TargetName="Card" Property="BorderThickness" Value="2"/>
+                                    <Setter TargetName="Card" Property="Background" Value="#EEF2FF"/>
+                                    <Setter TargetName="Card" Property="Padding" Value="15,12"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </ResourceDictionary>
     </Window.Resources>
 
     <Grid>

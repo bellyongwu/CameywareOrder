@@ -17,6 +17,75 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-27 18:15 — Store members panel (per-shop membership, activation, schedule)  [DONE]
+- Ask: "Use the similar UI as above to design and do features: Manage store members in current opened store. >Manager is able to view all active users in the store. >Can see how many workers in the store. >What roles are they currently are >Active user control. if ever active, but deactive, next time even he login with the right auth, it should say something like you are not valid to login, something like that, or your account is deactivated. >But if he belongs to another active store, he can still login to view the store. Admin user in current opened store. >Including all features for manager's role. >Add delete user ability. The Management panel is called by a link with beautified icon on the main application. >trigger will open a beautifed UI with all users. >Besides the regular info(name, birthday), also include the time schedule they worked from and until, when they started work and if deactivated, show when delisted from the role. show a timepicker for that. >Manager can add new user to manage the store, plus create username and password, role in the store for the user. >Manager can create a new user as manager too. can also demote him/her to staff."
+- Reading of the ask, taken as assumptions:
+  - **Activation is PER SHOP, not per account** — that is the only reading under which "if he belongs to
+    another active store, he can still login" is true. Sign-in is refused only when EVERY membership is
+    deactivated.
+  - "time schedule they worked from and until" + "show a timepicker" = the daily shift (two times of day);
+    "when they started work" = the date they joined this shop; "when delisted" = a timestamp stamped
+    automatically on deactivation, never typed.
+  - Name and birthday are ACCOUNT-level (a person has one birthday); shift, join date and activation are
+    MEMBERSHIP-level (the same person can work different hours at two branches).
+- Plan:
+  - [ ] Model: `ShopAssignment` (shop, role) becomes `ShopMembership` (shop, roleS, active, joined,
+        deactivated, shift) — one record per person per shop. Credential-file schema version 3.
+  - [ ] `AuthenticationService`: active-only role resolution, a sign-in failure reason for a fully
+        deactivated account, member CRUD scoped to one shop, `CanManageStoreMembers`.
+  - [ ] `LoginWindow` reports "account deactivated" distinctly from bad credentials.
+  - [ ] New `Views/StoreMembersWindow` in the same visual language as 用户管理.
+  - [ ] Toolbar icon button on `MainWindow`, gated to manager + administrator.
+  - [ ] `UserManagementWindow` updated to the membership model, preserving per-shop metadata on save.
+  - [ ] Localization keys in both blocks; both gates green; build clean; verify by execution.
+- Done:
+  - [x] `ShopAssignment` (shop, role) → `ShopMembership` (shop, **roleS**, `IsActive`, `JoinedOn`,
+        `DeactivatedOn`, `ShiftStart`/`ShiftEnd` as `TimeOnly?`), one record per person per shop.
+        `CredentialRecord` gained `DisplayName` + `BirthDate` — a birthday is the same in every branch,
+        a shift is not, which is exactly where the account/membership line falls.
+  - [x] Credential file schema **version 3**, upgraded from BOTH earlier shapes. The version-2 fold
+        (flat assignments → one membership per shop) needs no shop list and runs on load; the version-1
+        step still defers to `ApplyLegacyShopMemberships`. The version is only bumped once no record is
+        still waiting for a shop list, which is what lets the two halves coexist.
+  - [x] `Authenticate` now returns `SignInResult` with a `SignInFailure`. A correct credential is
+        refused ONLY when the account belongs to ≥1 shop and every membership is deactivated — being
+        suspended at one branch must not cost someone their job at another. An account with NO
+        memberships is deliberately not "deactivated": that is a new hire, and they get the accurate
+        "no shop is available" message instead.
+  - [x] NEW `Views/StoreMembersWindow`: head-count tiles (total / active / deactivated), roster cards
+        with role + shift and an Active/Deactivated badge, and an editor for person (name, birthday),
+        role in THIS shop (manager and/or staff), activation, start date, read-only delisting stamp
+        and a 15-minute shift picker. Add-member creates the account and its membership together.
+        删除账户 is administrator-only; a manager's tool for "they left" is deactivation, which records
+        when.
+  - [x] `Views/ManagementStyles.xaml` (NEW): the shared card/button/input language, merged by all
+        three management windows. Extracted the moment a third window needed it.
+  - [x] Toolbar entry point on `MainWindow` — a vector two-person icon + label, gated by the new
+        `CanManageStoreMembers`; `CanDeleteAccounts` gates deletion.
+  - [x] `UserManagementWindow` moved onto memberships: its matrix now sends ROLES ONLY
+        (`SetShopRoles`), so editing an account there cannot silently reset the roster's activation,
+        start date or shift.
+  - [x] 34 keys × 2 blocks; both blocks verified at **485 keys, identical sets, no duplicates**.
+- **Verified by execution:**
+  - `authcheck`: **52/52**. Covers the deactivation rules end to end (delisted everywhere → refused;
+    delisted here but active there → signs in and sees only the other shop; reactivation clears the
+    stamp), the roster CRUD, promote/demote, both legacy upgrades on synthetic files, and the guards
+    (manager cannot deactivate themselves in the open shop, cannot delete accounts, cannot reset the
+    password of someone who also works in a shop they do not run). Live file restored byte-identical.
+  - `uicheck`: 16 window opens across both languages, **0 binding errors**, screenshots reviewed.
+    Two real bugs were found from the screenshots and fixed: the footer 保存修改/删除 stayed enabled
+    while the add form was open (they still pointed at the previously selected row — in BOTH windows).
+- Notes: build **0 warnings / 0 errors**; full Sonar pass **zero findings**, no suppressions added.
+  - **The live `credentials.json` was already at version 2** when this work started — the app had been
+    signed into since the previous task. The harness assertions were rewritten to check the END STATE
+    rather than assume a starting version, with the version-1 path covered on a synthetic file instead.
+    Worth repeating: a test that depends on how many times real data has already been migrated is a
+    test that fails for the wrong reason.
+  - **IDE will need a language-server restart** (SKILL §15): `StoreMembersWindow.g.i.cs` does not exist
+    yet and `MainWindow.g.i.cs` is one field behind (18 vs 19 — missing `StoreMembersButton`), because
+    a new XAML window and new `x:Name` controls were added. `dotnet build` is clean, so any CS0103 in
+    the editor is the stale design-time model, not a defect.
+
 ### 2026-07-27 17:40 — Per-shop user & role management  [DONE]
 - Ask: "Implement new features: User's rule management System >Admin can access all resources for the application >Admin can assign any user with sepcific role and assign him/her into any store. >Admin user is currently locked, no one else can be assigned as admin. >The user can be assigned in different stores at the sametime. >User can be manager/staff role in any store. for example, User1 can be manager in store 1 and both in store 2. >no limitation of rules for now in any store. >Now, lets create two empty accounts without any roles. User1: test1 test1 User2: test2 test2 >Create and beautify UIed panel to manage user, manage user roles can be on the Select shop step. Have this section UI redesigned. >Manager/staff can switch different stores (if they have the ability to view), but only manager can modify the store's setting. Local configuration setup is limited. -Import/export,Local database is disabled for both roles, do not expose the info at the bottom as well. -Set Header & Footer is unviewd by staff -Shop settings, measurement terms and currency setup is unviewed by staff"
 - Reading of the ask, taken as assumptions (stated to the user, not blocking):

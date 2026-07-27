@@ -97,7 +97,7 @@ public partial class UserManagementWindow : Window
         if (account.IsAdministrator)
             return _localization["Shop.Role.Admin"];
 
-        var shopCount = account.Assignments.Select(assignment => assignment.ShopPublicId).Distinct().Count();
+        var shopCount = account.Memberships.Count(membership => membership.IsActive);
 
         return shopCount == 0
             ? _localization["Users.NoAccess"]
@@ -148,13 +148,12 @@ public partial class UserManagementWindow : Window
             .FirstOrDefault(candidate =>
                 string.Equals(candidate.UserName, userName, StringComparison.OrdinalIgnoreCase));
 
-        var held = account?.Assignments ?? Array.Empty<ShopAssignment>();
+        var held = account?.Memberships ?? Array.Empty<ShopMembership>();
 
         foreach (var shop in _shops)
         {
-            var roles = held.Where(assignment => assignment.ShopPublicId == shop.PublicId)
-                .Select(assignment => assignment.Role)
-                .ToList();
+            var roles = held.FirstOrDefault(membership => membership.ShopPublicId == shop.PublicId)?.Roles
+                ?? new List<UserRole>();
 
             _assignments.Add(new ShopAssignmentRow(
                 shop.PublicId,
@@ -208,7 +207,7 @@ public partial class UserManagementWindow : Window
 
         if (!row.IsAdministrator)
         {
-            var result = AuthenticationService.Instance.SetAssignments(row.UserName, CollectAssignments());
+            var result = AuthenticationService.Instance.SetShopRoles(row.UserName, CollectRoles());
             if (result != AccountOperationResult.Success)
             {
                 ShowError(ErrorKey(result));
@@ -248,23 +247,32 @@ public partial class UserManagementWindow : Window
     }
 
     /// <summary>
-    /// The ticked matrix as assignments. Both boxes ticked yields two entries for the same shop,
-    /// which is exactly how "manager and staff in the same branch" is stored.
+    /// The ticked matrix as a role set per shop. Both boxes ticked yields both roles, which is
+    /// exactly how "manager and staff in the same branch" is stored. An empty set means the account
+    /// is not a member of that shop at all.
     /// </summary>
-    private List<ShopAssignment> CollectAssignments()
+    /// <remarks>
+    /// Only the ROLES are sent: activation, join date and shift belong to the shop's own roster
+    /// screen, and this window must not silently reset them while editing something else.
+    /// </remarks>
+    private Dictionary<Guid, IReadOnlyList<UserRole>> CollectRoles()
     {
-        var assignments = new List<ShopAssignment>();
+        var rolesByShop = new Dictionary<Guid, IReadOnlyList<UserRole>>();
 
         foreach (var row in _assignments)
         {
+            var roles = new List<UserRole>();
+
             if (row.IsManager)
-                assignments.Add(new ShopAssignment { ShopPublicId = row.ShopPublicId, Role = UserRole.Manager });
+                roles.Add(UserRole.Manager);
 
             if (row.IsStaff)
-                assignments.Add(new ShopAssignment { ShopPublicId = row.ShopPublicId, Role = UserRole.Staff });
+                roles.Add(UserRole.Staff);
+
+            rolesByShop[row.ShopPublicId] = roles;
         }
 
-        return assignments;
+        return rolesByShop;
     }
 
     private void OnDeleteUserClick(object sender, RoutedEventArgs e)
@@ -306,6 +314,11 @@ public partial class UserManagementWindow : Window
         DetailPanel.Visibility = Visibility.Collapsed;
         EmptySelectionText.Visibility = Visibility.Collapsed;
         CreatePanel.Visibility = Visibility.Visible;
+
+        // The footer still points at whoever was selected before this form opened, so leaving those
+        // buttons live would let 保存修改 or 删除用户 act on them. Re-enabled by ShowSelectedUser.
+        SaveButton.IsEnabled = false;
+        DeleteUserButton.IsEnabled = false;
 
         NewUserNameBox.Focus();
     }
