@@ -180,6 +180,7 @@ public partial class App : Application
             await EnsureSchemaCompatibilityAsync(db);
             await EnsureShopSchemaAsync(db);
             await EnsureShopBootstrapAsync(db, localization);
+            await MigrateLegacyUserRolesAsync(db);
         }
 
         // Open a shop before anything shop-scoped can run.
@@ -500,16 +501,17 @@ public partial class App : Application
         // Staff and managers on a single-shop installation — the overwhelmingly common case — get
         // no picker at all. A modal with exactly one choice is a keystroke tax on every shift.
         // Administrators always see it: choosing and managing shops is what it is for.
-        if (shops.Count == 1 && !AuthenticationService.Instance.CanManageShops)
+        if (shops.Count == 1 && !AuthenticationService.Instance.IsAdministrator)
         {
             ApplyActiveShop(shops[0]);
             return ShopSelection.Success();
         }
 
-        // Only reachable when every shop has been archived — the bootstrap always creates one on a
-        // fresh database. An administrator can create a shop from the picker; nobody else can, so
-        // there is nothing to show them but an explanation.
-        if (shops.Count == 0 && !AuthenticationService.Instance.CanManageShops)
+        // Nothing to open: either every shop has been archived, or — far more likely now that
+        // access is per shop — this account has not been assigned to any. An administrator can
+        // create a shop from the picker; nobody else can, so there is nothing to show them but an
+        // explanation pointing at the person who can fix it.
+        if (shops.Count == 0 && !AuthenticationService.Instance.IsAdministrator)
         {
             var localization = LocalizationService.Instance;
             MessageBox.Show(
@@ -543,16 +545,44 @@ public partial class App : Application
         public static ShopSelection Success(bool configureTerms = false) => new(true, configureTerms);
     }
 
+    /// <summary>
+    /// The shops the signed-in user may open — active ones they hold a role in, or all of them for
+    /// an administrator.
+    /// </summary>
     private async Task<List<Shop>> LoadSelectableShopsAsync()
     {
         using var scope = _host!.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        return await db.Shops
+        var shops = await db.Shops
             .AsNoTracking()
             .Where(s => !s.IsArchived)
             .OrderBy(s => s.Id)
             .ToListAsync();
+
+        // Filtered in memory rather than in SQL: the assignments live in credentials.json, outside
+        // the database, so there is nothing for EF to translate.
+        return AuthenticationService.Instance.FilterAccessibleShops(shops);
+    }
+
+    /// <summary>
+    /// Completes the upgrade of <c>credentials.json</c> from one global role per account to per-shop
+    /// assignments, which needs a shop list and therefore cannot run when the service is first
+    /// constructed for the login window.
+    /// </summary>
+    /// <remarks>
+    /// Must run BEFORE the first shop list is built. The user has already signed in by this point;
+    /// migrating afterwards would show them "no shop is available" and then grant the access a
+    /// moment later, with nothing on screen to reflect it.
+    /// </remarks>
+    private static async Task MigrateLegacyUserRolesAsync(AppDbContext db)
+    {
+        var shopIds = await db.Shops
+            .AsNoTracking()
+            .Select(shop => shop.PublicId)
+            .ToListAsync();
+
+        AuthenticationService.Instance.ApplyLegacyShopAssignments(shopIds);
     }
 
     /// <summary>
@@ -577,6 +607,12 @@ public partial class App : Application
         // see the same thing. The login picker itself stays usable for everyone, or a user could
         // not read the screen they sign in on.
         var keepCurrentLanguage = AuthenticationService.Instance.CanChooseLanguage;
+
+        // BEFORE SetActive, never after: a manager in one branch can be staff in the next, so the
+        // capability answers have to change in the same instant the shop does. SetActive raises
+        // ShopChanged, and MainWindow re-applies its role gating from that event — if the binding
+        // came afterwards, the window would repaint itself with the previous shop's permissions.
+        AuthenticationService.Instance.BindShop(shop);
         ShopContext.Instance.SetActive(shop);
 
         // The shop's own language wins once it is open — UNLESS the user just picked one by hand

@@ -46,6 +46,7 @@ public partial class MainWindow : Window
         ApplyRolePermissions();
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _localization.LanguageChanged += OnLanguageChangedGlobally;
+        ShopContext.Instance.ShopChanged += OnShopChanged;
         RefreshToolbarLabels();
         _ = _viewModel.LoadOrdersAsync();
     }
@@ -74,51 +75,77 @@ public partial class MainWindow : Window
     /// Applies the signed-in user's capabilities to the chrome. Kept in one place so a new
     /// role rule has a single obvious home rather than being scattered through the handlers.
     /// </summary>
+    /// <remarks>
+    /// Re-run on every shop switch, not only at construction: the same person can be a manager in
+    /// one branch and staff in the next, so a menu that was correct when the window opened is not
+    /// necessarily correct after 切换店铺. Everything here is hidden rather than disabled — a dead
+    /// control invites a support call, an absent one reads as "not offered".
+    /// </remarks>
     private void ApplyRolePermissions()
     {
         var auth = AuthenticationService.Instance;
 
         // Non-administrators run in the language their shop is configured for, so a branch's staff
-        // all see the same thing. Hidden rather than disabled — a dead control invites a support
-        // call, an absent one reads as "not offered".
-        var languageVisibility = auth.CanChooseLanguage ? Visibility.Visible : Visibility.Collapsed;
-        LanguageSwitchLabel.Visibility = languageVisibility;
-        LanguageSwitchBox.Visibility = languageVisibility;
+        // all see the same thing.
+        var language = Show(auth.CanChooseLanguage);
+        LanguageSwitchLabel.Visibility = language;
+        LanguageSwitchBox.Visibility = language;
 
-        ShopSettingsMenuItem.Visibility = auth.CanManageShops ? Visibility.Visible : Visibility.Collapsed;
+        // A manager configures the shop they run; staff take orders in it.
+        var configure = Show(auth.CanConfigureShop);
+        ShopSettingsMenuItem.Visibility = configure;
+        CurrencySettingMenuItem.Visibility = configure;
+        MeasurementTermsMenuItem.Visibility = configure;
+        HeaderFooterMenuItem.Visibility = configure;
+
+        // Whole-installation tools, and the database path they act on.
+        var dataTools = Show(auth.CanUseDataTools);
+        LocalDatabaseMenuItem.Visibility = dataTools;
+        ImportExportMenuItem.Visibility = dataTools;
+        DataPathSeparator.Visibility = dataTools;
+        DataPathLabelItem.Visibility = dataTools;
+        DataPathValueItem.Visibility = dataTools;
+
+        UserManagementMenuItem.Visibility = Show(auth.CanManageUsers);
+
+        // Hidden when everything below it is: a separator with nothing under it reads as a menu
+        // that failed to load.
+        ConfigSeparator.Visibility = Show(auth.CanConfigureShop || auth.CanUseDataTools);
 
         RefreshSignedInUser();
     }
 
+    private static Visibility Show(bool visible) => visible ? Visibility.Visible : Visibility.Collapsed;
+
+    private void OnShopChanged(object? sender, EventArgs e) => ApplyRolePermissions();
+
     private void RefreshSignedInUser()
     {
-        var user = AuthenticationService.Instance.CurrentUser;
+        var auth = AuthenticationService.Instance;
+        var user = auth.CurrentUser;
+
         if (user is null)
         {
             SignedInUserText.Text = string.Empty;
             return;
         }
 
-        var role = _localization[RoleKey(user.Role)];
+        // The role shown is the one held in the OPEN shop, because that is the one the surrounding
+        // toolbar has just been gated by.
+        var role = UserPresentation.RoleText(_localization, auth.CurrentRole);
         SignedInUserText.Text = _localization.Format("Toolbar.SignedInAs", user.UserName, role);
         SignedInUserText.ToolTip = _localization.Format("Shop.Picker.SignedInAs", user.UserName, role);
     }
 
-    private static string RoleKey(UserRole role) => role switch
-    {
-        UserRole.Admin => "Shop.Role.Admin",
-        UserRole.Manager => "Shop.Role.Manager",
-        _ => "Shop.Role.Staff"
-    };
-
     /// <summary>
-    /// Drops the subscriptions this window and its view model hold on the localization singleton.
+    /// Drops the subscriptions this window and its view model hold on the application singletons.
     /// Signing out builds a NEW MainWindow, so without this each sign-out would leave a dead
-    /// window listening for language changes and updating controls nobody can see.
+    /// window listening for language and shop changes and updating controls nobody can see.
     /// </summary>
     protected override void OnClosed(EventArgs e)
     {
         _localization.LanguageChanged -= OnLanguageChangedGlobally;
+        ShopContext.Instance.ShopChanged -= OnShopChanged;
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
         _viewModel.Detach();
 
@@ -192,8 +219,13 @@ public partial class MainWindow : Window
         }
     }
 
+    // Defence in depth on every handler below the 本地数据库 and 导入/导出 menus: those menus are
+    // hidden for non-administrators, but a hidden menu is a fact about the UI, not a permission.
     private void OnOpenDataFolderClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         try
         {
             var dbPath = DatabasePathProvider.DatabaseFilePath;
@@ -216,6 +248,9 @@ public partial class MainWindow : Window
 
     private void OnCopyDataPathClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         try
         {
             Clipboard.SetText(DatabasePathProvider.DatabaseFilePath);
@@ -229,6 +264,9 @@ public partial class MainWindow : Window
 
     private void OnRevealDataFileClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         try
         {
             var dbPath = DatabasePathProvider.DatabaseFilePath;
@@ -509,12 +547,18 @@ public partial class MainWindow : Window
 
     private void OnEditBrandingClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanConfigureShop)
+            return;
+
         var window = new ReceiptBrandingWindow(_localization) { Owner = this };
         window.ShowDialog();
     }
 
     private void OnCurrencySettingClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanConfigureShop)
+            return;
+
         var window = new CurrencySettingWindow(_localization) { Owner = this };
         if (window.ShowDialog() == true)
             _viewModel.LoadOrdersCommand.Execute(null);
@@ -522,6 +566,9 @@ public partial class MainWindow : Window
 
     private void OnMeasurementTermsClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanConfigureShop)
+            return;
+
         var window = new MeasurementTermsWindow { Owner = this };
         window.ShowDialog();
     }
@@ -550,11 +597,26 @@ public partial class MainWindow : Window
             new MeasurementTermsWindow { Owner = this }.ShowDialog();
     }
 
-    private void OnShopSettingsClick(object sender, RoutedEventArgs e)
+    private void OnUserManagementClick(object sender, RoutedEventArgs e)
     {
         // Defence in depth: the menu item is hidden for non-administrators, but the check belongs
         // where the action happens too.
-        if (!AuthenticationService.Instance.CanManageShops || ShopContext.Instance.Current is not { } current)
+        if (!AuthenticationService.Instance.CanManageUsers)
+            return;
+
+        new UserManagementWindow(_localization, _scopeFactory) { Owner = this }.ShowDialog();
+
+        // An administrator can revoke their own access to the open shop here. Their capabilities in
+        // it are resolved from the assignments that were just rewritten, so the chrome has to be
+        // re-gated even though the shop itself did not change.
+        ApplyRolePermissions();
+    }
+
+    private void OnShopSettingsClick(object sender, RoutedEventArgs e)
+    {
+        // Defence in depth: the menu item is hidden for staff, but the check belongs where the
+        // action happens too.
+        if (!AuthenticationService.Instance.CanConfigureShop || ShopContext.Instance.Current is not { } current)
             return;
 
         var setup = new ShopSetupWindow(_localization, _scopeFactory, current) { Owner = this };
@@ -608,6 +670,9 @@ public partial class MainWindow : Window
 
     private void OnExportMeasurementTermsClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         var dialog = new SaveFileDialog
         {
             FileName = BuildDatedExportFileName("measurement-terms", "json"),
@@ -630,6 +695,9 @@ public partial class MainWindow : Window
 
     private void OnImportMeasurementTermsClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         var dialog = new OpenFileDialog
         {
             Filter = JsonFileFilter,
@@ -679,6 +747,9 @@ public partial class MainWindow : Window
 
     private void OnExportDatabaseClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         // The exported package is a zip containing orders.db plus every attached
         // custom-made document image, so the export is self-contained and can be
         // copied to another PC without leaving image references dangling.
@@ -704,6 +775,9 @@ public partial class MainWindow : Window
 
     private void OnImportDatabaseClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         // Accepts the zip package produced by export (db + document images) as well as a
         // legacy raw .db file exported before document packaging existed.
         var dialog = new OpenFileDialog
@@ -739,6 +813,9 @@ public partial class MainWindow : Window
 
     private void OnExportBrandingClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         var dialog = new SaveFileDialog
         {
             FileName = BuildDatedExportFileName("header-footer-branding", "json"),
@@ -761,6 +838,9 @@ public partial class MainWindow : Window
 
     private void OnImportBrandingClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         var dialog = new OpenFileDialog
         {
             Filter = JsonFileFilter,
@@ -812,6 +892,9 @@ public partial class MainWindow : Window
     // images, measurement terms, receipt branding (logo included), currency and language.
     private void OnExportGlobalSettingsClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         var dialog = new SaveFileDialog
         {
             FileName = BuildDatedExportFileName("leeyonge-global-settings", "zip"),
@@ -834,6 +917,9 @@ public partial class MainWindow : Window
 
     private void OnImportGlobalSettingsClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanUseDataTools)
+            return;
+
         var dialog = new OpenFileDialog
         {
             Filter = "Backup Package (*.zip)|*.zip|All Files (*.*)|*.*",

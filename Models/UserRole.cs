@@ -1,21 +1,30 @@
 namespace CameywareOrder.Models;
 
 /// <summary>
-/// What a signed-in user is allowed to do. Only <see cref="Admin"/> is issued today and nothing is
-/// gated on the value yet — the roles exist so that adding staff accounts later is a data change
-/// plus a management screen, with no credential-file migration.
+/// What a signed-in user is allowed to do.
 ///
-/// When gating does arrive, put the decisions behind named capability checks on the session (e.g.
-/// "can manage shops") rather than scattering <c>role == Admin</c> comparisons through the UI.
+/// <see cref="Admin"/> is an ACCOUNT-level property (see <c>CredentialRecord.IsAdministrator</c>) —
+/// it is never assigned to a shop, because an administrator already has every right in every shop.
+/// <see cref="Manager"/> and <see cref="Staff"/> are per-shop: an account holds a set of them per
+/// branch, so the same person can run one shop and take orders in another. Holding both in one shop
+/// is legal and resolves to Manager.
+///
+/// DECLARATION ORDER IS LOAD-BEARING: the values are ordered strongest-first, and
+/// <c>AuthenticationService.StrongestRole</c> resolves the effective role by taking the minimum.
+/// Inserting a value in the middle would silently re-rank the existing ones.
+///
+/// Decisions are made through named capability properties on <c>AuthenticationService</c>
+/// (<c>CanConfigureShop</c>, <c>CanUseDataTools</c>, …) rather than <c>role == Manager</c>
+/// comparisons scattered through the UI, so a rule change has one home.
 /// </summary>
 public enum UserRole
 {
-    /// <summary>Full access, including creating and switching shops.</summary>
+    /// <summary>Full access to the whole installation: every shop, its settings, data and accounts.</summary>
     Admin = 0,
 
-    /// <summary>Reserved: runs a single shop's day-to-day operation.</summary>
+    /// <summary>Runs a shop's day-to-day operation, including its configuration.</summary>
     Manager = 1,
 
-    /// <summary>Reserved: takes orders, with no configuration access.</summary>
+    /// <summary>Takes orders in a shop, with no access to its configuration.</summary>
     Staff = 2
 }

@@ -24,6 +24,41 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **Authorization is PER SHOP, and the answer changes when the shop does (2026-07-27).** An account is
+  either an administrator (everything, everywhere — an account-level `IsAdministrator` flag, never a shop
+  assignment) or it holds a set of `ShopAssignment`s: one or more roles per shop. Holding Manager AND Staff
+  in the same shop is legal and resolves to Manager, which is why the management UI is a checkbox MATRIX
+  rather than a per-shop dropdown.
+  - `UserRole`'s declaration order is LOAD-BEARING: values are strongest-first (Admin 0, Manager 1,
+    Staff 2) and `StrongestRole` takes the **minimum**. Inserting a value in the middle re-ranks the rest.
+  - Assignments key on **`Shop.PublicId`, never `Shop.Id`** — `credentials.json` lives outside the
+    database and whole databases move between machines, where the local autoincrement ids collide.
+  - Capabilities are named, not role comparisons: `CanCreateShops` / `CanManageUsers` / `CanUseDataTools`
+    are administrator-only because they act on the whole installation; `CanConfigureShop` is administrator
+    **or the open shop's manager** and gates 店铺设置 / 货币设置 / 测量术语 / 页眉页脚. The old single
+    `CanManageShops` is gone — it conflated "may create a branch" with "may configure this one".
+  - `AuthenticationService.BindShop` supplies the shop the capabilities resolve against and is called from
+    `App.ApplyActiveShop` **BEFORE** `ShopContext.SetActive`. Order matters: `SetActive` raises
+    `ShopChanged`, and `MainWindow` re-gates its chrome from that event — bind afterwards and the window
+    repaints with the previous shop's permissions.
+  - **`MainWindow.ApplyRolePermissions` MUST stay subscribed to `ShopChanged`.** It used to run only in
+    the constructor, which is correct exactly until someone who is a manager in one branch and staff in
+    another uses 切换店铺. Same reason it re-runs after 用户管理 closes.
+  - The database path in the status bar is hidden with the data tools it describes — it is the same
+    information those menus act on, printed rather than clicked.
+- **`credentials.json` is schema version 2, and the upgrade is deliberately in TWO halves.** The service is
+  constructed for the login window, which runs before the generic host exists — so no shop can be read at
+  that point. `UpgradeAccountShape` (on load) promotes a legacy global `Role=Admin` to the admin flag;
+  `ApplyLegacyShopAssignments` (called from `App` right after the shop bootstrap, before the first shop
+  list) grants a legacy Manager/Staff that role in every shop that then exists, which is exactly what they
+  could already open. It also refreshes the signed-in session, because the user authenticated BEFORE the
+  migration ran and would otherwise be told no shop is available.
+  - `ProvisionedAccounts` records every account ever seeded, so **deleting a seeded account sticks**.
+    Topping seeds up on every load (the old behaviour) would have made the delete button useless.
+    `admin` is the one exception and is always restored: an installation with no administrator can never
+    be administered again. Nothing can promote another account to administrator.
+  - Seeded accounts are admin/manager/staff plus **test1 / test2, created with no roles at all** so the
+    assignment screen has something to exercise.
 - **Tax is a STORE rule, not a per-order figure (2026-07-27).** `PaymentTaxRules` (in **Models**, not
   Services) holds one `PaymentTaxRule` — taxable + rate — per payment method, persisted on
   `Shops.PaymentTaxRulesJson` and edited in 本地配置 → 店铺设置. Its static `Active` is assigned in
@@ -108,6 +143,18 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     Kit reloads the project on such a change. **Expect an IDE model refresh to be needed
     after any csproj edit**, including temporary analyzer packages.
 
+- **S2325 on a WPF status/message helper has an honest fix, not just a suppression (2026-07-27).** Four
+  helpers in `UserManagementWindow` that only wrote to `x:Name` controls were flagged "make static" — the
+  documented false positive, and making them static would not compile. Rather than suppress, they were
+  changed to take a string-table **key** and resolve it through `_localization`, so each genuinely reads
+  instance state. The call sites got shorter too. Prefer this shape for any new message helper.
+- **Verifying a UI redesign needs the window OPENED, not just built.** `uicheck` in the session scratchpad
+  constructs the real windows against the built dll with a `PresentationTraceSources` listener attached and
+  renders each to PNG. It caught two wording bugs a build never would (a subtitle duplicated by the list
+  caption, and an empty-state that said "no shops have been created" when the real cause was "none is
+  assigned to you"). Two gotchas if it is rebuilt: `Application.ResourceAssembly` is latched before your
+  first statement can set it, so give the HARNESS its own `Assets\ICONS\app-icon.ico` `<Resource>` instead;
+  and `System.IO` needs an explicit `using` there.
 - **Running Sonar without SonarLint**: when the IDE/SonarLint tooling is unavailable, add
   `SonarAnalyzer.CSharp` as a PackageReference, `dotnet build`, read the `warning Sxxxx` lines,
   then remove the package again. SonarLint *is* this analyzer, so rule ids and messages match the

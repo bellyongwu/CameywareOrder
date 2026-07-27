@@ -3,16 +3,94 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:CameywareOrder.Localization"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Title], Mode=OneWay}"
-        Height="520" Width="520"
+        Height="640" Width="820"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Icon="/Assets/ICONS/app-icon.ico"
-        Background="#F5F6FA">
+        Background="#F4F5F9">
     <!-- Shown twice in the app's life: once at startup between sign-in and the main window, and
          again for 本地配置 → 切换店铺. It therefore cannot rely on DI (the host is not started yet
          at the first call site) and is constructed by hand, like LoginWindow.
          CenterScreen rather than CenterOwner because there is no owner on the startup path. -->
+    <Window.Resources>
+        <!-- One rounded-button shape, recoloured per role. Built as a template rather than a
+             Background setter because the WPF default button chrome paints its own gradient over
+             any Background you set, and hover would otherwise revert to the system blue. -->
+        <Style x:Key="RoundedButton" TargetType="Button">
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#D1D5DB"/>
+            <Setter Property="Padding" Value="18,9"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome" CornerRadius="6"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.75"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Chrome" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource RoundedButton}">
+            <Setter Property="Background" Value="#4F46E5"/>
+            <Setter Property="BorderBrush" Value="#4F46E5"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="26,9"/>
+        </Style>
+
+        <!-- Shop rows are cards, not list lines: the whole card is the hit target, and selection
+             reads as a raised accent rather than the system highlight colour. -->
+        <Style x:Key="ShopCardContainer" TargetType="ListBoxItem">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Card" CornerRadius="10" Background="White"
+                                BorderBrush="#E5E7EB" BorderThickness="1"
+                                Padding="16,13" SnapsToDevicePixels="True">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="#A5B4FC"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="#4F46E5"/>
+                                <Setter TargetName="Card" Property="BorderThickness" Value="2"/>
+                                <Setter TargetName="Card" Property="Background" Value="#EEF2FF"/>
+                                <Setter TargetName="Card" Property="Padding" Value="15,12"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -20,18 +98,48 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#2C3E50" Padding="24,18">
-            <StackPanel>
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Title], Mode=OneWay}"
-                           Foreground="White" FontSize="20" FontWeight="Bold"/>
-                <!-- Who is signed in and what they are allowed to do. Set in code because it
-                     interleaves a stored user name with a localized role name. -->
-                <TextBlock x:Name="SignedInText" Foreground="#BDC3C7" FontSize="12" Margin="0,6,0,0"
-                           TextWrapping="Wrap"/>
-            </StackPanel>
+        <!-- ── Header band ─────────────────────────────────────────────── -->
+        <Border Grid.Row="0" Padding="28,22">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                    <GradientStop Color="#4F46E5" Offset="0"/>
+                    <GradientStop Color="#7C3AED" Offset="1"/>
+                </LinearGradientBrush>
+            </Border.Background>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Title], Mode=OneWay}"
+                               Foreground="White" FontSize="24" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Subtitle], Mode=OneWay}"
+                               Foreground="#DDD6FE" FontSize="12.5" Margin="0,7,24,0" TextWrapping="Wrap"/>
+                </StackPanel>
+
+                <!-- Who is signed in. Set in code because it interleaves a stored user name with a
+                     localized role name. -->
+                <Border Grid.Column="1" CornerRadius="8" Background="#26FFFFFF" Padding="12,9"
+                        VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="34" Height="34" CornerRadius="17" Background="#40FFFFFF">
+                            <TextBlock x:Name="UserInitialText" Foreground="White" FontSize="15" FontWeight="Bold"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <StackPanel Margin="10,0,2,0" VerticalAlignment="Center">
+                            <TextBlock x:Name="SignedInText" Foreground="White" FontSize="12.5" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="SignedInRoleText" Foreground="#DDD6FE" FontSize="11" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Border>
 
-        <Grid Grid.Row="1" Margin="24,18,24,0">
+        <!-- ── Shop list ───────────────────────────────────────────────── -->
+        <Grid Grid.Row="1" Margin="28,20,28,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -39,47 +147,85 @@
 
             <TextBlock Grid.Row="0"
                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Prompt], Mode=OneWay}"
-                       FontSize="13" Foreground="#374151" Margin="0,0,0,10" TextWrapping="Wrap"/>
+                       FontSize="12" Foreground="#6B7280" FontWeight="SemiBold" Margin="2,0,0,12"
+                       TextWrapping="Wrap"/>
 
             <Grid Grid.Row="1">
-                <ListBox x:Name="ShopList" BorderBrush="#D6DBE3" BorderThickness="1" Background="White"
-                         HorizontalContentAlignment="Stretch"
+                <ListBox x:Name="ShopList" Background="Transparent" BorderThickness="0"
+                         ItemContainerStyle="{StaticResource ShopCardContainer}"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                          MouseDoubleClick="OnShopDoubleClick"
                          SelectionChanged="OnShopSelectionChanged">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="6,7">
-                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
-                                           Foreground="#1F2937" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding Details}" FontSize="11" Foreground="#6B7280"
-                                           Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
-                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <!-- Initial of the shop name: recognizable at a glance in a list of
+                                     branches without needing a per-shop asset. -->
+                                <Border Grid.Column="0" Width="42" Height="42" CornerRadius="10"
+                                        Background="{Binding AvatarBrush}" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Initial}" Foreground="White" FontSize="17"
+                                               FontWeight="Bold" HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"/>
+                                </Border>
+
+                                <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold"
+                                               Foreground="#111827" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding Details}" FontSize="11.5" Foreground="#6B7280"
+                                               Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+
+                                <Border Grid.Column="2" CornerRadius="11" Padding="11,4"
+                                        Background="{Binding RoleBackground}" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding RoleText}" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{Binding RoleForeground}"/>
+                                </Border>
+                            </Grid>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
 
                 <!-- Sits on top of the (empty) list rather than replacing it, so no layout changes
-                     when a shop is created without closing this window. -->
+                     when a shop is created without closing this window. The text is set in code:
+                     "no shops exist" and "none of them is yours" are different situations and only
+                     one of them is the user's to act on. -->
                 <TextBlock x:Name="EmptyText"
-                           Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Empty], Mode=OneWay}"
                            Visibility="Collapsed"
                            HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Foreground="#9CA3AF" FontSize="13" TextWrapping="Wrap" MaxWidth="320"
+                           Foreground="#9CA3AF" FontSize="13" TextWrapping="Wrap" MaxWidth="360"
                            TextAlignment="Center" IsHitTestVisible="False"/>
             </Grid>
         </Grid>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,16,24,20">
-            <Button x:Name="CreateButton"
-                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.CreateNew], Mode=OneWay}"
-                    Padding="16,7" Margin="0,0,10,0" Click="OnCreateClick"/>
-            <Button x:Name="CancelButton"
-                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Cancel], Mode=OneWay}"
-                    Padding="18,7" Margin="0,0,10,0" Click="OnCancelClick" IsCancel="True"/>
-            <Button x:Name="OpenButton"
-                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Open], Mode=OneWay}"
-                    Padding="24,7" Background="#2980B9" Foreground="White" FontWeight="SemiBold"
-                    Click="OnOpenClick" IsDefault="True"/>
-        </StackPanel>
+        <!-- ── Footer ──────────────────────────────────────────────────── -->
+        <Border Grid.Row="2" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0"
+                Padding="28,14" Margin="0,20,0,0">
+            <Grid>
+                <!-- Administrator work sits on the left, away from the confirm button, so the
+                     rightmost control is always "open the shop I picked". -->
+                <Button x:Name="ManageUsersButton" HorizontalAlignment="Left"
+                        Style="{StaticResource RoundedButton}"
+                        Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.UserManagement], Mode=OneWay}"
+                        Click="OnManageUsersClick"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CreateButton" Style="{StaticResource RoundedButton}" Margin="0,0,10,0"
+                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.CreateNew], Mode=OneWay}"
+                            Click="OnCreateClick"/>
+                    <Button x:Name="CancelButton" Style="{StaticResource RoundedButton}" Margin="0,0,10,0"
+                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Cancel], Mode=OneWay}"
+                            Click="OnCancelClick" IsCancel="True"/>
+                    <Button x:Name="OpenButton" Style="{StaticResource PrimaryButton}"
+                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Open], Mode=OneWay}"
+                            Click="OnOpenClick" IsDefault="True"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

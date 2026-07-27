@@ -164,11 +164,13 @@
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}" Margin="4,0"/>
             </StatusBarItem>
-            <Separator/>
-            <StatusBarItem>
+            <!-- Administrator only; hidden in code together with the 本地数据库 and 导入/导出 menus.
+                 It is the same information those menus act on, printed rather than clicked. -->
+            <Separator x:Name="DataPathSeparator"/>
+            <StatusBarItem x:Name="DataPathLabelItem">
                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[DataPath.Label], Mode=OneWay}" Margin="4,0,4,0" FontWeight="SemiBold"/>
             </StatusBarItem>
-            <StatusBarItem>
+            <StatusBarItem x:Name="DataPathValueItem">
                 <TextBlock Text="{Binding DatabaseFilePath}" Margin="0,0,4,0" TextTrimming="CharacterEllipsis"/>
             </StatusBarItem>
         </StatusBar>
@@ -194,13 +196,17 @@
                             </StackPanel>
                         </MenuItem.Header>
                         
+                        <!-- Everyone may switch shop; the picker only lists the shops their
+                             account is assigned to. -->
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SwitchShop], Mode=OneWay}" Click="OnSwitchShopClick"/>
-                        <!-- Administrators only; hidden in code. Edits the OPEN shop's name,
-                             language and currency. -->
+                        <!-- Administrators and the shop's manager; hidden in code. Edits the OPEN
+                             shop's name, language, currency and tax rules. -->
                         <MenuItem x:Name="ShopSettingsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ShopSettings], Mode=OneWay}" Click="OnShopSettingsClick"/>
-                        <Separator/>
-                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CurrencySetting], Mode=OneWay}" Click="OnCurrencySettingClick"/>
-                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.MeasurementTerms], Mode=OneWay}" Click="OnMeasurementTermsClick"/>
+                        <!-- Administrators only; accounts span every shop. -->
+                        <MenuItem x:Name="UserManagementMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.UserManagement], Mode=OneWay}" Click="OnUserManagementClick"/>
+                        <Separator x:Name="ConfigSeparator"/>
+                        <MenuItem x:Name="CurrencySettingMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CurrencySetting], Mode=OneWay}" Click="OnCurrencySettingClick"/>
+                        <MenuItem x:Name="MeasurementTermsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.MeasurementTerms], Mode=OneWay}" Click="OnMeasurementTermsClick"/>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick"
                                       IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility}, ConverterParameter=NotNull}"/>
@@ -208,14 +214,17 @@
                                       Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}"/>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnPrintReceiptAndMeasurementsClick"
                                       Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}"/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}" Click="OnEditBrandingClick"/>
+                            <!-- Staff print receipts but do not design them; hidden in code. -->
+                            <MenuItem x:Name="HeaderFooterMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}" Click="OnEditBrandingClick"/>
                         </MenuItem>
-                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalDatabase], Mode=OneWay}">
+                        <!-- The next two act on the whole installation rather than on one shop, so
+                             they are administrator-only; hidden in code. -->
+                        <MenuItem x:Name="LocalDatabaseMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalDatabase], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyDataPath], Mode=OneWay}" Click="OnCopyDataPathClick"/>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.RevealDataFile], Mode=OneWay}" Click="OnRevealDataFileClick"/>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.OpenDataFolder], Mode=OneWay}" Click="OnOpenDataFolderClick"/>
                         </MenuItem>
-                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ImportExport], Mode=OneWay}">
+                        <MenuItem x:Name="ImportExportMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ImportExport], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}">
                                 <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Import], Mode=OneWay}" Click="OnImportBrandingClick"/>
                                 <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Export], Mode=OneWay}" Click="OnExportBrandingClick"/>

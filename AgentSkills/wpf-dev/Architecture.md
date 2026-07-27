@@ -59,6 +59,20 @@ components are added/renamed or the way pieces fit together changes.
     `RestoreDefaultMeasurements`); `LoadOrSeed`+`MergePredefined` seed/upgrade;
     `ExportConfigJson` / `TryParseConfigJson` / `ImportConfig` back the
     量身项目设置 import/export; `ConfigChanged` event.
+  - `AuthenticationService` — singleton `Instance`; sign-in **and** authorization. Accounts live in
+    `credentials.json` under LocalAppData (outside the database on purpose: a 导入 → 数据库 replaces the
+    whole database file and must not wipe the accounts). An account is either an administrator
+    (`IsAdministrator` — everything, everywhere, never a shop assignment) or holds `ShopAssignment`s,
+    one or more roles per shop, keyed on **`Shop.PublicId`**. `BindShop` supplies the shop the named
+    capabilities resolve against: `CanCreateShops` / `CanManageUsers` / `CanUseDataTools` (administrator,
+    whole-installation) and `CanConfigureShop` (administrator or the open shop's manager).
+    `RoleFor` / `CanAccessShop` / `FilterAccessibleShops` answer per shop; `StrongestRole` takes the
+    MINIMUM `UserRole` because the enum is ordered strongest-first. Account CRUD
+    (`CreateAccount` / `DeleteAccount` / `SetPassword` / `SetAssignments` → `AccountOperationResult`)
+    backs the 用户管理 screen; the administrator cannot be deleted or assigned, and no account can be
+    promoted to administrator. File schema version 2; `ApplyLegacyShopAssignments` completes the
+    version-1 upgrade once shops are readable, and `ProvisionedAccounts` makes deleting a seeded
+    account permanent.
   - `CurrencySettingService` — singleton `Instance` (`INotifyPropertyChanged`)
     owning the **global** currency (`Current` + `Symbol`: ￥ for CNY else $),
     persisted to `currency-setting.json` under LocalAppData. Currency is an app
@@ -288,13 +302,31 @@ components are added/renamed or the way pieces fit together changes.
   - `DocumentPreviewWindow` — in-app image viewer (loads via `BitmapImage`
     `OnLoad` so the file is not locked).
   - `LanguageSelectionWindow` — first-run language picker.
+  - `ShopPickerWindow` — chooses the shop to work in, at startup after sign-in and again for
+    切换店铺. Redesigned as a gradient header (title + signed-in chip) over shop **cards** — avatar
+    tile, name, currency/language/order-count line, and the user's role in that shop as a badge —
+    with a footer carrying 新建店铺 / 用户管理 (administrators only), 取消 and 打开. The list is
+    filtered by `AuthenticationService.FilterAccessibleShops`, and the empty state distinguishes
+    "no shops exist" from "none is assigned to you". Row/badge presentation comes from the shared
+    `UserPresentation` helper; `ShopPickerRow` is a top-level `internal` type so its `{Binding}`-only
+    members do not each need an S1144 suppression.
+  - `UserManagementWindow` — administrator-only accounts screen, reached from the shop picker and from
+    本地配置 → 用户管理. Left: searchable account list (avatar, role summary, 已锁定 badge on the
+    administrator) plus 新建用户. Right: identity card, password reset (blank = unchanged), and a
+    **shop × role checkbox matrix** — the shape that makes "manager AND staff in the same shop"
+    expressible. Archived shops are still listed, or saving would silently strip an assignment to one.
+    Writes on 保存修改 rather than per tick, so a re-assignment cannot revoke access halfway through.
+  - `UserPresentation` (static, `Views/`) — localized role name (including "no role") and the stable
+    name-hashed avatar brush/initial, shared by the picker, the user manager and the main toolbar so
+    the role-name switch is not copied a third time.
   - `ShopSetupWindow` — creates a shop and edits one (本地配置 → 店铺设置). A scrolling card
     layout: shop identity (per-language names, preferred language, currency), the **payment /
     tax matrix** (one row per `PaymentTaxRules.ConfigurableMethods` entry — tax free vs. charge at
     its own rate, generated from a `PaymentTaxRow` view-model so a method added later needs no
     XAML change), the **receipt-number format** (prefix / padding / next number / mode with a live
     preview built through `OrderNumberFormatter`, so the preview cannot drift from what is
-    actually issued), and measurement-terms seeding (creation only). Administrators only.
+    actually issued), and measurement-terms seeding (creation only). **Creating** a shop is
+    administrator-only; **editing** the open one is `CanConfigureShop`, so its manager may too.
 - **Migrations/** — `InitialCreate`, `AddOrderPaymentFields`, and the model
   snapshot. Columns added after those two migrations arrive through the runtime
   guards in `App.xaml.cs` instead (see Startup above).
@@ -304,6 +336,12 @@ components are added/renamed or the way pieces fit together changes.
 ## Key cross-cutting patterns
 
 - All UI text flows through `Languages.xml` / `LocalizationService`.
+- **Authorization is per shop and re-evaluated on every shop switch.** Decisions go through the
+  named capability properties on `AuthenticationService`, never `role == Manager` comparisons in the
+  UI. Chrome is HIDDEN rather than disabled, and every hidden action still re-checks its capability
+  in the handler — a hidden menu is a fact about the UI, not a permission. `App.ApplyActiveShop`
+  binds the shop before publishing it, and `MainWindow` re-gates from `ShopContext.ShopChanged`,
+  because the same person can be a manager in one branch and staff in the next.
 - Per-section money math is centralized in `Order.CalculateSectionPayment` and
   reused by the model and the live editor summary so persisted and on-screen
   values match; tax is applied **per payment portion** (deposit vs. final) based

@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Media;
 using CameywareOrder.Data;
@@ -13,7 +12,8 @@ namespace CameywareOrder.Views;
 
 /// <summary>
 /// Chooses the shop to work in. Runs at startup straight after sign-in, and again whenever the user
-/// picks 本地配置 → 切换店铺.
+/// picks 本地配置 → 切换店铺. For an administrator it is also the way into 用户管理 — this is the one
+/// screen where "which shops exist" and "who may open them" are both on the table.
 ///
 /// Constructed by hand rather than through DI: on the startup path the generic host has been built
 /// but not started, and this window is shown before the main window exists. It reads through the
@@ -24,7 +24,7 @@ public partial class ShopPickerWindow : Window
     private readonly LocalizationService _localization;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly UserAccount? _user;
-    private readonly ObservableCollection<ShopRow> _rows = new();
+    private readonly ObservableCollection<ShopPickerRow> _rows = new();
 
     /// <param name="currentShop">
     /// The shop already open, preselected in the list. Null on the startup path.
@@ -43,13 +43,15 @@ public partial class ShopPickerWindow : Window
 
         ShopList.ItemsSource = _rows;
 
-        // Creating a shop is an administrator's job. Hidden rather than disabled: a greyed-out
-        // button invites a support call, an absent one reads as "not your job".
-        CreateButton.Visibility = AuthenticationService.Instance.CanManageShops
+        // Creating a shop and managing accounts are an administrator's job. Hidden rather than
+        // disabled: a greyed-out button invites a support call, an absent one reads as "not your job".
+        var adminVisibility = AuthenticationService.Instance.IsAdministrator
             ? Visibility.Visible
             : Visibility.Collapsed;
+        CreateButton.Visibility = adminVisibility;
+        ManageUsersButton.Visibility = adminVisibility;
 
-        SignedInText.Text = BuildSignedInText();
+        ApplySignedInHeader();
 
         LoadShops(currentShop?.Id);
     }
@@ -65,21 +67,40 @@ public partial class ShopPickerWindow : Window
     /// </summary>
     public bool ConfigureTermsRequested { get; private set; }
 
-    private string BuildSignedInText()
+    private void ApplySignedInHeader()
     {
         if (_user is null)
-            return string.Empty;
+        {
+            SignedInText.Text = string.Empty;
+            SignedInRoleText.Text = string.Empty;
+            UserInitialText.Text = string.Empty;
+            return;
+        }
 
-        var role = _localization[RoleKey(_user.Role)];
-        return _localization.Format("Shop.Picker.SignedInAs", _user.UserName, role);
+        SignedInText.Text = _localization.Format("Shop.Picker.SignedInUser", _user.UserName);
+        UserInitialText.Text = UserPresentation.Initial(_user.UserName);
+
+        // No shop is open yet, so there is no single role to report: an administrator is one
+        // everywhere, and everyone else holds a role PER shop — which is what the row badges show.
+        SignedInRoleText.Text = BuildAccessSummary(_user);
     }
 
-    private static string RoleKey(UserRole role) => role switch
+    private string BuildAccessSummary(UserAccount user)
     {
-        UserRole.Admin => "Shop.Role.Admin",
-        UserRole.Manager => "Shop.Role.Manager",
-        _ => "Shop.Role.Staff"
-    };
+        if (user.IsAdministrator)
+            return _localization["Shop.Role.Admin"];
+
+        var shopCount = CountAccessibleShops(user);
+
+        // "0 shops" is a count where the user needs a statement — it is the whole reason the list
+        // below is empty.
+        return shopCount == 0
+            ? _localization["Users.NoAccess"]
+            : _localization.Format("Users.ShopCount", shopCount);
+    }
+
+    private static int CountAccessibleShops(UserAccount user)
+        => user.Assignments.Select(assignment => assignment.ShopPublicId).Distinct().Count();
 
     private void LoadShops(int? preselectShopId)
     {
@@ -94,6 +115,12 @@ public partial class ShopPickerWindow : Window
             .OrderBy(shop => shop.Id)
             .ToList();
 
+        // A user only ever sees the shops they hold a role in; an administrator sees every one.
+        // Filtered here as well as in App.LoadSelectableShopsAsync because this window is also
+        // reached from 切换店铺, which does not go through that path.
+        var existingShopCount = shops.Count;
+        shops = AuthenticationService.Instance.FilterAccessibleShops(shops);
+
         // IgnoreQueryFilters is essential: AppDbContext filters Orders to the ACTIVE shop, so
         // without it every shop in this list would report the open shop's order count (and zero on
         // the startup path, where no shop is active yet).
@@ -104,8 +131,21 @@ public partial class ShopPickerWindow : Window
             .ToDictionary(entry => entry.ShopId, entry => entry.Count);
 
         foreach (var shop in shops)
-            _rows.Add(new ShopRow(shop, BuildDetails(shop, counts.GetValueOrDefault(shop.Id)), _localization));
+        {
+            _rows.Add(new ShopPickerRow(
+                shop,
+                shop.ResolveName(_localization.CurrentLanguageCode),
+                BuildDetails(shop, counts.GetValueOrDefault(shop.Id)),
+                AuthenticationService.Instance.RoleFor(shop.PublicId),
+                _localization));
+        }
 
+        // Two different empty states, and only one of them is the user's to act on: an installation
+        // with no shops at all wants "create one", while a list emptied by the assignment filter
+        // wants "ask an administrator".
+        EmptyText.Text = _localization[existingShopCount == 0
+            ? "Shop.Picker.Empty"
+            : "Shop.Picker.NoShopForRole"];
         EmptyText.Visibility = _rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
         ShopList.SelectedItem =
@@ -134,7 +174,7 @@ public partial class ShopPickerWindow : Window
     }
 
     private void UpdateOpenButtonState()
-        => OpenButton.IsEnabled = ShopList.SelectedItem is ShopRow;
+        => OpenButton.IsEnabled = ShopList.SelectedItem is ShopPickerRow;
 
     private void OnShopSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
         => UpdateOpenButtonState();
@@ -166,7 +206,7 @@ public partial class ShopPickerWindow : Window
 
     private void Confirm()
     {
-        if (ShopList.SelectedItem is not ShopRow row)
+        if (ShopList.SelectedItem is not ShopPickerRow row)
             return;
 
         SelectedShop = row.Shop;
@@ -177,7 +217,7 @@ public partial class ShopPickerWindow : Window
     {
         // Defence in depth: the button is hidden for non-administrators, but the check belongs
         // where the action happens, not only where it is offered.
-        if (!AuthenticationService.Instance.CanManageShops)
+        if (!AuthenticationService.Instance.CanCreateShops)
             return;
 
         var setup = new ShopSetupWindow(_localization, _scopeFactory) { Owner = this };
@@ -191,28 +231,90 @@ public partial class ShopPickerWindow : Window
         DialogResult = true;
     }
 
-    private void OnCancelClick(object sender, RoutedEventArgs e) => DialogResult = false;
-
-    /// <summary>One shop as the list renders it.</summary>
-    private sealed class ShopRow
+    private void OnManageUsersClick(object sender, RoutedEventArgs e)
     {
-        private readonly LocalizationService _localization;
+        if (!AuthenticationService.Instance.CanManageUsers)
+            return;
 
-        public ShopRow(Shop shop, string details, LocalizationService localization)
-        {
-            Shop = shop;
-            Details = details;
-            _localization = localization;
-        }
+        new UserManagementWindow(_localization, _scopeFactory) { Owner = this }.ShowDialog();
 
-        public Shop Shop { get; }
+        // Reloaded because an administrator can revoke their OWN access to a shop here. Keeping the
+        // stale list would offer a shop that the next click is no longer allowed to open.
+        LoadShops((ShopList.SelectedItem as ShopPickerRow)?.Shop.Id);
+    }
 
-        // Consumed by {Binding Name} in the picker's item template, which Roslyn cannot see, so
-        // every analyzer reads it as dead. Deleting it blanks the shop name in the list.
-        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members should be removed",
-            Justification = "Bound from ShopPickerWindow.xaml; XAML data bindings are invisible to static analysis.")]
-        public string Name => Shop.ResolveName(_localization.CurrentLanguageCode);
+    private void OnCancelClick(object sender, RoutedEventArgs e) => DialogResult = false;
+}
 
-        public string Details { get; }
+/// <summary>
+/// One shop as the picker's card template renders it.
+/// </summary>
+/// <remarks>
+/// Deliberately a top-level internal type rather than a private nested one. Every member here is
+/// reached only through <c>{Binding}</c>, which static analysis cannot see, so as private members
+/// they all read as dead code and each needs its own suppression to stay. Internal members are not
+/// in that rule's scope, which resolves the problem instead of annotating around it.
+/// </remarks>
+internal sealed class ShopPickerRow
+{
+    private static readonly Brush AdminBadgeBackground = Frozen("#E0E7FF");
+    private static readonly Brush AdminBadgeForeground = Frozen("#3730A3");
+    private static readonly Brush ManagerBadgeBackground = Frozen("#FEF3C7");
+    private static readonly Brush ManagerBadgeForeground = Frozen("#92400E");
+    private static readonly Brush StaffBadgeBackground = Frozen("#D1FAE5");
+    private static readonly Brush StaffBadgeForeground = Frozen("#065F46");
+    private static readonly Brush NoRoleBadgeBackground = Frozen("#F3F4F6");
+    private static readonly Brush NoRoleBadgeForeground = Frozen("#6B7280");
+
+    public ShopPickerRow(Shop shop, string name, string details, UserRole? role, LocalizationService localization)
+    {
+        Shop = shop;
+        Name = name;
+        Details = details;
+        Initial = UserPresentation.Initial(name);
+        AvatarBrush = UserPresentation.AvatarBrush(name);
+
+        RoleText = UserPresentation.RoleText(localization, role);
+        RoleBackground = BadgeBackground(role);
+        RoleForeground = BadgeForeground(role);
+    }
+
+    public Shop Shop { get; }
+
+    public string Name { get; }
+
+    public string Details { get; }
+
+    public string Initial { get; }
+
+    public Brush AvatarBrush { get; }
+
+    public string RoleText { get; }
+
+    public Brush RoleBackground { get; }
+
+    public Brush RoleForeground { get; }
+
+    private static Brush BadgeBackground(UserRole? role) => role switch
+    {
+        UserRole.Admin => AdminBadgeBackground,
+        UserRole.Manager => ManagerBadgeBackground,
+        UserRole.Staff => StaffBadgeBackground,
+        _ => NoRoleBadgeBackground
+    };
+
+    private static Brush BadgeForeground(UserRole? role) => role switch
+    {
+        UserRole.Admin => AdminBadgeForeground,
+        UserRole.Manager => ManagerBadgeForeground,
+        UserRole.Staff => StaffBadgeForeground,
+        _ => NoRoleBadgeForeground
+    };
+
+    private static Brush Frozen(string hex)
+    {
+        var brush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex));
+        brush.Freeze();
+        return brush;
     }
 }

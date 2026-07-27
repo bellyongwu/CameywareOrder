@@ -17,6 +17,79 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-27 17:40 — Per-shop user & role management  [DONE]
+- Ask: "Implement new features: User's rule management System >Admin can access all resources for the application >Admin can assign any user with sepcific role and assign him/her into any store. >Admin user is currently locked, no one else can be assigned as admin. >The user can be assigned in different stores at the sametime. >User can be manager/staff role in any store. for example, User1 can be manager in store 1 and both in store 2. >no limitation of rules for now in any store. >Now, lets create two empty accounts without any roles. User1: test1 test1 User2: test2 test2 >Create and beautify UIed panel to manage user, manage user roles can be on the Select shop step. Have this section UI redesigned. >Manager/staff can switch different stores (if they have the ability to view), but only manager can modify the store's setting. Local configuration setup is limited. -Import/export,Local database is disabled for both roles, do not expose the info at the bottom as well. -Set Header & Footer is unviewd by staff -Shop settings, measurement terms and currency setup is unviewed by staff"
+- Reading of the ask, taken as assumptions (stated to the user, not blocking):
+  - "manager in store 1 and **both** in store 2" = a (user, shop) pair may hold Manager **and** Staff at once, so
+    an assignment is a SET per shop, rendered as two checkboxes per shop row. Effective capability = the highest
+    role held there.
+  - Admin is an ACCOUNT-level flag, not a per-shop assignment ("access all resources"). The `admin` account is
+    locked: it cannot be deleted or demoted, and no other account can be promoted to it.
+  - Creating a shop stays administrator-only — the ask grants a manager the right to *modify* a store's settings,
+    not to add branches.
+- Plan:
+  - [ ] `AuthenticationService` v2: per-shop assignments keyed on `Shop.PublicId`, `IsAdministrator`, account
+        CRUD, a seeded-account marker so a deleted account stays deleted, legacy-role migration.
+  - [ ] Capability API resolved against the ACTIVE shop, bound in `App.ApplyActiveShop`.
+  - [ ] Shop lists filtered by assignment (startup path + picker + 切换店铺).
+  - [ ] `ShopPickerWindow` redesigned; 用户管理 launches from it (admin only).
+  - [ ] New `Views/UserManagementWindow` — user list, add/delete, password reset, shop×role matrix.
+  - [ ] `MainWindow` chrome gated by role and RE-APPLIED on every shop switch; status-bar database path hidden
+        for non-administrators.
+  - [ ] test1/test2 accounts seeded with no roles.
+  - [ ] Localization keys in both blocks; both gates green; build clean.
+- Done:
+  - [x] `AuthenticationService` rewritten around `IsAdministrator` + `ShopAssignment[]` keyed on
+        `Shop.PublicId`. Capabilities split from the old single `CanManageShops` into `CanCreateShops` /
+        `CanManageUsers` / `CanUseDataTools` (administrator, whole-installation actions) and
+        `CanConfigureShop` (administrator or the OPEN shop's manager). `BindShop` supplies the shop the
+        answers resolve against, called from `App.ApplyActiveShop` **before** `SetActive`.
+  - [x] Credential file is now version 2, upgraded in TWO steps because the service is constructed for
+        the login window — before the host exists and therefore before a shop can be read.
+        `UpgradeAccountShape` (on load) turns a global `Role=Admin` into the admin flag;
+        `ApplyLegacyShopAssignments` (called from `App` after the shop bootstrap) turns a legacy
+        Manager/Staff into that role in every shop that exists, preserving what those accounts could
+        already open, and refreshes the already-signed-in session so the user is not told "no shop is
+        available" one second before being granted access.
+  - [x] `CredentialFile.ProvisionedAccounts` records what has ever been seeded, so a deleted account
+        stays deleted. Seeding an account on every load was the old behaviour and would have made the
+        new delete button useless. `admin` is exempt — an installation with no administrator can never
+        be administered again.
+  - [x] `ShopPickerWindow` redesigned: gradient header with the signed-in chip, shop CARDS with an
+        avatar tile, per-shop role badge and hover/selected accent, and a footer carrying 用户管理
+        (administrators only). Two distinct empty states — "no shops exist" vs "none is yours".
+  - [x] NEW `Views/UserManagementWindow`: account list (search + avatar + role summary + 已锁定 badge),
+        create panel, password reset, and a **shop × role matrix of checkboxes** — which is what makes
+        "manager AND staff in the same shop" expressible rather than an either/or dropdown.
+        Archived shops still appear, or saving an account would silently strip an assignment to one.
+  - [x] `MainWindow.ApplyRolePermissions` extended and, critically, **re-run on `ShopContext.ShopChanged`**
+        (and after 用户管理 closes). It was construction-only, so a manager who switched into a shop where
+        they are staff kept the manager menus.
+  - [x] Defence-in-depth guards on all 14 gated handlers; status-bar database path hidden with the
+        data tools it describes.
+  - [x] 24 keys × 2 blocks; both blocks verified at **452 keys, identical sets, no duplicates**.
+- **Verified by execution, not just by build** (two scratch harnesses referencing the built dll):
+  - `authcheck`: **54/54 assertions**, run against the LIVE credentials file so the version-1 upgrade was
+    exercised on real data — legacy manager gains Manager in both real shops, admin gains none, a second
+    migration pass is a no-op, both roles in one shop resolve to Manager while BOTH are persisted,
+    re-assignment revokes the old shop, staff cannot configure, the administrator cannot be deleted or
+    assigned, a deleted seeded account is not resurrected, and a missing administrator is restored.
+    The file was restored byte-identical afterwards (sha256 unchanged), so the real migration still
+    happens on the user's next sign-in.
+  - `uicheck`: opens the redesigned picker and the new user-management window **for real** in both
+    languages, with a `PresentationTraceSources` listener attached — 8/8 windows opened, **0 binding
+    errors or warnings**. A XAML resource/template mistake compiles cleanly and only fails on show, so
+    a green build says nothing about whether these screens open. Screenshots were captured and reviewed;
+    two wording bugs were found that way (a duplicated prompt, and an empty-state message that blamed
+    the wrong cause) and fixed.
+- Notes: build succeeded, **0 warnings / 0 errors**, and a full build with `SonarAnalyzer.CSharp`
+  temporarily referenced reported **zero Sxxxx findings** project-wide (package removed; `git diff` on the
+  csproj is clean). No `[SuppressMessage]` was needed: the four S2325 flags on the status-message helpers
+  were resolved by restructuring them to take a string-table KEY instead of a finished string, so they
+  genuinely read instance state.
+  - `.g.cs` / `.g.i.cs` field counts match on all three touched windows (21/21, 9/9, 18/18) — no stale
+    design-time model this time, unlike the previous session.
+
 ### 2026-07-27 16:40 — Store-scoped payment/tax rules, split card types, receipt number format, GST/HST  [DONE]
 - Ask: "Implement new features: 1.Apply new rules for Stores > List all types of payment types for the charging tax. basic diagrams like below / TAX free / Tax Rate / CASH (Check mark) / Card / Debit Card (Check mark) (inputfield - a changable field) / Credit Card (Check mark) (inputfield - a changable field) / Etransfer (Check mark) / You can save this settings in the global setting for the shop respectively. 2. Beautify the above UI, make it morden look. easy to access. 3. Divide Card type into two separate groups, Debit and credit card. 4. Apply the rules for the payment areas, and locking the tax percentage area - Making the inputbox in text lable, bolded. > the change on the global tax percentage charging rules will reflect globally in store's scope > By default Cash + Etransfer are 0%, any card type is 13% 5. Add Rules for Store's Receipt format. start with Prefix, start with number or something you can think the most commonly used for your self. 6. add a configuration field for printing store's GST/HST input for tracking receipt's tax slip. In any printing field, place it within [Header & footer editor], just under the Header Area."
 - Decisions taken with the user before starting (both affect existing financial data):
