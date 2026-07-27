@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Windows.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
-using LeeYongeOrdering.Services;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
+using CameywareOrder.Services;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 [ValueConversion(typeof(CustomMadeServiceRecord), typeof(string))]
 public class CustomMadeRecordSummaryConverter : IValueConverter

@@ -1,8 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
-using LeeYongeOrdering.Localization;
+using CameywareOrder.Localization;
 
-namespace LeeYongeOrdering.Views;
+namespace CameywareOrder.Views;
 
 public partial class LanguageSelectionWindow : Window
 {

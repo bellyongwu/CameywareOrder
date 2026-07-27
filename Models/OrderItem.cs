@@ -1,4 +1,4 @@
-namespace LeeYongeOrdering.Models;
+namespace CameywareOrder.Models;
 
 public class OrderItem
 {

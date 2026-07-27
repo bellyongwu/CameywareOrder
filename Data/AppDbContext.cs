@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using LeeYongeOrdering.Models;
-using LeeYongeOrdering.Services;
+using CameywareOrder.Models;
+using CameywareOrder.Services;
 
-namespace LeeYongeOrdering.Data;
+namespace CameywareOrder.Data;
 
 public class AppDbContext : DbContext
 {

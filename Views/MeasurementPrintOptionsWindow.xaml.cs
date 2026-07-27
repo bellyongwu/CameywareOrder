@@ -1,8 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
-using LeeYongeOrdering.Localization;
+using CameywareOrder.Localization;
 
-namespace LeeYongeOrdering.Views;
+namespace CameywareOrder.Views;
 
 /// <summary>
 /// Small dialog that asks for the language and unit to use when printing a custom-made

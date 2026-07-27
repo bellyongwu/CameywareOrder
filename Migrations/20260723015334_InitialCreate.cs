@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace LeeYongeOrdering.Migrations
+namespace CameywareOrder.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration

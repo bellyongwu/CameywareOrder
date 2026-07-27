@@ -1,14 +1,14 @@
 using System.IO;
 using System.IO.Compression;
 
-namespace LeeYongeOrdering.Data;
+namespace CameywareOrder.Data;
 
 public static class DatabasePathProvider
 {
     public static string AppDataDirectory =>
         System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LeeYongeOrdering");
+            "CameywareOrder");
 
     public static string DatabaseFilePath => System.IO.Path.Combine(AppDataDirectory, "orders.db");
 

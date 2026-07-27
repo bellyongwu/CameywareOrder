@@ -1,4 +1,4 @@
-# Architecture — LeeYongeOrdering (WPF Ordering App)
+# Architecture — CameywareOrder (WPF Ordering App)
 
 Component map of the app this skill maintains. Keep this current whenever
 components are added/renamed or the way pieces fit together changes.
@@ -45,7 +45,7 @@ components are added/renamed or the way pieces fit together changes.
 - **Services/**
   - `DocumentStorageService` — static global helper for custom-made record
     images: import/export/delete under
-    `AppData\LeeYongeOrdering\Documents\CustomMade`. NOTE: `using Path =
+    `AppData\CameywareOrder\Documents\CustomMade`. NOTE: `using Path =
     System.IO.Path;` alias is required because `ImplicitUsings` pulls in
     `HotChocolate.Path`, making bare `Path` ambiguous.
   - `MeasurementTermsService` — singleton `Instance` for the Measurement Terms
@@ -66,7 +66,7 @@ components are added/renamed or the way pieces fit together changes.
     unused.
   - `ReceiptBrandingStore` — static store for the receipt/measurement branding:
     `receipt-branding.json` + a `logo.*` file under
-    `%LocalAppData%\LeeYongeOrdering\Branding`. `ReceiptBrandingSettings` holds
+    `%LocalAppData%\CameywareOrder\Branding`. `ReceiptBrandingSettings` holds
     per-language `LocalizedBranding` (`HeaderXaml`/`FooterXaml`) plus
     `LogoFileName` + `LogoPlacement` (Left/Center/Right, default Center).
     `ExportConfigJson` / `TryParseConfigJson` / `ImportConfig` (+ `BrandingExport`

@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Windows.Data;
-using LeeYongeOrdering.Localization;
+using CameywareOrder.Localization;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 [ValueConversion(typeof(object), typeof(string))]
 public class LocalizationLookupConverter : IValueConverter

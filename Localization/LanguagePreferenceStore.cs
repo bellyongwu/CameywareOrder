@@ -1,13 +1,13 @@
 using System.Text.Json;
 
-namespace LeeYongeOrdering.Localization;
+namespace CameywareOrder.Localization;
 
 public sealed class LanguagePreferenceStore
 {
     private const string FileName = "language-preference.json";
 
     private static string PreferenceDirectory =>
-        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LeeYongeOrdering");
+        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CameywareOrder");
 
     private static string PreferenceFilePath => System.IO.Path.Combine(PreferenceDirectory, FileName);
 

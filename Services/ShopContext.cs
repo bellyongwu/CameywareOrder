@@ -1,10 +1,10 @@
 using System.ComponentModel;
-using LeeYongeOrdering.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Data;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace LeeYongeOrdering.Services;
+namespace CameywareOrder.Services;
 
 /// <summary>
 /// The shop the application is currently working in. Every shop-scoped decision — which orders are

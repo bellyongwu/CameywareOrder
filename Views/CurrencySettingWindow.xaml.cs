@@ -1,10 +1,10 @@
 using System.Windows;
 using System.Windows.Controls;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
-using LeeYongeOrdering.Services;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
+using CameywareOrder.Services;
 
-namespace LeeYongeOrdering.Views;
+namespace CameywareOrder.Views;
 
 /// <summary>
 /// Small dialog that edits the application-wide currency setting (see

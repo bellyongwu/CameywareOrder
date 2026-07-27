@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Windows.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 /// <summary>
 /// Lists every service that is actually present in an order (has a charge, details,

@@ -1,18 +1,24 @@
-# Context — LeeYongeOrdering
+# Context — CameywareOrder
 
 Running project state, recent decisions, and gotchas. Update as work proceeds.
 Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Workspace
 
-- Repo: `d:\Projects\LeeYongeOrdering` (moved from `c:\` — older TODO entries
-  still quote the old path)
-- App process name (kill before building): `LeeYongeOrdering`
+- **Renamed 2026-07-27: LeeYongeOrdering → CameywareOrder** (product is now developed by
+  Cameyware INC). Namespace, assembly, exe, `.csproj`/`.sln` and the LocalAppData folder all
+  carry the new name. Two things deliberately did NOT change — see the rebrand entry in
+  `TODO.md`: the **repo directory** (still `LeeYongeOrdering`, renaming it would break open
+  editors and local paths for no gain) and **`Main.HeaderTitle`** (上海丽扬高级定制 /
+  "Shanghai LeeYonge Bespoke" — that is the customer shop's name, not the product's).
+- Repo: `c:\Projects\LeeYongeOrdering` — directory name is intentionally stale, everything
+  inside it is `CameywareOrder`. Older TODO entries quote a `d:\` path from a past move.
+- App process name (kill before building): `CameywareOrder`
 - Build/verify command:
   ```powershell
-  Get-Process -Name LeeYongeOrdering -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+  Get-Process -Name CameywareOrder -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
   Start-Sleep -Milliseconds 400
-  dotnet build LeeYongeOrdering.csproj -v quiet --nologo 2>&1 | Select-String -Pattern "error|Build succeeded|Build FAILED"
+  dotnet build CameywareOrder.csproj -v quiet --nologo 2>&1 | Select-String -Pattern "error|Build succeeded|Build FAILED"
   ```
   Expect `Build succeeded. 0 Error(s)`.
 
@@ -88,7 +94,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   it provides, never the application around it.
   - The catch is `IOException` ONLY, on purpose — a broader one would hide a genuinely broken
     hosted service behind a "everything is fine" start.
-  - A busy 5050 almost always means another `LeeYongeOrdering` process, sometimes one with no
+  - A busy 5050 almost always means another `CameywareOrder` process, sometimes one with no
     window at all. `Get-NetTCPConnection -LocalPort 5050` names the owner.
 
 - **Shop isolation rests on two mechanisms in `AppDbContext` — do not work around either.**
@@ -499,7 +505,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   (B/I/U, font size, align, color swatches) with a logo card and one tab per
   language, each holding a header + footer `RichTextBox`. Persistence:
   `Services/ReceiptBrandingStore` (static) writes `receipt-branding.json` + a
-  `logo.*` file under `%LocalAppData%\LeeYongeOrdering\Branding`;
+  `logo.*` file under `%LocalAppData%\CameywareOrder\Branding`;
   `ReceiptBrandingSettings` stores per-language `HeaderXaml`/`FooterXaml`.
   `Services/BrandingRenderer` round-trips content via `XamlWriter.Save` /
   `XamlReader.Parse` (FlowDocument ↔ XAML string) and also renders XAML → QuestPDF

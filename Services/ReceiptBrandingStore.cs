@@ -1,9 +1,9 @@
 using System.IO;
 using System.Text.Json;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Models;
 using Path = System.IO.Path;
 
-namespace LeeYongeOrdering.Services;
+namespace CameywareOrder.Services;
 
 /// <summary>Horizontal placement of the logo in printed receipts and the measurements PDF.</summary>
 public enum LogoPlacement
@@ -61,7 +61,7 @@ public static class ReceiptBrandingStore
     private static string BrandingRoot =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LeeYongeOrdering",
+            "CameywareOrder",
             "Branding");
 
     /// <summary>

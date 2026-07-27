@@ -1,4 +1,4 @@
-namespace LeeYongeOrdering.Models;
+namespace CameywareOrder.Models;
 
 /// <summary>
 /// What a signed-in user is allowed to do. Only <see cref="Admin"/> is issued today and nothing is

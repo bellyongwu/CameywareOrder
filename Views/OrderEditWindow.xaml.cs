@@ -4,13 +4,13 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using LeeYongeOrdering.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Data;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace LeeYongeOrdering.Views;
+namespace CameywareOrder.Views;
 
 public partial class OrderEditWindow : Window
 {

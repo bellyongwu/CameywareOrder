@@ -2,14 +2,14 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
-using LeeYongeOrdering.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
-using LeeYongeOrdering.Services;
+using CameywareOrder.Data;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
+using CameywareOrder.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace LeeYongeOrdering.Views;
+namespace CameywareOrder.Views;
 
 /// <summary>
 /// Creates a shop, and edits an existing one. Both modes write the same fields — name per language,

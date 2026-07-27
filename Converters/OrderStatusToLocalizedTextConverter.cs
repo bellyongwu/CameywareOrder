@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Windows.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 [ValueConversion(typeof(OrderStatus), typeof(string))]
 public class OrderStatusToLocalizedTextConverter : IValueConverter

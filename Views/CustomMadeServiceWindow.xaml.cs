@@ -7,15 +7,15 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Collections.ObjectModel;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
-using LeeYongeOrdering.Services;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
+using CameywareOrder.Services;
 using Microsoft.Win32;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
-namespace LeeYongeOrdering.Views;
+namespace CameywareOrder.Views;
 
 public partial class CustomMadeServiceWindow : Window
 {

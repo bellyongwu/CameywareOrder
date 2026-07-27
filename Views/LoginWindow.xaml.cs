@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Services;
+using CameywareOrder.Localization;
+using CameywareOrder.Services;
 
-namespace LeeYongeOrdering.Views;
+namespace CameywareOrder.Views;
 
 /// <summary>
 /// First screen of the application: signs a user in before anything else runs. Replaces the

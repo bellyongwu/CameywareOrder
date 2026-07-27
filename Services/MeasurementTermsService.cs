@@ -1,10 +1,10 @@
 using System.IO;
 using System.Text.Json;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
 using Path = System.IO.Path;
 
-namespace LeeYongeOrdering.Services;
+namespace CameywareOrder.Services;
 
 /// <summary>
 /// Owns the Measurement Terms configuration: the master list of measurement terms
@@ -398,7 +398,7 @@ public sealed class MeasurementTermsService
     private static string SettingDirectory =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LeeYongeOrdering");
+            "CameywareOrder");
 
     /// <summary>Pre-multi-shop file; the seed the first shop's terms are adopted from.</summary>
     private static string LegacyFilePath => Path.Combine(SettingDirectory, FileName);

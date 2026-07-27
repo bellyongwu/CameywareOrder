@@ -2,10 +2,10 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
 
-namespace LeeYongeOrdering.Views;
+namespace CameywareOrder.Views;
 
 /// <summary>
 /// Small editor that lets the user provide a name for a custom measurement term (or

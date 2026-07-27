@@ -1,6 +1,6 @@
 using System.Linq;
 
-namespace LeeYongeOrdering.Models;
+namespace CameywareOrder.Models;
 
 public enum CustomMadeServiceMode
 {

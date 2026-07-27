@@ -1,6 +1,6 @@
-using LeeYongeOrdering.Models;
+using CameywareOrder.Models;
 
-namespace LeeYongeOrdering.Services;
+namespace CameywareOrder.Services;
 
 // Reads custom-made measurement data straight off an order's saved records (rather than
 // the live editor) so the main window can render the "定制服务" list flag and print all

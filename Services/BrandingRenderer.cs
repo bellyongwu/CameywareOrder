@@ -7,7 +7,7 @@ using System.Windows.Media.Imaging;
 using QuestPDF.Fluent;
 using QuestPDF.Infrastructure;
 
-namespace LeeYongeOrdering.Services;
+namespace CameywareOrder.Services;
 
 /// <summary>
 /// Bridges the rich header/footer content between its three representations:

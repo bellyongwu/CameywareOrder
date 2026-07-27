@@ -2,7 +2,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
-namespace LeeYongeOrdering.Views;
+namespace CameywareOrder.Views;
 
 public partial class DocumentPreviewWindow : Window
 {

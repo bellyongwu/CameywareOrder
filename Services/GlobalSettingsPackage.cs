@@ -1,12 +1,12 @@
 using System.IO;
 using System.IO.Compression;
 using System.Text.Json;
-using LeeYongeOrdering.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Data;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
 using Path = System.IO.Path;
 
-namespace LeeYongeOrdering.Services;
+namespace CameywareOrder.Services;
 
 /// <summary>
 /// Everything the app keeps on this machine, in one file: the order database (with its

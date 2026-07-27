@@ -2,9 +2,9 @@ using System.Globalization;
 using System.IO;
 using System.Windows.Data;
 using System.Windows.Media.Imaging;
-using LeeYongeOrdering.Services;
+using CameywareOrder.Services;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 // Loads a stored document image into a thumbnail bitmap for square previews.
 // The bytes are fully decoded on load (BitmapCacheOption.OnLoad) so the file is

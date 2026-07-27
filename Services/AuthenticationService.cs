@@ -2,10 +2,10 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Models;
 using Path = System.IO.Path;
 
-namespace LeeYongeOrdering.Services;
+namespace CameywareOrder.Services;
 
 /// <summary>
 /// Sign-in for the application. Accounts live in <c>credentials.json</c> under the app's local
@@ -157,7 +157,7 @@ public sealed class AuthenticationService
     private static string SettingDirectory =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LeeYongeOrdering");
+            "CameywareOrder");
 
     private static string SettingFilePath => Path.Combine(SettingDirectory, FileName);
 

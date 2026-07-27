@@ -1,9 +1,9 @@
 using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Models;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 /// <summary>
 /// Maps an <see cref="Order"/>'s <see cref="Order.PaymentStatusKind"/> to the brush

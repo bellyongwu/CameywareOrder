@@ -1,10 +1,10 @@
 using System.ComponentModel;
 using System.IO;
 using System.Text.Json;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Models;
 using Path = System.IO.Path;
 
-namespace LeeYongeOrdering.Services;
+namespace CameywareOrder.Services;
 
 /// <summary>
 /// Application-wide currency setting. For a small business the currency is a
@@ -84,7 +84,7 @@ public sealed class CurrencySettingService : INotifyPropertyChanged
     private static string SettingDirectory =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "LeeYongeOrdering");
+            "CameywareOrder");
 
     private static string SettingFilePath => Path.Combine(SettingDirectory, FileName);
 

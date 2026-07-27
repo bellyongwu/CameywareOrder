@@ -1,9 +1,9 @@
 using System.IO;
-using LeeYongeOrdering.Data;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Data;
+using CameywareOrder.Models;
 using Path = System.IO.Path;
 
-namespace LeeYongeOrdering.Services;
+namespace CameywareOrder.Services;
 
 // Global helper for storing, retrieving, exporting and deleting the image files
 // attached to custom-made records. Files live next to the database under AppData so

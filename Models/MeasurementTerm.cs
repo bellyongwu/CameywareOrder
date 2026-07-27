@@ -1,4 +1,4 @@
-namespace LeeYongeOrdering.Models;
+namespace CameywareOrder.Models;
 
 /// <summary>
 /// Whether a measurement term is commonly used regardless of gender, or specific to

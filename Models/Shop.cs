@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 
-namespace LeeYongeOrdering.Models;
+namespace CameywareOrder.Models;
 
 /// <summary>
 /// One shop (branch) whose orders and settings this installation manages. Every order belongs to

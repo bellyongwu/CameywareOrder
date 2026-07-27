@@ -1,11 +1,11 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
-using LeeYongeOrdering.Services;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
+using CameywareOrder.Services;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 // Drives the "定制服务" list column. Bound to the whole Order row; the ConverterParameter
 // selects what to emit:

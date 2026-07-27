@@ -10,15 +10,15 @@ using System.Data.Common;
 using System.Net;
 using System.Net.Sockets;
 using System.Windows;
-using LeeYongeOrdering.Data;
-using LeeYongeOrdering.GraphQL;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
-using LeeYongeOrdering.Services;
-using LeeYongeOrdering.ViewModels;
-using LeeYongeOrdering.Views;
+using CameywareOrder.Data;
+using CameywareOrder.GraphQL;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
+using CameywareOrder.Services;
+using CameywareOrder.ViewModels;
+using CameywareOrder.Views;
 
-namespace LeeYongeOrdering;
+namespace CameywareOrder;
 
 public partial class App : Application
 {
@@ -68,7 +68,7 @@ public partial class App : Application
         {
             // Deliberately not localized: localization is itself part of startup and may be
             // exactly what failed, so this cannot depend on the string table being loaded.
-            MessageBox.Show(ex.ToString(), "LeeYonge Ordering — startup failed",
+            MessageBox.Show(ex.ToString(), "Cameyware Order — startup failed",
                 MessageBoxButton.OK, MessageBoxImage.Error);
             Shutdown(1);
         }
@@ -78,6 +78,12 @@ public partial class App : Application
     {
         // Prevent WPF from shutting down when the language picker closes.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        // FIRST, before anything resolves a storage path. The product rename moved the data folder
+        // from %LocalAppData%\LeeYongeOrdering to \CameywareOrder, and EnsureDatabasePathReady
+        // below CREATES that folder — so running this any later would find the destination already
+        // present, skip the move, and hand an existing shop an empty order list.
+        LocalDataFolderMigration.EnsureCurrentFolderName();
 
         var localization = LocalizationService.Instance;
         var languageFilePath = ResolveLanguageFilePath();

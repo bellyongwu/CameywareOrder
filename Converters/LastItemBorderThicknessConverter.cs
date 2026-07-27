@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 /// <summary>
 /// Produces a bottom border for every item in a list except the last one.

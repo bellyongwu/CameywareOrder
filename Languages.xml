@@ -46,14 +46,14 @@
     <Text key="Branding.Cancel">取消</Text>
     <Text key="Login.Title">登录</Text>
     <Text key="Login.Welcome">欢迎</Text>
-    <Text key="Login.WelcomeMessage">欢迎使用 LeeYonge 订单管理系统</Text>
+    <Text key="Login.WelcomeMessage">欢迎使用 Cameyware 订单管理系统</Text>
     <Text key="Login.UserName">用户名</Text>
     <Text key="Login.Password">密码</Text>
     <Text key="Login.SignIn">登录</Text>
     <Text key="Login.Failed">用户名或密码不正确。</Text>
     <Text key="Login.Language">语言</Text>
     <Text key="LanguageSelection.Welcome">欢迎</Text>
-    <Text key="LanguageSelection.WelcomeMessage">欢迎使用 LeeYonge 订单管理系统</Text>
+    <Text key="LanguageSelection.WelcomeMessage">欢迎使用 Cameyware 订单管理系统</Text>
     <Text key="LanguageSelection.Enter">进入系统</Text>
 
     <Text key="Toolbar.SwitchShop">切换店铺</Text>
@@ -459,14 +459,14 @@
     <Text key="Branding.Cancel">Cancel</Text>
     <Text key="Login.Title">Sign In</Text>
     <Text key="Login.Welcome">Welcome</Text>
-    <Text key="Login.WelcomeMessage">Welcome to the LeeYonge order management system</Text>
+    <Text key="Login.WelcomeMessage">Welcome to the Cameyware order management system</Text>
     <Text key="Login.UserName">User name</Text>
     <Text key="Login.Password">Password</Text>
     <Text key="Login.SignIn">Sign In</Text>
     <Text key="Login.Failed">Incorrect user name or password.</Text>
     <Text key="Login.Language">Language</Text>
     <Text key="LanguageSelection.Welcome">Welcome</Text>
-    <Text key="LanguageSelection.WelcomeMessage">Welcome to the LeeYonge Ordering System</Text>
+    <Text key="LanguageSelection.WelcomeMessage">Welcome to the Cameyware Order System</Text>
     <Text key="LanguageSelection.Enter">Enter System</Text>
 
     <Text key="Toolbar.SwitchShop">Switch Shop</Text>

@@ -1,4 +1,4 @@
-# LeeYonge Ordering
+# Cameyware Order
 
 A bilingual (Simplified Chinese / English) desktop order-management application for a
 bespoke tailoring shop. It records customer orders across three service lines, tracks the
@@ -48,17 +48,17 @@ Around that core the app provides:
 ### Build and run
 
 ```powershell
-dotnet build LeeYongeOrdering.csproj
-dotnet run --project LeeYongeOrdering.csproj
+dotnet build CameywareOrder.csproj
+dotnet run --project CameywareOrder.csproj
 ```
 
 > **The running app locks its own executable.** A rebuild fails with a file-in-use error
 > unless you stop it first:
 >
 > ```powershell
-> Get-Process -Name LeeYongeOrdering -ErrorAction SilentlyContinue | Stop-Process -Force
+> Get-Process -Name CameywareOrder -ErrorAction SilentlyContinue | Stop-Process -Force
 > Start-Sleep -Milliseconds 400
-> dotnet build LeeYongeOrdering.csproj
+> dotnet build CameywareOrder.csproj
 > ```
 
 On first launch the app asks which language to use; the choice is remembered.
@@ -67,7 +67,7 @@ On first launch the app asks which language to use; the choice is remembered.
 
 ## Where your data lives
 
-Everything is stored under `%LOCALAPPDATA%\LeeYongeOrdering\`:
+Everything is stored under `%LOCALAPPDATA%\CameywareOrder\`:
 
 | Path | Contents |
 | --- | --- |
@@ -208,7 +208,7 @@ they are.
 Verify every change set with a clean build:
 
 ```powershell
-dotnet build LeeYongeOrdering.csproj -v quiet --nologo
+dotnet build CameywareOrder.csproj -v quiet --nologo
 ```
 
 Expect `Build succeeded. 0 Error(s)`.

@@ -7,15 +7,15 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
-using LeeYongeOrdering.Converters;
-using LeeYongeOrdering.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
-using LeeYongeOrdering.Services;
-using LeeYongeOrdering.ViewModels;
-using LeeYongeOrdering.Views;
+using CameywareOrder.Converters;
+using CameywareOrder.Data;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
+using CameywareOrder.Services;
+using CameywareOrder.ViewModels;
+using CameywareOrder.Views;
 
-namespace LeeYongeOrdering;
+namespace CameywareOrder;
 
 public partial class MainWindow : Window
 {
@@ -149,7 +149,7 @@ public partial class MainWindow : Window
             // This handler is async void and the window it belongs to is already closing, so an
             // exception here would otherwise take the whole dispatcher down with no explanation.
             // No owner window: by this point there may not be one.
-            MessageBox.Show(ex.ToString(), "LeeYonge Ordering", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show(ex.ToString(), "Cameyware Order", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 

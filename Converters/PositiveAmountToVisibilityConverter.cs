@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 [ValueConversion(typeof(decimal), typeof(Visibility))]
 public class PositiveAmountToVisibilityConverter : IValueConverter

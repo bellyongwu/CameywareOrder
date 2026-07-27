@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace LeeYongeOrdering.Migrations
+namespace CameywareOrder.Migrations
 {
     /// <inheritdoc />
     public partial class AddOrderPaymentFields : Migration

@@ -1,4 +1,4 @@
-# TODO / Checkpoints — LeeYongeOrdering
+# TODO / Checkpoints — CameywareOrder
 
 Checkpoint log for work driven by the `wpf-dev` skill. **When a new
 request arrives, append a new entry at the top of "Open / in progress" BEFORE
@@ -16,6 +16,58 @@ Entry format:
 ```
 
 ## Open / in progress
+
+### 2026-07-27 15:25 — Rebrand LeeYongeOrdering → CameywareOrder  [DONE]
+- Ask: "Now, Lets renaming the whole project, Lets call the program CameywareOrder, whenever you see LeeYongeOrder, rename to this. Why? Previously, we wanted to design a simple single store tracking system. Now the concept has been more scalable. now, we put everything managed/developed by Cameyware INC."
+- Decisions taken with the user before starting (three non-mechanical calls inside an otherwise mechanical rename):
+  - **Data folder renames WITH a one-time auto-migration.** `%LocalAppData%\LeeYongeOrdering`
+    → `CameywareOrder`, moved on first launch when the new folder is absent and the old one
+    exists. Without this, every existing installation would launch as a fresh install with an
+    empty order list — the path is resolved independently in SIX places.
+  - **`Main.HeaderTitle` (上海丽扬高级定制 / "Shanghai LeeYonge Bespoke") is NOT renamed.** It is
+    the customer shop's own name — seeded into `Shop.NamesJson` and printed on receipts —
+    whereas Cameyware INC is the vendor. Only product strings change.
+  - **Repo directory keeps its name**; `.csproj`/`.sln`/assembly are renamed.
+- Plan:
+  - [ ] Rename namespace `LeeYongeOrdering` → `CameywareOrder` across all `.cs`/`.xaml`.
+  - [ ] `git mv` the `.csproj`/`.sln`; assembly + root namespace follow the file name.
+  - [ ] Surgical `Languages.xml` edit: product strings only, `Main.HeaderTitle` untouched.
+  - [ ] New one-time LocalAppData folder migration, run before anything reads a path.
+  - [ ] Docs: README + Architecture + the operational parts of context.md (process name and
+        build command both change); historical TODO entries and verbatim asks left as written.
+  - [ ] Build and confirm `Build succeeded. 0 Error(s)`.
+- Done:
+  - [x] 72 code/project files rewritten (`LeeYongeOrdering`→`CameywareOrder`,
+        `LeeYonge Ordering`→`Cameyware Order`); `git mv` of the `.csproj`/`.sln`, both recorded as
+        renames (R100/R092). Assembly and root namespace follow the project file name, so
+        `CameywareOrder.exe` is produced and the kill-before-build process name changes with it.
+  - [x] `Languages.xml`: 4 product strings changed, `Main.HeaderTitle` untouched; XML re-parsed at
+        768 `<Text>` elements. Worth noting `App.MainTitle` ALREADY read "Cameyware订单录入系统" /
+        "Order Entry System Designed by Cameyware" — the vendor/shop split was already in the data.
+  - [x] NEW `Services/LocalDataFolderMigration.cs`, called as the FIRST statement of
+        `StartApplicationAsync` — ahead of `EnsureDatabasePathReady()`, which creates the folder and
+        would otherwise make the destination "already exist" and skip the move forever.
+        Handles the empty-placeholder case (a renamed build launched once before the migration
+        existed) and is deliberately FATAL on IOException/UnauthorizedAccess: continuing would
+        show the shop an empty order list, which reads as data loss. The thrown message says the
+        data is safe, names both folders, and points at the usual cause (another copy running).
+  - [x] Stale old-named build outputs cleared (50 files) so nobody launches the wrong exe; a
+        `LeeYongeOrdering.sln` stub the IDE regenerated on reload was deleted.
+- **Verified against the live 76.8 MB data set, not just by build:**
+  - Backup first: `%LocalAppData%\LeeYongeOrdering.FULLBACKUP-preRebrand`, confirmed identical at
+    94 files / 76,834,895 bytes.
+  - Launched the real exe (the migration runs before the login window, so this exercises the
+    wiring too): legacy folder gone, `CameywareOrder` present, **94 files / 76,834,895 bytes —
+    exact match**.
+  - Launched again: legacy NOT recreated, data still 94 / 76,834,895. Idempotent.
+  - Reflection-based testing was tried first and abandoned: Windows PowerShell 5.1 is .NET
+    Framework and returns null for a type in a net8.0 assembly. Running the exe is the better
+    test anyway — it covers the call site, which reflection would have skipped.
+- Notes: build succeeded, 0 warnings / 0 errors. One failure en route, fixed: the new file used a
+  bare `Path`, which is ambiguous under `ImplicitUsings` (`HotChocolate.Path` vs `System.IO.Path`)
+  — the alias `using Path = System.IO.Path;` is required, exactly as `DocumentStorageService` does.
+  Deliberately NOT renamed: the repo directory, `Main.HeaderTitle` (the customer shop's name), and
+  the historical entries in this file including the verbatim `- Ask:` quote above.
 
 ### 2026-07-26 20:30 — Multi-shop + login (scalability)  [IN PROGRESS — Phase 0 of 6 DONE]
 - Ask: "Lets scalable the Whole application" — add a login screen (roles Admin/Manager/Staff later, admin/admin for now, no complexity rules); after login the admin picks an existing shop or creates one; the current data becomes "Shanghai LeeYonge Bespoke"; a new shop collects name, preferred language, currency and measurement-terms setup; bilingual for now, multi-language later; role-gated behaviour left blank.

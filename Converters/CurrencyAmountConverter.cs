@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Windows.Data;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 public class CurrencyAmountConverter : IMultiValueConverter
 {

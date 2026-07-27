@@ -1,9 +1,9 @@
 using HotChocolate.Data;
 using Microsoft.EntityFrameworkCore;
-using LeeYongeOrdering.Data;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Data;
+using CameywareOrder.Models;
 
-namespace LeeYongeOrdering.GraphQL;
+namespace CameywareOrder.GraphQL;
 
 public class Query
 {

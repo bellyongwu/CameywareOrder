@@ -1,10 +1,10 @@
 using System.Globalization;
 using System.Text;
 using System.Windows.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 /// <summary>
 /// Renders a per-service payment breakdown or an overall balance status for an

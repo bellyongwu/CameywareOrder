@@ -5,11 +5,11 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
-using LeeYongeOrdering.Data;
-using LeeYongeOrdering.Localization;
-using LeeYongeOrdering.Models;
+using CameywareOrder.Data;
+using CameywareOrder.Localization;
+using CameywareOrder.Models;
 
-namespace LeeYongeOrdering.ViewModels;
+namespace CameywareOrder.ViewModels;
 
 public class MainViewModel : INotifyPropertyChanged
 {

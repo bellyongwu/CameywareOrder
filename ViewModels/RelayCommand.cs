@@ -1,6 +1,6 @@
 using System.Windows.Input;
 
-namespace LeeYongeOrdering.ViewModels;
+namespace CameywareOrder.ViewModels;
 
 /// <summary>Minimal ICommand implementation that works with async lambdas.</summary>
 public class RelayCommand : ICommand

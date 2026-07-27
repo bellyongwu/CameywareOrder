@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Windows.Data;
-using LeeYongeOrdering.Localization;
+using CameywareOrder.Localization;
 
-namespace LeeYongeOrdering.Converters;
+namespace CameywareOrder.Converters;
 
 // Resolves the cancellation/return reason shown in the order-details panel and the
 // receipt: values[0] = Order.StatusReasonCategory (stable key, e.g. "CustomerDoesNotWant"
