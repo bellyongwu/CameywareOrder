@@ -1,0 +1,85 @@
+<Window x:Class="LeeYongeOrdering.Views.ShopPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:LeeYongeOrdering.Localization"
+        Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Title], Mode=OneWay}"
+        Height="520" Width="520"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Icon="/Assets/ICONS/app-icon.ico"
+        Background="#F5F6FA">
+    <!-- Shown twice in the app's life: once at startup between sign-in and the main window, and
+         again for 本地配置 → 切换店铺. It therefore cannot rely on DI (the host is not started yet
+         at the first call site) and is constructed by hand, like LoginWindow.
+         CenterScreen rather than CenterOwner because there is no owner on the startup path. -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="#2C3E50" Padding="24,18">
+            <StackPanel>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Title], Mode=OneWay}"
+                           Foreground="White" FontSize="20" FontWeight="Bold"/>
+                <!-- Who is signed in and what they are allowed to do. Set in code because it
+                     interleaves a stored user name with a localized role name. -->
+                <TextBlock x:Name="SignedInText" Foreground="#BDC3C7" FontSize="12" Margin="0,6,0,0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="24,18,24,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0"
+                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Prompt], Mode=OneWay}"
+                       FontSize="13" Foreground="#374151" Margin="0,0,0,10" TextWrapping="Wrap"/>
+
+            <Grid Grid.Row="1">
+                <ListBox x:Name="ShopList" BorderBrush="#D6DBE3" BorderThickness="1" Background="White"
+                         HorizontalContentAlignment="Stretch"
+                         MouseDoubleClick="OnShopDoubleClick"
+                         SelectionChanged="OnShopSelectionChanged">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="6,7">
+                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
+                                           Foreground="#1F2937" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Details}" FontSize="11" Foreground="#6B7280"
+                                           Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Sits on top of the (empty) list rather than replacing it, so no layout changes
+                     when a shop is created without closing this window. -->
+                <TextBlock x:Name="EmptyText"
+                           Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Empty], Mode=OneWay}"
+                           Visibility="Collapsed"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           Foreground="#9CA3AF" FontSize="13" TextWrapping="Wrap" MaxWidth="320"
+                           TextAlignment="Center" IsHitTestVisible="False"/>
+            </Grid>
+        </Grid>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="24,16,24,20">
+            <Button x:Name="CreateButton"
+                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.CreateNew], Mode=OneWay}"
+                    Padding="16,7" Margin="0,0,10,0" Click="OnCreateClick"/>
+            <Button x:Name="CancelButton"
+                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Cancel], Mode=OneWay}"
+                    Padding="18,7" Margin="0,0,10,0" Click="OnCancelClick" IsCancel="True"/>
+            <Button x:Name="OpenButton"
+                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Open], Mode=OneWay}"
+                    Padding="24,7" Background="#2980B9" Foreground="White" FontWeight="SemiBold"
+                    Click="OnOpenClick" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

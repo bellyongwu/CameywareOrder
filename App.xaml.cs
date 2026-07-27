@@ -148,21 +148,18 @@ public partial class App : Application
             await EnsureShopBootstrapAsync(db, localization);
         }
 
-        // Open a shop before anything shop-scoped can run. Until the picker exists (Phase 5) this
-        // simply takes the first active shop, which after the bootstrap is always the adopted one.
+        // Open a shop before anything shop-scoped can run.
         ShopContext.Instance.Initialize(_host.Services.GetRequiredService<IServiceScopeFactory>());
 
-        // For a user allowed to choose, the login screen's language IS the session's language —
-        // whether they changed it or simply accepted what was shown. Overriding it with the shop's
-        // preference only when the picker went untouched made the displayed value a lie: the
-        // screen said English, the app then opened in Chinese.
-        //
-        // Everyone else runs in the language their shop is configured for, so a branch's staff all
-        // see the same thing. The picker itself stays usable for everyone, or a user could not read
-        // the screen they sign in on.
-        var keepLoginLanguage = AuthenticationService.Instance.CanChooseLanguage;
-
-        await OpenInitialShopAsync(keepCurrentLanguage: keepLoginLanguage);
+        var configureTerms = await OpenInitialShopAsync();
+        if (!ShopContext.Instance.HasShop)
+        {
+            // No shop was opened — the user cancelled the picker, or there is nothing they may
+            // open. Same reasoning as the login window: ShutdownMode is still OnExplicitShutdown,
+            // so returning would leave a windowless process holding the database.
+            Shutdown();
+            return;
+        }
 
         // Start Kestrel + all hosted services
         await _host.StartAsync();
@@ -171,6 +168,12 @@ public partial class App : Application
         MainWindow = mainWindow;
         ShutdownMode = ShutdownMode.OnMainWindowClose;
         mainWindow.Show();
+
+        // Deferred until the shop is both open and bound: the terms editor writes to whichever
+        // shop MeasurementTermsService is pointed at, so offering it any earlier would have
+        // configured the shop the administrator was leaving.
+        if (configureTerms)
+            new MeasurementTermsWindow { Owner = mainWindow }.ShowDialog();
     }
 
     private static string ResolveLanguageFilePath()
@@ -275,30 +278,82 @@ public partial class App : Application
     /// <summary>
     /// Selects the shop to work in and applies its settings. Shop-scoped services are bound here,
     /// before any of them is read, so none of them can ever resolve against "no shop".
+    /// Returns true when the user asked to configure a newly created shop's measurement terms.
     /// </summary>
-    private async Task OpenInitialShopAsync(bool keepCurrentLanguage)
+    private async Task<bool> OpenInitialShopAsync()
+    {
+        var shops = await LoadSelectableShopsAsync();
+
+        // Staff and managers on a single-shop installation — the overwhelmingly common case — get
+        // no picker at all. A modal with exactly one choice is a keystroke tax on every shift.
+        // Administrators always see it: choosing and managing shops is what it is for.
+        if (shops.Count == 1 && !AuthenticationService.Instance.CanManageShops)
+        {
+            ApplyActiveShop(shops[0]);
+            return false;
+        }
+
+        // Only reachable when every shop has been archived — the bootstrap always creates one on a
+        // fresh database. An administrator can create a shop from the picker; nobody else can, so
+        // there is nothing to show them but an explanation.
+        if (shops.Count == 0 && !AuthenticationService.Instance.CanManageShops)
+        {
+            var localization = LocalizationService.Instance;
+            MessageBox.Show(
+                localization["Shop.Picker.NoShopForRole"],
+                localization["Shop.Picker.Title"],
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return false;
+        }
+
+        var picker = new ShopPickerWindow(
+            LocalizationService.Instance,
+            _host!.Services.GetRequiredService<IServiceScopeFactory>(),
+            AuthenticationService.Instance.CurrentUser,
+            currentShop: null);
+
+        if (picker.ShowDialog() is not true || picker.SelectedShop is null)
+            return false;
+
+        ApplyActiveShop(picker.SelectedShop);
+        return picker.ConfigureTermsRequested;
+    }
+
+    private async Task<List<Shop>> LoadSelectableShopsAsync()
     {
         using var scope = _host!.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var shop = await db.Shops
+        return await db.Shops
             .AsNoTracking()
             .Where(s => !s.IsArchived)
             .OrderBy(s => s.Id)
-            .FirstOrDefaultAsync();
-
-        if (shop is null)
-            return;
-
-        ApplyActiveShop(shop, keepCurrentLanguage);
+            .ToListAsync();
     }
 
     /// <summary>
-    /// Makes <paramref name="shop"/> the active one and re-points every shop-scoped service at it.
-    /// Shared by startup and (from Phase 5) the switch-shop command, so the two can never drift.
+    /// Opens a shop from outside startup — the 切换店铺 command, and 店铺设置 after an edit.
+    /// Deliberately routes through the same method startup uses, so a shop opened mid-session and
+    /// one opened at launch can never end up in different states.
     /// </summary>
-    private void ApplyActiveShop(Shop shop, bool keepCurrentLanguage = false)
+    internal void OpenShop(Shop shop) => ApplyActiveShop(shop);
+
+    /// <summary>
+    /// Makes <paramref name="shop"/> the active one and re-points every shop-scoped service at it.
+    /// </summary>
+    private void ApplyActiveShop(Shop shop)
     {
+        // For a user allowed to choose, the language on screen is the session's language — whether
+        // they picked it on the login screen or simply accepted what was shown. Overriding it with
+        // the shop's preference made the displayed value a lie: the screen said English, the app
+        // then opened in Chinese. It also matters on a switch: an administrator working across
+        // branches should not have the UI language change under them every time they move shop.
+        //
+        // Everyone else runs in the language their shop is configured for, so a branch's staff all
+        // see the same thing. The login picker itself stays usable for everyone, or a user could
+        // not read the screen they sign in on.
+        var keepCurrentLanguage = AuthenticationService.Instance.CanChooseLanguage;
         ShopContext.Instance.SetActive(shop);
 
         // The shop's own language wins once it is open — UNLESS the user just picked one by hand

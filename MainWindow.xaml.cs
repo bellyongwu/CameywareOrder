@@ -40,6 +40,7 @@ public partial class MainWindow : Window
         DataContext = _viewModel;
 
         InitializeLanguageSwitcher();
+        ApplyRolePermissions();
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _localization.LanguageChanged += OnLanguageChangedGlobally;
         RefreshToolbarLabels();
@@ -64,6 +65,24 @@ public partial class MainWindow : Window
         var label = _localization[isReadOnly ? "Toolbar.ViewOrder" : "Toolbar.EditOrder"];
         EditOrderButton.Content = label;
         EditContextMenuItem.Header = label;
+    }
+
+    /// <summary>
+    /// Applies the signed-in user's capabilities to the chrome. Kept in one place so a new
+    /// role rule has a single obvious home rather than being scattered through the handlers.
+    /// </summary>
+    private void ApplyRolePermissions()
+    {
+        var auth = AuthenticationService.Instance;
+
+        // Non-administrators run in the language their shop is configured for, so a branch's staff
+        // all see the same thing. Hidden rather than disabled — a dead control invites a support
+        // call, an absent one reads as "not offered".
+        var languageVisibility = auth.CanChooseLanguage ? Visibility.Visible : Visibility.Collapsed;
+        LanguageSwitchLabel.Visibility = languageVisibility;
+        LanguageSwitchBox.Visibility = languageVisibility;
+
+        ShopSettingsMenuItem.Visibility = auth.CanManageShops ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void InitializeLanguageSwitcher()
@@ -437,6 +456,78 @@ public partial class MainWindow : Window
     {
         var window = new MeasurementTermsWindow { Owner = this };
         window.ShowDialog();
+    }
+
+    // --- Shops (本地配置 → 切换店铺 / 店铺设置) ----------------------------------
+
+    private void OnSwitchShopClick(object sender, RoutedEventArgs e)
+    {
+        if (!EnsureNoOpenOrderWindows())
+            return;
+
+        var picker = new ShopPickerWindow(
+            _localization,
+            _scopeFactory,
+            AuthenticationService.Instance.CurrentUser,
+            ShopContext.Instance.Current) { Owner = this };
+
+        if (picker.ShowDialog() is not true || picker.SelectedShop is null)
+            return;
+
+        OpenShop(picker.SelectedShop);
+
+        // Deferred to here for the same reason as on the startup path: the terms editor writes to
+        // whichever shop is bound, so the new shop has to be open first.
+        if (picker.ConfigureTermsRequested)
+            new MeasurementTermsWindow { Owner = this }.ShowDialog();
+    }
+
+    private void OnShopSettingsClick(object sender, RoutedEventArgs e)
+    {
+        // Defence in depth: the menu item is hidden for non-administrators, but the check belongs
+        // where the action happens too.
+        if (!AuthenticationService.Instance.CanManageShops || ShopContext.Instance.Current is not { } current)
+            return;
+
+        var setup = new ShopSetupWindow(_localization, _scopeFactory, current) { Owner = this };
+        if (setup.ShowDialog() is not true || setup.Shop is null)
+            return;
+
+        // Re-opened rather than mutated in place: the saved instance came from a different
+        // DbContext, and rebinding is what refreshes the header name, the currency symbol and the
+        // measurement-terms file in one step.
+        OpenShop(setup.Shop);
+    }
+
+    private void OpenShop(Shop shop)
+    {
+        ((App)Application.Current).OpenShop(shop);
+
+        // The order list is filtered by shop, and the currency symbol is rendered per row, so the
+        // list has to be rebuilt even when the shop only had its settings edited.
+        _ = _viewModel.LoadOrdersAsync();
+    }
+
+    /// <summary>
+    /// Blocks a shop switch while an order editor is open. The editor holds an order belonging to
+    /// the shop being left; once the active shop changes, AppDbContext filters that order out, so
+    /// saving would fail to find its own row. Cheaper to refuse than to explain afterwards.
+    /// </summary>
+    private bool EnsureNoOpenOrderWindows()
+    {
+        var openEditor = Application.Current.Windows.OfType<OrderEditWindow>().FirstOrDefault();
+        if (openEditor is null)
+            return true;
+
+        MessageBox.Show(
+            this,
+            _localization["Shop.Switch.CloseEditors"],
+            _localization["Toolbar.SwitchShop"],
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+
+        openEditor.Activate();
+        return false;
     }
 
     // --- Import / export (本地配置 → 导入/导出) ----------------------------------

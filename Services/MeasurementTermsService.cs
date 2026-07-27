@@ -84,6 +84,39 @@ public sealed class MeasurementTermsService
         }
     }
 
+    /// <summary>
+    /// Seeds <paramref name="target"/>'s measurement terms from <paramref name="source"/>'s — the
+    /// new-shop wizard's "copy from an existing shop" option. Copies the FILE rather than the
+    /// in-memory config, so the source shop does not have to be the open one and the active shop's
+    /// binding is left untouched.
+    ///
+    /// Does nothing when the source has no file yet: the target then falls back to the predefined
+    /// defaults when it is bound, which is exactly what the source is showing too.
+    /// </summary>
+    public static void CopyConfigBetweenShops(Shop source, Shop target)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(target);
+
+        try
+        {
+            var from = Path.Combine(SettingDirectory, ShopFileName(source));
+            var to = Path.Combine(SettingDirectory, ShopFileName(target));
+
+            // Never overwrite: a shop that already has terms of its own has been configured.
+            if (!File.Exists(from) || File.Exists(to))
+                return;
+
+            Directory.CreateDirectory(SettingDirectory);
+            File.Copy(from, to);
+        }
+        catch (IOException)
+        {
+            // Best-effort, like every other persistence path here: the new shop falls back to the
+            // seeded defaults rather than the creation failing.
+        }
+    }
+
     private void ReplaceConfigInPlace(MeasurementTermsConfig source)
     {
         _config.Terms.Clear();

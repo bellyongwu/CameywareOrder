@@ -194,6 +194,11 @@
                             </StackPanel>
                         </MenuItem.Header>
                         
+                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SwitchShop], Mode=OneWay}" Click="OnSwitchShopClick"/>
+                        <!-- Administrators only; hidden in code. Edits the OPEN shop's name,
+                             language and currency. -->
+                        <MenuItem x:Name="ShopSettingsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ShopSettings], Mode=OneWay}" Click="OnShopSettingsClick"/>
+                        <Separator/>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CurrencySetting], Mode=OneWay}" Click="OnCurrencySettingClick"/>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.MeasurementTerms], Mode=OneWay}" Click="OnMeasurementTermsClick"/>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
@@ -235,7 +240,9 @@
             <Separator/>
                 <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Refresh], Mode=OneWay}" Command="{Binding LoadOrdersCommand}"  Padding="10,4" Margin="2"/>
             <Separator/>
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Language], Mode=OneWay}" VerticalAlignment="Center" Margin="8,0,4,0"/>
+                <!-- Both hidden in code for non-administrators, who run in the language their shop
+                     is configured for. -->
+                <TextBlock x:Name="LanguageSwitchLabel" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Language], Mode=OneWay}" VerticalAlignment="Center" Margin="8,0,4,0"/>
             <ComboBox x:Name="LanguageSwitchBox" Width="130" Margin="2" VerticalAlignment="Center" SelectionChanged="OnLanguageChanged"/>
         </ToolBar>
 
