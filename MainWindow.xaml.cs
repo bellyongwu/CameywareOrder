@@ -22,6 +22,9 @@ public partial class MainWindow : Window
     private static readonly string ExplorerPath = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
 
+    // Shared file-dialog filter for the JSON import/export dialogs (measurement terms, branding).
+    private const string JsonFileFilter = "JSON (*.json)|*.json";
+
     private readonly MainViewModel _viewModel;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly LocalizationService _localization;
@@ -608,7 +611,7 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog
         {
             FileName = BuildDatedExportFileName("measurement-terms", "json"),
-            Filter = "JSON (*.json)|*.json"
+            Filter = JsonFileFilter
         };
 
         if (dialog.ShowDialog(this) is not true)
@@ -629,7 +632,7 @@ public partial class MainWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Filter = "JSON (*.json)|*.json",
+            Filter = JsonFileFilter,
             CheckFileExists = true
         };
 
@@ -739,7 +742,7 @@ public partial class MainWindow : Window
         var dialog = new SaveFileDialog
         {
             FileName = BuildDatedExportFileName("header-footer-branding", "json"),
-            Filter = "JSON (*.json)|*.json"
+            Filter = JsonFileFilter
         };
 
         if (dialog.ShowDialog(this) is not true)
@@ -760,7 +763,7 @@ public partial class MainWindow : Window
     {
         var dialog = new OpenFileDialog
         {
-            Filter = "JSON (*.json)|*.json",
+            Filter = JsonFileFilter,
             CheckFileExists = true
         };
 
@@ -1042,9 +1045,9 @@ public partial class MainWindow : Window
         document.Blocks.Add(ReceiptStatusLine(_localization["Order.Fields.BalanceStatus"],
             balanceStatusText, BalanceStatusBrush(order.PaymentStatusKind)));
 
-        // Cancelled/returned orders no longer have a meaningful payment-method breakdown;
-        // the receipt shows the cancellation/return reason there instead (mirrors the
-        // on-screen order-details panel).
+        // A cancelled or returned order no longer has a meaningful payment-method breakdown.
+        // The receipt prints the cancellation or return reason in its place, matching what the
+        // on-screen order-details panel shows.
         if (order.IsRefunded)
         {
             var reasonLabelKey = order.Status == OrderStatus.Cancelled

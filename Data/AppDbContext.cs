@@ -58,6 +58,7 @@ public class AppDbContext : DbContext
     {
         var addedOrders = ChangeTracker.Entries<Order>()
             .Where(entry => entry.State == EntityState.Added)
+            .Select(entry => entry.Entity)
             .ToList();
 
         if (addedOrders.Count == 0)
@@ -65,13 +66,13 @@ public class AppDbContext : DbContext
 
         var shop = ShopContext.Instance.RequireCurrent();
 
-        foreach (var entry in addedOrders)
+        foreach (var order in addedOrders)
         {
-            entry.Entity.ShopId = shop.Id;
+            order.ShopId = shop.Id;
             // Stamp the shop's currency onto the order too. The column has existed unused since
             // currency became a global setting; recording what was actually charged makes a
             // per-order currency history possible later without another migration.
-            entry.Entity.CurrencyType = shop.CurrencyType;
+            order.CurrencyType = shop.CurrencyType;
         }
     }
 

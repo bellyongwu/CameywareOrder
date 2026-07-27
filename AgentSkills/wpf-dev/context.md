@@ -18,6 +18,62 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **2026-07-27, OrderEditWindow CS0103 storm — diagnosed, code was correct.** ~80 CS0103
+  errors on `x:Name` controls and `InitializeComponent` while `dotnet build` reported
+  0 errors / 0 warnings. Proof it was the stale design-time model, not a defect:
+  `obj\Debug\net8.0-windows\Views\OrderEditWindow.g.i.cs` held **97** fields at
+  **9:06 AM** while `OrderEditWindow.g.cs` held **147** at **2:09 PM** — the design-time
+  partial was missing 50 controls, among them `ClearAllBalancesStrike` and
+  `AlterationDownCompletedStrike`. Every other `*.g.i.cs` shared the same 9:06 AM stamp,
+  so the whole design-time build was idle. The stale file was deleted (a regenerable
+  `obj/` artifact); clearing it fully needs a language-server restart from the IDE.
+  - **CONFIRMED at 14:58**: after the restart, all 15 `*.g.i.cs` regenerated in one pass
+    and `OrderEditWindow.g.i.cs` came back with **147 fields — identical to `.g.cs`** —
+    carrying the two markers (`ClearAllBalancesStrike`, `AlterationDownCompletedStrike`)
+    it had been missing. Every CS0103 **and all 4 SonarLint findings** cleared together,
+    which is what the CLI analysis had already predicted by reporting zero. Not one line
+    of application code was changed to fix ~80 editor errors — the whole episode was one
+    stale artifact. **The field-count comparison is the reliable test both before and
+    after: it proves the diagnosis up front and proves the fix landed afterwards, without
+    trusting a Problems view that can be quiet for the wrong reason.**
+  - **It came back ~2 minutes later on `CustomMadeServiceWindow.xaml.cs`** (fresh
+    document, `modelVersionId: 1`) while that window's `.g.i.cs` was correct and current
+    at 37/37 fields — the "name IS present yet reported missing" signature, i.e. the
+    server had stopped reading the generated files again. `dotnet.restartServer` fixed
+    it a second time. Suspected trigger: a CLI `dotnet build` run between the two,
+    rewriting `obj/` under the live IDE. NOT proven, so it is written as a suspicion —
+    but the practical rule stands either way: **batch edits and build once**, rather
+    than building between every check, while someone has the project open.
+  - **Dead end, do not retry:** redirecting CLI builds away from the IDE's folder with
+    `-p:BaseIntermediateOutputPath=obj-cli\` FAILS on this project. WPF's temp-project
+    mechanism (`*_wpftmp.csproj`) ignores the override, reads stale `AssemblyInfo` files
+    out of the real `obj/`, and emits a wall of CS0579 duplicate-attribute errors. It
+    also leaves `*_wpftmp*` residue behind (420 files were cleared afterwards). Recovery
+    is `Remove-Item obj -Recurse -Filter '*_wpftmp*'` plus deleting `obj-cli`/`bin-cli`.
+  - Likely trigger: adding then removing the `SonarAnalyzer.CSharp` PackageReference in
+    the preceding turn rewrote the `.csproj` and `project.assets.json` twice, and C# Dev
+    Kit reloads the project on such a change. **Expect an IDE model refresh to be needed
+    after any csproj edit**, including temporary analyzer packages.
+
+- **Running Sonar without SonarLint**: when the IDE/SonarLint tooling is unavailable, add
+  `SonarAnalyzer.CSharp` as a PackageReference, `dotnet build`, read the `warning Sxxxx` lines,
+  then remove the package again. SonarLint *is* this analyzer, so rule ids and messages match the
+  IDE exactly. Verified 2026-07-27: it found 11 issues the plain build reported as 0 warnings.
+  - **A full build sees the XAML-generated `.g.cs` fields that standalone single-file analysis
+    cannot.** So an S2325 "make static" raised THIS way is far more likely to be real than the
+    documented SonarLint false positive — check whether the method truly touches an `x:Name`
+    control before either complying or dismissing it. `MeasurementTermsWindow.ShowDuplicateTermWarning`
+    was a genuine one and is now static.
+  - It does NOT see XAML data bindings. `ShopPickerWindow.ShopRow.Name` is bound as
+    `{Binding Name}` and was flagged S1144 "unused"; it carries a justified `[SuppressMessage]`.
+    Deleting a "dead" member on a class used as a template item is how a list silently goes blank.
+- **Every `Regex` in this project carries a match timeout** (S6444). Each file declares a
+  `private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1)` **above** its patterns:
+  static field initializers run in TEXTUAL order, so a timeout declared below them is still
+  `TimeSpan.Zero` when the `Regex` constructors run, which `Regex` rejects — surfacing as a
+  `TypeInitializationException` on the first keystroke rather than as a build error. Keep new
+  patterns below that field.
+
 - **The GraphQL endpoint must never be able to stop the app.** Nothing in the desktop UI reads
   through it (no `HttpClient`, no in-app reference to the URL) — it exists for external callers,
   while the UI goes through `AppDbContext` directly. Until 2026-07-27 a fixed `UseUrls(...:5050)`

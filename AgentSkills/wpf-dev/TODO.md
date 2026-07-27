@@ -96,6 +96,40 @@ Entry format:
 
 ## Completed
 
+### 2026-07-27 14:10 — Run both quality gates; clear every SonarQube finding  [DONE]
+- Ask: "skill :wpf-skill. run the IDE checking and SONAQUBE FIXES"
+- **Neither gate's tooling exists in this session** — no `get_errors`/diagnostics tool and no
+  SonarLint/SonarQube tool in the registry (the IDE diagnostics seen earlier arrive unprompted from
+  a PostToolUse hook on `Edit`, which cannot be invoked on demand). Reproduced both from the CLI:
+  - **Gate 1** — `dotnet build` for real compiler diagnostics: 0 errors, 0 warnings.
+  - **Gate 2** — added `SonarAnalyzer.CSharp` 10.30.0 as a PackageReference, built, read the
+    `warning Sxxxx` lines, then **removed the package** (`git diff` on the csproj confirms it is
+    back to its committed state). SonarLint IS this analyzer, so the rules and ids match the IDE.
+    **Technique worth reusing whenever SonarLint is unavailable.**
+- Scope note: the session's own changes (`App.xaml.cs`, `MainWindow.xaml`) came back **completely
+  clean**; `MainWindow.xaml` has no C# to analyse. All 11 findings were in untouched files, fixed
+  because the ask was explicitly for the fixes.
+- Fixed (11 findings / 6 files), re-analysed to zero:
+  - [x] **S3267** `AppDbContext.StampNewOrdersWithShop` — projected with `.Select(entry => entry.Entity)`
+        and iterated orders directly instead of reaching through `entry.Entity` twice per iteration.
+  - [x] **S6444 ×7** (`OrderEditWindow` 3, `CustomMadeServiceWindow` 4) — every `Regex` now carries a
+        1-second match timeout. A `RegexTimeout` field was added to each file **above** the patterns:
+        static field initializers run in TEXTUAL order, so declaring it below would hand the
+        constructors `TimeSpan.Zero`, which `Regex` rejects — and it would surface as a
+        `TypeInitializationException` on first keystroke, not as a build error.
+  - [x] **S2325** `MeasurementTermsWindow.ShowDuplicateTermWarning` → `static`. Checked before
+        complying: it touches no `x:Name` control and no field, only the localization singleton, so
+        this is a REAL finding rather than the documented WPF false positive.
+  - [x] **S125** `MainWindow.xaml.cs` — a prose comment flagged as commented-out code. Exactly the
+        pattern context.md already warns about (semicolon + parenthetical reading as syntax);
+        reworded into plain sentences, no behaviour touched.
+  - [x] **S1144** `ShopPickerWindow.ShopRow.Name` — **false positive, suppressed with justification.**
+        It is consumed by `{Binding Name}` in the picker item template (`ShopPickerWindow.xaml:52`);
+        XAML bindings are invisible to Roslyn. Deleting it would have blanked the shop name.
+- Notes: build succeeded, 0 warnings / 0 errors, both with the analyzer present and after removing
+  it. No DB, XAML or string-table change. `Details`/`Shop` on the same `ShopRow` are equally
+  XAML-only but were NOT flagged — Sonar's inconsistency, per SKILL §10; left untouched deliberately.
+
 ### 2026-07-27 12:45 — Startup died with "Failed to bind 127.0.0.1:5050 — address in use"  [DONE]
 - Ask: "When i tried to login to read records, it says System.IO.Exceptions: Failed to bind 127.0.0.1:5050... address in use. can you find how we can avoid this"
 - Diagnosed live before changing anything: `Get-NetTCPConnection -LocalPort 5050` named PID 15892 —

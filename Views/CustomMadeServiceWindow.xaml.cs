@@ -23,11 +23,19 @@ public partial class CustomMadeServiceWindow : Window
 
     private const string ValidationTitleKey = "OrderEdit.ValidationTitle";
 
-    private static readonly Regex MoneyInputPattern = new(@"^\d*(\.\d{0,2})?$");
-    private static readonly Regex MeasurementInputPattern = new(@"^(\d+(\.\d*)?[+-]?)?$");
+    // Backstop against pathological backtracking on pasted input (S6444). MUST be declared before
+    // the patterns that use it: static field initializers run in textual order, so a timeout
+    // declared below them would still be TimeSpan.Zero when they construct — which Regex rejects,
+    // and the failure would surface as a TypeInitializationException on first use, not a build error.
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
+    private static readonly Regex MoneyInputPattern =
+        new(@"^\d*(\.\d{0,2})?$", RegexOptions.None, RegexTimeout);
+    private static readonly Regex MeasurementInputPattern =
+        new(@"^(\d+(\.\d*)?[+-]?)?$", RegexOptions.None, RegexTimeout);
     // Splits a measurement into its numeric part and an optional trailing +/- so a
     // unit conversion only touches the digits (e.g. "20+" -> convert 20, keep "+").
-    private static readonly Regex MeasurementNumberPattern = new(@"^(\d+(?:\.\d*)?)([+-]?)$");
+    private static readonly Regex MeasurementNumberPattern =
+        new(@"^(\d+(?:\.\d*)?)([+-]?)$", RegexOptions.None, RegexTimeout);
     private const decimal CentimetersPerInch = 2.54m;
 
     private readonly LocalizationService _localization;
@@ -735,7 +743,7 @@ public partial class CustomMadeServiceWindow : Window
 
         // Requirement 3: replace spaces (and any underscore runs) with a single "_",
         // then end the file name with the short language name (zh/en).
-        sanitized = Regex.Replace(sanitized, @"[\s_]+", "_").Trim('_');
+        sanitized = Regex.Replace(sanitized, @"[\s_]+", "_", RegexOptions.None, RegexTimeout).Trim('_');
         return $"{sanitized}_{ShortLanguageName(languageCode)}";
     }
 

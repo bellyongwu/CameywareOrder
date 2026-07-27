@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Media;
 using LeeYongeOrdering.Data;
@@ -206,6 +207,10 @@ public partial class ShopPickerWindow : Window
 
         public Shop Shop { get; }
 
+        // Consumed by {Binding Name} in the picker's item template, which Roslyn cannot see, so
+        // every analyzer reads it as dead. Deleting it blanks the shop name in the list.
+        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members should be removed",
+            Justification = "Bound from ShopPickerWindow.xaml; XAML data bindings are invisible to static analysis.")]
         public string Name => Shop.ResolveName(_localization.CurrentLanguageCode);
 
         public string Details { get; }

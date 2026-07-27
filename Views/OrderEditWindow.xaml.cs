@@ -27,7 +27,16 @@ public partial class OrderEditWindow : Window
     // Fallback for a SAVED order whose stored category matches no item — never "None", or a
     // legacy free-text value would switch a charged alteration service off.
     private const string DefaultSavedAlterationCategoryTag = "GarmentAdjustments";
-    private static readonly Regex DecimalInputPattern = new("^\\d*(\\.\\d{0,2})?$");
+    // Status-reason category that requires the free-text detail to be filled in, and the
+    // fallback for legacy records saved before the preset picker existed.
+    private const string OtherStatusReasonTag = "Other";
+    // Backstop against pathological backtracking on pasted input (S6444). MUST be declared before
+    // the patterns that use it: static field initializers run in textual order, so a timeout
+    // declared below them would still be TimeSpan.Zero when they construct — which Regex rejects,
+    // and the failure would surface as a TypeInitializationException on first use, not a build error.
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
+    private static readonly Regex DecimalInputPattern =
+        new("^\\d*(\\.\\d{0,2})?$", RegexOptions.None, RegexTimeout);
     // Muted grey used by the small-print breakdown lines; matches the TaxBreakdownLine XAML
     // style. Frozen and shared so the per-line TextBlocks don't each allocate a brush.
     // System.Windows.Media is fully qualified here: under ImplicitUsings, QuestPDF and
@@ -37,7 +46,8 @@ public partial class OrderEditWindow : Window
     // Amber, for a service that carries items but no charge — a flag, not an error.
     private static readonly System.Windows.Media.SolidColorBrush UnpricedLineBrush =
         CreateFrozenBrush(0xC1, 0x7A, 0x0B);
-    private static readonly Regex EmailPattern = new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+    private static readonly Regex EmailPattern =
+        new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.None, RegexTimeout);
     private static readonly string[] ClothingItemKeys =
     {
         "Jackets",
@@ -739,7 +749,7 @@ public partial class OrderEditWindow : Window
             return false;
         }
 
-        if (category == "Other" && string.IsNullOrWhiteSpace(StatusReasonBox.Text))
+        if (category == OtherStatusReasonTag && string.IsNullOrWhiteSpace(StatusReasonBox.Text))
         {
             var message = _localization["OrderEdit.Validate.StatusReasonOtherRequired"];
             ErrorText.Text = message;
@@ -816,7 +826,7 @@ public partial class OrderEditWindow : Window
 
         var category = (StatusReasonCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string;
         order.StatusReasonCategory = category;
-        order.StatusReason = category == "Other" ? NullIfWhiteSpace(StatusReasonBox.Text) : null;
+        order.StatusReason = category == OtherStatusReasonTag ? NullIfWhiteSpace(StatusReasonBox.Text) : null;
     }
 
     private void OnServiceTypeChanged(object sender, RoutedEventArgs e)
@@ -1188,7 +1198,7 @@ public partial class OrderEditWindow : Window
 
     private static bool IsValidPhone(string phone)
     {
-        if (!Regex.IsMatch(phone, @"^\+?[\d\s\-().]+$"))
+        if (!Regex.IsMatch(phone, @"^\+?[\d\s\-().]+$", RegexOptions.None, RegexTimeout))
             return false;
 
         var digits = phone.Count(char.IsDigit);
@@ -2115,7 +2125,7 @@ public partial class OrderEditWindow : Window
     private void UpdateOtherReasonRowVisibility(bool categoryRowVisible)
     {
         var isOther = categoryRowVisible
-            && (StatusReasonCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string == "Other";
+            && (StatusReasonCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string == OtherStatusReasonTag;
 
         StatusReasonContainer.Visibility = isOther ? Visibility.Visible : Visibility.Collapsed;
         if (isOther)
@@ -2141,7 +2151,7 @@ public partial class OrderEditWindow : Window
         if (!matched)
         {
             foreach (var item in StatusReasonCategoryBox.Items.OfType<ComboBoxItem>())
-                item.IsSelected = string.Equals(item.Tag as string, "Other", StringComparison.Ordinal);
+                item.IsSelected = string.Equals(item.Tag as string, OtherStatusReasonTag, StringComparison.Ordinal);
         }
     }
 

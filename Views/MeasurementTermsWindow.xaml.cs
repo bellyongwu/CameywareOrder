@@ -290,7 +290,9 @@ public partial class MeasurementTermsWindow : Window
         RefreshTermRows();
     }
 
-    private void ShowDuplicateTermWarning()
+    // Static, and genuinely so: it reads no x:Name control and no field, only the localization
+    // singleton. This is NOT the S2325 WPF false positive the other view helpers hit.
+    private static void ShowDuplicateTermWarning()
     {
         MessageBox.Show(
             LocalizationService.Instance["MeasureTerms.DuplicateTermWarning"],

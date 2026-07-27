@@ -13,6 +13,39 @@ Entry format:
 - Why: <reason / triggering request>
 ```
 
+### 2026-07-27 — False positives and IDE editor problems must be RESOLVED, not just diagnosed
+- Changed: `SKILL.md` §9 (replaced the "only acceptable non-fix is a false positive"
+  escape hatch with the opposite rule — a false positive is not an exemption, just a
+  different fix; deleted the old "only leave documented false positives" bullet);
+  §9a (new bullet: every `Regex` gets a match timeout the first time); §9b Gate 1
+  (now passes only when `get_errors` returns **nothing at all** — classifying a
+  diagnostic is not clearing it; perform the restart, re-read, escalate to a window
+  reload rather than declaring it benign); new **§10a "False positives must be
+  RESOLVED, not merely diagnosed"** — a four-rung ladder (re-check the verdict →
+  restructure → suppress with a justification naming what the analyzer cannot see →
+  never leave visible or delete correct code) plus the §15 carve-out; §10 gained two
+  concrete rule fixes (**S6444** regex timeout incl. the static-initializer
+  declaration-order trap, and **S1144** on XAML-bound members — suppress, never
+  delete); §15 step 3 made mandatory verification rather than optional confirmation;
+  §15 "How to recognize" gained a **PROVE it is stale** block — compare the build-time
+  `.g.cs` against the design-time `.g.i.cs` in `obj/` by timestamp and declared-field
+  count, plus two refinements (one shared old timestamp across every `*.g.i.cs` = the
+  whole design-time build is idle; a name the editor calls missing that IS present in
+  the stale file = the server is not reading it at all, so only a restart helps) and a
+  note that editing the `.csproj` triggers the same reload; §15 "The fix" step 2 now
+  records `dotnet.restartServer` as **confirmed twice** and warns that the breakage
+  **recurs within a session** after anything that rewrites `obj/` or the `.csproj`
+  under a live IDE — re-run the command rather than doubting the diagnosis, and batch
+  edits into one build when someone has the project open.
+- Why: two user directives in one session — "To keep the code clean. False positive
+  errors should be fixed as well. add this to skill" and "Also, IDE editor problems
+  should be fixed too". The preceding gate run supplied the concrete material: 11
+  Sonar findings included one true XAML-binding false positive (`ShopPickerWindow.
+  ShopRow.Name`, bound as `{Binding Name}` — deleting it would have blanked the shop
+  name) and one S2325 that LOOKED like the documented WPF false positive but was
+  genuine, because a full-build analysis sees the generated `.g.cs` fields that
+  SonarLint's single-file pass cannot. That asymmetry is now written into rung 1.
+
 ### 2026-07-26 — Persona statement + English-only Markdown; string-table hygiene rules
 - Changed: `SKILL.md` — new "Who this skill is" section stating that `wpf-dev` is an
   English-language full-stack WPF developer that may *converse* in Chinese but writes

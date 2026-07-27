@@ -402,8 +402,15 @@ Run these **in order, before every build**, on each changed file:
      code bug: **restart the C# language server** and re-check — do **not** edit
      correct code or add `[SuppressMessage]` (see section 15).
    - **SonarLint issue:** handle in Gate 2, not here.
-   Gate 1 passes when every changed file reports **zero** diagnostics that are
-   real or that survive a language-server restart.
+   **Gate 1 passes only when `get_errors` on every changed file returns nothing
+   at all.** IDE editor problems are zero-tolerance exactly like Sonar issues:
+   a red squiggle you have *classified* is not a squiggle you have *cleared*.
+   "It is only the stale design-time model" is a diagnosis, not a result — go and
+   restart the language server, re-read the diagnostics, and confirm the editor is
+   actually empty. If a restart does not clear it, escalate (reload the window)
+   rather than declaring it benign and moving on. What differs between a real
+   error and a false positive is **which fix applies**, never **whether** it gets
+   fixed.
 2. **Gate 2 — SonarQube (SonarLint).** Analyze each changed file and clear every
    flagged issue at every severity/category (see sections 10, 9a). Re-analyze to
    confirm the file is 100% Sonar-clean.
@@ -420,12 +427,17 @@ restart) from a *real* code defect (fixed by editing).
   warnings, zero alerts, zero errors. Do not defer, downgrade, batch-for-later,
   or hand-wave a flag ("minor", "info", "optional", "style", "pre-existing" are
   all in scope; if you touched the file, you own its Sonar state). After fixing,
-  **re-analyze the file to confirm zero remaining issues**. The only acceptable
-  non-fix is a genuine, context-invalid false positive (see section 10) — and
-  that must be either restructured to resolve cleanly or suppressed with a
-  justified `[SuppressMessage]`; never left silently outstanding.
-- Actively resolve genuinely flagged Sonar issues instead of ignoring them;
-  only leave documented false positives.
+  **re-analyze the file to confirm zero remaining issues**.
+- **A false positive is NOT an exemption — it is just a different fix.** "Clean"
+  means the Problems view is **empty**, not "empty except the ones I judged
+  wrong". A flag you have explained is still a flag: the next person re-reads the
+  same warning, re-derives the same verdict, and pays the cost again. Resolve it
+  by the ladder in section 10a — re-check the verdict, restructure, or suppress
+  with a justification that names what the analyzer cannot see. The single
+  carve-out is a **stale-model compiler** diagnostic (section 15), which is fixed
+  by refreshing the language server and must never be edited around or suppressed.
+- Never close a task with a visible flag and an explanation of why it does not
+  count. Either the code changes or a justified suppression records why it cannot.
 - Do not create Markdown docs to describe changes unless explicitly asked.
 
 ### 9a. Write clean the first time (avoid these while coding — Sonar + IDE)
@@ -459,6 +471,9 @@ CS0103s by editing the (correct) code or adding a suppression.
   even `is true` there.
 - **No nested ternaries (S3358).** Never chain `a ? x : b ? y : z`. Write an
   `if` / `else if` / `else` block (or a `switch` expression) instead.
+- **Every `Regex` gets a match timeout (S6444).** Write it with the timeout the
+  first time — never a bare `new Regex(pattern)` or `Regex.IsMatch(input, pattern)`.
+  Mind the declaration-order trap in section 10.
 
 ## 10. SonarQube (SonarLint) code-quality cleanup
 
@@ -467,6 +482,40 @@ file must be fixed before the work is done — regardless of severity label
 (Blocker → Info) or category (Bug / Vulnerability / Security Hotspot / Code
 Smell). "Build succeeded" does not close a task; "changed files are 100%
 Sonar-clean" does. Re-analyze after each fix until the file reports nothing.
+
+### 10a. False positives must be RESOLVED, not merely diagnosed
+
+Clean code means a clean Problems view. A warning left visible because it is
+"wrong" costs every future reader the same investigation you just did, and it
+hides the next real issue in the noise. Work the ladder in order and stop at the
+first rung that applies:
+
+1. **Re-check the verdict — most "false positives" are real.** Confirm what the
+   analyzer can actually see before dismissing it. Concretely: a **full build**
+   analysis sees the XAML-generated `.g.cs` fields that standalone single-file
+   analysis cannot, so an `S2325` "make static" raised by a full build is usually
+   **genuine** even though the same rule is a documented false positive from
+   SonarLint's single-file pass. Check whether the method truly touches an
+   `x:Name` control before either complying or dismissing.
+2. **Restructure so the rule resolves honestly.** Preferred over suppression,
+   because it leaves nothing to re-litigate. Proven examples: EF `DbSet`s as
+   auto-properties rather than `=> Set<T>()`; inlining a one-off WPF helper
+   instead of extracting it; rewording a prose comment whose punctuation reads as
+   syntax to `S125`.
+3. **Suppress with a justification that names what the analyzer cannot see.**
+   Only when restructuring would make the code worse. The justification must
+   state the invisible consumer — "bound from `Foo.xaml`", "interface
+   implementation", "WPF-bound view-model member" — never just "false positive".
+   A reader must be able to verify the claim without re-deriving it.
+4. **Never** leave it visible, and **never** "fix" it by deleting or bending
+   correct code. Deleting a member that looks dead but is bound in XAML blanks
+   the UI at runtime with no build error.
+
+**The one carve-out:** stale-model **compiler** diagnostics (`CS0103` on `x:Name`
+controls or `InitializeComponent`, owner `DocumentCompilerSemantic` — section 15)
+are not analyzer false positives and cannot be suppressed at all. They are fixed
+by refreshing the language server, and the refresh must actually be performed and
+verified. Never edit correct code to silence one.
 
 Workflow: **run SonarQube (SonarLint) analysis before the build.** After a
 change set, trigger analysis per changed file first, then read the results from
@@ -530,6 +579,20 @@ Concrete rule fixes observed in this codebase:
   (`ServerScheme` / `ServerHost` / `ServerPort` constants →
   `$"{ServerScheme}://{ServerHost}:{ServerPort}"`) so no literal contains a full
   scheme+authority URI. Reading from config/env is an alternative.
+- **S6444 (regex without a timeout):** give every `Regex` a match timeout —
+  `new(pattern, RegexOptions.None, RegexTimeout)` and
+  `Regex.IsMatch(input, pattern, RegexOptions.None, RegexTimeout)`. Declare the
+  shared `private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1)`
+  **above** the patterns that use it: static field initializers run in **textual
+  order**, so a timeout declared below them is still `TimeSpan.Zero` when the
+  constructors run — which `Regex` rejects, surfacing as a
+  `TypeInitializationException` on first use rather than a build error.
+- **S1144 (unused private member) on a XAML-bound member:** a property consumed
+  only by `{Binding Name}` is invisible to Roslyn and reads as dead. **Suppress
+  with a justification naming the binding — do not delete it**; removing it
+  compiles cleanly and blanks that field in the UI at runtime. Note the rule fires
+  inconsistently across sibling members of the same class (see the caveat above):
+  fix what is flagged, leave the rest.
 - **S2077 (string-formatted SQL):** never interpolate into `CommandText`. Use
   parameters (`command.CreateParameter()` with `@name`) for values; for
   fixed-shape statements that cannot take parameters (e.g.
@@ -537,9 +600,12 @@ Concrete rule fixes observed in this codebase:
   interpolating a table name.
 
 General principle: distinguish real issues from context-invalid false positives
-(EF `Set<T>()`, design-time factory interface, XAML-bound VM members). Fix the
-real ones; for the rest use the auto-property form where possible, otherwise a
-justified `[SuppressMessage]`.
+(EF `Set<T>()`, design-time factory interface, XAML-bound VM members) — but
+distinguish them to pick the right fix, **not to decide which ones to skip**.
+Both categories get resolved; see section 10a for the ladder. Fix the real ones
+outright; for the rest use the auto-property form or another honest restructure
+where possible, otherwise a justified `[SuppressMessage]`. Either way the file
+ends up reporting nothing.
 
 ## 11. DataGrid row context menus, commands & keyboard shortcuts
 
@@ -706,6 +772,32 @@ is sections 9a/10.
   adding new `x:Name` controls** — the IDE's design-time build hasn't
   regenerated that window's partial (`.g.cs` / design-time `.g.i.cs`) yet, so
   Roslyn can't see the generated `x:Name` fields or `InitializeComponent`.
+  **Editing the `.csproj` does it too** — adding or removing a `PackageReference`
+  makes C# Dev Kit reload the project, and a reload that races a CLI build can
+  leave the model broken rather than merely out of date.
+
+**PROVE it is stale — do not assert it.** The two generated partials are on disk
+and can be compared directly, which turns "probably a false positive" into
+evidence (this is rung 1 of section 10a, applied to the Roslyn side):
+
+```powershell
+# Build-time partial vs the design-time one the language server actually reads
+Get-ChildItem obj -Recurse -Filter "OrderEditWindow.g*.cs" |
+    Select-Object FullName, Length, LastWriteTime
+# Field counts: they should match
+Select-String -Path obj\Debug\net8.0-windows\Views\Foo.g.i.cs -Pattern 'internal .* \w+;' |
+    Measure-Object
+```
+
+A timestamp hours behind `.g.cs`, or a lower field count, IS the staleness —
+observed 2026-07-27 as `.g.i.cs` 97 fields / 9:06 AM against `.g.cs` 147 fields /
+2:09 PM. Two refinements that fall out of the comparison:
+
+- If **every** `*.g.i.cs` in `obj/` shares one old timestamp, the whole
+  design-time build is idle — a project-model problem, not a per-file one.
+- If a name the editor calls missing IS present in the stale `.g.i.cs`, the
+  server is not reading that file at all; its project model is broken, so waiting
+  for a design-time pass will not help and only a restart/reload will.
 
 ### Why it happens
 
@@ -723,9 +815,20 @@ didn't re-run the design-time pass), those generated members are missing from
 2. **Restart the C# language server** (command `dotnet.restartServer`, a.k.a.
    "C#: Restart Language Server") so it re-runs the design-time build and
    regenerates the partials. Prefer this over a full window reload (lighter, and
-   a reload restarts the extension host).
+   a reload restarts the extension host). **Confirmed twice on 2026-07-27** as the
+   fix for a full CS0103 storm.
+   - **Expect it to RECUR within a session, and do not read that as a failed
+     diagnosis.** Anything that rewrites `obj/` or the `.csproj` under a live IDE
+     — a CLI `dotnet build`, adding/removing a package — can invalidate the model
+     again minutes later. Re-run the command; it is cheap and idempotent. When
+     working alongside someone with the project open, prefer to **batch edits and
+     build once at the end** rather than build between every change.
 3. Re-check editor diagnostics (`get_errors`) on the affected files — they clear
-   once the model refreshes.
+   once the model refreshes. **This step is mandatory, not optional confirmation:
+   the task is done when the editor is actually empty, not when the diagnostic has
+   been correctly labelled a false positive.** If a restart does not clear it,
+   reload the window; if that does not either, re-examine the "false positive"
+   verdict — a genuine error can hide behind the same message.
 4. **Never** "resolve" these by editing the correct code, renaming controls, or
    adding `[SuppressMessage]` — compiler diagnostics from a stale model are not
    suppressible and there is nothing wrong to fix. Suppression/edits only mask
