@@ -21,6 +21,49 @@ _(none)_
 
 ## Completed
 
+### 2026-07-26 20:00 — Payment breakdown: add a pre-tax final-balance row to both stages  [DONE]
+- Ask: "Improve the payment section's breakdown — 添加一个税前尾款，在定金付款stage，放置在税前小计下；在尾款支付的stage，新添加一个税前尾款，放置于此服务总计税之上，税前定金之下。"
+- Value shown in both places is `SectionPayment.FinalBase` (pre-tax subtotal minus the pre-tax deposit), so the row states what is still owed before any card tax.
+- Done:
+  - [x] New key `Order.Fields.PreTaxFinalBalance` (税前尾款 / "Pre-Tax Final Balance") in both language blocks. Distinct from `Order.Fields.FinalBalance` (剩余尾款, the taxed amount still outstanding) and `Order.Fields.PreTaxDownpayment`.
+  - [x] Deposit-stage panels (`*DepositBreakdownPanel`, all 3 sections): grew from 3 to 4 rows; the new row sits at index 1, directly under `PreTaxSubtotal`, pushing `ServiceStageTax` to 2 and `PostTaxTotal` to 3. New value blocks `Alteration/CustomMade/ClothingPreTaxBalanceText`.
+  - [x] Final-stage panels (`*FinalBreakdownPanel`, all 3 sections): grew from 6 to 7 rows; the new row sits at index 2, between `PreTaxDownpayment` (1) and `ServiceTotalTax` (3), pushing the per-portion tax-split `StackPanel` to 4, `PostTaxTotal` to 5 and `FinalBalance` to 6. New value blocks `Alteration/CustomMade/ClothingFinalPreTaxBalanceText`.
+  - [x] All six populated from `money.FinalBase` in the three `Refresh*Totals` methods.
+- Verified: build succeeded 0 warnings / 0 errors; 6 new `x:Name`s declared, 6 assignments in code-behind, 6 `PreTaxFinalBalance` label bindings; both language blocks at 342 keys with identical sets. The new `x:Name`s produced the usual `CS0103` stale-design-time-model false positives in the editor (SKILL §15), cleared by the build with no code changed for them.
+- Notes: presentation only — no model, schema or calculation change. Row renumbering was done as six explicit whole-block edits rather than a scripted find/replace, because a mis-numbered `Grid.Row` fails silently (WPF clamps out-of-range rows) instead of breaking the build.
+
+### 2026-07-26 19:45 — "None" as alteration default, shared money-input behaviour, deposit ceiling  [DONE]
+- Ask: "1. 修改衣服\"无\"为默认选项。2. 所有Input价格为0时，再次修改时要避免出现012这种类型的价格。可以参考税前定金的input定义。3. 在当前服务付款中，当税前定金价格高于税前服务总价时应该阻止用户继续输入，并且弹窗告知用户，用户确认后，税前定金应该等于税前服务总价。"
+- Done (1) — "None" is the alteration default:
+  - [x] Moved the `Tag="None"` item to FIRST in `AlterationCategoryBox`, so the existing `SelectedIndex = 0` on the new-order path makes it the default (matches the first-option convention in SKILL §5).
+  - [x] **Legacy guard**: the edit-load fallback no longer uses `SelectedIndex = 0`. An unmatched stored category (free text from before the dropdown existed, or null) now selects `DefaultSavedAlterationCategoryTag` = `GarmentAdjustments` via the new `SelectAlterationCategory(tag)`. Falling back to index 0 would have switched a charged legacy alteration service OFF and dropped it from the totals.
+- Done (2) — one money-input behaviour everywhere:
+  - [x] `RegisterDepositBox` generalised to `RegisterMoneyBox` (decimal/paste filtering + zero-clearing focus + restore-zero-on-blur) and applied to the alteration price, all three tax boxes, all three deposit boxes, and the runtime-created clothing unit/promotional price boxes. Handlers renamed `OnMoneyBoxGotFocus`/`OnMoneyBoxLostFocus`.
+  - [x] `OnMoneyBoxGotFocus` now also skips **read-only** boxes, not just disabled ones: a read-only box still takes focus, and clearing its text programmatically succeeds — it would have blanked e.g. a tax box that is 0 because the stage is settled by cash.
+  - [x] `restoreZeroOnBlur: false` for two boxes where BLANK carries its own meaning: the **promotional price** (blank = no promotion) and the **alteration price** (blank = the service is absent, per `HasItems`; forcing "0" would silently enrol it as an unpriced service and trigger the unpriced warnings).
+  - [x] `OnMoneyBoxLostFocus` refresh downgraded to `runAutoComplete: false` — restoring a zero must not move a payment-method selection, and the deposit boxes' own TextChanged already ran the auto-complete pass.
+- Done (3) — deposit ceiling:
+  - [x] New `PaymentSectionControls.SectionSubtotal` (pre-tax, the actual ceiling — `SectionTotal` is post-tax and would allow a deposit above the pre-tax price).
+  - [x] `EnforceDepositCeiling(box)` called from `OnDownpaymentAmountChanged`: warns via `OrderEdit.Warn.DepositExceedsTotal` (naming the service and the capped amount), then pins the box to the subtotal and puts the caret at the end. Skipped while the section is unpriced (nothing to cap against).
+  - [x] New `_enforcingDepositCeiling` guard — the modal warning pumps messages and the correction raises TextChanged again, so without it the dialog stacks.
+  - Note: `CalculateSectionPayment` already clamped the deposit silently; this makes the clamp visible so a typo cannot hide behind numbers that quietly stop responding.
+- Notes: build succeeded 0 warnings / 0 errors; both language blocks verified at 341 keys with identical sets. No DB/schema change.
+
+### 2026-07-26 19:15 — Pick-up confirmation for unpriced services + "None" alteration category  [DONE]
+- Ask: "1. 在edit order panel，当点击已取货时，如果价格可能有误，提醒一下用户，告诉他哪些service没有被charge（价格没有或者为0），让用户确认，并且提醒用户，一旦确认取货，此订单不再更改。2. 修改衣服可以添加一个新的option, \"无\"，用来指示没有修改衣服的服务，且锁定附加说明和收款项目。其最终并不参与计算。"
+- Done (1) — pick-up confirmation:
+  - [x] Extracted `UnpricedServiceList()` from `WarnAboutUnpricedServices` so the clear-all warning and the new pick-up confirm share one definition of "has items but no charge".
+  - [x] New `ConfirmPickUp()` returns false to cancel; `OnPickedUpChanged` reverts the tick inside the `_syncingStatus` guard when the user declines, so the handler is not re-entered. A fully priced order is not interrupted at all.
+  - [x] `OrderEdit.Confirm.PickUpUnpriced` names the unpriced services AND states that confirming marks the order completed and no longer modifiable (both parts of the ask in one dialog).
+- Done (2) — "None" alteration category:
+  - [x] `Views/OrderEditWindow.xaml`: third `ComboBoxItem` with `Tag="None"` on `AlterationCategoryBox`, listed **last** so the existing first-option default (`GarmentAdjustments`) is unchanged. New key `Alteration.Category.None`.
+  - [x] `PaymentSectionControls.ServiceSwitchedOff` (optional `Func<bool>`) + `IsServiceSwitchedOff`; only Alterations supplies it, via the new `AlterationServiceSwitchedOff` property (`ServiceDetails` tag == `NoAlterationServiceTag`).
+  - [x] Excluded from calculation: `HasItems()` returns false when switched off, and `RefreshAlterationTotals` uses a price of 0 — the price box VALUE is kept, so switching the category back restores it.
+  - [x] Locked: `ApplySectionInputLocks` and `ApplySectionLock` both fold in `IsServiceSwitchedOff` (price, tax, deposit box, all method radios, both checkboxes), and `RefreshPricingLocks` marks `AlterationAdditionalNotesBox` read-only. `AlterationCategoryBox` itself deliberately stays enabled — it is the only way back out of "None".
+  - [x] `OnServiceCategoryChanged` upgraded from `RefreshServicesTotalBreakdown()` to `RefreshComputedTotals(runAutoComplete: false)`: the category now affects totals and locks, not just the breakdown text.
+- Round-trip: `ServiceDetails` stores `"None"` like any other category, the edit ctor's tag-matching loop reselects it, and `AlterationAddedToReceipt` stays false (total 0) so the section is absent from the receipt, the detail panel and the order-total breakdown.
+- Notes: build succeeded 0 warnings / 0 errors; both language blocks verified at 340 keys with identical sets. No DB/schema change. Reported to the user: the read-only warning appears only when a service is unpriced (the literal reading of the ask) — offered to show it on every pick-up instead.
+
 ### 2026-07-26 18:45 — Project README  [DONE]
 - Ask: "Add a Readme markdown file for this project"
 - Done: new `README.md` at the repository root — what the app is, the three service sections,

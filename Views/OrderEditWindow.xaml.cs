@@ -20,6 +20,13 @@ public partial class OrderEditWindow : Window
     private const string DownpaymentMethodKey = "OrderEdit.DownpaymentMethod";
     private const string FinalBalanceMethodKey = "OrderEdit.FinalBalanceMethod";
     private const string ValidationTitleKey = "OrderEdit.ValidationTitle";
+    // Stored in Order.ServiceDetails like the other alteration categories; marks the whole
+    // alteration service as not part of this order. It is the first item in the picker and so
+    // the default for a NEW order.
+    private const string NoAlterationServiceTag = "None";
+    // Fallback for a SAVED order whose stored category matches no item — never "None", or a
+    // legacy free-text value would switch a charged alteration service off.
+    private const string DefaultSavedAlterationCategoryTag = "GarmentAdjustments";
     private static readonly Regex DecimalInputPattern = new("^\\d*(\\.\\d{0,2})?$");
     // Muted grey used by the small-print breakdown lines; matches the TaxBreakdownLine XAML
     // style. Frozen and shared so the per-line TextBlocks don't each allocate a brush.
@@ -50,6 +57,9 @@ public partial class OrderEditWindow : Window
     private bool _suppressLanguageRefresh;
     private bool _syncingPayment;
     private bool _syncingStatus;
+    // Guards EnforceDepositCeiling: its modal warning pumps messages and its correction raises
+    // TextChanged again, so without this the dialog can stack up.
+    private bool _enforcingDepositCeiling;
     private bool _alterationAutoCompleted;
     private bool _customMadeAutoCompleted;
     private bool _clothingAutoCompleted;
@@ -105,6 +115,8 @@ public partial class OrderEditWindow : Window
         public required Func<bool> HasItems { get; init; }
         // The section's current post-tax total (read live — the Refresh*Totals passes own it).
         public required Func<decimal> SectionTotal { get; init; }
+        // The section's PRE-TAX subtotal, which is the ceiling for its deposit.
+        public required Func<decimal> SectionSubtotal { get; init; }
         // Localization key naming this service.
         public required string ServiceNameKey { get; init; }
 
@@ -114,6 +126,12 @@ public partial class OrderEditWindow : Window
         // True once the user has picked a final-balance method by hand. Until then the final
         // method just follows the deposit's, so changing the deposit method must re-mirror it.
         public bool FinalMethodUserChosen { get; set; }
+
+        // Optional: the service has been switched off for this order (Alterations "None"), so
+        // its inputs lock and it contributes nothing. Sections without the concept omit it.
+        public Func<bool>? ServiceSwitchedOff { get; init; }
+
+        public bool IsServiceSwitchedOff => ServiceSwitchedOff?.Invoke() ?? false;
 
         // The single TaxBox edits one stage at a time, so both rates are kept here and the
         // box is swapped when the section moves between stages. ShowingFinalRate records
@@ -195,8 +213,12 @@ public partial class OrderEditWindow : Window
             categoryItem.IsSelected = isMatch;
             matchedCategory |= isMatch;
         }
+        // Deliberately NOT the first item here: the first item is "None", which switches the
+        // alteration service off. A saved order that stored free text (from before this
+        // dropdown existed) or no category at all must not silently lose its alteration
+        // charge, so an unmatched value falls back to the plain garment-adjustments category.
         if (!matchedCategory)
-            AlterationCategoryBox.SelectedIndex = 0;
+            SelectAlterationCategory(DefaultSavedAlterationCategoryTag);
         AlterationAdditionalNotesBox.Text = existing.AdditionalNotes;
         AlterationPriceBox.Text = (existing.AlterationSubtotal ?? existing.Subtotal)?.ToString("0.##") ?? string.Empty;
 
@@ -425,10 +447,13 @@ public partial class OrderEditWindow : Window
             DepositTaxLine = AlterationDepositTaxLineText,
             FinalTaxLine = AlterationFinalTaxLineText,
             // Alterations has no item list of its own, so a typed price — even "0" — is what
-            // marks the service as present on this order.
-            HasItems = () => !string.IsNullOrWhiteSpace(AlterationPriceBox.Text),
+            // marks the service as present on this order. Choosing the "None" category switches
+            // the service off outright, so it stops counting whatever the price box holds.
+            HasItems = () => !AlterationServiceSwitchedOff && !string.IsNullOrWhiteSpace(AlterationPriceBox.Text),
             SectionTotal = () => _alterationSumTotal,
-            ServiceNameKey = "ServiceType.Alterations"
+            SectionSubtotal = () => _alterationSubtotal,
+            ServiceNameKey = "ServiceType.Alterations",
+            ServiceSwitchedOff = () => AlterationServiceSwitchedOff
         };
         _customMadeControls = new PaymentSectionControls
         {
@@ -452,6 +477,7 @@ public partial class OrderEditWindow : Window
             FinalTaxLine = CustomMadeFinalTaxLineText,
             HasItems = () => _customMadeRecords.Count > 0,
             SectionTotal = () => _customMadeSumTotal,
+            SectionSubtotal = () => _customMadeSubtotal,
             ServiceNameKey = "ServiceType.CustomMade"
         };
         _clothingControls = new PaymentSectionControls
@@ -476,6 +502,7 @@ public partial class OrderEditWindow : Window
             FinalTaxLine = ClothingFinalTaxLineText,
             HasItems = () => _clothingItemRows.Count > 0,
             SectionTotal = () => _clothingSumTotal,
+            SectionSubtotal = () => _clothingSubtotal,
             ServiceNameKey = "ServiceType.ReadyMade"
         };
     }
@@ -801,10 +828,12 @@ public partial class OrderEditWindow : Window
     private void OnAlterationValuesChanged(object sender, TextChangedEventArgs e)
         => RefreshComputedTotals(runAutoComplete: false);
 
-    // A service category carries no money, so it only needs to refresh the small-print
-    // breakdown under the order total — the one place the category is displayed.
+    // The alteration category is normally money-free, but its "None" option switches the whole
+    // service off — which changes the totals and the section's locks — so this runs the full
+    // refresh. runAutoComplete stays false: choosing a category must never move a payment
+    // method selection.
     private void OnServiceCategoryChanged(object sender, SelectionChangedEventArgs e)
-        => RefreshServicesTotalBreakdown();
+        => RefreshComputedTotals(runAutoComplete: false);
 
     private void OnClothingValuesChanged(object sender, TextChangedEventArgs e)
         => RefreshComputedTotals(runAutoComplete: false);
@@ -831,7 +860,60 @@ public partial class OrderEditWindow : Window
             }
         }
 
+        if (!_syncingPayment && sender is TextBox depositBox)
+            EnforceDepositCeiling(depositBox);
+
         RefreshComputedTotals();
+    }
+
+    /// <summary>
+    /// A deposit can never exceed its section's pre-tax service total. CalculateSectionPayment
+    /// already clamps it, but silently — which hides a typo behind numbers that quietly stop
+    /// responding. This tells the shop what happened and pins the deposit to the total, so the
+    /// entered value and the calculated one always agree.
+    /// </summary>
+    private void EnforceDepositCeiling(TextBox depositBox)
+    {
+        // A re-entrancy guard of its own: writing the corrected value raises TextChanged again,
+        // and a modal dialog pumps messages, so without this the warning can stack up.
+        if (_enforcingDepositCeiling)
+            return;
+
+        var section = AllSections.FirstOrDefault(c => c.DownpaymentBox == depositBox);
+        if (section is null)
+            return;
+
+        // Nothing to cap against until the service is priced.
+        var subtotal = section.SectionSubtotal();
+        if (subtotal <= 0m || ParseDecimalOrZero(depositBox.Text) <= subtotal)
+            return;
+
+        _enforcingDepositCeiling = true;
+        try
+        {
+            MessageBox.Show(
+                _localization.Format("OrderEdit.Warn.DepositExceedsTotal",
+                    _localization[section.ServiceNameKey], FormatCurrency(subtotal)),
+                _localization[ValidationTitleKey],
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            _syncingPayment = true;
+            try
+            {
+                depositBox.Text = subtotal.ToString("0.##");
+            }
+            finally
+            {
+                _syncingPayment = false;
+            }
+
+            depositBox.CaretIndex = depositBox.Text.Length;
+        }
+        finally
+        {
+            _enforcingDepositCeiling = false;
+        }
     }
 
     private void OnPaymentOptionChanged(object sender, RoutedEventArgs e)
@@ -1146,30 +1228,47 @@ public partial class OrderEditWindow : Window
 
     private void RegisterDecimalTextBoxes()
     {
-        RegisterDecimalTextBox(AlterationPriceBox);
-        RegisterDecimalTextBox(AlterationTaxBox);
-        RegisterDecimalTextBox(AlterationDownpaymentBox);
-        RegisterDecimalTextBox(CustomMadeTaxBox);
-        RegisterDecimalTextBox(ClothingTaxBox);
-        RegisterDecimalTextBox(ClothingDownpaymentBox);
-        RegisterDecimalTextBox(CustomMadeDownpaymentBox);
-
-        RegisterDepositBox(AlterationDownpaymentBox);
-        RegisterDepositBox(CustomMadeDownpaymentBox);
-        RegisterDepositBox(ClothingDownpaymentBox);
+        // Every money input gets the same treatment: digits-only filtering, paste filtering,
+        // and the zero-clearing focus behaviour that stops "0" turning into "012".
+        // The alteration price opts out of restore-zero-on-blur: a BLANK price box is what marks
+        // the alteration service as absent from the order (HasItems), so turning it into "0"
+        // would silently enrol the service as an unpriced one.
+        RegisterMoneyBox(AlterationPriceBox, restoreZeroOnBlur: false);
+        RegisterMoneyBox(AlterationTaxBox);
+        RegisterMoneyBox(AlterationDownpaymentBox);
+        RegisterMoneyBox(CustomMadeTaxBox);
+        RegisterMoneyBox(ClothingTaxBox);
+        RegisterMoneyBox(ClothingDownpaymentBox);
+        RegisterMoneyBox(CustomMadeDownpaymentBox);
     }
 
-    private void RegisterDepositBox(TextBox box)
+    /// <summary>
+    /// Wires the shared money-input behaviour. Clothing item rows are created at runtime and
+    /// call this too, so every price box in the window behaves identically.
+    /// </summary>
+    /// <param name="restoreZeroOnBlur">
+    /// Pass false for a box where BLANK carries its own meaning and must not become "0" —
+    /// an optional promotional price, or the alteration price box whose emptiness marks the
+    /// service as absent. The zero-clearing focus behaviour still applies either way.
+    /// </param>
+    private void RegisterMoneyBox(TextBox box, bool restoreZeroOnBlur = true)
     {
-        box.GotFocus += OnDepositBoxGotFocus;
-        box.LostFocus += OnDepositBoxLostFocus;
+        RegisterDecimalTextBox(box);
+        box.GotFocus += OnMoneyBoxGotFocus;
+
+        if (restoreZeroOnBlur)
+            box.LostFocus += OnMoneyBoxLostFocus;
     }
 
-    // Requirement 4c - clearing the leading zero on entry avoids malformed numeric
-    // entries. Leaving the box empty or invalid restores a valid zero on exit.
-    private void OnDepositBoxGotFocus(object sender, RoutedEventArgs e)
+    // A box already showing 0 is cleared on entry, so typing "12" gives "12" rather than
+    // "012" — the caret would otherwise land after the existing zero. Leaving the box empty
+    // or invalid restores a valid zero on exit.
+    private void OnMoneyBoxGotFocus(object sender, RoutedEventArgs e)
     {
-        if (sender is not TextBox box || !box.IsEnabled)
+        // IsReadOnly is checked as well as IsEnabled: a read-only box (e.g. a tax box while the
+        // stage is settled by cash) still takes focus, and clearing its text programmatically
+        // would succeed and blank a value the user is not allowed to change.
+        if (sender is not TextBox box || !box.IsEnabled || box.IsReadOnly)
             return;
 
         if (box.Text.Length > 0 && ParseDecimalOrZero(box.Text) == 0m)
@@ -1181,7 +1280,7 @@ public partial class OrderEditWindow : Window
         box.SelectAll();
     }
 
-    private void OnDepositBoxLostFocus(object sender, RoutedEventArgs e)
+    private void OnMoneyBoxLostFocus(object sender, RoutedEventArgs e)
     {
         if (sender is not TextBox box)
             return;
@@ -1191,7 +1290,9 @@ public partial class OrderEditWindow : Window
             _syncingPayment = true;
             box.Text = "0";
             _syncingPayment = false;
-            RefreshComputedTotals();
+            // runAutoComplete stays false: restoring a zero must not move a payment method.
+            // The deposit boxes' own TextChanged handler already ran the auto-complete pass.
+            RefreshComputedTotals(runAutoComplete: false);
         }
     }
 
@@ -1288,7 +1389,7 @@ public partial class OrderEditWindow : Window
     private void ApplySectionInputLocks(PaymentSectionControls c, TextBox? priceBox)
     {
         var downCompleted = c.DownCompletedCheck.IsChecked is true;
-        var sectionLocked = _isReadOnly || _isRefunded || IsSettled(c);
+        var sectionLocked = _isReadOnly || _isRefunded || IsSettled(c) || c.IsServiceSwitchedOff;
         var inputsLocked = sectionLocked || downCompleted;
 
         if (priceBox is not null)
@@ -1308,6 +1409,8 @@ public partial class OrderEditWindow : Window
     private void RefreshPricingLocks()
     {
         ApplySectionInputLocks(_alterationControls, AlterationPriceBox);
+        // Additional notes belong to the alteration service, so they lock with it.
+        AlterationAdditionalNotesBox.IsReadOnly = _isReadOnly || _isRefunded || AlterationServiceSwitchedOff;
         ApplySectionInputLocks(_customMadeControls, priceBox: null);
         ApplySectionInputLocks(_clothingControls, priceBox: null);
 
@@ -1508,7 +1611,9 @@ public partial class OrderEditWindow : Window
 
     private void RefreshAlterationTotals()
     {
-        var price = ParseDecimalOrZero(AlterationPriceBox.Text);
+        // A switched-off alteration service contributes nothing, whatever the price box holds —
+        // the value is kept so switching the category back restores it.
+        var price = AlterationServiceSwitchedOff ? 0m : ParseDecimalOrZero(AlterationPriceBox.Text);
         // Resolves both stage rates and points the shared tax box at the current stage.
         // Cash/Etransfer portions are forced to 0%, so the displayed rate always matches
         // what is actually charged.
@@ -1528,10 +1633,13 @@ public partial class OrderEditWindow : Window
         // Deposit-stage rows are scoped to that stage and add up: subtotal + deposit tax.
         var alterationStageTax = DepositStageTax(money);
         AlterationSubtotalText.Text = FormatCurrency(price);
+        // Pre-tax balance still to come: the subtotal less the deposit, before any card tax.
+        AlterationPreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
         AlterationDepositTaxText.Text = FormatCurrency(alterationStageTax);
         AlterationSumTotalText.Text = FormatCurrency(money.Subtotal + alterationStageTax);
         AlterationFinalPriceDisplayText.Text = FormatCurrency(price);
         AlterationFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
+        AlterationFinalPreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
         AlterationFinalTotalTaxText.Text = FormatCurrency(money.Tax);
         UpdateTaxBreakdownLines(_alterationControls, money);
         AlterationFinalTotalText.Text = FormatCurrency(money.Total);
@@ -1566,10 +1674,12 @@ public partial class OrderEditWindow : Window
         var clothingStageTax = DepositStageTax(money);
         ClothingPriceText.Text = FormatCurrency(subtotal);
         ClothingSubtotalText.Text = FormatCurrency(subtotal);
+        ClothingPreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
         ClothingDepositTaxText.Text = FormatCurrency(clothingStageTax);
         ClothingSumTotalText.Text = FormatCurrency(money.Subtotal + clothingStageTax);
         ClothingFinalPriceDisplayText.Text = FormatCurrency(subtotal);
         ClothingFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
+        ClothingFinalPreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
         ClothingFinalTotalTaxText.Text = FormatCurrency(money.Tax);
         UpdateTaxBreakdownLines(_clothingControls, money);
         ClothingFinalTotalText.Text = FormatCurrency(money.Total);
@@ -1596,10 +1706,12 @@ public partial class OrderEditWindow : Window
         var customMadeStageTax = DepositStageTax(money);
         CustomMadePriceText.Text = FormatCurrency(_customMadeSubtotal);
         CustomMadeSubtotalText.Text = FormatCurrency(_customMadeSubtotal);
+        CustomMadePreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
         CustomMadeDepositTaxText.Text = FormatCurrency(customMadeStageTax);
         CustomMadeSumTotalText.Text = FormatCurrency(money.Subtotal + customMadeStageTax);
         CustomMadeFinalPriceDisplayText.Text = FormatCurrency(_customMadeSubtotal);
         CustomMadeFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
+        CustomMadeFinalPreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
         CustomMadeFinalTotalTaxText.Text = FormatCurrency(money.Tax);
         UpdateTaxBreakdownLines(_customMadeControls, money);
         CustomMadeFinalTotalText.Text = FormatCurrency(money.Total);
@@ -1808,6 +1920,18 @@ public partial class OrderEditWindow : Window
         return row;
     }
 
+    private void SelectAlterationCategory(string tag)
+    {
+        foreach (var item in AlterationCategoryBox.Items.OfType<ComboBoxItem>())
+            item.IsSelected = string.Equals(item.Tag as string, tag, StringComparison.Ordinal);
+    }
+
+    // "None" in the alteration category means this order includes no alteration work at all.
+    // The section then takes no charge, contributes nothing to the order total, and its notes
+    // and payment inputs are locked so nothing can be entered against a service that is off.
+    private bool AlterationServiceSwitchedOff
+        => (AlterationCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string == NoAlterationServiceTag;
+
     // The alteration section's parenthetical: its selected service category.
     private string AlterationDetailText()
     {
@@ -1888,6 +2012,22 @@ public partial class OrderEditWindow : Window
     {
         if (_syncingStatus)
             return;
+
+        // Ask before completing an order that has an unpriced service, and undo the tick if
+        // the user backs out. Reverting runs inside the guard so this handler is not re-entered.
+        if (PickedUpCheck.IsChecked.GetValueOrDefault() && !ConfirmPickUp())
+        {
+            _syncingStatus = true;
+            try
+            {
+                PickedUpCheck.IsChecked = false;
+            }
+            finally
+            {
+                _syncingStatus = false;
+            }
+            return;
+        }
 
         _syncingStatus = true;
         try
@@ -2073,24 +2213,50 @@ public partial class OrderEditWindow : Window
         c.BalanceClearedCheck.IsChecked = true;
     }
 
-    // A service carrying items but no charge is allowed — shops zero-rate one on purpose
-    // often enough — so this only tells the user, it never blocks settling the order.
-    private void WarnAboutUnpricedServices()
+    // Names of every service that carries items but no charge, as a localized list. Empty
+    // when every service that takes part is priced.
+    private string UnpricedServiceList()
     {
         var unpriced = AllSections
             .Where(c => c.HasMissingPrice)
             .Select(c => _localization[c.ServiceNameKey])
             .ToList();
 
-        if (unpriced.Count == 0)
+        return unpriced.Count == 0
+            ? string.Empty
+            : string.Join(ListSeparator(_localization.CurrentLanguageCode), unpriced);
+    }
+
+    // A service carrying items but no charge is allowed — shops zero-rate one on purpose
+    // often enough — so this only tells the user, it never blocks settling the order.
+    private void WarnAboutUnpricedServices()
+    {
+        var unpriced = UnpricedServiceList();
+        if (unpriced.Length == 0)
             return;
 
         MessageBox.Show(
-            _localization.Format("OrderEdit.Warn.UnpricedServices",
-                string.Join(ListSeparator(_localization.CurrentLanguageCode), unpriced)),
+            _localization.Format("OrderEdit.Warn.UnpricedServices", unpriced),
             _localization[ValidationTitleKey],
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
+    }
+
+    // Marking an order picked up completes it, and a completed order opens read-only from then
+    // on. That is worth stopping for when a service went out without a charge, so the shop can
+    // catch a missing price while the order can still be edited. Returns false to cancel the
+    // tick. A fully priced order is not interrupted.
+    private bool ConfirmPickUp()
+    {
+        var unpriced = UnpricedServiceList();
+        if (unpriced.Length == 0)
+            return true;
+
+        return MessageBox.Show(
+            _localization.Format("OrderEdit.Confirm.PickUpUnpriced", unpriced),
+            _localization[ValidationTitleKey],
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning) == MessageBoxResult.Yes;
     }
 
     private bool IsOrderBalanceCleared()
@@ -2144,7 +2310,7 @@ public partial class OrderEditWindow : Window
         // IsSettled, not the cleared tick alone: a section with no charge reports cleared
         // because nothing is owed, and disabling its radios here is what makes a zero-priced
         // section stop responding to payment-method clicks after it is reopened.
-        var sectionLocked = _isReadOnly || IsSettled(c);
+        var sectionLocked = _isReadOnly || IsSettled(c) || c.IsServiceSwitchedOff;
         // Deposit method radios are frozen once the deposit is marked received OR the whole section is locked.
         var depositMethodLocked = sectionLocked || c.DownCompletedCheck.IsChecked is true;
 
@@ -2450,7 +2616,7 @@ public partial class OrderEditWindow : Window
             Padding = new Thickness(6, 4, 6, 4),
             Text = existingItem?.UnitPrice.ToString("0.##") ?? string.Empty
         };
-        RegisterDecimalTextBox(unitPriceBox);
+        RegisterMoneyBox(unitPriceBox);
         unitPriceBox.PreviewTextInput += OnDecimalTextBoxPreviewTextInput;
         Grid.SetColumn(unitPriceBox, 1);
 
@@ -2460,7 +2626,8 @@ public partial class OrderEditWindow : Window
             Padding = new Thickness(6, 4, 6, 4),
             Text = existingItem?.PromotionalPrice?.ToString("0.##") ?? string.Empty
         };
-        RegisterDecimalTextBox(promotionalPriceBox);
+        // Optional field: a blank promotional price means "no promotion", so it must stay blank.
+        RegisterMoneyBox(promotionalPriceBox, restoreZeroOnBlur: false);
         promotionalPriceBox.PreviewTextInput += OnDecimalTextBoxPreviewTextInput;
         Grid.SetColumn(promotionalPriceBox, 2);
 

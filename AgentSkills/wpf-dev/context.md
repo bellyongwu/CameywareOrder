@@ -18,6 +18,38 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A service can be switched OFF, not just left empty**: `Alteration.Category.None` (tag
+  `"None"`, stored in `Order.ServiceDetails` like the other categories, listed **FIRST** so it
+  is the default for a new order) marks the order as having no alteration work.
+  - GOTCHA: the edit-load fallback for an unmatched category must NOT be `SelectedIndex = 0`
+    any more — that is now "None", which would switch a charged legacy alteration service off
+    and drop it from the totals. It selects `DefaultSavedAlterationCategoryTag`
+    (`GarmentAdjustments`) via `SelectAlterationCategory(tag)` instead. `PaymentSectionControls.ServiceSwitchedOff` is an optional `Func<bool>` — only
+  Alterations supplies one — and it feeds three things: `HasItems()` returns false,
+  `RefreshAlterationTotals` uses a price of 0 (the box VALUE is kept so switching back
+  restores it), and both lock methods plus `AlterationAdditionalNotesBox` go read-only.
+  `AlterationCategoryBox` itself stays enabled — it is the only way back out of "None".
+  - `OnServiceCategoryChanged` therefore runs the FULL `RefreshComputedTotals`, not just the
+    breakdown: the category now affects totals and locks.
+- **One money-input behaviour for every price box**: `RegisterMoneyBox(box, restoreZeroOnBlur)`
+  wires decimal + paste filtering, clears a box already showing 0 on focus (so typing "12"
+  gives "12", not "012"), and optionally restores "0" on blur. Applied to the alteration price,
+  all tax boxes, all deposit boxes and the runtime-created clothing price boxes.
+  - `OnMoneyBoxGotFocus` skips **read-only** boxes as well as disabled ones — a read-only box
+    still takes focus and clearing its text programmatically succeeds.
+  - `restoreZeroOnBlur: false` where BLANK has its own meaning: the promotional price (blank =
+    no promotion) and the alteration price (blank = service absent, per `HasItems` — forcing
+    "0" would enrol it as an unpriced service).
+- **Deposit is capped at the pre-tax subtotal, visibly**: `EnforceDepositCeiling` warns and
+  pins the box to `SectionSubtotal()` (pre-tax — `SectionTotal` is post-tax and too generous).
+  `CalculateSectionPayment` already clamped silently, which hid typos behind numbers that
+  quietly stopped responding. Needs its own `_enforcingDepositCeiling` guard because the modal
+  pumps messages and the correction re-raises TextChanged.
+- **Pick-up asks before completing an unpriced order**: `ConfirmPickUp()` lists any service
+  with items but no charge and warns that completing makes the order read-only; declining
+  reverts the tick inside the `_syncingStatus` guard. Shares `UnpricedServiceList()` with the
+  clear-all warning so both use one definition. A fully priced order is not interrupted.
+
 - **One-click global settings backup**: `Services/GlobalSettingsPackage` bundles everything
   local into a single zip — `settings.json` (currency, language code, `MeasurementTermsConfig`,
   `BrandingExport`, version + timestamp) plus a **nested** `database.zip`. Nesting
@@ -92,6 +124,21 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   a typed deposit is what the shop EXPECTS, not what it holds. 实收尾款 was already gated on
   `BalanceCleared`. Both model and editor were changed together so a saved order reports the
   same figures the editor showed.
+
+- **Payment breakdown row layout (as of 2026-07-26)** — both panels now carry a pre-tax
+  final-balance row (`Order.Fields.PreTaxFinalBalance` 税前尾款, value `money.FinalBase`):
+  - Deposit stage (`*DepositBreakdownPanel`, 4 rows): PreTaxSubtotal, **PreTaxFinalBalance**,
+    ServiceStageTax, PostTaxTotal.
+  - Final stage (`*FinalBreakdownPanel`, 7 rows): PreTaxServiceTotal, PreTaxDownpayment,
+    **PreTaxFinalBalance**, ServiceTotalTax, the per-portion tax-split `StackPanel`,
+    PostTaxTotal, FinalBalance.
+  - GOTCHA when inserting a row here: a `Grid.Row` beyond the `RowDefinitions` count is
+    CLAMPED by WPF, not an error — a renumbering mistake shows up as two rows silently drawn
+    on top of each other, never as a build failure. Add the `RowDefinition` and renumber every
+    following row in the same edit, and do it per section rather than by find/replace.
+  - Three distinct "balance" keys — do not conflate: `PreTaxFinalBalance` (税前尾款, before
+    tax), `FinalBalance` (剩余尾款, taxed and still outstanding), `ReceivedFinalBalance`
+    (实收尾款, taxed and collected).
 
 - **Small-print breakdowns in the order editor**: two code-filled panels now explain the
   headline figures. `ServicesTotalBreakdownPanel` (under 全部服务总金额) lists one line per

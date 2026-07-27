@@ -119,6 +119,7 @@
     <Text key="Order.Fields.ServiceDetails">服务详情</Text>
     <Text key="Alteration.Category.GarmentAdjustments">服装修改</Text>
     <Text key="Alteration.Category.Others">其他</Text>
+    <Text key="Alteration.Category.None">无</Text>
     <Text key="Order.Fields.AdditionalNotes">附加说明</Text>
     <Text key="Order.Fields.Price">价格</Text>
     <Text key="Order.Fields.Tax">税率 (%)</Text>
@@ -129,6 +130,7 @@
     <Text key="Order.Fields.FinalTaxRate">尾款税率 (%)</Text>
     <Text key="Order.Fields.PreTaxDownpayment">税前定金</Text>
     <Text key="Order.Fields.PreTaxSubtotal">税前小计</Text>
+    <Text key="Order.Fields.PreTaxFinalBalance">税前尾款</Text>
     <Text key="Order.Fields.PostTaxTotal">税后总价</Text>
     <Text key="Order.Fields.ServiceStageTax">此服务计税</Text>
     <Text key="Order.Fields.ServiceTotalTax">此服务总计税</Text>
@@ -138,6 +140,8 @@
     <Text key="Order.Fields.ServiceTotalLineNoDetail">·  {0}</Text>
     <Text key="Order.Fields.ServiceTotalUnpriced">（价格有误）</Text>
     <Text key="OrderEdit.Warn.UnpricedServices">以下服务有项目但价格为 0：{0}。已按原价结清，如非有意请检查价格。</Text>
+    <Text key="OrderEdit.Confirm.PickUpUnpriced">以下服务有项目但未收费（价格为空或为 0）：{0}。&#10;&#10;确认取货后，此订单将标记为已完成并不可再修改。&#10;&#10;确定要继续吗？</Text>
+    <Text key="OrderEdit.Warn.DepositExceedsTotal">{0}：税前定金不能高于税前服务总价。定金已调整为 {1}。</Text>
     <Text key="Order.Fields.UnitPrice">原价</Text>
     <Text key="Order.Fields.PromotionalPrice">优惠价</Text>
     <Text key="Order.Fields.ItemCategory">品类</Text>
@@ -483,6 +487,7 @@
     <Text key="Order.Fields.ServiceDetails">Service Details</Text>
     <Text key="Alteration.Category.GarmentAdjustments">Garment Adjustments</Text>
     <Text key="Alteration.Category.Others">Others</Text>
+    <Text key="Alteration.Category.None">None</Text>
     <Text key="Order.Fields.AdditionalNotes">Additional Notes</Text>
     <Text key="Order.Fields.Price">Price</Text>
     <Text key="Order.Fields.Tax">Tax (%)</Text>
@@ -493,6 +498,7 @@
     <Text key="Order.Fields.FinalTaxRate">Final Balance Tax Rate (%)</Text>
     <Text key="Order.Fields.PreTaxDownpayment">Pre-Tax Deposit</Text>
     <Text key="Order.Fields.PreTaxSubtotal">Pre-Tax Subtotal</Text>
+    <Text key="Order.Fields.PreTaxFinalBalance">Pre-Tax Final Balance</Text>
     <Text key="Order.Fields.PostTaxTotal">Post-Tax Total</Text>
     <Text key="Order.Fields.ServiceStageTax">Tax for This Service</Text>
     <Text key="Order.Fields.ServiceTotalTax">Total Tax for Service</Text>
@@ -502,6 +508,8 @@
     <Text key="Order.Fields.ServiceTotalLineNoDetail">·  {0}</Text>
     <Text key="Order.Fields.ServiceTotalUnpriced"> (price missing)</Text>
     <Text key="OrderEdit.Warn.UnpricedServices">These services have items but no charge: {0}. They were settled as-is — please check the price if that was not intended.</Text>
+    <Text key="OrderEdit.Confirm.PickUpUnpriced">These services have items but were not charged (the price is blank or 0): {0}.&#10;&#10;Once pick-up is confirmed this order is marked completed and can no longer be modified.&#10;&#10;Continue?</Text>
+    <Text key="OrderEdit.Warn.DepositExceedsTotal">{0}: the pre-tax deposit cannot exceed the pre-tax service total. The deposit has been set to {1}.</Text>
     <Text key="Order.Fields.UnitPrice">Unit Price</Text>
     <Text key="Order.Fields.PromotionalPrice">Promotional Price</Text>
     <Text key="Order.Fields.ItemCategory">Item Category</Text>
