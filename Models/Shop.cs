@@ -47,6 +47,45 @@ public class Shop
     /// <summary>Hidden from the shop picker without deleting its orders.</summary>
     public bool IsArchived { get; set; }
 
+    /// <summary>
+    /// This shop's tax rule per payment method, serialized. Null means "never configured", which
+    /// reads back as <see cref="PaymentTaxRules.CreateDefault"/> — cash and e-transfer tax free,
+    /// both card types at 13% — so an existing shop keeps behaving exactly as it always did.
+    /// </summary>
+    public string? PaymentTaxRulesJson { get; set; }
+
+    /// <summary>How this shop numbers its orders / receipts.</summary>
+    public OrderNumberMode OrderNumberMode { get; set; } = OrderNumberMode.Timestamp;
+
+    /// <summary>Leading text of an order number, e.g. "ORD" in ORD-000123. Blank means no prefix.</summary>
+    public string? OrderNumberPrefix { get; set; }
+
+    /// <summary>Digits the running number is padded to, so 12 prints as 0012 at a padding of 4.</summary>
+    public int OrderNumberPadding { get; set; } = 4;
+
+    /// <summary>
+    /// The running number the next order will take. Advanced only after an order is actually
+    /// saved, so abandoning a half-filled form does not burn a receipt number.
+    /// </summary>
+    public int OrderNumberNextSequence { get; set; } = 1;
+
+    /// <summary>
+    /// The period <see cref="OrderNumberNextSequence"/> belongs to (a date or a year, depending on
+    /// the mode). When the current period no longer matches this, the counter restarts at 1 —
+    /// which is what makes daily and yearly numbering reset without a scheduled job.
+    /// </summary>
+    public string? OrderNumberSequenceKey { get; set; }
+
+    /// <summary>Decoded <see cref="PaymentTaxRulesJson"/>. Computed, never stored directly.</summary>
+    [NotMapped]
+    public PaymentTaxRules PaymentTaxRules => PaymentTaxRules.FromJson(PaymentTaxRulesJson);
+
+    public void SetPaymentTaxRules(PaymentTaxRules rules)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        PaymentTaxRulesJson = rules.ToJson();
+    }
+
     /// <summary>Language code to display name, decoded from <see cref="NamesJson"/>.</summary>
     [NotMapped]
     public Dictionary<string, string> Names
@@ -84,4 +123,24 @@ public class Shop
 
         return names.Values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
     }
+}
+
+/// <summary>
+/// How a shop composes its order / receipt numbers. <see cref="Timestamp"/> is the format the app
+/// has always produced and stays the default, so no existing shop's numbering changes until it
+/// picks another one.
+/// </summary>
+public enum OrderNumberMode
+{
+    /// <summary>PREFIX-20260727-153012 — unique by the second, no counter to keep.</summary>
+    Timestamp = 0,
+
+    /// <summary>PREFIX-000123 — one continuous run of numbers.</summary>
+    Sequential = 1,
+
+    /// <summary>PREFIX-20260727-0001 — a fresh run of numbers each day.</summary>
+    DailySequential = 2,
+
+    /// <summary>PREFIX-2026-0001 — a fresh run of numbers each year.</summary>
+    YearlySequential = 3
 }

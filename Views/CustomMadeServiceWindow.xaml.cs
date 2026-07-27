@@ -641,6 +641,19 @@ public partial class CustomMadeServiceWindow : Window
                         BrandingRenderer.AlignLogo(column.Item(), brandingSettings.LogoPlacement).MaxHeight(70).Image(logoBytes);
                     BrandingRenderer.RenderToPdf(column, branding.HeaderXaml);
 
+                    // Directly under the header, matching where the printed receipt puts it.
+                    if (!string.IsNullOrWhiteSpace(brandingSettings.TaxRegistrationNumber))
+                    {
+                        // L(), not Format(): this document is generated in the language the user
+                        // picked in the print dialog, which is not necessarily the UI language.
+                        column.Item().Text(string.Format(
+                                System.Globalization.CultureInfo.CurrentCulture,
+                                L("Receipt.TaxNumberLine"),
+                                brandingSettings.TaxRegistrationNumber.Trim()))
+                            .FontSize(9.5f)
+                            .FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
+                    }
+
                     // Only fall back to the default document title when the header editor is empty.
                     if (!hasHeader)
                         column.Item().Text(L("Customer.Measurements.PrintTitle")).Bold().FontSize(18);

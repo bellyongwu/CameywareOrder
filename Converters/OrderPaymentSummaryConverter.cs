@@ -78,8 +78,10 @@ public class OrderPaymentSummaryConverter : IValueConverter
         builder.AppendLine();
     }
 
+    // Normalized so an order still holding the legacy single "Card" value reads as Debit Card,
+    // which is what that option was labelled before debit and credit were separated.
     private static string MethodText(LocalizationService loc, PaymentMethod? method)
-        => method is null ? "-" : loc[$"PaymentMethod.{method}"];
+        => method is null ? "-" : loc[$"PaymentMethod.{PaymentTaxRules.Normalize(method.Value)}"];
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();

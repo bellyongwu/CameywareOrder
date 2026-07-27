@@ -130,6 +130,29 @@
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
 
+        <!-- The tax rate is a store-wide rule, not a per-order figure, so it is shown as a fixed
+             value rather than an input. Deliberately NOT a disabled TextBox: a greyed-out box
+             invites clicking and reads as broken, where a plain bold value reads as settled. -->
+        <Style x:Key="LockedRateBox" TargetType="Border">
+            <Setter Property="Background" Value="#EEF2F7"/>
+            <Setter Property="BorderBrush" Value="#DCE3EC"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="Padding" Value="9,5"/>
+            <Setter Property="Margin" Value="0,8"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="MinWidth" Value="78"/>
+            <Setter Property="ToolTip" Value="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.TaxRateLocked], Mode=OneWay}"/>
+        </Style>
+
+        <Style x:Key="LockedRateText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#1F2937"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
         <!-- Thin horizontal divider between payment steps. -->
         <Style x:Key="StepDivider" TargetType="Border">
             <Setter Property="Height" Value="1"/>
@@ -384,13 +407,16 @@
                                     <!-- Text is set in code-behind: the box edits the deposit rate until the
                                          deposit is received, then the final-balance rate, and the label says which. -->
                                     <TextBlock Grid.Column="2" x:Name="AlterationTaxLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
-                                    <TextBox Grid.Column="3" x:Name="AlterationTaxBox" Margin="0,8" Padding="6,4" TextChanged="OnAlterationValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
+                                    <Border Grid.Column="3" Style="{StaticResource LockedRateBox}">
+                                        <TextBlock x:Name="AlterationTaxValueText" Style="{StaticResource LockedRateText}"/>
+                                    </Border>
                                 </Grid>
 
                                 <TextBlock x:Name="AlterationDownMethodLabel" Style="{StaticResource StepLabel}"/>
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton x:Name="AlterationDownCash" Style="{StaticResource MethodRadio}" GroupName="AlterationDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
-                                    <RadioButton x:Name="AlterationDownCard" Style="{StaticResource MethodRadio}" GroupName="AlterationDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Card], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                    <RadioButton x:Name="AlterationDownDebit" Style="{StaticResource MethodRadio}" GroupName="AlterationDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                    <RadioButton x:Name="AlterationDownCredit" Style="{StaticResource MethodRadio}" GroupName="AlterationDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="AlterationDownEtransfer" Style="{StaticResource MethodRadio}" GroupName="AlterationDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Etransfer], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="AlterationDownNone" Style="{StaticResource MethodRadio}" GroupName="AlterationDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.None], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                 </StackPanel>
@@ -442,7 +468,8 @@
                                         <TextBlock x:Name="AlterationFinalMethodLabel" Style="{StaticResource StepLabel}" Margin="0,14,0,6"/>
                                         <StackPanel Orientation="Horizontal">
                                             <RadioButton x:Name="AlterationFinalCash" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
-                                            <RadioButton x:Name="AlterationFinalCard" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Card], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                            <RadioButton x:Name="AlterationFinalDebit" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                            <RadioButton x:Name="AlterationFinalCredit" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="AlterationFinalEtransfer" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Etransfer], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                         </StackPanel>
                                         <!-- Full price breakdown shown once deposit is received -->
@@ -534,13 +561,16 @@
 
                                     <!-- Text is set in code-behind (stage-aware); see AlterationTaxLabel. -->
                                     <TextBlock Grid.Column="2" x:Name="CustomMadeTaxLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
-                                    <TextBox Grid.Column="3" x:Name="CustomMadeTaxBox" Margin="0,8" Padding="6,4" TextChanged="OnCustomMadeValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
+                                    <Border Grid.Column="3" Style="{StaticResource LockedRateBox}">
+                                        <TextBlock x:Name="CustomMadeTaxValueText" Style="{StaticResource LockedRateText}"/>
+                                    </Border>
                                 </Grid>
 
                                 <TextBlock x:Name="CustomMadeDownMethodLabel" Style="{StaticResource StepLabel}"/>
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton x:Name="CustomMadeDownCash" Style="{StaticResource MethodRadio}" GroupName="CustomMadeDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
-                                    <RadioButton x:Name="CustomMadeDownCard" Style="{StaticResource MethodRadio}" GroupName="CustomMadeDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Card], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                    <RadioButton x:Name="CustomMadeDownDebit" Style="{StaticResource MethodRadio}" GroupName="CustomMadeDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                    <RadioButton x:Name="CustomMadeDownCredit" Style="{StaticResource MethodRadio}" GroupName="CustomMadeDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="CustomMadeDownEtransfer" Style="{StaticResource MethodRadio}" GroupName="CustomMadeDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Etransfer], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="CustomMadeDownNone" Style="{StaticResource MethodRadio}" GroupName="CustomMadeDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.None], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                 </StackPanel>
@@ -592,7 +622,8 @@
                                         <TextBlock x:Name="CustomMadeFinalMethodLabel" Style="{StaticResource StepLabel}" Margin="0,14,0,6"/>
                                         <StackPanel Orientation="Horizontal">
                                             <RadioButton x:Name="CustomMadeFinalCash" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
-                                            <RadioButton x:Name="CustomMadeFinalCard" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Card], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                            <RadioButton x:Name="CustomMadeFinalDebit" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                            <RadioButton x:Name="CustomMadeFinalCredit" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="CustomMadeFinalEtransfer" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Etransfer], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                         </StackPanel>
                                         <!-- Full price breakdown shown once deposit is received -->
@@ -671,13 +702,16 @@
 
                                     <!-- Text is set in code-behind (stage-aware); see AlterationTaxLabel. -->
                                     <TextBlock Grid.Column="2" x:Name="ClothingTaxLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
-                                    <TextBox Grid.Column="3" x:Name="ClothingTaxBox" Margin="0,8" Padding="6,4" TextChanged="OnClothingValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
+                                    <Border Grid.Column="3" Style="{StaticResource LockedRateBox}">
+                                        <TextBlock x:Name="ClothingTaxValueText" Style="{StaticResource LockedRateText}"/>
+                                    </Border>
                                 </Grid>
 
                                 <TextBlock x:Name="ClothingDownMethodLabel" Style="{StaticResource StepLabel}"/>
                                 <StackPanel Orientation="Horizontal">
                                     <RadioButton x:Name="ClothingDownCash" Style="{StaticResource MethodRadio}" GroupName="ClothingDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
-                                    <RadioButton x:Name="ClothingDownCard" Style="{StaticResource MethodRadio}" GroupName="ClothingDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Card], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                    <RadioButton x:Name="ClothingDownDebit" Style="{StaticResource MethodRadio}" GroupName="ClothingDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                    <RadioButton x:Name="ClothingDownCredit" Style="{StaticResource MethodRadio}" GroupName="ClothingDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="ClothingDownEtransfer" Style="{StaticResource MethodRadio}" GroupName="ClothingDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Etransfer], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="ClothingDownNone" Style="{StaticResource MethodRadio}" GroupName="ClothingDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.None], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                 </StackPanel>
@@ -729,7 +763,8 @@
                                         <TextBlock x:Name="ClothingFinalMethodLabel" Style="{StaticResource StepLabel}" Margin="0,14,0,6"/>
                                         <StackPanel Orientation="Horizontal">
                                             <RadioButton x:Name="ClothingFinalCash" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
-                                            <RadioButton x:Name="ClothingFinalCard" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Card], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                            <RadioButton x:Name="ClothingFinalDebit" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
+                                            <RadioButton x:Name="ClothingFinalCredit" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="ClothingFinalEtransfer" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Etransfer], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                         </StackPanel>
                                         <!-- Full price breakdown shown once deposit is received -->

@@ -22,6 +22,12 @@ public partial class ReceiptBrandingWindow : Window
     private readonly Dictionary<string, (RichTextBox Header, RichTextBox Footer)> _editors = new();
     private RichTextBox? _activeEditor;
 
+    // One box per language tab, all showing the SAME value: a tax registration number is not
+    // translated, but it belongs directly under the header on whichever tab is open, so the tabs
+    // mirror each other rather than the field being hidden on all but one.
+    private readonly List<TextBox> _taxNumberBoxes = new();
+    private bool _syncingTaxNumber;
+
     private string? _pendingLogoSourcePath;
     private bool _logoRemoved;
 
@@ -54,6 +60,8 @@ public partial class ReceiptBrandingWindow : Window
 
             var panel = new StackPanel { Margin = new Thickness(0, 12, 0, 0) };
             panel.Children.Add(BuildEditorCard("Branding.Header", headerEditor));
+            // Directly under the header area, because that is where it prints.
+            panel.Children.Add(BuildTaxNumberCard());
             panel.Children.Add(BuildEditorCard("Branding.Footer", footerEditor));
 
             LanguageTabs.Items.Add(new TabItem
@@ -92,6 +100,58 @@ public partial class ReceiptBrandingWindow : Window
     }
 
     private Border BuildEditorCard(string labelKey, RichTextBox editor)
+        => BuildCard(labelKey, editor);
+
+    /// <summary>
+    /// The shop's GST/HST number, sitting under the header editor because that is where it prints
+    /// on the receipt. Every language tab gets its own box showing one shared value — see
+    /// <see cref="_taxNumberBoxes"/>.
+    /// </summary>
+    private Border BuildTaxNumberCard()
+    {
+        var box = new TextBox
+        {
+            FontSize = 13,
+            Padding = new Thickness(7, 5, 7, 5),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0xDC, 0xE1, 0xE7)),
+            BorderThickness = new Thickness(1),
+            Text = _settings.TaxRegistrationNumber ?? string.Empty
+        };
+        box.TextChanged += OnTaxNumberChanged;
+        _taxNumberBoxes.Add(box);
+
+        var hint = new TextBlock
+        {
+            Text = _localization["Branding.TaxNumberHint"],
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.FromRgb(0x7A, 0x87, 0x94)),
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 5, 0, 0)
+        };
+
+        return BuildCard("Branding.TaxNumber", box, hint);
+    }
+
+    // Keeps every tab's copy of the tax number in step. Guarded against reentrancy: assigning
+    // Text here raises TextChanged on each box it writes to.
+    private void OnTaxNumberChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_syncingTaxNumber || sender is not TextBox source)
+            return;
+
+        _syncingTaxNumber = true;
+        try
+        {
+            foreach (var box in _taxNumberBoxes.Where(candidate => !ReferenceEquals(candidate, source)))
+                box.Text = source.Text;
+        }
+        finally
+        {
+            _syncingTaxNumber = false;
+        }
+    }
+
+    private Border BuildCard(string labelKey, params UIElement[] content)
     {
         var stack = new StackPanel();
         stack.Children.Add(new TextBlock
@@ -101,7 +161,9 @@ public partial class ReceiptBrandingWindow : Window
             Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x41, 0x4D)),
             Margin = new Thickness(0, 0, 0, 6)
         });
-        stack.Children.Add(editor);
+
+        foreach (var element in content)
+            stack.Children.Add(element);
 
         return new Border
         {
@@ -242,6 +304,10 @@ public partial class ReceiptBrandingWindow : Window
             branding.HeaderXaml = BrandingRenderer.IsEmpty(headerXaml) ? null : headerXaml;
             branding.FooterXaml = BrandingRenderer.IsEmpty(footerXaml) ? null : footerXaml;
         }
+
+        // Every tab holds the same value, so the first box is as good as any.
+        var taxNumber = _taxNumberBoxes.FirstOrDefault()?.Text.Trim();
+        _settings.TaxRegistrationNumber = string.IsNullOrWhiteSpace(taxNumber) ? null : taxNumber;
 
         if (_logoRemoved)
             ReceiptBrandingStore.RemoveLogo(_settings);

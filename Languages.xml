@@ -32,6 +32,8 @@
     <Text key="Branding.Description">设置徽标、页眉和页脚，用于打印小票和量身单下载（可分别设置中英文）。</Text>
     <Text key="Branding.Header">页眉</Text>
     <Text key="Branding.Footer">页脚</Text>
+    <Text key="Branding.TaxNumber">税号（GST/HST）</Text>
+    <Text key="Branding.TaxNumberHint">用于小票税务凭证。填写后将打印在页眉正下方。各语言共用同一个税号。</Text>
     <Text key="Branding.Logo">徽标图片</Text>
     <Text key="Branding.ChooseLogo">选择图片</Text>
     <Text key="Branding.RemoveLogo">移除</Text>
@@ -91,7 +93,32 @@
     <Text key="Shop.Setup.NameDuplicate">已存在同名店铺，请换一个名称。</Text>
     <Text key="Shop.Setup.Save">保存</Text>
     <Text key="Shop.Setup.Cancel">取消</Text>
+    <Text key="Shop.Setup.Subtitle">此处的设置仅适用于本店铺：店名、货币、各支付方式的税率以及小票编号规则。</Text>
+    <Text key="Shop.Setup.IdentitySection">店铺信息</Text>
     <Text key="Shop.Switch.CloseEditors">请先关闭所有订单窗口，再切换店铺。</Text>
+
+    <Text key="Shop.Tax.Section">支付方式与税率</Text>
+    <Text key="Shop.Tax.SectionHint">设置每种支付方式是否计税。此处的税率将应用于本店铺所有订单的收款计算。</Text>
+    <Text key="Shop.Tax.MethodColumn">支付方式</Text>
+    <Text key="Shop.Tax.FreeColumn">免税</Text>
+    <Text key="Shop.Tax.RateColumn">计税税率</Text>
+    <Text key="Shop.Tax.Free">免税</Text>
+    <Text key="Shop.Tax.Charge">计税</Text>
+    <Text key="Shop.Tax.SummaryFree">不收取税费</Text>
+    <Text key="Shop.Tax.SummaryTaxable">按 {0}% 收取税费</Text>
+    <Text key="Shop.Tax.RateInvalid">税率必须为 0 到 100 之间的数字。</Text>
+
+    <Text key="Shop.Receipt.Section">小票编号规则</Text>
+    <Text key="Shop.Receipt.SectionHint">新订单的订单号（即小票号）的生成方式。已有订单的编号不会改变。</Text>
+    <Text key="Shop.Receipt.Prefix">前缀</Text>
+    <Text key="Shop.Receipt.Padding">编号位数</Text>
+    <Text key="Shop.Receipt.NextNumber">下一个编号</Text>
+    <Text key="Shop.Receipt.Mode">编号方式</Text>
+    <Text key="Shop.Receipt.ModeTimestamp">日期 + 时间（例：ORD-20260727-153012）</Text>
+    <Text key="Shop.Receipt.ModeSequential">连续编号（例：ORD-0001）</Text>
+    <Text key="Shop.Receipt.ModeDaily">日期 + 每日重新编号（例：ORD-20260727-0001）</Text>
+    <Text key="Shop.Receipt.ModeYearly">年份 + 每年重新编号（例：ORD-2026-0001）</Text>
+    <Text key="Shop.Receipt.Preview">预览：</Text>
 
     <Text key="StatusBar.Label">状态:</Text>
     <Text key="Status.Ready">就绪</Text>
@@ -131,6 +158,7 @@
     <Text key="Status.ImportGlobalSettingsFailed">恢复全局设置失败: {0}</Text>
     <Text key="Status.ImportGlobalSettingsInvalid">所选文件不是有效的全局设置备份包。</Text>
     <Text key="Receipt.Title">销售小票</Text>
+    <Text key="Receipt.TaxNumberLine">GST/HST 税号：{0}</Text>
     <Text key="Receipt.SectionTotal">合计</Text>
     <Text key="Search.Label">搜索</Text>
     <Text key="Filter.Status.Label">状态</Text>
@@ -285,6 +313,7 @@
     <Text key="OrderEdit.DownpaymentMethod">定金支付方式</Text>
     <Text key="OrderEdit.FinalBalanceMethod">尾款支付方式</Text>
     <Text key="OrderEdit.DownpaymentCompleted">定金已收</Text>
+    <Text key="OrderEdit.TaxRateLocked">税率由店铺设置统一管理（本地配置 → 店铺设置），不可在订单中单独修改。</Text>
     <Text key="OrderEdit.BalanceCleared">当前服务尾款已结清</Text>
     <Text key="OrderEdit.ClearAllBalances">结清所有尾款</Text>
     <Text key="OrderEdit.PickedUp">已取货</Text>
@@ -392,6 +421,8 @@
 
     <Text key="PaymentMethod.Etransfer">电子转账</Text>
     <Text key="PaymentMethod.Card">银行卡 (Visa/借记卡)</Text>
+    <Text key="PaymentMethod.DebitCard">借记卡</Text>
+    <Text key="PaymentMethod.CreditCard">信用卡</Text>
     <Text key="PaymentMethod.Cash">现金</Text>
     <Text key="PaymentMethod.None">无</Text>
     <Text key="Payment.Status.Cleared">已结清</Text>
@@ -445,6 +476,8 @@
     <Text key="Branding.Description">Set a logo, header, and footer used on printed receipts and measurement-sheet downloads (separately for each language).</Text>
     <Text key="Branding.Header">Header</Text>
     <Text key="Branding.Footer">Footer</Text>
+    <Text key="Branding.TaxNumber">Tax Number (GST/HST)</Text>
+    <Text key="Branding.TaxNumberHint">Used for the receipt's tax slip. When set, it is printed directly under the header. The same number is shared by every language.</Text>
     <Text key="Branding.Logo">Logo Image</Text>
     <Text key="Branding.ChooseLogo">Choose Image</Text>
     <Text key="Branding.RemoveLogo">Remove</Text>
@@ -502,6 +535,31 @@
     <Text key="Shop.Setup.NameDuplicate">A shop with this name already exists. Choose another name.</Text>
     <Text key="Shop.Setup.Save">Save</Text>
     <Text key="Shop.Setup.Cancel">Cancel</Text>
+    <Text key="Shop.Setup.Subtitle">These settings apply to this shop only: its name, currency, the tax charged on each payment method, and how its receipts are numbered.</Text>
+    <Text key="Shop.Setup.IdentitySection">Shop Details</Text>
+
+    <Text key="Shop.Tax.Section">Payment Methods &amp; Tax</Text>
+    <Text key="Shop.Tax.SectionHint">Choose whether each payment method is taxed. These rates apply to every order in this shop.</Text>
+    <Text key="Shop.Tax.MethodColumn">Payment Method</Text>
+    <Text key="Shop.Tax.FreeColumn">Tax Free</Text>
+    <Text key="Shop.Tax.RateColumn">Tax Rate</Text>
+    <Text key="Shop.Tax.Free">Tax free</Text>
+    <Text key="Shop.Tax.Charge">Charge</Text>
+    <Text key="Shop.Tax.SummaryFree">No tax charged</Text>
+    <Text key="Shop.Tax.SummaryTaxable">Taxed at {0}%</Text>
+    <Text key="Shop.Tax.RateInvalid">A tax rate must be a number between 0 and 100.</Text>
+
+    <Text key="Shop.Receipt.Section">Receipt Number Format</Text>
+    <Text key="Shop.Receipt.SectionHint">How a new order (and therefore its receipt) is numbered. Orders that already exist keep their numbers.</Text>
+    <Text key="Shop.Receipt.Prefix">Prefix</Text>
+    <Text key="Shop.Receipt.Padding">Number Length</Text>
+    <Text key="Shop.Receipt.NextNumber">Next Number</Text>
+    <Text key="Shop.Receipt.Mode">Numbering</Text>
+    <Text key="Shop.Receipt.ModeTimestamp">Date + time (e.g. ORD-20260727-153012)</Text>
+    <Text key="Shop.Receipt.ModeSequential">Running number (e.g. ORD-0001)</Text>
+    <Text key="Shop.Receipt.ModeDaily">Date + a fresh run each day (e.g. ORD-20260727-0001)</Text>
+    <Text key="Shop.Receipt.ModeYearly">Year + a fresh run each year (e.g. ORD-2026-0001)</Text>
+    <Text key="Shop.Receipt.Preview">Preview:</Text>
     <Text key="Shop.Switch.CloseEditors">Close all order windows before switching shops.</Text>
 
     <Text key="StatusBar.Label">Status:</Text>
@@ -542,6 +600,7 @@
     <Text key="Status.ImportGlobalSettingsFailed">Failed to restore global settings: {0}</Text>
     <Text key="Status.ImportGlobalSettingsInvalid">The selected file is not a valid global settings backup package.</Text>
     <Text key="Receipt.Title">Sales Receipt</Text>
+    <Text key="Receipt.TaxNumberLine">GST/HST No.: {0}</Text>
     <Text key="Receipt.SectionTotal">Total</Text>
     <Text key="Search.Label">Search</Text>
     <Text key="Filter.Status.Label">Status</Text>
@@ -696,6 +755,7 @@
     <Text key="OrderEdit.DownpaymentMethod">Downpayment Method</Text>
     <Text key="OrderEdit.FinalBalanceMethod">Balance Method</Text>
     <Text key="OrderEdit.DownpaymentCompleted">Downpayment received</Text>
+    <Text key="OrderEdit.TaxRateLocked">The tax rate is set once for the whole store (Local Config → Shop Settings) and cannot be changed on an individual order.</Text>
     <Text key="OrderEdit.BalanceCleared">Current service balance cleared</Text>
     <Text key="OrderEdit.ClearAllBalances">Clear all final balances</Text>
     <Text key="OrderEdit.PickedUp">Picked up</Text>
@@ -803,6 +863,8 @@
 
     <Text key="PaymentMethod.Etransfer">E-transfer</Text>
     <Text key="PaymentMethod.Card">Card (Visa/Debit)</Text>
+    <Text key="PaymentMethod.DebitCard">Debit Card</Text>
+    <Text key="PaymentMethod.CreditCard">Credit Card</Text>
     <Text key="PaymentMethod.Cash">Cash</Text>
     <Text key="PaymentMethod.None">None</Text>
     <Text key="Payment.Status.Cleared">Cleared</Text>

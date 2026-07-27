@@ -3,95 +3,389 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:CameywareOrder.Localization"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.CreateTitle], Mode=OneWay}"
-        SizeToContent="Height"
-        Width="470"
-        ResizeMode="NoResize"
+        Height="840" Width="820"
+        MinHeight="620" MinWidth="760"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="#F4F6F9">
-    <!-- Creates a shop, and edits one (本地配置 → 店铺设置). Both modes write the same four
-         fields, so they share one window rather than drifting apart as two. -->
+        Background="#EEF2F7">
+    <!-- Creates a shop, and edits one (本地配置 → 店铺设置). Both modes write the same fields, so
+         they share one window rather than drifting apart as two. Everything here is per shop: two
+         branches can charge different tax on the same payment method and number their receipts
+         differently. -->
     <Window.Resources>
+        <Style x:Key="CardStyle" TargetType="Border">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="BorderBrush" Value="#E3E8EF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,14"/>
+        </Style>
+
+        <Style x:Key="CardTitleStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14.5"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#1F2937"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Coloured rule down the left of a card heading; the same accent language the order
+             editor's payment cards use. -->
+        <Style x:Key="AccentBarStyle" TargetType="Border">
+            <Setter Property="Width" Value="4"/>
+            <Setter Property="Height" Value="17"/>
+            <Setter Property="CornerRadius" Value="2"/>
+            <Setter Property="Background" Value="#2980B9"/>
+            <Setter Property="Margin" Value="0,0,9,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
         <Style x:Key="SectionLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12.5"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="#374151"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
         </Style>
+
         <Style x:Key="HintStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="Foreground" Value="#6B7280"/>
             <Setter Property="TextWrapping" Value="Wrap"/>
             <Setter Property="Margin" Value="0,4,0,0"/>
         </Style>
+
+        <Style x:Key="ColumnHeaderStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#8592A3"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+        </Style>
+
+        <Style x:Key="InputStyle" TargetType="TextBox">
+            <Setter Property="Padding" Value="7,5"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="BorderBrush" Value="#D3DAE3"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="PickerStyle" TargetType="ComboBox">
+            <Setter Property="Padding" Value="7,5"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <Style x:Key="ModeRadioStyle" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,0,0,10"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="26,8"/>
+            <Setter Property="Background" Value="#2980B9"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1F6690"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SecondaryButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="22,8"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#42505E"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#C3CCD6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" CornerRadius="6" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#EEF2F6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
-    <Border Padding="24">
-        <StackPanel>
-            <TextBlock x:Name="TitleText" FontSize="17" FontWeight="Bold" Foreground="#1F2937"
-                       Margin="0,0,0,16"/>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
 
-            <!-- ── Name, one box per installed language ────────────────────── -->
-            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Name], Mode=OneWay}"
-                       Style="{StaticResource SectionLabelStyle}"/>
-            <ItemsControl x:Name="NameItems">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Grid Margin="0,0,0,6">
+        <!-- ── Title band ──────────────────────────────────────────────────── -->
+        <Border Grid.Row="0" Background="White" BorderBrush="#E3E8EF" BorderThickness="0,0,0,1" Padding="24,18">
+            <StackPanel>
+                <TextBlock x:Name="TitleText" FontSize="18" FontWeight="Bold" Foreground="#1F2937"/>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Subtitle], Mode=OneWay}"
+                           FontSize="12" Foreground="#7A8794" Margin="0,4,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,18,24,0">
+            <StackPanel>
+
+                <!-- ── Shop identity ───────────────────────────────────────── -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                            <Border Style="{StaticResource AccentBarStyle}"/>
+                            <TextBlock Style="{StaticResource CardTitleStyle}"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.IdentitySection], Mode=OneWay}"/>
+                        </StackPanel>
+
+                        <!-- Name, one box per installed language -->
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Name], Mode=OneWay}"
+                                   Style="{StaticResource SectionLabelStyle}"/>
+                        <ItemsControl x:Name="NameItems">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="100"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding LanguageName}" VerticalAlignment="Center"
+                                                   FontSize="12" Foreground="#4B5563"/>
+                                        <!-- PropertyChanged, not the default LostFocus: Save must see what is on
+                                             screen even when the box still has focus. -->
+                                        <TextBox Grid.Column="1" Padding="7,5" FontSize="13" BorderBrush="#D3DAE3"
+                                                 Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.NameHint], Mode=OneWay}"
+                                   Style="{StaticResource HintStyle}" Margin="0,2,0,16"/>
+
+                        <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="90"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="18"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{Binding LanguageName}" VerticalAlignment="Center"
-                                       FontSize="12" Foreground="#4B5563"/>
-                            <!-- PropertyChanged, not the default LostFocus: Save must see what is on
-                                 screen even when the box still has focus. -->
-                            <TextBox Grid.Column="1" Padding="7,5" FontSize="13"
-                                     Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.PreferredLanguage], Mode=OneWay}"
+                                           Style="{StaticResource SectionLabelStyle}"/>
+                                <ComboBox x:Name="LanguageBox" Style="{StaticResource PickerStyle}"/>
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.PreferredLanguageHint], Mode=OneWay}"
+                                           Style="{StaticResource HintStyle}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Currency], Mode=OneWay}"
+                                           Style="{StaticResource SectionLabelStyle}"/>
+                                <ComboBox x:Name="CurrencyBox" Style="{StaticResource PickerStyle}"/>
+                            </StackPanel>
                         </Grid>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.NameHint], Mode=OneWay}"
-                       Style="{StaticResource HintStyle}" Margin="0,2,0,16"/>
+                    </StackPanel>
+                </Border>
 
-            <!-- ── Preferred language ──────────────────────────────────────── -->
-            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.PreferredLanguage], Mode=OneWay}"
-                       Style="{StaticResource SectionLabelStyle}"/>
-            <ComboBox x:Name="LanguageBox" Padding="7,5" FontSize="13"/>
-            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.PreferredLanguageHint], Mode=OneWay}"
-                       Style="{StaticResource HintStyle}" Margin="0,4,0,16"/>
+                <!-- ── Payment methods & tax ───────────────────────────────── -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <Border Style="{StaticResource AccentBarStyle}" Background="#27AE60"/>
+                            <TextBlock Style="{StaticResource CardTitleStyle}"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.Section], Mode=OneWay}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.SectionHint], Mode=OneWay}"
+                                   Style="{StaticResource HintStyle}" Margin="13,0,0,14"/>
 
-            <!-- ── Currency ────────────────────────────────────────────────── -->
-            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Currency], Mode=OneWay}"
-                       Style="{StaticResource SectionLabelStyle}"/>
-            <ComboBox x:Name="CurrencyBox" Padding="7,5" FontSize="13" Margin="0,0,0,16"/>
+                        <!-- Column captions; the row template below repeats this geometry exactly. -->
+                        <Grid Margin="13,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="110"/>
+                                <ColumnDefinition Width="210"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Style="{StaticResource ColumnHeaderStyle}"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.MethodColumn], Mode=OneWay}"/>
+                            <TextBlock Grid.Column="1" Style="{StaticResource ColumnHeaderStyle}"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.FreeColumn], Mode=OneWay}"/>
+                            <TextBlock Grid.Column="2" Style="{StaticResource ColumnHeaderStyle}"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.RateColumn], Mode=OneWay}"/>
+                        </Grid>
 
-            <!-- ── Measurement terms (creation only) ───────────────────────── -->
-            <StackPanel x:Name="TermsSection">
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.MeasurementTerms], Mode=OneWay}"
-                           Style="{StaticResource SectionLabelStyle}"/>
-                <RadioButton x:Name="SeedDefaultsRadio" GroupName="Terms" IsChecked="True" Margin="0,0,0,6"
-                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.SeedDefaults], Mode=OneWay}"
-                             Checked="OnTermsSourceChanged"/>
-                <RadioButton x:Name="CopyFromRadio" GroupName="Terms"
-                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.CopyFrom], Mode=OneWay}"
-                             Checked="OnTermsSourceChanged"/>
-                <ComboBox x:Name="CopySourceBox" Padding="7,5" FontSize="13" Margin="20,6,0,0" IsEnabled="False"/>
-                <CheckBox x:Name="ConfigureNowCheck" Margin="0,12,0,0"
-                          Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.ConfigureNow], Mode=OneWay}"/>
+                        <!-- Rows are generated from PaymentTaxRules.ConfigurableMethods, so adding a
+                             payment method later needs no XAML change. -->
+                        <ItemsControl x:Name="PaymentTaxItems">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Background="#F8FAFC" CornerRadius="8" BorderBrush="#E8EDF3" BorderThickness="1"
+                                            Padding="0,0,12,0" Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="110"/>
+                                                <ColumnDefinition Width="210"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border Grid.Column="0" Width="4" CornerRadius="8,0,0,8" Background="{Binding AccentColor}"/>
+
+                                            <StackPanel Grid.Column="1" Margin="9,12,0,12">
+                                                <TextBlock Text="{Binding DisplayName}" FontSize="13.5" FontWeight="SemiBold" Foreground="#1F2937"/>
+                                                <TextBlock Text="{Binding StateSummary}" FontSize="11" Foreground="#8592A3" Margin="0,2,0,0"/>
+                                            </StackPanel>
+
+                                            <RadioButton Grid.Column="2" GroupName="{Binding GroupName}" VerticalAlignment="Center"
+                                                         IsChecked="{Binding IsTaxFree, Mode=TwoWay}"
+                                                         Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.Free], Mode=OneWay}"/>
+
+                                            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <RadioButton GroupName="{Binding GroupName}" VerticalAlignment="Center"
+                                                             IsChecked="{Binding IsTaxable, Mode=TwoWay}"
+                                                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.Charge], Mode=OneWay}"/>
+                                                <TextBox Width="66" Margin="10,0,0,0" Padding="6,4" FontSize="13" BorderBrush="#D3DAE3"
+                                                         TextAlignment="Right" VerticalContentAlignment="Center"
+                                                         IsEnabled="{Binding IsTaxable}"
+                                                         Text="{Binding RateText, UpdateSourceTrigger=PropertyChanged}"/>
+                                                <TextBlock Text="%" VerticalAlignment="Center" Margin="5,0,0,0" Foreground="#4B5563"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Receipt / order numbering ───────────────────────────── -->
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <Border Style="{StaticResource AccentBarStyle}" Background="#D4AC0D"/>
+                            <TextBlock Style="{StaticResource CardTitleStyle}"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.Section], Mode=OneWay}"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.SectionHint], Mode=OneWay}"
+                                   Style="{StaticResource HintStyle}" Margin="13,0,0,14"/>
+
+                        <Grid Margin="13,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.Prefix], Mode=OneWay}"
+                                           Style="{StaticResource SectionLabelStyle}"/>
+                                <TextBox x:Name="PrefixBox" Style="{StaticResource InputStyle}" MaxLength="20"
+                                         TextChanged="OnReceiptFormatChanged"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.Padding], Mode=OneWay}"
+                                           Style="{StaticResource SectionLabelStyle}"/>
+                                <ComboBox x:Name="PaddingBox" Style="{StaticResource PickerStyle}"
+                                          SelectionChanged="OnReceiptFormatSelectionChanged"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.NextNumber], Mode=OneWay}"
+                                           Style="{StaticResource SectionLabelStyle}"/>
+                                <TextBox x:Name="NextNumberBox" Style="{StaticResource InputStyle}" MaxLength="9"
+                                         TextChanged="OnReceiptFormatChanged"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.Mode], Mode=OneWay}"
+                                   Style="{StaticResource SectionLabelStyle}" Margin="13,16,0,8"/>
+                        <StackPanel Margin="13,0,0,0">
+                            <RadioButton x:Name="TimestampModeRadio" GroupName="OrderNumberMode" Style="{StaticResource ModeRadioStyle}"
+                                         Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.ModeTimestamp], Mode=OneWay}"
+                                         Checked="OnReceiptModeChanged"/>
+                            <RadioButton x:Name="SequentialModeRadio" GroupName="OrderNumberMode" Style="{StaticResource ModeRadioStyle}"
+                                         Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.ModeSequential], Mode=OneWay}"
+                                         Checked="OnReceiptModeChanged"/>
+                            <RadioButton x:Name="DailyModeRadio" GroupName="OrderNumberMode" Style="{StaticResource ModeRadioStyle}"
+                                         Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.ModeDaily], Mode=OneWay}"
+                                         Checked="OnReceiptModeChanged"/>
+                            <RadioButton x:Name="YearlyModeRadio" GroupName="OrderNumberMode" Style="{StaticResource ModeRadioStyle}"
+                                         Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.ModeYearly], Mode=OneWay}"
+                                         Checked="OnReceiptModeChanged"/>
+                        </StackPanel>
+
+                        <Border Background="#F1F7FB" BorderBrush="#CFE3F0" BorderThickness="1" CornerRadius="8"
+                                Padding="14,10" Margin="13,6,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.Preview], Mode=OneWay}"
+                                           Foreground="#5A6773" VerticalAlignment="Center"/>
+                                <TextBlock x:Name="ReceiptPreviewText" Margin="10,0,0,0" FontSize="15" FontWeight="Bold"
+                                           Foreground="#1F6690" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Measurement terms (creation only) ───────────────────── -->
+                <Border x:Name="TermsSection" Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                            <Border Style="{StaticResource AccentBarStyle}" Background="#8E7CC3"/>
+                            <TextBlock Style="{StaticResource CardTitleStyle}"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.MeasurementTerms], Mode=OneWay}"/>
+                        </StackPanel>
+                        <RadioButton x:Name="SeedDefaultsRadio" GroupName="Terms" IsChecked="True" Margin="13,0,0,8"
+                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.SeedDefaults], Mode=OneWay}"
+                                     Checked="OnTermsSourceChanged"/>
+                        <RadioButton x:Name="CopyFromRadio" GroupName="Terms" Margin="13,0,0,0"
+                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.CopyFrom], Mode=OneWay}"
+                                     Checked="OnTermsSourceChanged"/>
+                        <ComboBox x:Name="CopySourceBox" Style="{StaticResource PickerStyle}" Margin="33,6,0,0" IsEnabled="False"/>
+                        <CheckBox x:Name="ConfigureNowCheck" Margin="13,12,0,0"
+                                  Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.ConfigureNow], Mode=OneWay}"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
+        </ScrollViewer>
 
-            <TextBlock x:Name="ErrorText" Foreground="#C0392B" FontSize="12" TextWrapping="Wrap"
-                       Visibility="Collapsed" Margin="0,14,0,0"/>
+        <!-- ── Actions ─────────────────────────────────────────────────────── -->
+        <Border Grid.Row="2" Background="White" BorderBrush="#E3E8EF" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
-                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Cancel], Mode=OneWay}"
-                        Padding="18,7" Margin="0,0,10,0" Click="OnCancelClick" IsCancel="True"/>
-                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Save], Mode=OneWay}"
-                        Padding="24,7" Background="#2980B9" Foreground="White" FontWeight="SemiBold"
-                        Click="OnSaveClick" IsDefault="True"/>
-            </StackPanel>
-        </StackPanel>
-    </Border>
+                <TextBlock x:Name="ErrorText" Grid.Column="0" Foreground="#C0392B" FontSize="12" TextWrapping="Wrap"
+                           VerticalAlignment="Center" Visibility="Collapsed" Margin="0,0,16,0"/>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <Button Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,0" IsCancel="True"
+                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Cancel], Mode=OneWay}"
+                            Click="OnCancelClick"/>
+                    <Button Style="{StaticResource PrimaryButtonStyle}" IsDefault="True"
+                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Save], Mode=OneWay}"
+                            Click="OnSaveClick"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

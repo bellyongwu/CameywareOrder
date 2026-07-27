@@ -441,6 +441,23 @@ public partial class App : Application
     };
 
     /// <summary>
+    /// Columns added to Shops after that table first shipped. The CREATE TABLE guard in
+    /// <see cref="EnsureShopSchemaAsync"/> covers a fresh install only — an existing database
+    /// already has the table, so IF NOT EXISTS does nothing there and each later column needs its
+    /// own ALTER. Keep the two lists in step: a column added to one and not the other works on
+    /// exactly one kind of installation.
+    /// </summary>
+    private static readonly (string Column, string Ddl)[] ShopColumnMigrations =
+    {
+        ("PaymentTaxRulesJson", "ALTER TABLE Shops ADD COLUMN PaymentTaxRulesJson TEXT NULL; "),
+        ("OrderNumberMode", "ALTER TABLE Shops ADD COLUMN OrderNumberMode INTEGER NOT NULL DEFAULT 0; "),
+        ("OrderNumberPrefix", "ALTER TABLE Shops ADD COLUMN OrderNumberPrefix TEXT NULL; "),
+        ("OrderNumberPadding", "ALTER TABLE Shops ADD COLUMN OrderNumberPadding INTEGER NOT NULL DEFAULT 4; "),
+        ("OrderNumberNextSequence", "ALTER TABLE Shops ADD COLUMN OrderNumberNextSequence INTEGER NOT NULL DEFAULT 1; "),
+        ("OrderNumberSequenceKey", "ALTER TABLE Shops ADD COLUMN OrderNumberSequenceKey TEXT NULL; "),
+    };
+
+    /// <summary>
     /// Adds every Orders/OrderItems column the model has gained since the last real migration.
     /// MUST run AFTER <c>MigrateAsync</c> — see the ordering comment at the call site. The
     /// HasOrdersTable check below is now only a defensive no-op; if it ever fires it means the
@@ -582,6 +599,12 @@ public partial class App : Application
 
         CurrencySettingService.Instance.BindTo(shop);
         MeasurementTermsService.Instance.BindTo(shop);
+
+        // The shop's tax rules become the ones every money calculation reads. Bound here rather
+        // than looked up per call because Order.CalculateSectionPayment is static and runs on both
+        // the UI and Kestrel threads; one assignment per shop switch keeps a single answer to
+        // "is this payment method taxed" everywhere.
+        PaymentTaxRules.SetActive(shop.PaymentTaxRules);
     }
 
     /// <summary>
@@ -610,8 +633,24 @@ public partial class App : Application
                 PreferredLanguageCode TEXT NULL,
                 CurrencyType INTEGER NOT NULL DEFAULT 1,
                 CreatedAtUtc TEXT NOT NULL,
-                IsArchived INTEGER NOT NULL DEFAULT 0
+                IsArchived INTEGER NOT NULL DEFAULT 0,
+                PaymentTaxRulesJson TEXT NULL,
+                OrderNumberMode INTEGER NOT NULL DEFAULT 0,
+                OrderNumberPrefix TEXT NULL,
+                OrderNumberPadding INTEGER NOT NULL DEFAULT 4,
+                OrderNumberNextSequence INTEGER NOT NULL DEFAULT 1,
+                OrderNumberSequenceKey TEXT NULL
             );");
+
+        // A database created by an earlier build already HAS the table, so CREATE TABLE IF NOT
+        // EXISTS above does nothing for it — every column added to Shops after the table shipped
+        // needs its own guard here, exactly like OrderColumnMigrations does for Orders.
+        var shopColumns = await ReadShopColumnsAsync(db);
+        foreach (var (column, ddl) in ShopColumnMigrations)
+        {
+            if (!shopColumns.Contains(column))
+                await db.Database.ExecuteSqlRawAsync(ddl);
+        }
 
         await db.Database.ExecuteSqlRawAsync(
             "CREATE UNIQUE INDEX IF NOT EXISTS IX_Shops_PublicId ON Shops (PublicId);");
@@ -717,6 +756,24 @@ public partial class App : Application
         }
 
         return (hasOrdersTable, hasOrderItemsTable, orderColumns, orderItemColumns);
+    }
+
+    private static async Task<HashSet<string>> ReadShopColumnsAsync(AppDbContext db)
+    {
+        var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var connection = db.Database.GetDbConnection();
+        await connection.OpenAsync();
+        try
+        {
+            await ReadColumnNamesAsync(connection, "PRAGMA table_info('Shops');", columns);
+        }
+        finally
+        {
+            await connection.CloseAsync();
+        }
+
+        return columns;
     }
 
     private static async Task<bool> TableExistsAsync(DbConnection connection, string tableName)

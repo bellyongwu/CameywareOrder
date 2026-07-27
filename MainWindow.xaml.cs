@@ -1081,19 +1081,50 @@ public partial class MainWindow : Window
     // measurements export.
     private static void InjectReceiptBranding(FlowDocument document, ReceiptBrandingSettings settings, LocalizedBranding branding)
     {
+        // Inserted BEFORE the header is prepended, so the header ends up above it: the shop's tax
+        // registration number reads as part of the letterhead, directly under the header — which
+        // is what makes the receipt usable as a tax slip.
+        var taxNumberBlock = CreateTaxNumberBlock(settings.TaxRegistrationNumber);
+        if (taxNumberBlock is not null)
+            InsertAtTop(document, taxNumberBlock);
+
         BrandingRenderer.AppendToFlowDocument(document, branding.HeaderXaml, atTop: true);
 
         var logoBlock = BrandingRenderer.CreateLogoBlock(ReceiptBrandingStore.GetLogoPath(settings), maxHeight: 80, settings.LogoPlacement);
         if (logoBlock is not null)
-        {
-            var anchor = document.Blocks.FirstBlock;
-            if (anchor is null)
-                document.Blocks.Add(logoBlock);
-            else
-                document.Blocks.InsertBefore(anchor, logoBlock);
-        }
+            InsertAtTop(document, logoBlock);
 
         BrandingRenderer.AppendToFlowDocument(document, branding.FooterXaml, atTop: false);
+    }
+
+    private static void InsertAtTop(FlowDocument document, Block block)
+    {
+        var anchor = document.Blocks.FirstBlock;
+        if (anchor is null)
+            document.Blocks.Add(block);
+        else
+            document.Blocks.InsertBefore(anchor, block);
+    }
+
+    /// <summary>
+    /// The GST/HST line, or null when the shop has not entered a number (本地配置 →
+    /// 添加或更改页眉页脚). The whole line shape comes from the string table so the separator is
+    /// translated too — zh uses a fullwidth colon where en uses ": ".
+    /// </summary>
+    private static Paragraph? CreateTaxNumberBlock(string? taxRegistrationNumber)
+    {
+        if (string.IsNullOrWhiteSpace(taxRegistrationNumber))
+            return null;
+
+        var text = LocalizationService.Instance.Format("Receipt.TaxNumberLine", taxRegistrationNumber.Trim());
+
+        return new Paragraph(new Run(text))
+        {
+            FontSize = 11,
+            TextAlignment = TextAlignment.Center,
+            Foreground = System.Windows.Media.Brushes.DimGray,
+            Margin = new Thickness(0, 0, 0, 10)
+        };
     }
 
     // Builds a paragraph that preserves the line breaks in multi-line receipt content.

@@ -17,6 +17,70 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-27 16:40 — Store-scoped payment/tax rules, split card types, receipt number format, GST/HST  [DONE]
+- Ask: "Implement new features: 1.Apply new rules for Stores > List all types of payment types for the charging tax. basic diagrams like below / TAX free / Tax Rate / CASH (Check mark) / Card / Debit Card (Check mark) (inputfield - a changable field) / Credit Card (Check mark) (inputfield - a changable field) / Etransfer (Check mark) / You can save this settings in the global setting for the shop respectively. 2. Beautify the above UI, make it morden look. easy to access. 3. Divide Card type into two separate groups, Debit and credit card. 4. Apply the rules for the payment areas, and locking the tax percentage area - Making the inputbox in text lable, bolded. > the change on the global tax percentage charging rules will reflect globally in store's scope > By default Cash + Etransfer are 0%, any card type is 13% 5. Add Rules for Store's Receipt format. start with Prefix, start with number or something you can think the most commonly used for your self. 6. add a configuration field for printing store's GST/HST input for tracking receipt's tax slip. In any printing field, place it within [Header & footer editor], just under the Header Area."
+- Decisions taken with the user before starting (both affect existing financial data):
+  - **Legacy `PaymentMethod.Card` displays as Debit Card.** The old label was literally 银行卡 (Visa/借记卡) / "Card (Visa/Debit)", so Debit is what the shop was recording. The enum value is KEPT so un-re-saved rows still resolve a name everywhere.
+  - **A store rate change re-prices editable orders only.** An order that can still be edited picks up the current store rate when opened; a read-only one (Completed/Shipped/Cancelled/Returned) keeps the rate it was actually charged, so a printed receipt can never disagree with the screen.
+- Plan:
+  - [ ] `PaymentMethod`: add DebitCard/CreditCard; keep Card as the legacy value.
+  - [ ] Per-shop `PaymentTaxRules` (taxable + rate per method) and receipt-number format on `Shop`, with runtime column guards.
+  - [ ] `PaymentTaxRuleService` + `OrderNumberFormatter`, bound to the active shop like `CurrencySettingService`.
+  - [ ] New `ShopSettingsWindow` (payment/tax matrix + receipt format) off the 本地配置 menu.
+  - [ ] `OrderEditWindow`: Debit/Credit radios everywhere, tax rate becomes a locked bold label driven by the rules.
+  - [ ] GST/HST number in the header/footer editor, printed under the receipt header.
+  - [ ] Localization keys in both blocks; build clean.
+- Done:
+  - [x] `Models/PaymentTaxRules.cs` (NEW): `PaymentTaxRule` (taxable + rate) keyed per method, `CreateDefault`
+        (cash/e-transfer free, both cards 13%), `Normalize` (legacy `Card` → `DebitCard`), JSON round-trip, and a
+        static `Active` the money calculation reads. **The type lives in Models, not Services, deliberately** —
+        `Order.CalculateSectionPayment` cannot decide whether a portion is taxed without it, and a model reaching
+        into a service is worse than a model owning the rule type.
+  - [x] `Order.CalculateSectionPayment` gate changed from `method == Card` to
+        `PaymentTaxRules.Active.IsTaxable(method)`. **The RATE still comes from the order** (what was charged and
+        persisted), only the taxable/tax-free decision follows the shop — so no saved order re-prices behind the
+        shop's back, while a method made tax free stops adding tax.
+  - [x] `Shop`: `PaymentTaxRulesJson` + five receipt-numbering columns, with a new `ShopColumnMigrations` guard
+        table in `App.xaml.cs`. **The CREATE TABLE guard was not enough**: an existing database already has Shops,
+        so `IF NOT EXISTS` is a no-op there and every later column needs its own ALTER.
+  - [x] `Services/OrderNumberFormatter.cs` (NEW): 4 modes (Timestamp = the legacy format and still the default,
+        Sequential, DailySequential, YearlySequential) + prefix + padding. `Reserve` scans past numbers already
+        taken; `CommitSequence` advances the counter **only after the order is saved**, so an abandoned form
+        cannot burn a receipt number.
+  - [x] `ShopSetupWindow` rebuilt as a scrolling card layout (identity / payment-tax matrix / receipt numbering /
+        measurement terms) with a live number preview. The tax matrix is generated from
+        `PaymentTaxRules.ConfigurableMethods`, so a method added to the enum later needs no XAML change.
+  - [x] `OrderEditWindow`: Debit + Credit radios in all 6 groups; the three tax `TextBox`es became bold read-only
+        value blocks (`LockedRateBox`/`LockedRateText` + a tooltip naming where the rate is set). The four
+        radio helpers now take `PaymentSectionControls` instead of a positional radio list — with five deposit
+        radios, a call site passing them in the wrong order would have compiled and silently read the wrong method.
+  - [x] `ReceiptBrandingSettings.TaxRegistrationNumber` + a field directly under the Header card in the branding
+        editor, mirrored across language tabs (one shared value, reentrancy-guarded). Printed under the header on
+        the receipt, the measurement print, and the QuestPDF measurement export.
+  - [x] 30 keys × 2 blocks; both blocks verified at **413 keys, identical sets, no duplicates**.
+- **Verified by execution, not just by build** (scratch harness in the session scratchpad, referencing the built dll):
+  - 35 assertions on numbering and tax rules, all passing: every format shape, blank prefix, padding clamping,
+    daily/yearly rollover, commit advancing exactly one, a hand-typed number leaving the counter alone,
+    yesterday's number not moving today's run, JSON round-trip, and the money split honouring the rules.
+  - **One real bug found and fixed this way**: `ResolveNextSequence` compared the period key in *every* mode, so a
+    continuous (Sequential) run carrying any stale key restarted at **1** and would have re-issued receipt numbers
+    already handed to customers. Only period-based modes may roll over now.
+  - Schema guards run against a **copy of the live database** with the DDL read out of the built assembly by
+    reflection (so the test cannot drift from what ships): Shops went 8 → 14 columns, 6 statements applied, both
+    existing shops survived reading back mode=0 / padding=4 / next=1 / rules=null (i.e. the documented defaults),
+    16 orders untouched, and a second pass added nothing.
+- Notes: build succeeded, **0 warnings / 0 errors**, and a full build with `SonarAnalyzer.CSharp` 10.30.0.144632
+  temporarily referenced reported **zero Sxxxx findings** across the project (package then removed; `git diff` on
+  the csproj is clean). Two justified `[SuppressMessage]`s were added in `ShopSetupWindow` for the documented WPF
+  false positives — S2325 on a method that only reads `x:Name` radios, S1144 on a property consumed solely by
+  `{Binding GroupName}`.
+  - The live database is **deliberately not migrated yet**: startup blocks on the login window *before* the schema
+    phase, so it will be migrated on the user's next sign-in. A backup was taken first at
+    `%LOCALAPPDATA%\CameywareOrder\orders.db.bak-preShopRules`, and the live file was confirmed byte-size identical
+    afterwards — launching to the login screen changed nothing.
+  - Expect a CS0103 storm in the editor (SKILL §15): ~15 new `x:Name` controls plus two `.csproj` edits for the
+    analyzer. `dotnet build` is clean, so it is the stale design-time model — restart the C# language server.
+
 ### 2026-07-27 15:25 — Rebrand LeeYongeOrdering → CameywareOrder  [DONE]
 - Ask: "Now, Lets renaming the whole project, Lets call the program CameywareOrder, whenever you see LeeYongeOrder, rename to this. Why? Previously, we wanted to design a simple single store tracking system. Now the concept has been more scalable. now, we put everything managed/developed by Cameyware INC."
 - Decisions taken with the user before starting (three non-mechanical calls inside an otherwise mechanical rename):

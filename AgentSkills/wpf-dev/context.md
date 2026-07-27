@@ -24,6 +24,53 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **Tax is a STORE rule, not a per-order figure (2026-07-27).** `PaymentTaxRules` (in **Models**, not
+  Services) holds one `PaymentTaxRule` — taxable + rate — per payment method, persisted on
+  `Shops.PaymentTaxRulesJson` and edited in 本地配置 → 店铺设置. Its static `Active` is assigned in
+  `App.ApplyActiveShop` alongside the currency/terms binds.
+  - It lives in Models because `Order.CalculateSectionPayment` must consult it; a model reaching into a
+    service would be worse than a model owning the rule type. Defaults (cash + e-transfer free, both card
+    types 13%) mean a shop that never opens the settings screen behaves exactly as the app always did.
+  - **The gate changed, the rate did not.** `CalculateSectionPayment` now taxes a portion when
+    `Active.IsTaxable(method)` rather than `method == Card`, but still at the rate stored **on the order**.
+    So a saved order never silently re-prices, while a method the shop makes tax free stops adding tax.
+  - `OrderEditWindow` is the other half: it resolves rates live from `Active` for an editable order, and
+    keeps the stored rates for a **read-only** one (completed/shipped/cancelled/returned) whose receipt is
+    already printed. That is the whole answer to "does a rate change affect existing orders".
+  - The three 税率 `TextBox`es are gone — they are bold read-only value blocks (`LockedRateBox` /
+    `LockedRateText`). Deliberately not a disabled TextBox: a greyed box invites clicking and reads as broken.
+- **`PaymentMethod.Card` is legacy and must never be deleted.** Debit and credit are now separate values
+  (`DebitCard = 5`, `CreditCard = 6`); orders saved before the split still hold `Card = 2`. Everything that
+  DISPLAYS a method runs it through `PaymentTaxRules.Normalize` (→ `DebitCard`, which is what the old label
+  银行卡 (Visa/借记卡) / "Card (Visa/Debit)" actually named): `SetSelectedDownMethod`/`SetSelectedFinalMethod`,
+  `OrderEditWindow.PaymentMethodName`, `OrderPaymentSummaryConverter.MethodText`. Without the normalization in
+  the setters, a legacy order comes back with **no deposit radio checked**, and `UpdateSectionVisibility`
+  collapses the section's whole pricing panel — the failure mode already recorded twice in this file.
+- **The payment-radio helpers take `PaymentSectionControls`, not a positional radio list.** With five deposit
+  radios and four final ones, `GetSelectedDownMethod(none, etransfer, card, cash)` was one argument swap away
+  from compiling and silently reading the wrong method. `GetSelectedFinalMethod`/`SetSelectedFinalMethod`
+  replaced `Get/SetSelectedPaymentMethod`.
+- **Receipt numbering is per shop** (`Services/OrderNumberFormatter` + five `Shops.OrderNumber*` columns):
+  Timestamp (the legacy `ORD-yyyyMMdd-HHmmss`, still the default so no existing shop's numbering changes),
+  Sequential, DailySequential, YearlySequential, each with a prefix and padding.
+  - The counter advances in `CommitSequence` **only after the order is saved** — a preview shown in an
+    abandoned form must not burn a number, because a gap in a receipt run is what an audit asks about.
+  - **Bug caught by testing, worth remembering:** `ResolveNextSequence` compared the period key in every mode,
+    so a continuous run carrying a stale key restarted at 1 and re-issued numbers already given to customers.
+    Only period-based modes may roll over; a continuous run has no period and must never restart.
+  - `Reserve` also scans for numbers already taken — order numbers can be typed by hand and databases get
+    imported, so a stored counter alone is not proof a number is free.
+- **`ShopColumnMigrations` (App.xaml.cs) is the Shops equivalent of `OrderColumnMigrations`.** The
+  `CREATE TABLE IF NOT EXISTS Shops` guard only helps a FRESH install; an existing database already has the
+  table, so every column added later needs its own ALTER. Keep the two lists in step — a column added to one
+  and not the other works on exactly one kind of installation.
+- **The shop's GST/HST number lives in the branding settings**, not on the Shop row:
+  `ReceiptBrandingSettings.TaxRegistrationNumber`, edited directly under the Header card in 页眉页脚 and
+  printed under the header by `InjectReceiptBranding` (inserted BEFORE the header is prepended, so the header
+  lands above it) and by the QuestPDF measurement export. It is NOT per language — a registration number is
+  the same string in both; only its label is translated (`Receipt.TaxNumberLine` carries the whole line shape).
+  Each language tab shows its own box over one shared value, reentrancy-guarded by `_syncingTaxNumber`.
+
 - **2026-07-27, OrderEditWindow CS0103 storm — diagnosed, code was correct.** ~80 CS0103
   errors on `x:Name` controls and `InitializeComponent` while `dotnet build` reported
   0 errors / 0 warnings. Proof it was the stale design-time model, not a defect:

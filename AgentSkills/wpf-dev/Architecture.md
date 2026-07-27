@@ -68,7 +68,9 @@ components are added/renamed or the way pieces fit together changes.
     `receipt-branding.json` + a `logo.*` file under
     `%LocalAppData%\CameywareOrder\Branding`. `ReceiptBrandingSettings` holds
     per-language `LocalizedBranding` (`HeaderXaml`/`FooterXaml`) plus
-    `LogoFileName` + `LogoPlacement` (Left/Center/Right, default Center).
+    `LogoFileName` + `LogoPlacement` (Left/Center/Right, default Center) and the shop's
+    `TaxRegistrationNumber` (GST/HST — NOT per language; printed directly under the
+    receipt header, and edited under the Header card in the branding editor).
     `ExportConfigJson` / `TryParseConfigJson` / `ImportConfig` (+ `BrandingExport`
     DTO) make the 页眉页脚 export **self-contained** — the logo travels as base64
     inside the JSON.
@@ -86,6 +88,12 @@ components are added/renamed or the way pieces fit together changes.
     QuestPDF spans for the measurements PDF (`RenderToPdf`, `AlignLogo`).
     `IsEmpty(headerXaml)` is the gate that decides whether the built-in document
     title is printed.
+  - `OrderNumberFormatter` — static; builds a shop's order/receipt numbers from its configured
+    format (`OrderNumberMode` Timestamp/Sequential/DailySequential/YearlySequential + prefix +
+    padding). `Preview` (no reservation), `Reserve` (skips numbers already taken),
+    `CommitSequence` (advances the counter, called only AFTER the order is saved so an abandoned
+    form cannot burn a receipt number), `SequenceKeyFor` (the period a counter belongs to —
+    empty for a continuous run, which therefore never restarts).
   - `CustomMadeMeasurementReader` — static read-only helper that projects an
     order's saved `CustomMadeRecords` into print/UI shapes: `GetGarmentNames`
     (distinct, order-preserving garment display names in a given language) and
@@ -117,6 +125,16 @@ components are added/renamed or the way pieces fit together changes.
     stored as a pair: `StatusReasonCategory` (stable key — CustomerDoesNotWant /
     ServiceUnsatisfactory / ProductIssue / PriceTooHigh / Other) plus
     `StatusReason` (free text, only meaningful for `Other`).
+  - `PaymentTaxRules` / `PaymentTaxRule` (`Models/PaymentTaxRules.cs`) — a shop's tax rule per
+    payment method (taxable + rate). Persisted on `Shop.PaymentTaxRulesJson`; the static `Active`
+    is assigned in `App.ApplyActiveShop` and is what `Order.CalculateSectionPayment` consults to
+    decide whether a portion is taxed at all. `ConfigurableMethods` drives the settings UI;
+    `Normalize` maps the legacy `PaymentMethod.Card` onto `DebitCard`. Deliberately in Models
+    rather than Services — the money calculation cannot resolve without it.
+  - `PaymentMethod` — `Etransfer`, `Card` (LEGACY, never delete: orders saved before the split
+    still hold it), `Cash`, `None`, `DebitCard`, `CreditCard`.
+  - `OrderNumberMode` (`Models/Shop.cs`) — Timestamp (default, the format the app always produced)
+    / Sequential / DailySequential / YearlySequential.
   - `SectionPayment` — immutable `readonly record struct`
     (Subtotal, Deposit, FinalBase, ReceivedDownpayment, FinalCharge, Total, Tax)
     holding one section's money split.
@@ -270,6 +288,13 @@ components are added/renamed or the way pieces fit together changes.
   - `DocumentPreviewWindow` — in-app image viewer (loads via `BitmapImage`
     `OnLoad` so the file is not locked).
   - `LanguageSelectionWindow` — first-run language picker.
+  - `ShopSetupWindow` — creates a shop and edits one (本地配置 → 店铺设置). A scrolling card
+    layout: shop identity (per-language names, preferred language, currency), the **payment /
+    tax matrix** (one row per `PaymentTaxRules.ConfigurableMethods` entry — tax free vs. charge at
+    its own rate, generated from a `PaymentTaxRow` view-model so a method added later needs no
+    XAML change), the **receipt-number format** (prefix / padding / next number / mode with a live
+    preview built through `OrderNumberFormatter`, so the preview cannot drift from what is
+    actually issued), and measurement-terms seeding (creation only). Administrators only.
 - **Migrations/** — `InitialCreate`, `AddOrderPaymentFields`, and the model
   snapshot. Columns added after those two migrations arrive through the runtime
   guards in `App.xaml.cs` instead (see Startup above).
@@ -282,7 +307,11 @@ components are added/renamed or the way pieces fit together changes.
 - Per-section money math is centralized in `Order.CalculateSectionPayment` and
   reused by the model and the live editor summary so persisted and on-screen
   values match; tax is applied **per payment portion** (deposit vs. final) based
-  on that portion's method **and its own rate**. The editor persists whatever it
+  on that portion's method **and its own rate**. Whether a portion is taxed at all
+  comes from the SHOP (`PaymentTaxRules.Active`), while the rate comes from the
+  ORDER — so a rule change never silently re-prices a saved order, and the order
+  editor resolves rates live from the rules except on a read-only order, which
+  keeps what it was actually charged. The editor persists whatever it
   displayed — both stage rates, and the final method resolved through
   `EffectiveFinalMethod` — so a reloaded order never recomputes to different
   amounts than the ones the shop saw when saving.

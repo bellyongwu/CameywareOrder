@@ -34,6 +34,13 @@ public sealed class ReceiptBrandingSettings
 
     public LogoPlacement LogoPlacement { get; set; } = LogoPlacement.Center;
 
+    /// <summary>
+    /// The shop's tax registration number (GST/HST in Canada), printed directly under the receipt
+    /// header so a receipt doubles as a tax slip. Deliberately NOT per language: a registration
+    /// number is the same string whoever is reading it; only its label is translated.
+    /// </summary>
+    public string? TaxRegistrationNumber { get; set; }
+
     public Dictionary<string, LocalizedBranding> Languages { get; set; } =
         new(StringComparer.OrdinalIgnoreCase);
 

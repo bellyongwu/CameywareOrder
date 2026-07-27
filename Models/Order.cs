@@ -272,7 +272,9 @@ public class Order
         => (balanceCleared && money.FinalBase > 0m) ? money.FinalCharge : 0m;
 
     // Splits a service section into its deposit and final-balance money, applying tax to
-    // each portion only when that portion is settled by card. Each portion carries its own
+    // each portion only when the method that settled it is taxable under the shop's rules
+    // (PaymentTaxRules.Active — by default the two card types, not cash or e-transfer). Each
+    // portion carries its own
     // rate, so the shop can charge e.g. 5% on a card deposit and 7% on the card final
     // balance. The deposit is the pre-tax amount entered by the shop and ReceivedDownpayment
     // is that deposit after any card tax. FinalBase is the pre-tax remainder and FinalCharge
@@ -286,8 +288,14 @@ public class Order
         var safeDeposit = Math.Clamp(deposit, 0m, safeSubtotal);
         var finalBase = safeSubtotal - safeDeposit;
 
-        var depositRate = downpaymentMethod == PaymentMethod.Card && depositRatePercent > 0m ? depositRatePercent : 0m;
-        var finalRate = finalBalanceMethod == PaymentMethod.Card && finalRatePercent > 0m ? finalRatePercent : 0m;
+        // The RATE comes from the order (what the shop actually charged and persisted); whether it
+        // applies at all comes from the shop's current rules. Keeping the stored rate is what makes
+        // a saved order print the same figures it was saved with, while the taxable/tax-free
+        // decision still follows the shop — a method the shop has since made tax free stops adding
+        // tax rather than silently keeping a rate nobody can see any more.
+        var rules = PaymentTaxRules.Active;
+        var depositRate = rules.IsTaxable(downpaymentMethod) && depositRatePercent > 0m ? depositRatePercent : 0m;
+        var finalRate = rules.IsTaxable(finalBalanceMethod) && finalRatePercent > 0m ? finalRatePercent : 0m;
 
         var receivedDownpayment = safeDeposit + (safeDeposit * depositRate / 100m);
         var finalCharge = finalBase + (finalBase * finalRate / 100m);
@@ -349,9 +357,15 @@ public enum OrderServiceType
 public enum PaymentMethod
 {
     Etransfer = 1,
+    // Legacy single "card" value, from before debit and credit were charged separately. Kept so
+    // orders already saved with it still resolve a name in every converter and on the receipt; the
+    // editor shows one as Debit, which is what its old label (银行卡 (Visa/借记卡) / "Card
+    // (Visa/Debit)") actually named. See PaymentTaxRules.Normalize.
     Card = 2,
     Cash = 3,
-    None = 4
+    None = 4,
+    DebitCard = 5,
+    CreditCard = 6
 }
 
 public enum OrderStatus
