@@ -398,12 +398,12 @@
                             <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomMadeFlag], Mode=OneWay}" Width="170">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Flag}"
-                                                       HorizontalAlignment="Center" TextAlignment="Center" FontWeight="SemiBold"/>
+                                                       HorizontalAlignment="Left" TextAlignment="Left" FontWeight="SemiBold"/>
                                             <TextBlock Text="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Names}"
                                                        Visibility="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=NamesVisibility}"
-                                                       HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" FontSize="11" Foreground="#666"/>
+                                                       HorizontalAlignment="Left" TextAlignment="Left" TextWrapping="Wrap" FontSize="11" Foreground="#666"/>
                                         </StackPanel>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>

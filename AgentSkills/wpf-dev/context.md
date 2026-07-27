@@ -18,6 +18,23 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **The GraphQL endpoint must never be able to stop the app.** Nothing in the desktop UI reads
+  through it (no `HttpClient`, no in-app reference to the URL) — it exists for external callers,
+  while the UI goes through `AppDbContext` directly. Until 2026-07-27 a fixed `UseUrls(...:5050)`
+  plus an unguarded `_host.StartAsync()` meant a second running copy of the app made startup fail
+  with `IOException: Failed to bind to address http://127.0.0.1:5050: address already in use`,
+  which `OnStartup`'s catch turned into `Shutdown(1)` — no orders readable because a port nobody
+  reads was busy. Now `ResolveServerPort()` prefers 5050 and otherwise resolves a **concrete** free
+  port (never `localhost:0` — Kestrel resolves that hostname to two loopback addresses and takes a
+  separate ephemeral port for each), and `StartApiServerAsync()` catches `IOException` and runs
+  without the API. `App.ApiEndpoint` holds whatever was actually bound, read back from
+  `IServerAddressesFeature`. General rule: an auxiliary service's failure must degrade the feature
+  it provides, never the application around it.
+  - The catch is `IOException` ONLY, on purpose — a broader one would hide a genuinely broken
+    hosted service behind a "everything is fine" start.
+  - A busy 5050 almost always means another `LeeYongeOrdering` process, sometimes one with no
+    window at all. `Get-NetTCPConnection -LocalPort 5050` names the owner.
+
 - **Shop isolation rests on two mechanisms in `AppDbContext` — do not work around either.**
   - `HasQueryFilter(e => e.ShopId == _shopId)` on `Order` confines every read. `_shopId` MUST stay
     an instance field read in the constructor: EF parameterises instance-field references, while a
@@ -314,8 +331,9 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 - **Custom-service (定制服务) list flag + measurement printing**: the main list
   dropped the Last Modified column (moved into the detail panel; ordering still
-  defaults to LastModifiedDate desc in `LoadOrdersAsync`) and gained a centered,
-  wrappable **定制服务** column driven by `Converters/CustomMadeServiceFlagConverter`
+  defaults to LastModifiedDate desc in `LoadOrdersAsync`) and gained a
+  **left-aligned** (as of 2026-07-27; originally centered), wrappable **定制服务**
+  column driven by `Converters/CustomMadeServiceFlagConverter`
   (binds the whole `Order`; ConverterParameter `Flag`→有/无, `Names`→bracketed
   garment names with a zh 、 / en ", " separator, `NamesVisibility`). Order/Number
   and Balance-Status columns were widened (150→200, 140→180). `Order.

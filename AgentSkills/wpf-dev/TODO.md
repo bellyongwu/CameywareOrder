@@ -96,6 +96,46 @@ Entry format:
 
 ## Completed
 
+### 2026-07-27 12:45 — Startup died with "Failed to bind 127.0.0.1:5050 — address in use"  [DONE]
+- Ask: "When i tried to login to read records, it says System.IO.Exceptions: Failed to bind 127.0.0.1:5050... address in use. can you find how we can avoid this"
+- Diagnosed live before changing anything: `Get-NetTCPConnection -LocalPort 5050` named PID 15892 —
+  an already-running `LeeYongeOrdering` with an EMPTY `MainWindowTitle`, holding the port and the
+  database. So the trigger is a second copy of the app, often one left running with no window.
+- **Root cause was the blast radius, not the port.** `web.UseUrls(...:5050)` bound a fixed port and
+  `await _host.StartAsync()` was unguarded, so a bind failure propagated to `OnStartup`'s catch →
+  message box → `Shutdown(1)`. Confirmed by grep that NOTHING in the app consumes the endpoint (no
+  `HttpClient`, no reference to the URL outside `App.xaml.cs`) — the UI reads and writes through
+  `AppDbContext` directly. An external integration surface was taking down the order book with it.
+- Done, all in `App.xaml.cs`:
+  - [x] `ServerPort` const split into `PreferredServerPort` (5050) + `AnyFreePort` (0). New
+        `ResolveServerPort()` runs BEFORE the host is built — the URL is baked in at build time, so
+        retrying another port after a failed start would mean rebuilding the whole container.
+  - [x] Fallback resolves a **concrete** free port via `TryFindFreePort()` rather than handing
+        Kestrel `localhost:0`. With port 0 Kestrel resolves the one hostname to two loopback
+        addresses and takes a SEPARATE ephemeral port for each; picking the number first makes the
+        fallback bind exactly like the 5050 path, with one address to report.
+  - [x] `StartApiServerAsync()` wraps `StartAsync` and catches **`IOException` only** — that is what
+        Kestrel wraps a bind failure in. A broader catch would swallow a genuinely broken hosted
+        service and start the app in a state nobody checked. On failure the app runs with no API.
+  - [x] `internal static string? ApiEndpoint` records the address actually bound, read back from
+        `IServerAddressesFeature` (with `AnyFreePort` the real port is only known after the bind).
+        Logged at Information, or a warning naming the degradation.
+- Verified by execution, not just by build: a scratch console app running the identical
+  resolve/start/read-back path with 5050 deliberately occupied chose **57132**, bound it, and read
+  the address back — startup completed. Re-run with 5050 free chose **5050**. Both paths proven.
+- Notes: build succeeded, 0 warnings / 0 errors. No DB, XAML or string-table change. The transient
+  Sonar S1144 "unused private field" flags on the two new consts cleared once the helpers landed.
+  Deliberately NOT added: a single-instance mutex. It would also stop the port collision, but with
+  one shared database and in-app shop switching, two instances is plausibly something the user
+  wants; refusing the second launch is a bigger behaviour change than moving a port nobody reads.
+
+### 2026-07-27 11:36 — Left-align the 定制服务 column content  [DONE]
+- Ask: "go over the project, and do a minor update on 定制服务 on the main application, make the content left aligned."
+- Done:
+  - [x] `MainWindow.xaml`, the `Order.Fields.CustomMadeFlag` column cell template: the 有/无 flag `TextBlock` and the bracketed garment-names `TextBlock` both moved from `HorizontalAlignment="Center" TextAlignment="Center"` to `Left`.
+  - [x] The wrapping `StackPanel` went `HorizontalAlignment="Center"` → `"Stretch"`. Needed, not incidental: a centered panel measures to its content, so left-aligning the children inside it would left-align them against the *text block*, not the column, and the whole group would still sit centered in the cell. Stretch makes the panel fill the column width, which also keeps `TextWrapping="Wrap"` breaking the garment names at the full 170px column rather than at the widest line.
+- Notes: presentation-only — no converter, model, schema or string-table change; the column header stays as it was. Build succeeded, 0 warnings / 0 errors.
+
 ### 2026-07-26 20:00 — Payment breakdown: add a pre-tax final-balance row to both stages  [DONE]
 - Ask: "Improve the payment section's breakdown — 添加一个税前尾款，在定金付款stage，放置在税前小计下；在尾款支付的stage，新添加一个税前尾款，放置于此服务总计税之上，税前定金之下。"
 - Value shown in both places is `SectionPayment.FinalBase` (pre-tax subtotal minus the pre-tax deposit), so the row states what is still owed before any card tax.

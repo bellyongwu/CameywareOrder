@@ -1,10 +1,14 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Data.Common;
+using System.Net;
+using System.Net.Sockets;
 using System.Windows;
 using LeeYongeOrdering.Data;
 using LeeYongeOrdering.GraphQL;
@@ -20,7 +24,27 @@ public partial class App : Application
 {
     private const string ServerScheme = "http";
     private const string ServerHost = "localhost";
-    private const int ServerPort = 5050;
+
+    /// <summary>
+    /// Where the GraphQL endpoint is published when the port is free. It is only a PREFERENCE: a
+    /// second instance (or any other process holding 5050) sends the server to an ephemeral port
+    /// instead of failing, so the well-known address belongs to whoever starts first.
+    /// </summary>
+    private const int PreferredServerPort = 5050;
+
+    /// <summary>
+    /// Port 0 asks the OS for any free port. Used to DISCOVER a fallback port number, which is then
+    /// bound explicitly — see <see cref="ResolveServerPort"/>.
+    /// </summary>
+    private const int AnyFreePort = 0;
+
+    /// <summary>
+    /// The address the GraphQL endpoint actually ended up on, or <c>null</c> when it could not be
+    /// started at all. Nothing in the desktop app reads through it — it is an integration surface
+    /// for external callers — which is precisely why a failure here must not stop the app.
+    /// </summary>
+    internal static string? ApiEndpoint { get; private set; }
+
     private IHost? _host;
     private readonly LanguagePreferenceStore _languagePreferenceStore = new();
     // Set while a shop's own preferred language is being applied. The global preference file backs
@@ -86,6 +110,10 @@ public partial class App : Application
             return;
         }
 
+        // Resolved BEFORE the host is built, because the URL is baked in at build time: retrying a
+        // different port after a failed StartAsync would mean rebuilding the whole container.
+        var serverPort = ResolveServerPort();
+
         _host = Host.CreateDefaultBuilder()
             .ConfigureLogging(logging =>
             {
@@ -94,7 +122,7 @@ public partial class App : Application
             })
             .ConfigureWebHostDefaults(web =>
             {
-                web.UseUrls($"{ServerScheme}://{ServerHost}:{ServerPort}");
+                web.UseUrls($"{ServerScheme}://{ServerHost}:{serverPort}");
                 web.Configure(app =>
                 {
                     app.UseRouting();
@@ -161,8 +189,8 @@ public partial class App : Application
             return;
         }
 
-        // Start Kestrel + all hosted services
-        await _host.StartAsync();
+        // Start Kestrel + all hosted services. Deliberately non-fatal — see the method.
+        await StartApiServerAsync();
 
         ShowMainWindow(shopSelection.ConfigureTerms);
     }
@@ -211,6 +239,110 @@ public partial class App : Application
 
         ShowMainWindow(shopSelection.ConfigureTerms);
     }
+
+    /// <summary>
+    /// Starts Kestrel and every hosted service, treating a failure to bind as a DEGRADED START
+    /// rather than a fatal one.
+    /// </summary>
+    /// <remarks>
+    /// This used to be a bare <c>await _host.StartAsync()</c>, and a busy port ended the whole
+    /// application: the exception reached OnStartup's catch, which reports and calls Shutdown(1).
+    /// The user saw "Failed to bind to address http://127.0.0.1:5050: address already in use" while
+    /// signing in, and could not read a single order.
+    ///
+    /// That was the wrong trade. Nothing in the desktop app talks to this endpoint — the UI reads
+    /// and writes through <see cref="AppDbContext"/> directly — so the GraphQL server is an
+    /// integration surface for EXTERNAL callers. Losing it costs those callers a connection; losing
+    /// the app costs the shop its orders. Only the first of those is acceptable.
+    ///
+    /// The port is already resolved to a free one by <see cref="ResolveServerPort"/>, so reaching
+    /// the catch takes a genuine race (something claimed the port between the probe and the bind)
+    /// or a machine policy that forbids listening at all. Both leave the app fully usable.
+    /// </remarks>
+    private async Task StartApiServerAsync()
+    {
+        var logger = _host!.Services.GetRequiredService<ILogger<App>>();
+
+        try
+        {
+            await _host.StartAsync();
+            ApiEndpoint = ReadBoundAddress(_host);
+
+            if (ApiEndpoint is not null)
+                logger.LogInformation("GraphQL endpoint listening on {Endpoint}.", ApiEndpoint);
+        }
+        catch (System.IO.IOException ex)
+        {
+            // Only IOException: that is what Kestrel wraps a bind failure in. A broader catch would
+            // swallow a genuinely broken hosted service and start the app in a state nobody checked.
+            ApiEndpoint = null;
+            logger.LogWarning(ex, "The GraphQL endpoint could not be started; continuing without it. "
+                + "The desktop application does not depend on it.");
+        }
+    }
+
+    /// <summary>
+    /// Returns <see cref="PreferredServerPort"/> when it is free, otherwise a concrete free port.
+    /// </summary>
+    /// <remarks>
+    /// The overwhelmingly common cause of a busy 5050 is a second copy of this app — another
+    /// instance, or one left running with no window. Falling back means the second instance still
+    /// gets a working API instead of being refused a start, and the first keeps the well-known
+    /// address.
+    ///
+    /// A CONCRETE port is resolved here rather than handing Kestrel port 0, because "localhost:0"
+    /// makes it resolve one hostname to two loopback addresses and take a separate ephemeral port
+    /// for each. Picking the number first means the fallback binds exactly the way the 5050 path
+    /// does, with one address to report.
+    ///
+    /// Both probes are advisory, not guarantees: a port can be claimed in the gap before Kestrel
+    /// binds it, which is why <see cref="StartApiServerAsync"/> still handles the failure.
+    /// </remarks>
+    private static int ResolveServerPort()
+    {
+        if (IsPortAvailable(PreferredServerPort))
+            return PreferredServerPort;
+
+        // When even this fails the machine is refusing to let us listen at all. Return the
+        // preferred port and let the guarded start report it — there is no port that would work.
+        return TryFindFreePort() ?? PreferredServerPort;
+    }
+
+    private static bool IsPortAvailable(int port)
+    {
+        try
+        {
+            using var probe = new TcpListener(IPAddress.Loopback, port);
+            probe.Start();
+            return true;
+        }
+        catch (SocketException)
+        {
+            return false;
+        }
+    }
+
+    private static int? TryFindFreePort()
+    {
+        try
+        {
+            using var probe = new TcpListener(IPAddress.Loopback, AnyFreePort);
+            probe.Start();
+            return ((IPEndPoint)probe.LocalEndpoint).Port;
+        }
+        catch (SocketException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The address Kestrel actually bound. Read back rather than reconstructed, because with
+    /// <see cref="AnyFreePort"/> the real port is only known after the bind succeeds.
+    /// </summary>
+    private static string? ReadBoundAddress(IHost host)
+        => host.Services.GetService<IServer>()?.Features.Get<IServerAddressesFeature>()?
+            .Addresses.FirstOrDefault();
 
     private void ShowMainWindow(bool configureTerms)
     {

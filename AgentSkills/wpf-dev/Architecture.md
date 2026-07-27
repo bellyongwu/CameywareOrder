@@ -9,8 +9,13 @@ components are added/renamed or the way pieces fit together changes.
 - **Persistence:** EF Core 8 + SQLite. Schema is evolved at startup with
   idempotent runtime column guards in addition to the initial migration.
 - **API (in-process):** Hot Chocolate GraphQL server hosted via the .NET
-  Generic Host at `http://localhost:5050` (scheme/host/port composed from
-  constants in `App.xaml.cs`).
+  Generic Host, preferring `http://localhost:5050` (scheme/host/port composed
+  from constants in `App.xaml.cs`). The port is a **preference, not a
+  requirement**: `ResolveServerPort` falls back to a free port when 5050 is
+  taken, and `StartApiServerAsync` runs the app without the API if the bind
+  still fails. Nothing in the UI consumes the endpoint — it is for external
+  callers — so it must never block startup. `App.ApiEndpoint` holds the address
+  actually bound.
 - **PDF/print:** FlowDocument + `PrintDialog`; QuestPDF used for measurement
   export in the custom-made window.
 
@@ -179,8 +184,10 @@ components are added/renamed or the way pieces fit together changes.
     glyph) via the `GridViewColumnHeader.Click` handler and the
     `OrderColumnSort` attached properties. The Edit toolbar button + context-menu
     item relabel to "查看订单 / View Order" for read-only orders
-    (`RefreshToolbarLabels`). The list also shows a centered, wrappable **定制服务**
-    column (via `CustomMadeServiceFlagConverter`: 有/无 + bracketed garment names);
+    (`RefreshToolbarLabels`). The list also shows a **left-aligned**, wrappable
+    **定制服务** column (via `CustomMadeServiceFlagConverter`: 有/无 + bracketed
+    garment names; cell panel `Stretch`, both `TextBlock`s `Left`, so the flag and
+    the wrapped names share one left edge);
     the former Last Modified column moved into the detail panel (ordering still
     defaults to LastModifiedDate desc in `LoadOrdersAsync`). Rows gray out by
     status: **Cancelled/Returned** (`IsRefunded`) are the lightest gray,
