@@ -17,7 +17,82 @@ Entry format:
 
 ## Open / in progress
 
-_(none)_
+### 2026-07-26 20:30 — Multi-shop + login (scalability)  [IN PROGRESS — Phase 0 of 6 DONE]
+- Ask: "Lets scalable the Whole application" — add a login screen (roles Admin/Manager/Staff later, admin/admin for now, no complexity rules); after login the admin picks an existing shop or creates one; the current data becomes "Shanghai LeeYonge Bespoke"; a new shop collects name, preferred language, currency and measurement-terms setup; bilingual for now, multi-language later; role-gated behaviour left blank.
+- Approved plan: `C:\Users\123\.claude\plans\crispy-wandering-moler.md`. Decisions taken with the user: ONE SHARED DATABASE with a `ShopId` column (not per-shop folders); orders always filtered to the open shop, no cross-shop view yet; switch shops via a 本地配置 menu item without re-login; global language for login, per-shop language once open; wizard seeds defaults or copies another shop; the standalone language picker is dropped so startup is login → shop picker; `credentials.json` holds a LIST of accounts from day one.
+- A design review found five defects in the approved plan before any feature code was written. Folded in: the shop name must be LOCALIZED (`Main.HeaderTitle` is both 上海丽扬高级定制 and "Shanghai LeeYonge Bespoke" — a single string regresses the zh header and printed receipts); applying a shop's language would overwrite the global preference via the `LanguageChanged` handler; `ShopId` must be stamped centrally in `SaveChangesAsync` because `CopyOrderAsync` uses an explicit property list and would silently drop it; login/picker cancel would leave an invisible process under `OnExplicitShutdown`; and a zero-shops install needs its own path.
+
+#### Phase 0 — foundation fix  [DONE]
+- **Pre-existing, app-breaking bug found and fixed: a fresh install was broken outright.** `EnsureDatabaseCompatibilityAsync` ran BEFORE `MigrateAsync` and returned early when the `Orders` table did not exist, so on a machine with no `orders.db` all **38** `ALTER TABLE Orders ADD COLUMN` guards were skipped. The two migrations create only **15 + 3** columns against a model of ~50, so the first order query would throw "no such column". Never noticed because every dev machine already had a database — and multi-shop is exactly what would have hit it, since new shops mean new PCs.
+- Done:
+  - [x] `App.xaml.cs`: reordered the schema phase to **baseline → `MigrateAsync` → column guards**, with a load-bearing-order comment naming the failure it prevents. Verified there is NO overlap between `OrderColumnMigrations` and the three columns owned by `AddOrderPaymentFields`, so the reorder cannot cause a duplicate-column error.
+  - [x] Renamed `EnsureDatabaseCompatibilityAsync` → `EnsureSchemaCompatibilityAsync`; its `HasOrdersTable` early return is now documented as a defensive no-op rather than the silent trapdoor it was.
+  - [x] `OnStartup` body extracted to `StartApplicationAsync`, wrapped in try/catch → error dialog → `Shutdown(1)`. `OnStartup` can only be `async void`, so a throw past the first await previously made the app vanish with no message — and startup is about to gain a DB bootstrap.
+  - [x] `<remarks>` on `OrderColumnMigrations`: **never run `dotnet ef migrations add`**. `AppDbContextModelSnapshot.cs` records 22 Order properties against the model's ~50, so a scaffolded migration would emit `AddColumn` for ~28 existing columns and fail with "duplicate column name" on every live installation. This — not merely house convention — is why new tables must use `CREATE TABLE IF NOT EXISTS` guards.
+- Verified end to end, not just by build:
+  - Full backup taken and file-count-verified at `%LOCALAPPDATA%\LeeYongeOrdering.FULLBACKUP-preMultiShop` (keep until multi-shop is finished).
+  - Live `orders.db` moved aside, app launched against an empty folder: the new database contains every guard-only column (`LastModifiedDate`, `AlterationFinalTaxRate`, `StatusReasonCategory`, `ClothingFinalTaxRate`, `CustomMadeFinalTaxRate`, `AlterationBalanceCleared`, `CustomMadeRecordsJson`) as well as the migration-owned ones. Under the old ordering these were absent — that is the bug and its fix.
+  - Live database restored and confirmed **byte-for-byte identical** to the pre-test backup.
+  - Both migration ids are recorded in the live `__EFMigrationsHistory`, so `MigrateAsync` is a no-op there and the reorder provably changes nothing for existing data.
+  - Technique worth reusing: SQLite stores each table's `CREATE TABLE` text (and row data) as UTF-8 inside the file and rewrites it on `ALTER TABLE ADD COLUMN`, so schema and migration history can be verified by reading the `.db` file directly — no sqlite3 CLI needed.
+- Build: succeeded, 0 warnings / 0 errors.
+
+#### Phase 1 — schema + shop bootstrap  [DONE]
+- Done:
+  - [x] `Models/Shop.cs`: `Id`, **`PublicId` (Guid)**, `Code`, **`NamesJson`** (+ `[NotMapped] Names`, `SetNames`, `ResolveName`), `PreferredLanguageCode`, `CurrencyType`, `CreatedAtUtc`, `IsArchived`.
+    - `PublicId` exists because `Id` is a local autoincrement and whole databases are carried between machines (`GlobalSettingsPackage`, `DatabasePathProvider.ImportDatabaseFrom`). Anything stored OUTSIDE the database that belongs to a shop — its measurement-terms file, its branding folder — must key on `PublicId`, or an import silently hands one shop another's settings.
+    - `NamesJson` (not a single `Name`) because the shop name is user-facing bilingual text printed on receipts; `Main.HeaderTitle` is both 上海丽扬高级定制 and "Shanghai LeeYonge Bespoke". Reuses the per-language dictionary pattern from `MeasurementTerm`/`GarmentType`.
+  - [x] `Models/Order.cs`: `ShopId` with a comment forbidding hand-setting it (Phase 3 stamps it centrally).
+  - [x] `Data/AppDbContext.cs`: `DbSet<Shop>`, Shop mapping, unique index on `PublicId`, `HasIndex(o => o.ShopId)`. `ShopId` is modelled as a **scalar only, no FK/navigation** — SQLite cannot add a foreign key to an existing table without rebuilding it.
+  - [x] `App.xaml.cs`: `ShopId` entry in `OrderColumnMigrations` (`INTEGER NOT NULL DEFAULT 0`, so 0 is an unambiguous "unassigned" marker); new `EnsureShopSchemaAsync` (`CREATE TABLE IF NOT EXISTS Shops` + unique `IX_Shops_PublicId` + `IX_Orders_ShopId`) and `EnsureShopBootstrapAsync` (seed from `Main.HeaderTitle` in every installed language + current currency/language, then `UPDATE Orders SET ShopId = {0} WHERE ShopId = 0`, parameterised per S2077). Bootstrap returns immediately if any shop exists, so it cannot duplicate on relaunch.
+- **GOTCHA that broke the first run — `ExecuteSqlRawAsync` treats its SQL as a composite format string.** A literal `DEFAULT '{}'` in the `CREATE TABLE` DDL was parsed as a malformed `{...}` placeholder and threw `FormatException: expected an ASCII digit` at offset 258 *before any statement ran*. Fixed by dropping the column default (the `Shop.NamesJson` property already defaults to an empty JSON object, so `NOT NULL` still holds) and commenting the trap. Swept every other `ExecuteSqlRaw` in the project — the only remaining brace is the intentional `{0}` parameter.
+  - Two things this validated: the Phase 0 error handler turned a silent vanish into a precise message (type, text, offset) that located the bug in one pass; and the phased design contained it — the failure landed between two idempotent steps, so `ShopId` was already added, `Shops` was simply absent, no order was touched, and the retry continued from exactly where it stopped.
+- Verified with a read-only SQLite inspector built in the scratchpad (`Mode=ReadOnly`; reusable for Phases 3 and 5):
+  - before: 8 orders, 1 order item, no `Shops` table;
+  - after: 8 orders, 1 order item **unchanged**; 1 shop, `PublicId` populated, names holding BOTH `zh-CN` and `en-US`, language `zh-CN`, currency CAD;
+  - **0 orders unassigned, 0 orders pointing at a missing shop, all 8 claimed by shop 1.**
+- Build: succeeded, 0 warnings / 0 errors.
+
+#### Phase 2 — ShopContext + shop-scoped services  [DONE]
+- Done:
+  - [x] `Services/ShopContext.cs` (NEW): singleton, static `Instance` (bindable from XAML), `INotifyPropertyChanged`, `ShopChanged`. `RequireCurrent()` **throws** rather than returning a default — an order written against shop 0 disappears from every view with no error, so a loud failure at the point of the mistake is strictly better. `SetActive` assigns a **whole new object** to one field rather than mutating: GraphQL resolvers read this from Kestrel threads while the UI can switch shops, so a reader sees the old shop or the new one, never a torn mixture. `UpdateActiveShop(mutate)` persists through a scope factory supplied at startup.
+  - [x] `CurrencySettingService`: `Current` now reads the bound shop's row; the JSON file is demoted to the pre-shop fallback and the seed the first shop was migrated from. `BindTo(shop)` + a shared `RaiseChanged()`; `SetCurrency` writes through `ShopContext.UpdateActiveShop`.
+  - [x] `MeasurementTermsService`: per-shop file `measurement-terms-{PublicId:N}.json`; `BindTo(shop)` swaps the config **in place** (the `_config` field is readonly and callers hold references to its lists, so it follows the proven `ImportConfig` pattern).
+  - [x] `ReceiptBrandingStore`: per-shop folder `Branding\{PublicId:N}\`. Stays static and stateless — it re-reads on every `Load()` — so it asks `ShopContext` for the shop each time rather than caching one.
+  - [x] Shop name replaces `Main.HeaderTitle` in the `MainWindow` header (bound to `ShopContext.Instance.CurrentName` via a new `svc:` xmlns) and in `AddReceiptTitle`, so each branch prints under its own name. `CurrentName` falls back to `Main.HeaderTitle` when no shop is open, so neither can render blank.
+  - [x] `_suppressGlobalLanguageSave` guard in `App.xaml.cs`: applying a shop's preferred language no longer rewrites `language-preference.json`, which backs the pre-shop screens.
+- Two bugs caught in my own code before testing:
+  - `BindTo` originally fell back to seeded defaults for a shop with no file yet — that would have silently replaced the user's customized measurement terms. Fixed with an explicit one-time adoption (`AdoptLegacyFileFor` / `AdoptLegacyFolderFor`) that COPIES the legacy files, leaving the originals as a rollback net. `BindTo` deliberately does NOT fall back to the legacy file, or every newly created branch would inherit the first shop's configuration.
+  - The adoption sat inside the bootstrap's create-branch, so it would never have run for a database already bootstrapped by Phase 1. It now also runs as a catch-up for the **lowest-id** shop on every launch (both calls no-op once that shop has its own files).
+- **Real-data finding that validated Phase 3's necessity**: after the test launches the inspector showed `Orders 8 -> 9` with the new order at `ShopId = 0`. An order created through the UI is not stamped, exactly as the design review predicted (`CopyOrderAsync` and the other creation paths build an Order from an explicit property list). Harmless while nothing filters, invisible the moment filtering lands. Response: the backfill was extracted to `ClaimUnassignedOrdersAsync` and now runs on **every launch**, not just at bootstrap — 0 can only mean "written before stamping existed", so the first shop is the only sensible owner, and it becomes a permanent no-op safety net once Phase 3 stamps every new order.
+- Verified: per-shop `measurement-terms-6ad5a995….json` created and **hash-identical** to the legacy file (customizations intact); `Branding\6ad5a995…\receipt-branding.json` created (584 bytes, same as the original); legacy files left in place; still exactly **1 shop** after four launches, confirming bootstrap idempotency.
+- Build: succeeded, 0 warnings / 0 errors.
+
+#### Phase 3 — shop filtering on every read and write  [DONE]
+- Done:
+  - [x] `AppDbContext`: `_shopId` captured in the constructor as an **instance field** — EF parameterises instance-field references in a query filter, whereas a static lookup would be baked into the compiled query and only the first shop opened would ever work. Contexts are scoped and every operation creates a fresh scope, so a shop switch is picked up by the next query with nothing to invalidate. Zero (= no shop open, i.e. startup and design time) filters everything out, which fails safe: showing nothing is recoverable, showing another shop's orders is not.
+  - [x] `HasQueryFilter(e => e.ShopId == _shopId)` on `Order` — one line that confines the list, search, printing and both GraphQL read resolvers, so future code cannot leak another shop's data by forgetting a `Where`. `IgnoreQueryFilters()` is the deliberate escape hatch for a cross-shop view later.
+  - [x] `SaveChanges(bool)` / `SaveChangesAsync(bool, ct)` overridden (the no-arg overloads delegate to these, so the pair covers every save) calling `StampNewOrdersWithShop`: stamps `ShopId` **and** `CurrencyType` on every added order from `ShopContext.RequireCurrent()`, which throws when no shop is open. Central by design — `CopyOrderAsync` and the GraphQL create mutation build an Order from an explicit property list, and any one of them forgetting `ShopId` writes an order to shop 0 that saves without error and is then invisible everywhere.
+  - [x] `Models/Order.cs`: `[GraphQLIgnore]` on `ShopId`, since `Query.GetOrders` carries `[UseFiltering]`/`[UseSorting]` and would otherwise publish `shopId` as a filterable field advertising other shops' existence.
+- **Four cross-tenant holes closed in `GraphQL/Mutation.cs`.** `Find`/`FindAsync` are key lookups and **bypass EF query filters entirely**, so:
+  - `UpdateOrderAsync` and `DeleteOrderAsync` could fetch and then mutate/delete another shop's order — both now use `FirstOrDefaultAsync(o => o.Id == …)` so the filter applies.
+  - `AddOrderItemAsync` added the item to the change tracker BEFORE looking up the parent and saved regardless of whether it was found, so a line item could be attached to an order the caller could not see. The (filtered) parent lookup now comes first and throws when absent.
+  - `RemoveOrderItemAsync` reached the item through `OrderItems.FindAsync`; `OrderItem` carries no shop of its own and Find bypasses filters anyway. It now comes in through the filtered `Orders` set, which also yields the order needed to recalculate the total in the same query.
+  - Rule recorded at the top of the file: reach orders through a LINQ query, never `Find`.
+- [x] `MainViewModel` hardening for the Phase 5 switch: `DeleteOrderAsync` no longer uses `FindAsync` (a stale selection after a switch could delete another shop's order), and `LoadOrdersAsync`'s catch path now clears `_allOrders` / `SelectedOrder` / paging — otherwise a failed reload leaves the PREVIOUS shop's orders on screen under the new shop's name, with `SelectedOrder` pointing at an order Delete/Copy/Print would act on.
+- Verified against live data: orders went **9 → 12** during testing with **0 unassigned** and all 12 owned by shop 1. The Phase 2 failure (a UI-created order landing at `ShopId = 0`) is gone, the earlier orphan was claimed by `ClaimUnassignedOrdersAsync` on startup, and the list rendering correctly proves the query filter resolved the right shop — a wrong id would have shown an empty list.
+- Build: succeeded, 0 warnings / 0 errors.
+
+#### Phases 4-6 — remaining
+1. ~~Foundation fix~~ **DONE**
+2. ~~Schema + bootstrap~~ **DONE**
+3. ~~ShopContext + shop-scoped services~~ **DONE**
+4. ~~Shop filtering~~ **DONE**
+3. `ShopContext` + shop-scoped `CurrencySettingService` / `MeasurementTermsService` / `ReceiptBrandingStore`, each with the `Reload()` they lack; localized shop-name resolver into the header and receipt title.
+4. Filtering: EF global query filter + central `SaveChangesAsync` stamping, `MainViewModel`, Copy Order, and the six unguarded GraphQL primitives (`[GraphQLIgnore]` on `Order.ShopId`).
+5. Auth: `UserRole`, `AuthenticationService` (PBKDF2, list of accounts), `LoginWindow` replacing the language picker; cancel paths must `Shutdown()`.
+6. Shop UI: picker, new-shop wizard (creates the row BEFORE "Configure now" so the terms editor targets the new shop), 切换店铺 menu item + in-place reload.
+7. Localization keys, orphan sweep for the removed `LanguageSelection.*`, docs.
 
 ## Completed
 

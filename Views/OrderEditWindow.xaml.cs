@@ -1408,6 +1408,18 @@ public partial class OrderEditWindow : Window
 
     private void RefreshPricingLocks()
     {
+        // Re-apply the enable-state locks as well as the read-only ones. These two used to be
+        // driven by different triggers: IsReadOnly here on every refresh, IsEnabled only via
+        // UpdatePaymentVisibility, which RefreshComputedTotals skips when runAutoComplete is
+        // false. Both now depend on values that a plain refresh can change — the alteration
+        // category (IsServiceSwitchedOff) and the section total (IsSettled) — so leaving them on
+        // separate triggers stranded the deposit radios and checkboxes in a stale state while the
+        // price box unlocked correctly. ApplySectionLock only assigns IsEnabled, with no text
+        // writes, so calling it here cannot re-enter this method.
+        ApplySectionLock(_alterationControls);
+        ApplySectionLock(_customMadeControls);
+        ApplySectionLock(_clothingControls);
+
         ApplySectionInputLocks(_alterationControls, AlterationPriceBox);
         // Additional notes belong to the alteration service, so they lock with it.
         AlterationAdditionalNotesBox.IsReadOnly = _isReadOnly || _isRefunded || AlterationServiceSwitchedOff;
@@ -2322,8 +2334,13 @@ public partial class OrderEditWindow : Window
         c.FinalEtransfer.IsEnabled = !sectionLocked;
         c.FinalCard.IsEnabled = !sectionLocked;
         c.FinalCash.IsEnabled = !sectionLocked;
-        if (sectionLocked)
-            c.DownpaymentBox.IsEnabled = false;
+
+        // Assigned unconditionally, both ways. This used to only ever set false, leaving the
+        // re-enable to UpdateSectionVisibility — so once anything disabled the box it stayed
+        // disabled until that other method happened to run. A lock helper that can only lock is
+        // how a control gets stranded. "None" means no deposit is taken, so there is nothing to
+        // type either way.
+        c.DownpaymentBox.IsEnabled = !sectionLocked && c.DownNone.IsChecked is not true;
     }
 
     private static void UpdateSectionVisibility(PaymentSectionControls c)

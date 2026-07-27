@@ -1,0 +1,119 @@
+<Window x:Class="LeeYongeOrdering.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:LeeYongeOrdering.Localization"
+        Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Title], Mode=OneWay}"
+        Height="560" Width="440"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Icon="/Assets/ICONS/app-icon.ico"
+        Background="#F5F6FA">
+    <!-- Runs before the DI host exists, so this window is constructed by hand and reaches the
+         localization singleton directly, exactly like the language picker it replaces.
+         CenterScreen and an explicit Icon because there is no Owner window yet. -->
+    <Window.Resources>
+        <Style x:Key="EnterButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" CornerRadius="8">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#4F46E5" Offset="0"/>
+                                    <GradientStop Color="#7C3AED" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="FieldLabelStyle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+        </Style>
+
+        <Style x:Key="FieldInputStyle" TargetType="Control">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="8,7"/>
+            <Setter Property="BorderBrush" Value="#D6DBE3"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Welcome banner, carried over from the language picker this window replaces. -->
+        <Border Grid.Row="0" Height="170" ClipToBounds="True">
+            <Grid>
+                <Image Source="/Assets/WELCOME%20PANEL/welcome_header_enter_system.jpg" Stretch="UniformToFill"/>
+                <Border>
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#33000000" Offset="0"/>
+                            <GradientStop Color="#CC000000" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+                <StackPanel VerticalAlignment="Bottom" Margin="24,0,24,16">
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Welcome], Mode=OneWay}"
+                               Foreground="White" FontSize="24" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.WelcomeMessage], Mode=OneWay}"
+                               Foreground="#F0F0F0" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <StackPanel Grid.Row="1" Margin="32,24,32,0">
+            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.UserName], Mode=OneWay}"
+                       Style="{StaticResource FieldLabelStyle}"/>
+            <TextBox x:Name="UserNameBox" Style="{StaticResource FieldInputStyle}" Margin="0,0,0,16"/>
+
+            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Password], Mode=OneWay}"
+                       Style="{StaticResource FieldLabelStyle}"/>
+            <PasswordBox x:Name="PasswordBox" Style="{StaticResource FieldInputStyle}"/>
+
+            <TextBlock x:Name="ErrorText" Foreground="#C0392B" FontSize="12" TextWrapping="Wrap"
+                       Visibility="Collapsed" Margin="0,10,0,0"/>
+
+            <!-- Language lives here because this is now the first screen. Without it a fresh
+                 install on a new machine would be stuck in the default language with no way to
+                 change it before signing in. -->
+            <StackPanel Orientation="Horizontal" Margin="0,20,0,0" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Language], Mode=OneWay}"
+                           VerticalAlignment="Center" Foreground="#6B7280" FontSize="12" Margin="0,0,8,0"/>
+                <ComboBox x:Name="LanguageBox" Width="150" FontSize="12" Padding="6,3"
+                          SelectionChanged="OnLanguageChanged"/>
+            </StackPanel>
+        </StackPanel>
+
+        <Button Grid.Row="2" x:Name="SignInButton"
+                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.SignIn], Mode=OneWay}"
+                Style="{StaticResource EnterButtonStyle}"
+                Height="46" Margin="32,18,32,26"
+                IsDefault="True"
+                Click="OnSignInClick"/>
+    </Grid>
+</Window>

@@ -9,6 +9,8 @@ using System.Windows;
 using LeeYongeOrdering.Data;
 using LeeYongeOrdering.GraphQL;
 using LeeYongeOrdering.Localization;
+using LeeYongeOrdering.Models;
+using LeeYongeOrdering.Services;
 using LeeYongeOrdering.ViewModels;
 using LeeYongeOrdering.Views;
 
@@ -21,11 +23,35 @@ public partial class App : Application
     private const int ServerPort = 5050;
     private IHost? _host;
     private readonly LanguagePreferenceStore _languagePreferenceStore = new();
+    // Set while a shop's own preferred language is being applied. The global preference file backs
+    // the pre-shop screens (login, shop picker); without this guard, opening a zh-CN shop would
+    // rewrite it and the login screen's language would silently become whatever shop was opened last.
+    private bool _suppressGlobalLanguageSave;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
+        // OnStartup can only be async void, so any exception thrown past the first await would
+        // become an unhandled dispatcher exception and the app would simply vanish with no
+        // message. Startup does real work — schema migration, file I/O — so failures are
+        // reported and the app exits deliberately with a non-zero code.
+        try
+        {
+            await StartApplicationAsync();
+        }
+        catch (Exception ex)
+        {
+            // Deliberately not localized: localization is itself part of startup and may be
+            // exactly what failed, so this cannot depend on the string table being loaded.
+            MessageBox.Show(ex.ToString(), "LeeYonge Ordering — startup failed",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+            Shutdown(1);
+        }
+    }
+
+    private async Task StartApplicationAsync()
+    {
         // Prevent WPF from shutting down when the language picker closes.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
@@ -40,13 +66,24 @@ public partial class App : Application
             localization.SetLanguage(savedLanguageCode);
 
         localization.LanguageChanged += (_, _) =>
-            _languagePreferenceStore.SaveLanguageCode(localization.CurrentLanguageCode);
-
-        var languageDialog = new LanguageSelectionWindow(localization);
-        if (languageDialog.ShowDialog() == true && !string.IsNullOrWhiteSpace(languageDialog.SelectedLanguageCode))
         {
-            localization.SetLanguage(languageDialog.SelectedLanguageCode);
+            if (_suppressGlobalLanguageSave)
+                return;
+
             _languagePreferenceStore.SaveLanguageCode(localization.CurrentLanguageCode);
+        };
+
+        // Sign in first. This replaces the standalone language picker, which became redundant once
+        // each shop carried its own preferred language; the login window hosts the language
+        // selector so a fresh install can still be switched before signing in.
+        var loginWindow = new LoginWindow(localization);
+        if (loginWindow.ShowDialog() is not true)
+        {
+            // ShutdownMode is OnExplicitShutdown until the main window appears, so simply
+            // returning here would leave a running process with no window — invisible in the task
+            // bar and holding the database open. Exit deliberately.
+            Shutdown();
+            return;
         }
 
         _host = Host.CreateDefaultBuilder()
@@ -87,14 +124,45 @@ public partial class App : Application
             })
             .Build();
 
-        // Create tables if the database doesn't exist yet
+        // Bring the schema up to date. THE ORDER OF THESE THREE CALLS IS LOAD-BEARING:
+        //
+        //   1. Baseline first — marks a pre-existing database (one created before migrations
+        //      existed) as already having InitialCreate applied, so step 2 does not try to
+        //      re-create tables that are already there. It no-ops on a fresh database.
+        //   2. Migrate second — on a FRESH database this is what actually creates Orders and
+        //      OrderItems. The two migrations between them cover 18 columns.
+        //   3. Column guards last — they add the ~38 further Orders columns the model has
+        //      gained since, and they can only see the table once step 2 has created it.
+        //
+        // Running the guards FIRST (as this used to) silently skipped every one of them on a
+        // fresh database, because they bail when Orders does not exist yet — leaving a table
+        // with 18 of the model's ~50 columns and a "no such column" crash on the first query.
+        // A fresh install was broken outright. Do not reorder these.
         using (var scope = _host.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await EnsureDatabaseCompatibilityAsync(db);
             await EnsureMigrationBaselineAsync(db);
             await db.Database.MigrateAsync();
+            await EnsureSchemaCompatibilityAsync(db);
+            await EnsureShopSchemaAsync(db);
+            await EnsureShopBootstrapAsync(db, localization);
         }
+
+        // Open a shop before anything shop-scoped can run. Until the picker exists (Phase 5) this
+        // simply takes the first active shop, which after the bootstrap is always the adopted one.
+        ShopContext.Instance.Initialize(_host.Services.GetRequiredService<IServiceScopeFactory>());
+
+        // For a user allowed to choose, the login screen's language IS the session's language —
+        // whether they changed it or simply accepted what was shown. Overriding it with the shop's
+        // preference only when the picker went untouched made the displayed value a lie: the
+        // screen said English, the app then opened in Chinese.
+        //
+        // Everyone else runs in the language their shop is configured for, so a branch's staff all
+        // see the same thing. The picker itself stays usable for everyone, or a user could not read
+        // the screen they sign in on.
+        var keepLoginLanguage = AuthenticationService.Instance.CanChooseLanguage;
+
+        await OpenInitialShopAsync(keepCurrentLanguage: keepLoginLanguage);
 
         // Start Kestrel + all hosted services
         await _host.StartAsync();
@@ -118,6 +186,18 @@ public partial class App : Application
         throw new System.IO.FileNotFoundException("Languages.xml was not found.");
     }
 
+    /// <summary>
+    /// Idempotent column guards: each entry is applied only when the column is absent, so new
+    /// model properties reach an existing shop database without a migration.
+    /// </summary>
+    /// <remarks>
+    /// DO NOT run <c>dotnet ef migrations add</c> to replace these. Migrations/AppDbContextModelSnapshot.cs
+    /// is stale — it records 22 Order properties against the model's ~50 — so a scaffolded
+    /// migration would emit AddColumn for ~28 columns that already exist in every live database,
+    /// and the next MigrateAsync would fail with "duplicate column name" on every installation.
+    /// Add a new entry to this table instead. If migrations are ever to be adopted properly, the
+    /// snapshot has to be regenerated against the real model first, as its own dedicated task.
+    /// </remarks>
     private static readonly (string Column, string Ddl)[] OrderColumnMigrations =
     {
         ("PhoneNumber", "ALTER TABLE Orders ADD COLUMN PhoneNumber TEXT NOT NULL DEFAULT ''; "),
@@ -140,6 +220,9 @@ public partial class App : Application
         ("AlterationFinalTaxRate", "ALTER TABLE Orders ADD COLUMN AlterationFinalTaxRate TEXT NULL; "),
         ("ClothingFinalTaxRate", "ALTER TABLE Orders ADD COLUMN ClothingFinalTaxRate TEXT NULL; "),
         ("CustomMadeFinalTaxRate", "ALTER TABLE Orders ADD COLUMN CustomMadeFinalTaxRate TEXT NULL; "),
+        // Owning shop. Non-null with a 0 default so the backfill has an unambiguous "not yet
+        // assigned" marker; EnsureShopBootstrapAsync claims every 0 row for the first shop.
+        ("ShopId", "ALTER TABLE Orders ADD COLUMN ShopId INTEGER NOT NULL DEFAULT 0; "),
         ("ChestSize", "ALTER TABLE Orders ADD COLUMN ChestSize TEXT NULL; "),
         ("JacketLength", "ALTER TABLE Orders ADD COLUMN JacketLength TEXT NULL; "),
         ("CustomMadeRecordsJson", "ALTER TABLE Orders ADD COLUMN CustomMadeRecordsJson TEXT NULL; "),
@@ -163,7 +246,13 @@ public partial class App : Application
         ("StatusReasonCategory", "ALTER TABLE Orders ADD COLUMN StatusReasonCategory TEXT NULL; "),
     };
 
-    private static async Task EnsureDatabaseCompatibilityAsync(AppDbContext db)
+    /// <summary>
+    /// Adds every Orders/OrderItems column the model has gained since the last real migration.
+    /// MUST run AFTER <c>MigrateAsync</c> — see the ordering comment at the call site. The
+    /// HasOrdersTable check below is now only a defensive no-op; if it ever fires it means the
+    /// migration step failed to create the table, and skipping quietly beats a raw SQL error.
+    /// </summary>
+    private static async Task EnsureSchemaCompatibilityAsync(AppDbContext db)
     {
         var schema = await ReadOrdersSchemaAsync(db);
         if (!schema.HasOrdersTable)
@@ -181,6 +270,164 @@ public partial class App : Application
         // Legacy status normalization:
         // old Pending(0) is now mapped to Processing(1).
         await db.Database.ExecuteSqlRawAsync("UPDATE Orders SET Status = 1 WHERE Status = 0;");
+    }
+
+    /// <summary>
+    /// Selects the shop to work in and applies its settings. Shop-scoped services are bound here,
+    /// before any of them is read, so none of them can ever resolve against "no shop".
+    /// </summary>
+    private async Task OpenInitialShopAsync(bool keepCurrentLanguage)
+    {
+        using var scope = _host!.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var shop = await db.Shops
+            .AsNoTracking()
+            .Where(s => !s.IsArchived)
+            .OrderBy(s => s.Id)
+            .FirstOrDefaultAsync();
+
+        if (shop is null)
+            return;
+
+        ApplyActiveShop(shop, keepCurrentLanguage);
+    }
+
+    /// <summary>
+    /// Makes <paramref name="shop"/> the active one and re-points every shop-scoped service at it.
+    /// Shared by startup and (from Phase 5) the switch-shop command, so the two can never drift.
+    /// </summary>
+    private void ApplyActiveShop(Shop shop, bool keepCurrentLanguage = false)
+    {
+        ShopContext.Instance.SetActive(shop);
+
+        // The shop's own language wins once it is open — UNLESS the user just picked one by hand
+        // on the login screen. An explicit choice beats a stored default; overriding it a second
+        // later reads as the app ignoring the user. Suppress the global-preference save while
+        // applying it: that file is what the pre-shop screens use, and letting a shop overwrite it
+        // would make the login screen's language a side effect of whichever shop was opened last.
+        if (!keepCurrentLanguage && !string.IsNullOrWhiteSpace(shop.PreferredLanguageCode))
+        {
+            _suppressGlobalLanguageSave = true;
+            try
+            {
+                LocalizationService.Instance.SetLanguage(shop.PreferredLanguageCode);
+            }
+            finally
+            {
+                _suppressGlobalLanguageSave = false;
+            }
+        }
+
+        CurrencySettingService.Instance.BindTo(shop);
+        MeasurementTermsService.Instance.BindTo(shop);
+    }
+
+    /// <summary>
+    /// Creates the Shops table and the order-to-shop index. Hand-written DDL rather than an EF
+    /// migration for the reason documented on <see cref="OrderColumnMigrations"/> — the model
+    /// snapshot is stale, so scaffolding a migration would break every existing installation.
+    /// The column list here MUST stay in step with the Shop mapping in
+    /// <c>AppDbContext.OnModelCreating</c>: EF 8 does no model-vs-database check, so a mismatch
+    /// only shows up as a runtime failure when a row is read.
+    /// </summary>
+    private static async Task EnsureShopSchemaAsync(AppDbContext db)
+    {
+        // SQLite type affinities EF expects: int/bool/enum -> INTEGER, string/Guid/DateTime -> TEXT.
+        //
+        // NamesJson deliberately has NO column default. ExecuteSqlRawAsync treats the SQL as a
+        // composite format string, so a literal '{}' in the DDL is parsed as a malformed
+        // parameter placeholder and throws FormatException ("expected an ASCII digit") before a
+        // single statement runs. The Shop.NamesJson property already defaults to an empty JSON
+        // object, so every insert supplies a value and the NOT NULL constraint is satisfied.
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS Shops (
+                Id INTEGER NOT NULL CONSTRAINT PK_Shops PRIMARY KEY AUTOINCREMENT,
+                PublicId TEXT NOT NULL,
+                Code TEXT NULL,
+                NamesJson TEXT NOT NULL,
+                PreferredLanguageCode TEXT NULL,
+                CurrencyType INTEGER NOT NULL DEFAULT 1,
+                CreatedAtUtc TEXT NOT NULL,
+                IsArchived INTEGER NOT NULL DEFAULT 0
+            );");
+
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE UNIQUE INDEX IF NOT EXISTS IX_Shops_PublicId ON Shops (PublicId);");
+
+        // Not part of OrderColumnMigrations: that table is keyed on column existence, and an index
+        // is not a column. It must also run after the ShopId column guard above has applied.
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS IX_Orders_ShopId ON Orders (ShopId);");
+    }
+
+    /// <summary>
+    /// Adopts whatever is already on this machine as the first shop, and claims every unassigned
+    /// order for it. Idempotent: once any shop exists this does nothing, so a second launch cannot
+    /// create a duplicate. Seeds the name from the existing <c>Main.HeaderTitle</c> string in every
+    /// installed language, so the shop reads correctly in both zh-CN and en-US from day one.
+    /// </summary>
+    private static async Task EnsureShopBootstrapAsync(AppDbContext db, LocalizationService localization)
+    {
+        var existing = await db.Shops.OrderBy(s => s.Id).FirstOrDefaultAsync();
+        if (existing is not null)
+        {
+            // A shop already exists, so nothing is created. The adoption still runs because a
+            // database bootstrapped by an earlier build predates it; both calls no-op once that
+            // shop has files of its own. Restricted to the LOWEST-ID shop so a branch created
+            // later never inherits this machine's original configuration.
+            AdoptLegacyConfigFor(existing);
+            await ClaimUnassignedOrdersAsync(db, existing.Id);
+            return;
+        }
+
+        var names = localization.AvailableLanguages
+            .ToDictionary(
+                language => language.Code,
+                language => localization.GetText("Main.HeaderTitle", language.Code));
+
+        var shop = new Shop
+        {
+            PublicId = Guid.NewGuid(),
+            PreferredLanguageCode = localization.CurrentLanguageCode,
+            CurrencyType = CurrencySettingService.Instance.Current,
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        shop.SetNames(names);
+
+        db.Shops.Add(shop);
+        await db.SaveChangesAsync();
+
+        await ClaimUnassignedOrdersAsync(db, shop.Id);
+        AdoptLegacyConfigFor(shop);
+    }
+
+    /// <summary>
+    /// Gives every order with no owner to <paramref name="shopId"/>. Runs on EVERY launch, not
+    /// just at bootstrap: an order saved before ShopId was stamped centrally lands at 0 and would
+    /// otherwise be invisible once the list is filtered by shop. Zero can only mean "written
+    /// before stamping existed", so the first shop is the only sensible owner. A no-op once
+    /// SaveChangesAsync stamps every new order, which makes it a permanent safety net rather than
+    /// a migration step.
+    /// </summary>
+    private static async Task ClaimUnassignedOrdersAsync(AppDbContext db, int shopId)
+    {
+        // Parameterised, never interpolated (SonarQube S2077).
+        await db.Database.ExecuteSqlRawAsync(
+            "UPDATE Orders SET ShopId = {0} WHERE ShopId = 0;", shopId);
+    }
+
+    /// <summary>
+    /// Hands this machine's pre-multi-shop measurement terms and branding to the first shop, so
+    /// nothing it had configured is lost. Both calls copy rather than move — the originals stay as
+    /// a rollback safety net — and both no-op once the shop has files of its own, so this is safe
+    /// to run on every launch. Only ever called for the first shop: a branch created later seeds
+    /// defaults or copies from a shop the user picks.
+    /// </summary>
+    private static void AdoptLegacyConfigFor(Shop shop)
+    {
+        MeasurementTermsService.AdoptLegacyFileFor(shop);
+        ReceiptBrandingStore.AdoptLegacyFolderFor(shop);
     }
 
     private static async Task<(bool HasOrdersTable, bool HasOrderItemsTable, HashSet<string> OrderColumns, HashSet<string> OrderItemColumns)> ReadOrdersSchemaAsync(AppDbContext db)

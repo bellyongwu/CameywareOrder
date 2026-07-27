@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using LeeYongeOrdering.Models;
 using Path = System.IO.Path;
 
 namespace LeeYongeOrdering.Services;
@@ -57,13 +58,59 @@ public static class ReceiptBrandingStore
 {
     private const string FileName = "receipt-branding.json";
 
-    private static string BrandingDirectory =>
+    private static string BrandingRoot =>
         Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "LeeYongeOrdering",
             "Branding");
 
+    /// <summary>
+    /// Branding folder for the open shop, or the shared root before a shop is open — which is also
+    /// where the pre-multi-shop branding already lives, so the first shop inherits it unchanged.
+    ///
+    /// Sub-folders are keyed on <see cref="Shop.PublicId"/>, NEVER <see cref="Shop.Id"/>: ids are
+    /// local autoincrement values and whole databases move between machines, so an imported shop
+    /// would otherwise adopt an unrelated local shop's logo and header.
+    ///
+    /// This class stays static and stateless — it re-reads on every Load() — so it deliberately
+    /// asks ShopContext for the shop each time rather than caching one.
+    /// </summary>
+    private static string BrandingDirectory
+    {
+        get
+        {
+            var shop = ShopContext.Instance.Current;
+            return shop is null ? BrandingRoot : Path.Combine(BrandingRoot, shop.PublicId.ToString("N"));
+        }
+    }
+
     private static string SettingsFilePath => Path.Combine(BrandingDirectory, FileName);
+
+    /// <summary>
+    /// One-time migration: gives the first shop the header, footer and logo this machine already
+    /// had. Copies the files sitting directly in the shared Branding root into the shop's own
+    /// folder — top level only, so other shops' folders are never swept in — and leaves the
+    /// originals as a rollback safety net.
+    /// </summary>
+    public static void AdoptLegacyFolderFor(Shop shop)
+    {
+        ArgumentNullException.ThrowIfNull(shop);
+
+        try
+        {
+            var target = Path.Combine(BrandingRoot, shop.PublicId.ToString("N"));
+            if (Directory.Exists(target) || !Directory.Exists(BrandingRoot))
+                return;
+
+            Directory.CreateDirectory(target);
+            foreach (var file in Directory.EnumerateFiles(BrandingRoot))
+                File.Copy(file, Path.Combine(target, Path.GetFileName(file)), overwrite: true);
+        }
+        catch (IOException)
+        {
+            // Best-effort: a shop with no branding simply prints without a header.
+        }
+    }
 
     public static ReceiptBrandingSettings Load()
     {

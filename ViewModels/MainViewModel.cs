@@ -209,6 +209,15 @@ public class MainViewModel : INotifyPropertyChanged
         }
         catch (Exception ex)
         {
+            // Drop whatever was loaded before. Leaving it in place means a failed reload after a
+            // shop switch shows the PREVIOUS shop's orders under the new shop's name, with
+            // SelectedOrder pointing at an order that Delete / Copy / Print would then act on.
+            // An empty list is recoverable; acting on another shop's order is not.
+            _allOrders = new List<Order>();
+            SelectedOrder = null;
+            CurrentPage = 1;
+            RebuildOrdersView();
+
             StatusMessage = _localization.Format("Status.LoadFailed", ex.Message);
         }
     }
@@ -338,7 +347,10 @@ public class MainViewModel : INotifyPropertyChanged
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var order = await db.Orders.FindAsync(SelectedOrder.Id);
+            // A query, not FindAsync: Find is a key lookup and bypasses the shop query filter, so
+            // a stale selection left over from a shop switch could delete another shop's order.
+            var orderId = SelectedOrder.Id;
+            var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
             if (order is not null)
             {
                 db.Orders.Remove(order);

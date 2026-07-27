@@ -1,11 +1,26 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
+using HotChocolate;
 
 namespace LeeYongeOrdering.Models;
 
 public class Order
 {
     public int Id { get; set; }
+
+    /// <summary>
+    /// Owning shop. Never set this by hand on a new order — <c>AppDbContext.SaveChangesAsync</c>
+    /// stamps it from the active shop, because several creation paths (Copy Order, the GraphQL
+    /// mutation) build an Order from an explicit property list and would otherwise drop it
+    /// silently, leaving the order invisible in every view.
+    ///
+    /// Hidden from GraphQL: <c>Query.GetOrders</c> is decorated with [UseFiltering]/[UseSorting],
+    /// which would otherwise publish shopId as a filterable field and advertise the existence of
+    /// other shops. Results are already confined by the query filter regardless.
+    /// </summary>
+    [GraphQLIgnore]
+    public int ShopId { get; set; }
+
     public string OrderNumber { get; set; } = string.Empty;
     public string CustomerName { get; set; } = string.Empty;
     public string PhoneNumber { get; set; } = string.Empty;

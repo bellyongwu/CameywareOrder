@@ -18,6 +18,72 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **Shop isolation rests on two mechanisms in `AppDbContext` — do not work around either.**
+  - `HasQueryFilter(e => e.ShopId == _shopId)` on `Order` confines every read. `_shopId` MUST stay
+    an instance field read in the constructor: EF parameterises instance-field references, while a
+    static lookup would be baked into the compiled query and only the first shop opened would ever
+    work. `IgnoreQueryFilters()` is the escape hatch for a future cross-shop view.
+  - `SaveChanges(bool)` / `SaveChangesAsync(bool, ct)` stamp `ShopId` + `CurrencyType` on added
+    orders from `ShopContext.RequireCurrent()`. Never set `ShopId` at a call site: `CopyOrderAsync`
+    and the GraphQL create mutation build orders from explicit property lists, and one that forgets
+    it saves silently to shop 0 and then vanishes from every view. This was observed for real.
+- **`Find`/`FindAsync` BYPASS query filters** — they are key lookups. Any code reaching an order or
+  order item by id must use a LINQ query (`FirstOrDefaultAsync(o => o.Id == id)`) or it can read,
+  mutate and delete another shop's data. This had to be fixed in four GraphQL resolvers and
+  `MainViewModel.DeleteOrderAsync`. `OrderItem` has no shop of its own, so reach items **through**
+  the filtered `Orders` set.
+- **Lock state must be driven from ONE trigger, and lock helpers must assign both ways.** Two
+  bugs of the same shape, both in `OrderEditWindow`:
+  - `ApplySectionInputLocks` (`IsReadOnly`) ran on every refresh via `RefreshPricingLocks`, while
+    `ApplySectionLock` (`IsEnabled`) ran only via `UpdatePaymentVisibility`, which
+    `RefreshComputedTotals` skips when `runAutoComplete: false`. Both now depend on values a plain
+    refresh changes — the alteration category (`IsServiceSwitchedOff`) and the section total
+    (`IsSettled`) — so the deposit radios/checkboxes stranded in a stale state while the price box
+    unlocked correctly. `RefreshPricingLocks` now applies BOTH. Safe because `ApplySectionLock`
+    only assigns `IsEnabled` and writes no text, so it cannot re-enter the refresh.
+  - `ApplySectionLock` set `DownpaymentBox.IsEnabled = false` but never back to `true` — the
+    re-enable lived in `UpdateSectionVisibility`. A helper that can only lock is exactly how a
+    control gets permanently stranded; it is now assigned unconditionally in both directions.
+- **`ExecuteSqlRawAsync` treats its SQL as a COMPOSITE FORMAT STRING.** A literal `{` or `}` in
+  raw SQL is parsed as a parameter placeholder and throws `FormatException: expected an ASCII
+  digit` before any statement runs. This bit the `Shops` DDL, where `NamesJson TEXT NOT NULL
+  DEFAULT '{}'` was rejected outright. Never put braces in raw SQL except a real `{0}` parameter;
+  if a JSON default is needed, set it from the model's property initialiser instead.
+- **Multi-shop: `Shop.PublicId` (Guid) keys everything stored OUTSIDE the database.** `Shop.Id` is
+  a local autoincrement and whole databases move between machines via `GlobalSettingsPackage` /
+  `DatabasePathProvider.ImportDatabaseFrom`, so two installs will allocate the same `Id`. Per-shop
+  files (measurement terms, branding folder) must key on `PublicId` or an import silently hands one
+  shop another shop's settings.
+- **`Shop` name is bilingual (`NamesJson`), not a single string** — it replaces the localized
+  `Main.HeaderTitle` in the header and on printed receipts, so one string would force one
+  language's users to read the other's name. Same per-language dictionary pattern as
+  `MeasurementTerm.Names`.
+- **`Orders.ShopId` is a scalar with no FK and no navigation** — SQLite cannot add a foreign key to
+  an existing table without rebuilding it, and `Shops` is created by a runtime DDL guard. The index
+  `IX_Orders_ShopId` is what the shop-filtered list actually needs. `ShopId = 0` means "unassigned"
+  and is what `EnsureShopBootstrapAsync` claims.
+- **Startup schema phase order is LOAD-BEARING**: `EnsureMigrationBaselineAsync` →
+  `MigrateAsync()` → `EnsureSchemaCompatibilityAsync` (the column guards). The guards used to run
+  FIRST and returned early when the `Orders` table did not exist, so on a machine with no
+  `orders.db` all 38 `ALTER TABLE Orders ADD COLUMN` statements were skipped — the two migrations
+  create 15+3 columns against a model of ~50, so **a fresh install crashed on the first order
+  query**. Never reorder these three. `OrderColumnMigrations` and the three columns owned by
+  `AddOrderPaymentFields` deliberately do not overlap, which is what makes migrate-before-guards
+  safe.
+- **NEVER run `dotnet ef migrations add` on this project.** `Migrations/AppDbContextModelSnapshot.cs`
+  records 22 `Order` properties against the model's ~50, so a scaffolded migration emits
+  `AddColumn` for ~28 columns that already exist and the next `MigrateAsync` fails with
+  "duplicate column name" on every live installation. Add an `OrderColumnMigrations` entry for a
+  new column, or a `CREATE TABLE IF NOT EXISTS` guard for a new table. Adopting migrations
+  properly means regenerating the snapshot first, as its own task.
+- **`OnStartup` is `async void`** — its body lives in `StartApplicationAsync` wrapped in
+  try/catch → dialog → `Shutdown(1)`. Without that, anything thrown past the first await made the
+  app disappear silently.
+- **Verifying SQLite schema without a CLI**: SQLite keeps each table's `CREATE TABLE` text and its
+  row data as UTF-8 inside the `.db` file, and rewrites that text on `ALTER TABLE ADD COLUMN`. So
+  `grep -a` / a UTF-8 read of the file confirms which columns exist and which migration ids are
+  recorded — no sqlite3 tooling required.
+
 - **A service can be switched OFF, not just left empty**: `Alteration.Category.None` (tag
   `"None"`, stored in `Order.ServiceDetails` like the other categories, listed **FIRST** so it
   is the default for a new order) marks the order as having no alteration work.

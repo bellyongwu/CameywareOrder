@@ -18,9 +18,17 @@ public sealed class MeasurementTermsService
 {
     public static MeasurementTermsService Instance { get; } = new();
 
+    // Legacy per-machine file. Still the source the first shop's terms are adopted from; once a
+    // shop is bound the per-shop file below is used instead.
     private const string FileName = "measurement-terms.json";
 
+    // Per-shop file name. Keyed on Shop.PublicId, NEVER Shop.Id: ids are local autoincrement
+    // values and whole databases move between machines, so an imported shop would otherwise pick
+    // up an unrelated local shop's terms.
+    private static string ShopFileName(Shop shop) => $"measurement-terms-{shop.PublicId:N}.json";
+
     private readonly MeasurementTermsConfig _config;
+    private Shop? _shop;
 
     private MeasurementTermsService()
     {
@@ -28,6 +36,61 @@ public sealed class MeasurementTermsService
     }
 
     public event EventHandler? ConfigChanged;
+
+    /// <summary>
+    /// Points the service at a shop and loads that shop's terms in place. The config object itself
+    /// is never replaced — <see cref="_config"/> is readonly and callers hold references to its
+    /// lists — so the contents are swapped exactly the way <see cref="ImportConfig"/> already does.
+    /// A shop with no file yet inherits the seeded defaults, which are then written for it.
+    /// </summary>
+    public void BindTo(Shop shop)
+    {
+        ArgumentNullException.ThrowIfNull(shop);
+
+        _shop = shop;
+
+        // A shop with no file of its own starts from the predefined defaults. It deliberately does
+        // NOT fall back to the legacy file — that would hand every newly created shop the first
+        // shop's customizations. The first shop adopts the legacy file explicitly and once, via
+        // AdoptLegacyFileFor.
+        var loaded = TryLoad(SettingFilePath) ?? MeasurementTermDefaults.CreateDefaultConfig();
+        ReplaceConfigInPlace(loaded);
+        MergePredefined(_config);
+        Persist();
+    }
+
+    /// <summary>
+    /// One-time migration: gives the first shop the terms this machine already had. Copies rather
+    /// than moves, so the pre-multi-shop file stays put as a rollback safety net, and does nothing
+    /// if the shop already has its own file.
+    /// </summary>
+    public static void AdoptLegacyFileFor(Shop shop)
+    {
+        ArgumentNullException.ThrowIfNull(shop);
+
+        try
+        {
+            var target = Path.Combine(SettingDirectory, ShopFileName(shop));
+            if (File.Exists(target) || !File.Exists(LegacyFilePath))
+                return;
+
+            Directory.CreateDirectory(SettingDirectory);
+            File.Copy(LegacyFilePath, target);
+        }
+        catch (IOException)
+        {
+            // Best-effort, like every other persistence path here: the shop falls back to the
+            // seeded defaults rather than the app failing to start.
+        }
+    }
+
+    private void ReplaceConfigInPlace(MeasurementTermsConfig source)
+    {
+        _config.Terms.Clear();
+        _config.Terms.AddRange(source.Terms);
+        _config.Garments.Clear();
+        _config.Garments.AddRange(source.Garments);
+    }
 
     public MeasurementTermsConfig Config => _config;
 
@@ -295,7 +358,7 @@ public sealed class MeasurementTermsService
 
     private void Persist()
     {
-        Save(_config);
+        Save(_config, SettingFilePath);
         ConfigChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -304,22 +367,27 @@ public sealed class MeasurementTermsService
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "LeeYongeOrdering");
 
-    private static string SettingFilePath => Path.Combine(SettingDirectory, FileName);
+    /// <summary>Pre-multi-shop file; the seed the first shop's terms are adopted from.</summary>
+    private static string LegacyFilePath => Path.Combine(SettingDirectory, FileName);
+
+    /// <summary>Active file: the bound shop's own, or the legacy one before a shop is open.</summary>
+    private string SettingFilePath
+        => _shop is null ? LegacyFilePath : Path.Combine(SettingDirectory, ShopFileName(_shop));
 
     private static MeasurementTermsConfig LoadOrSeed()
     {
-        var loaded = TryLoad();
+        var loaded = TryLoad(LegacyFilePath);
         if (loaded is null)
         {
             var seeded = MeasurementTermDefaults.CreateDefaultConfig();
-            Save(seeded);
+            Save(seeded, LegacyFilePath);
             return seeded;
         }
 
         // Merge any predefined terms/garments introduced by a newer app version
         // without disturbing existing user customizations.
         if (MergePredefined(loaded))
-            Save(loaded);
+            Save(loaded, LegacyFilePath);
 
         return loaded;
     }
@@ -372,14 +440,14 @@ public sealed class MeasurementTermsService
         return changed;
     }
 
-    private static MeasurementTermsConfig? TryLoad()
+    private static MeasurementTermsConfig? TryLoad(string path)
     {
         try
         {
-            if (!File.Exists(SettingFilePath))
+            if (!File.Exists(path))
                 return null;
 
-            var json = File.ReadAllText(SettingFilePath);
+            var json = File.ReadAllText(path);
             return JsonSerializer.Deserialize<MeasurementTermsConfig>(json);
         }
         catch
@@ -388,13 +456,13 @@ public sealed class MeasurementTermsService
         }
     }
 
-    private static void Save(MeasurementTermsConfig config)
+    private static void Save(MeasurementTermsConfig config, string path)
     {
         try
         {
             Directory.CreateDirectory(SettingDirectory);
             var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(SettingFilePath, json);
+            File.WriteAllText(path, json);
         }
         catch
         {

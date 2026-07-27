@@ -774,7 +774,9 @@ public partial class MainWindow : Window
         if (hasHeader)
             return;
 
-        document.Blocks.Add(new Paragraph(new Bold(new Run(_localization["Main.HeaderTitle"])))
+        // The receipt is headed with the SHOP's own name, not a fixed app title — each branch
+        // prints under its own name. Falls back to Main.HeaderTitle when no shop is open.
+        document.Blocks.Add(new Paragraph(new Bold(new Run(ShopContext.Instance.CurrentName)))
         {
             FontSize = 18,
             TextAlignment = TextAlignment.Center,

@@ -37,6 +37,11 @@ public record AddOrderItemInput(
 
 // ── Mutation type ──────────────────────────────────────────────────────────────
 
+// Every resolver below reaches orders through a LINQ query, never Find/FindAsync. Find is a
+// primary-key lookup and bypasses EF query filters, so it would happily return — and then let a
+// caller mutate or delete — an order belonging to a different shop. Going through a query means
+// the shop filter in AppDbContext applies automatically and these resolvers hold no shop logic of
+// their own to drift out of step.
 public class Mutation
 {
     /// <summary>
@@ -71,7 +76,7 @@ public class Mutation
     /// </summary>
     public static async Task<Order?> UpdateOrderAsync(UpdateOrderInput input, AppDbContext context)
     {
-        var order = await context.Orders.FindAsync(input.Id);
+        var order = await context.Orders.FirstOrDefaultAsync(o => o.Id == input.Id);
         if (order is null) return null;
 
         if (input.CustomerName is not null) order.CustomerName = input.CustomerName;
@@ -91,7 +96,7 @@ public class Mutation
     /// </summary>
     public static async Task<bool> DeleteOrderAsync(int id, AppDbContext context)
     {
-        var order = await context.Orders.FindAsync(id);
+        var order = await context.Orders.FirstOrDefaultAsync(o => o.Id == id);
         if (order is null) return false;
 
         context.Orders.Remove(order);
@@ -104,6 +109,15 @@ public class Mutation
     /// </summary>
     public async Task<OrderItem> AddOrderItemAsync(AddOrderItemInput input, AppDbContext context)
     {
+        // Resolve the parent order FIRST. The lookup is shop-filtered, so an order belonging to
+        // another shop comes back null and the item is never created. Previously the item was
+        // added before this check and saved regardless of whether the order was found, which let a
+        // line item be attached to an order the caller could not otherwise see.
+        var order = await context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Id == input.OrderId)
+            ?? throw new ArgumentException("Order not found.", nameof(input));
+
         var item = new OrderItem
         {
             OrderId = input.OrderId,
@@ -114,9 +128,7 @@ public class Mutation
         context.OrderItems.Add(item);
 
         // Recalculate order total
-        var order = await context.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == input.OrderId);
-        if (order is not null)
-            order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice) + input.Quantity * input.UnitPrice;
+        order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice) + input.Quantity * input.UnitPrice;
 
         await context.SaveChangesAsync();
         return item;
@@ -127,14 +139,20 @@ public class Mutation
     /// </summary>
     public static async Task<bool> RemoveOrderItemAsync(int itemId, AppDbContext context)
     {
-        var item = await context.OrderItems.FindAsync(itemId);
-        if (item is null) return false;
+        // Reached through Orders rather than OrderItems: OrderItem carries no shop of its own, and
+        // OrderItems.FindAsync would bypass the filter anyway, so a caller could have deleted a
+        // line item from another shop's order. Coming in via the (filtered) order also yields the
+        // order needed to recalculate the total, in one query.
+        var order = await context.Orders
+            .Include(o => o.Items)
+            .FirstOrDefaultAsync(o => o.Items.Any(i => i.Id == itemId));
+
+        var item = order?.Items.FirstOrDefault(i => i.Id == itemId);
+        if (order is null || item is null)
+            return false;
 
         context.OrderItems.Remove(item);
-
-        var order = await context.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == item.OrderId);
-        if (order is not null)
-            order.TotalAmount = order.Items.Where(i => i.Id != itemId).Sum(i => i.Quantity * i.UnitPrice);
+        order.TotalAmount = order.Items.Where(i => i.Id != itemId).Sum(i => i.Quantity * i.UnitPrice);
 
         await context.SaveChangesAsync();
         return true;

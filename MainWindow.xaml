@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:conv="clr-namespace:LeeYongeOrdering.Converters"
         xmlns:loc="clr-namespace:LeeYongeOrdering.Localization"
+        xmlns:svc="clr-namespace:LeeYongeOrdering.Services"
         xmlns:local="clr-namespace:LeeYongeOrdering"
         mc:Ignorable="d"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[App.MainTitle], Mode=OneWay}"
@@ -146,7 +147,9 @@
         <!-- ── Header ──────────────────────────────────────────────────── -->
         <Border DockPanel.Dock="Top" Background="#2C3E50" Padding="16,10">
             <Grid>
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Main.HeaderTitle], Mode=OneWay}" Foreground="White"
+                <!-- The open shop's own name, in the current UI language. Falls back to the
+                     Main.HeaderTitle string when no shop is open, so it never renders blank. -->
+                <TextBlock Text="{Binding Source={x:Static svc:ShopContext.Instance}, Path=CurrentName, Mode=OneWay}" Foreground="White"
                            FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Main.HeaderSubtitle], Mode=OneWay}" Foreground="#7F8C8D"
                            FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"/>
