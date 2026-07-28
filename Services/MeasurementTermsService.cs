@@ -3,6 +3,7 @@ using System.Text.Json;
 using CameywareOrder.Localization;
 using CameywareOrder.Models;
 using Path = System.IO.Path;
+using CameywareOrder.Configuration;
 
 namespace CameywareOrder.Services;
 
@@ -132,9 +133,9 @@ public sealed class MeasurementTermsService
     public IReadOnlyList<MeasurementTerm> Terms => _config.Terms;
 
     public MeasurementTerm? FindTerm(string termId)
-        => _config.Terms.FirstOrDefault(t => string.Equals(t.Id, termId, StringComparison.Ordinal));
+        => _config.Terms.Find(t => string.Equals(t.Id, termId, StringComparison.Ordinal));
     public GarmentType? FindGarment(string garmentId)
-        => _config.Garments.FirstOrDefault(g => string.Equals(g.Id, garmentId, StringComparison.Ordinal));
+        => _config.Garments.Find(g => string.Equals(g.Id, garmentId, StringComparison.Ordinal));
 
     /// <summary>Resolves a term's display name for the current UI language.</summary>
     public static string ResolveTermName(MeasurementTerm term)
@@ -395,10 +396,13 @@ public sealed class MeasurementTermsService
         ConfigChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private static string SettingDirectory =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "CameywareOrder");
+    /// <summary>
+    /// Still the data-folder ROOT, not a subfolder. These files are keyed on Shop.PublicId in their
+    /// own FILE NAME (measurement-terms-&lt;publicId&gt;.json), and the pre-multi-shop file beside
+    /// them is the seed the first shop adopts — moving them would mean migrating a name-keyed set
+    /// for no gain the user can see.
+    /// </summary>
+    private static string SettingDirectory => UserDataPaths.ShopDataDirectory;
 
     /// <summary>Pre-multi-shop file; the seed the first shop's terms are adopted from.</summary>
     private static string LegacyFilePath => Path.Combine(SettingDirectory, FileName);
@@ -430,7 +434,7 @@ public sealed class MeasurementTermsService
         var changed = false;
 
         foreach (var termId in MeasurementTermDefaults.PredefinedTermIds
-                     .Where(termId => config.Terms.All(t => !string.Equals(t.Id, termId, StringComparison.Ordinal))))
+                     .Where(termId => config.Terms.TrueForAll(t => !string.Equals(t.Id, termId, StringComparison.Ordinal))))
         {
             config.Terms.Add(new MeasurementTerm
             {
@@ -457,7 +461,7 @@ public sealed class MeasurementTermsService
         }
 
         foreach (var garmentId in MeasurementTermDefaults.PredefinedGarmentIds
-                     .Where(garmentId => config.Garments.All(g => !string.Equals(g.Id, garmentId, StringComparison.Ordinal))))
+                     .Where(garmentId => config.Garments.TrueForAll(g => !string.Equals(g.Id, garmentId, StringComparison.Ordinal))))
         {
             config.Garments.Add(new GarmentType
             {

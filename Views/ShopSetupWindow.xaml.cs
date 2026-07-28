@@ -346,6 +346,11 @@ public partial class ShopSetupWindow : Window
     /// <see cref="ApplyReceiptFormat"/>: it reads the controls directly instead of adding three
     /// more parameters to the two save methods.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "False positive: PhoneBox, EmailBox and WebsiteBox are x:Name instance fields " +
+                        "from the XAML-generated partial, which the analyzer does not see. The method " +
+                        "reads instance data and cannot be static.")]
     private void ApplyContactDetails(Shop shop)
     {
         shop.PhoneNumber = Blank(PhoneBox.Text);

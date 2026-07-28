@@ -385,8 +385,47 @@ components are added/renamed or the way pieces fit together changes.
     RadioButton are recoloured but NOT re-templated — the order editor drives dozens of them from
     code and swaps templates on some. The ComboBox template handles `IsEditable` and resolves
     `DisplayMemberPath` through `ItemTemplateSelector`; see context.md before touching it.
-- **Languages.xml** (project root) — the single source string table (Chinese
-  block first, English block second).
+- **Settings/** (project root) — configuration that SHIPS with the build. Read-only at runtime,
+  versioned in git, replaced wholesale by an upgrade. Deployed by a `Settings\**\*` glob in the
+  csproj, so adding a file needs no project edit. Contrast `%LOCALAPPDATA%\CameywareOrder`, which
+  holds everything the application WRITES and must survive an upgrade.
+  - `System/Languages/<code>.lang.xml` — one document per language, root `<Language code name>`.
+    Ships **zh-CN, en-US, fr-FR**. **Discovered**, not registered: adding a language is dropping a
+    file in. The file name is a convention; the `code` attribute inside is the identity, and a
+    duplicate code is refused (naming both files, since which loads "second" is just alphabetical).
+    497 keys each, and every language must carry the same set — `LocalizationService.KeyGaps`
+    computes the difference and the harness fails on it.
+    - The harness additionally enforces that no key is DEAD (absent from source and not covered by a
+      runtime-composed prefix), that no translation is word-identical to English outside a small
+      shared allow-list, and that placeholder sets match — a stray `{1}` is a runtime
+      `FormatException`, not a cosmetic slip. See context.md before deleting any key.
+    - `Format.*` keys are RULES, not labels: how a language punctuates (`Format.ListSeparator`,
+      `Format.BulletSeparator`). Reach them through `LocalizationService.JoinList` /
+      `JoinFragments`, never by reading the separator out and joining by hand. Spaces are `&#32;`
+      because a trailing space is significant — and for the same reason these files must never be
+      rewritten with `XDocument.Save`. See context.md before adding to this namespace: some things
+      (export filename suffix, currency symbols) deliberately do NOT belong here.
+  - `System/Defaults/app-defaults.json` — `defaultLanguage`, the fact ABOUT the language set that no
+    single language file can own. Read through `Configuration/AppDefaults`, which degrades to a
+    fallback on every failure because startup reads it before any window exists.
+- **Configuration/** — the code that locates and reads configuration.
+  - `SystemSettingsPaths` — locates `Settings/System`, probing the app directory then the working
+    directory. `AppDefaults` — reads `app-defaults.json` (`defaultLanguage`, `backupRetentionCount`),
+    degrading to fallbacks on every failure because startup reads it before any window exists.
+  - `UserDataPaths` — **the one definition** of `%LOCALAPPDATA%\CameywareOrder` and everything under
+    it. Never re-derive that path: it was duplicated across six services before this existed, and
+    the product has already been renamed once.
+    - `Config/` — credentials, currency, language preference. Migrated LAZILY per file by
+      `ResolveConfigFile`, which returns the OLD path if the move fails, so a failed tidy-up can
+      never make credentials unreadable.
+    - `Backups/` — safety copies taken before an import. `SweepLegacyBackups` collects strays left
+      at the root by earlier versions and NEVER deletes; `PruneBackups` deletes, and only after a
+      new backup supersedes an old one.
+    - `orders.db`, `Documents/`, `measurement-terms-<publicId>.json` stay at the ROOT on purpose —
+      the first two are named inside every export package (relative to the root), the third is
+      keyed by file name. See the remarks in the class before moving any of them.
+    - Every operation has an overload taking the data root, so the migration is testable against a
+      throwaway folder rather than only against the machine it must not break.
 
 ## Key cross-cutting patterns
 

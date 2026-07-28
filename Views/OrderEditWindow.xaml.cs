@@ -10,6 +10,7 @@ using CameywareOrder.Models;
 using CameywareOrder.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CameywareOrder.Views;
 
@@ -922,7 +923,7 @@ public partial class OrderEditWindow : Window
         if (_enforcingDepositCeiling)
             return;
 
-        var section = AllSections.FirstOrDefault(c => c.DownpaymentBox == depositBox);
+        var section = Array.Find(AllSections, c => c.DownpaymentBox == depositBox);
         if (section is null)
             return;
 
@@ -989,7 +990,7 @@ public partial class OrderEditWindow : Window
 
     // Maps any payment radio back to the section that owns it.
     private PaymentSectionControls? FindSectionForRadio(RadioButton radio)
-        => AllSections.FirstOrDefault(c =>
+        => Array.Find(AllSections, c =>
             radio == c.DownNone || radio == c.DownEtransfer || radio == c.DownDebit
             || radio == c.DownCredit || radio == c.DownCash
             || IsFinalMethodRadio(c, radio));
@@ -1336,11 +1337,16 @@ public partial class OrderEditWindow : Window
         }
     }
 
-    private void RegisterDecimalTextBox(TextBox textBox)
+    // Static now that the paste handler it attaches is: nothing here touches the window.
+    private static void RegisterDecimalTextBox(TextBox textBox)
     {
         DataObject.AddPastingHandler(textBox, OnDecimalTextBoxPaste);
     }
 
+    [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "Named from XAML on four TextBoxes (PreviewTextInput=\"OnDecimalTextBoxPreviewTextInput\"), " +
+                        "as well as attached from code. The generated InitializeComponent wires it as " +
+                        "this.OnDecimalTextBoxPreviewTextInput, which does not compile against a static method.")]
     private void OnDecimalTextBoxPreviewTextInput(object sender, TextCompositionEventArgs e)
     {
         if (sender is not TextBox textBox)
@@ -1350,7 +1356,12 @@ public partial class OrderEditWindow : Window
         e.Handled = !DecimalInputPattern.IsMatch(proposedText);
     }
 
-    private void OnDecimalTextBoxPaste(object sender, DataObjectPastingEventArgs e)
+    /// <summary>
+    /// Static: attached only through <c>DataObject.AddPastingHandler</c> from code, never named in
+    /// XAML. A handler XAML wires up cannot be static, because the generated InitializeComponent
+    /// references it as <c>this.Handler</c>.
+    /// </summary>
+    private static void OnDecimalTextBoxPaste(object sender, DataObjectPastingEventArgs e)
     {
         if (sender is not TextBox textBox)
             return;
@@ -1988,7 +1999,7 @@ public partial class OrderEditWindow : Window
     {
         var languageCode = _localization.CurrentLanguageCode;
         var names = Services.CustomMadeMeasurementReader.GetGarmentNames(_customMadeRecords, languageCode);
-        return names.Count == 0 ? string.Empty : string.Join(ListSeparator(languageCode), names);
+        return names.Count == 0 ? string.Empty : _localization.JoinList(names, languageCode);
     }
 
     // The ready-made section's parenthetical: the distinct item categories priced on it.
@@ -2009,7 +2020,7 @@ public partial class OrderEditWindow : Window
                 names.Add(name);
         }
 
-        return names.Count == 0 ? string.Empty : string.Join(ListSeparator(_localization.CurrentLanguageCode), names);
+        return names.Count == 0 ? string.Empty : _localization.JoinList(names);
     }
 
     private static System.Windows.Media.SolidColorBrush CreateFrozenBrush(byte r, byte g, byte b)
@@ -2018,11 +2029,6 @@ public partial class OrderEditWindow : Window
         brush.Freeze();
         return brush;
     }
-
-    // Chinese joins list items with the ideographic comma; other languages use ", ".
-    // Matches CustomMadeServiceFlagConverter so the garment lists read the same everywhere.
-    private static string ListSeparator(string languageCode)
-        => languageCode.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "、" : ", ";
 
     // Localizes a token, falling back to the raw token when the key is missing (legacy
     // free-text values predate the fixed category lists).
@@ -2266,7 +2272,7 @@ public partial class OrderEditWindow : Window
 
         return unpriced.Count == 0
             ? string.Empty
-            : string.Join(ListSeparator(_localization.CurrentLanguageCode), unpriced);
+            : _localization.JoinList(unpriced);
     }
 
     // A service carrying items but no charge is allowed — shops zero-rate one on purpose
@@ -2664,14 +2670,15 @@ public partial class OrderEditWindow : Window
         categoryBox.SelectedIndex = 0;
         if (!string.IsNullOrWhiteSpace(existingItem?.ProductName))
         {
-            foreach (ComboBoxItem comboBoxItem in categoryBox.Items)
-            {
-                if (string.Equals(comboBoxItem.Tag?.ToString(), existingItem.ProductName, StringComparison.OrdinalIgnoreCase))
-                {
-                    categoryBox.SelectedItem = comboBoxItem;
-                    break;
-                }
-            }
+            // A search, not a loop: take the first category whose tag matches, and leave the
+            // SelectedIndex = 0 set above in place when nothing does.
+            var match = categoryBox.Items
+                .OfType<ComboBoxItem>()
+                .FirstOrDefault(item => string.Equals(
+                    item.Tag?.ToString(), existingItem.ProductName, StringComparison.OrdinalIgnoreCase));
+
+            if (match is not null)
+                categoryBox.SelectedItem = match;
         }
         Grid.SetColumn(categoryBox, 0);
 

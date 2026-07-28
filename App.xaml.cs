@@ -10,6 +10,7 @@ using System.Data.Common;
 using System.Net;
 using System.Net.Sockets;
 using System.Windows;
+using CameywareOrder.Configuration;
 using CameywareOrder.Data;
 using CameywareOrder.GraphQL;
 using CameywareOrder.Localization;
@@ -85,9 +86,20 @@ public partial class App : Application
         // present, skip the move, and hand an existing shop an empty order list.
         LocalDataFolderMigration.EnsureCurrentFolderName();
 
+        // AFTER the folder is under its current name, so the sweep looks in the right place. Moves
+        // the safety copies earlier versions left loose at the data-folder root into Backups/.
+        // Deliberately never deletes: an old backup is the user's, and reorganising around it is no
+        // reason to discard it. Non-fatal — failing to tidy up must not stop the application.
+        UserDataPaths.SweepLegacyBackups();
+
+        // One document per language, discovered from the folder rather than listed anywhere: adding
+        // a language is dropping a file into Settings/System/Languages. The default lives in
+        // app-defaults.json because it is a fact ABOUT the set — no single language's file can own
+        // it without two of them being able to claim it.
         var localization = LocalizationService.Instance;
-        var languageFilePath = ResolveLanguageFilePath();
-        localization.LoadFromFile(languageFilePath);
+        localization.LoadFromDirectory(
+            SystemSettingsPaths.LanguagesDirectory,
+            AppDefaults.Load().DefaultLanguageCode);
 
         DatabasePathProvider.EnsureDatabasePathReady();
 
@@ -366,19 +378,6 @@ public partial class App : Application
         // configured the shop the administrator was leaving.
         if (configureTerms)
             new MeasurementTermsWindow { Owner = mainWindow }.ShowDialog();
-    }
-
-    private static string ResolveLanguageFilePath()
-    {
-        var inAppDirectory = System.IO.Path.Combine(AppContext.BaseDirectory, "Languages.xml");
-        if (System.IO.File.Exists(inAppDirectory))
-            return inAppDirectory;
-
-        var inWorkingDirectory = System.IO.Path.Combine(Environment.CurrentDirectory, "Languages.xml");
-        if (System.IO.File.Exists(inWorkingDirectory))
-            return inWorkingDirectory;
-
-        throw new System.IO.FileNotFoundException("Languages.xml was not found.");
     }
 
     /// <summary>

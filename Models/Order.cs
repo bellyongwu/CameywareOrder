@@ -179,8 +179,8 @@ public class Order
     // print actions (measurement printing only makes sense when there are measurements).
     [NotMapped]
     public bool HasCustomMadeService
-        => CustomMadeRecords.Any(record => record.Garments.Any(garment =>
-            garment.Values.Any(value =>
+        => CustomMadeRecords.Exists(record => record.Garments.Exists(garment =>
+            garment.Values.Exists(value =>
                 !string.IsNullOrWhiteSpace(value.Cm) || !string.IsNullOrWhiteSpace(value.In))));
 
     // A section is cleared when it carries no charge, has been explicitly marked

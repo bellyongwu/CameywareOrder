@@ -49,8 +49,8 @@ public static class LocalDataFolderMigration
         try
         {
             // An EMPTY current folder means the renamed build was launched once before this
-            // migration existed and created a placeholder. Removing it lets the move land;
-            // Directory.Move refuses an existing destination. Only ever an empty directory is
+            // migration existed and created a placeholder. Removing it lets the move land, because
+            // a directory move refuses an existing destination. Only ever an empty directory is
             // deleted here — the guard above protects anything with content in it.
             if (Directory.Exists(current))
                 Directory.Delete(current);

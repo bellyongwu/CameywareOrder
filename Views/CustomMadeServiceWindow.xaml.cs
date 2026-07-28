@@ -14,6 +14,7 @@ using Microsoft.Win32;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CameywareOrder.Views;
 
@@ -55,9 +56,9 @@ public partial class CustomMadeServiceWindow : Window
     private readonly Dictionary<string, Dictionary<string, MeasurementCell>> _valueCache = new();
     private readonly List<TermInputEditor> _termEditors = new();
 
-    // Documents are grouped by category into their own collections so each category
-    // renders its own list. Uploaded files are copied into the store immediately;
-    // the changes are only committed to disk on Save and rolled back on cancel/close.
+    // Documents are grouped by category into their own collections so each category renders its
+    // own list. Uploaded files are copied into the store immediately, but the changes are only
+    // committed to disk on Save, and rolled back on cancel or close.
     private readonly ObservableCollection<CustomMadeDocument> _handwritingDocs = new();
     private readonly ObservableCollection<CustomMadeDocument> _fabricDocs = new();
     private readonly ObservableCollection<CustomMadeDocument> _photoDocs = new();
@@ -760,8 +761,26 @@ public partial class CustomMadeServiceWindow : Window
         return $"{sanitized}_{ShortLanguageName(languageCode)}";
     }
 
+    /// <summary>
+    /// Short language name for the exported file's suffix — "zh" from "zh-CN", "en" from "en-US".
+    /// </summary>
+    /// <remarks>
+    /// The primary subtag of a BCP-47 tag IS the short language name, so this derives it rather than
+    /// listing cases. It used to read `StartsWith("zh") ? "zh" : "en"`, which named every future
+    /// language "en": a French export would have been written as Measurements_en.pdf.
+    ///
+    /// Deliberately NOT a Format.* entry in the language files. Unlike a list separator this is not
+    /// a choice a language gets to make — it is the same mechanical rule for all of them, and data
+    /// that can be derived should not be maintained by hand.
+    /// </remarks>
     private static string ShortLanguageName(string languageCode)
-        => languageCode.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "zh" : "en";
+    {
+        if (string.IsNullOrWhiteSpace(languageCode))
+            return "en";
+
+        var primary = languageCode.Split('-')[0].Trim();
+        return primary.Length == 0 ? "en" : primary.ToLowerInvariant();
+    }
 
     private static string? MeasurementForPdf(string? text)
     {
@@ -1139,13 +1158,23 @@ public partial class CustomMadeServiceWindow : Window
         DataObject.AddPastingHandler(CustomPriceBox, (s, e) => HandlePaste(s, e, MoneyInputPattern));
     }
 
+    [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "Named from XAML (PreviewTextInput=\"OnMoneyPreviewTextInput\"). The generated " +
+                        "InitializeComponent wires it as this.OnMoneyPreviewTextInput, which does not compile " +
+                        "against a static method. Its measurement sibling below IS static, because that one is " +
+                        "only ever attached from code.")]
     private void OnMoneyPreviewTextInput(object sender, TextCompositionEventArgs e)
     {
         if (sender is TextBox box)
             e.Handled = !MoneyInputPattern.IsMatch(GetProposedText(box, e.Text));
     }
 
-    private void OnMeasurementPreviewTextInput(object sender, TextCompositionEventArgs e)
+    /// <summary>
+    /// Static, unlike its money sibling above: this one is only ever attached from code
+    /// (<c>box.PreviewTextInput += …</c>), where a static handler is fine. A handler named in XAML
+    /// cannot be static — the generated InitializeComponent wires it as <c>this.Handler</c>.
+    /// </summary>
+    private static void OnMeasurementPreviewTextInput(object sender, TextCompositionEventArgs e)
     {
         if (sender is TextBox box)
             e.Handled = !MeasurementInputPattern.IsMatch(GetProposedText(box, e.Text));

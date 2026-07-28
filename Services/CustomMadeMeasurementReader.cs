@@ -24,7 +24,7 @@ public static class CustomMadeMeasurementReader
         {
             foreach (var garment in record.Garments)
             {
-                var hasValue = garment.Values.Any(value =>
+                var hasValue = garment.Values.Exists(value =>
                     !string.IsNullOrWhiteSpace(value.Cm) || !string.IsNullOrWhiteSpace(value.In));
                 if (!hasValue)
                     continue;

@@ -300,6 +300,9 @@ public partial class MeasurementTermsWindow : Window
             MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
+    [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "Named from XAML (Click=\"OnTermEditClick\"). The generated InitializeComponent wires it " +
+                        "as this.OnTermEditClick, which does not compile against a static method.")]
     private void OnTermEditClick(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement { Tag: TermRow row })
@@ -494,23 +497,19 @@ public partial class MeasurementTermsWindow : Window
             Justification = "Bound in MeasurementTermsWindow.xaml (gender badge visibility/tooltip); not visible to single-file analysis.")]
         public bool ShowGenderGlyph => Term.Gender != MeasurementGender.Common;
 
+        // Both of these come from MeasurementGenderPresentation rather than from a switch here: the
+        // term editor's gender picker shows the same marks for the same classifications, and two
+        // private copies of a symbol table drift \u2014 leaving one screen labelling a term with a mark
+        // that means something other than what the other screen says it means.
         [SuppressMessage("Major Code Smell", "S1144:Unused private types or members should be removed",
             Justification = "Bound in MeasurementTermsWindow.xaml (gender badge text); not visible to single-file analysis.")]
-        public string GenderGlyph => Term.Gender switch
-        {
-            MeasurementGender.Male => "\u2642",
-            MeasurementGender.Female => "\u2640",
-            _ => string.Empty
-        };
+        public string GenderGlyph => MeasurementGenderPresentation.Symbol(Term.Gender);
 
         [SuppressMessage("Major Code Smell", "S1144:Unused private types or members should be removed",
             Justification = "Bound in MeasurementTermsWindow.xaml (gender badge tooltip); not visible to single-file analysis.")]
-        public string GenderTooltip => Term.Gender switch
-        {
-            MeasurementGender.Male => LocalizationService.Instance["MeasureTerms.FilterMale"],
-            MeasurementGender.Female => LocalizationService.Instance["MeasureTerms.FilterFemale"],
-            _ => string.Empty
-        };
+        public string GenderTooltip => Term.Gender == MeasurementGender.Common
+            ? string.Empty
+            : MeasurementGenderPresentation.NameText(LocalizationService.Instance, Term.Gender);
 
         public bool IsEditing
         {

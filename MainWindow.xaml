@@ -498,7 +498,11 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn local:OrderColumnSort.SortKey="OrderDate" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Width="130">
+                            <!-- 165, not 130: these widths have to hold the LONGEST language's header,
+                                 and French runs about a quarter longer than English — "Date de la
+                                 commande" against "Order Date" and 订单日期. Sized for French rather
+                                 than for whichever language happened to be open when it was set. -->
+                            <GridViewColumn local:OrderColumnSort.SortKey="OrderDate" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Width="165">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Style="{StaticResource NumericCellText}" Text="{Binding OrderDate, StringFormat=yyyy-MM-dd}"/>
@@ -521,7 +525,9 @@
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
                             <GridViewColumn local:OrderColumnSort.SortKey="BalanceStatus" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Width="270" DisplayMemberBinding="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}"/>
-                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomMadeFlag], Mode=OneWay}" Width="170">
+                            <!-- 195 for the same reason: "Service sur mesure" is the longest of the
+                                 three headers this column carries. -->
+                            <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomMadeFlag], Mode=OneWay}" Width="195">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Center">

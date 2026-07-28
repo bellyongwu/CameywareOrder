@@ -1,16 +1,14 @@
 using System.IO;
 using System.IO.Compression;
+using CameywareOrder.Configuration;
 
 namespace CameywareOrder.Data;
 
 public static class DatabasePathProvider
 {
-    public static string AppDataDirectory =>
-        System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "CameywareOrder");
+    public static string AppDataDirectory => UserDataPaths.Root;
 
-    public static string DatabaseFilePath => System.IO.Path.Combine(AppDataDirectory, "orders.db");
+    public static string DatabaseFilePath => UserDataPaths.DatabaseFile;
 
     public static string ConnectionString => $"Data Source={DatabaseFilePath}";
 
@@ -62,7 +60,7 @@ public static class DatabasePathProvider
 
     // --- Import / export ---------------------------------------------------------
 
-    private static string DocumentsRootDirectory => System.IO.Path.Combine(AppDataDirectory, "Documents");
+    private static string DocumentsRootDirectory => UserDataPaths.DocumentsDirectory;
 
     private const string DatabaseEntryName = "orders.db";
 
@@ -117,14 +115,22 @@ public static class DatabasePathProvider
         string? backupPath = null;
         if (System.IO.File.Exists(DatabaseFilePath))
         {
-            backupPath = System.IO.Path.Combine(AppDataDirectory, $"orders.db.bak-{DateTime.Now:yyyyMMddHHmmss}");
+            // Into Backups/ rather than beside the database. These used to land at the root of the
+            // data folder and nothing ever removed them; 23 had accumulated on one machine.
+            System.IO.Directory.CreateDirectory(UserDataPaths.BackupsDirectory);
+            backupPath = System.IO.Path.Combine(
+                UserDataPaths.BackupsDirectory, $"orders.db.bak-{DateTime.Now:yyyyMMddHHmmss}");
             System.IO.File.Copy(DatabaseFilePath, backupPath, overwrite: true);
         }
 
-        if (TryImportFromPackage(sourcePath, backupPath))
-            return backupPath;
+        var imported = TryImportFromPackage(sourcePath, backupPath);
+        if (!imported)
+            ImportLegacyDatabaseFile(sourcePath);
 
-        ImportLegacyDatabaseFile(sourcePath);
+        // AFTER the import, never before: pruning is only safe once the backup it might delete has
+        // been superseded by the one just taken.
+        UserDataPaths.PruneBackups(AppDefaults.Load().BackupRetentionCount);
+
         return backupPath;
     }
 
@@ -164,7 +170,9 @@ public static class DatabasePathProvider
         var suffix = databaseBackupPath is not null
             ? System.IO.Path.GetFileName(databaseBackupPath).Replace("orders.db.bak-", string.Empty)
             : DateTime.Now.ToString("yyyyMMddHHmmss");
-        var backupDirectory = System.IO.Path.Combine(AppDataDirectory, $"Documents.bak-{suffix}");
+
+        System.IO.Directory.CreateDirectory(UserDataPaths.BackupsDirectory);
+        var backupDirectory = System.IO.Path.Combine(UserDataPaths.BackupsDirectory, $"Documents.bak-{suffix}");
         System.IO.Directory.Move(DocumentsRootDirectory, backupDirectory);
     }
 

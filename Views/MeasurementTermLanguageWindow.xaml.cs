@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using System.Windows.Media;
 using CameywareOrder.Localization;
 using CameywareOrder.Models;
 
@@ -43,7 +44,7 @@ public partial class MeasurementTermLanguageWindow : Window
         if (initialGender.HasValue)
         {
             GenderPanel.Visibility = Visibility.Visible;
-            SetGenderRadio(initialGender.Value);
+            PopulateGenders(initialGender.Value);
         }
 
         foreach (var language in LocalizationService.Instance.AvailableLanguages)
@@ -55,21 +56,48 @@ public partial class MeasurementTermLanguageWindow : Window
         LanguageRows.ItemsSource = _rows;
     }
 
-    private void SetGenderRadio(MeasurementGender gender)
+    /// <summary>
+    /// Fills the gender drop-down and selects the term's current classification.
+    /// </summary>
+    /// <remarks>
+    /// Built here rather than declared in XAML so the labels come from the string table at the
+    /// moment the dialog opens. It is modal and short-lived, so it never has to survive a language
+    /// switch while on screen — the same reasoning the currency picker in ShopSetupWindow uses.
+    ///
+    /// Common leads the list because it is the default for a new term and by far the common case.
+    /// </remarks>
+    private void PopulateGenders(MeasurementGender selected)
     {
-        GenderCommonRadio.IsChecked = gender == MeasurementGender.Common;
-        GenderMaleRadio.IsChecked = gender == MeasurementGender.Male;
-        GenderFemaleRadio.IsChecked = gender == MeasurementGender.Female;
+        var loc = LocalizationService.Instance;
+
+        // Common leads: it is the default for a new term and by far the common case.
+        GenderBox.ItemsSource = new[]
+        {
+            MeasurementGender.Common,
+            MeasurementGender.Male,
+            MeasurementGender.Female,
+        }.Select(gender => new GenderOption(
+            gender,
+            MeasurementGenderPresentation.NameText(loc, gender),
+            MeasurementGenderPresentation.SymbolWithCommon(gender))).ToList();
+
+        GenderBox.SelectedValue = selected;
     }
 
+    /// <summary>
+    /// The chosen classification, falling back to Common. The fallback is reachable only if the
+    /// drop-down were somehow left unset, and Common is the right answer there: a term with no
+    /// stated gender applies to everyone, which is what the picker defaults to anyway.
+    /// </summary>
     private MeasurementGender ReadSelectedGender()
-    {
-        if (GenderMaleRadio.IsChecked is true)
-            return MeasurementGender.Male;
-        if (GenderFemaleRadio.IsChecked is true)
-            return MeasurementGender.Female;
-        return MeasurementGender.Common;
-    }
+        => GenderBox.SelectedValue as MeasurementGender? ?? MeasurementGender.Common;
+
+    /// <summary>
+    /// One entry in the gender drop-down: its value, its localized name, and the symbol shown in
+    /// front of it — all three taken from <see cref="MeasurementGenderPresentation"/> so the picker
+    /// cannot disagree with the badge the terms list draws for the same classification.
+    /// </summary>
+    private sealed record GenderOption(MeasurementGender Value, string Label, string Symbol);
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {

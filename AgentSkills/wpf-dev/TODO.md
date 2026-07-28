@@ -17,6 +17,256 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 04:50 — Gender picker: alignment and symbols  [DONE]
+- Ask: "性别分类UI做好看一些，标签跟语言选择一样，下拉菜单可以跟语言选择的input一样宽。同时在下拉菜单用
+  男女svg符号加在前面。通用的话也用个通用的svg符号。" then, mid-turn: "你不用自己新建svg，其他地方有".
+- Done:
+  - [x] The gender row is now literally one of the language rows' shape — a 120px label column and
+        the control in the remainder. Asserted, not eyeballed: the drop-down measures **246px, the
+        same as a language name box, at the same left edge (140px)**, and the label sits in the same
+        column (20px) in the same colour as 简体中文 / English / Français.
+  - [x] Symbols in front of each option: ♂ / ♀ / ♂♀.
+  - [x] `Views/MeasurementGenderPresentation` — ONE table for the symbol and the localized name.
+        The terms-list badge now reads from it too, instead of its own private switch.
+- **Course correction, and the user was right to make it.** I first hand-drew three vector Paths,
+  reasoning that ⚥ (U+26A5) is not reliably present in a UI font. The user pointed out the symbols
+  already exist elsewhere — the terms list has badged rows with the CHARACTERS ♂ / ♀ since long
+  before this. Reusing them is better on every axis: no second definition to drift, and both marks
+  are already proven to render in this application. "Common" is the two marks together, which needs
+  no third glyph at all and sidesteps the U+26A5 coverage problem entirely.
+- **Then I made the exact mistake I had just documented.** I gave the symbol a fixed `Width="26"`;
+  "♂♀" needs 38.4px, so its second glyph was cut and rendered as what looked like a missing-glyph
+  box — i.e. it looked precisely like the font problem I had used to justify drawing vectors.
+  Fixed with `Width="Auto"` + `SharedSizeGroup`, which measures the widest mark instead of guessing
+  and keeps the three labels on a common left edge. `Grid.IsSharedSizeScope` on the ComboBox so the
+  closed face is covered as well as the open list.
+- Notes: build 0/0, Sonar zero, **282 assertions across 7 harnesses**, 0 binding errors.
+  - `gendercheck` grew the assertion that would have caught the clipping without a screenshot: the
+    combined mark's rendered width against its measured width (38.4 vs 38.4). It also renders the
+    Common state to a second screenshot — the justification for using characters was that they are
+    proven to draw here, so that had to be shown, not asserted as a string.
+
+### 2026-07-28 04:30 — Gender picker: radios → drop-down  [DONE]
+- Ask: "在量身项目设置中，新添加全身量身项目后，多语言名称的性别分类改成下拉菜单把，radiobutton对其他
+  西方字母语言不友好。"
+- The user was right, and the harness put a number on it. Three radios in a row need the width of
+  ALL THREE labels at once, in a 420px dialog:
+  | language | width three radios needed | fits 420px? |
+  |---|---|---|
+  | zh-CN (通用（男女均适用）/仅男装/仅女装) | ~291px | yes |
+  | en-US (Common (both genders)/…) | **~429px** | **no** |
+  | fr-FR (Mixte (les deux genres)/…) | **~463px** | **no** |
+  A drop-down needs only the widest label, and only while open. Closed control is 366px in all three.
+- Done:
+  - [x] `MeasurementTermLanguageWindow`: three `RadioButton`s → one themed `ComboBox`, items built
+        from the string table when the dialog opens (modal and short-lived, so it never has to
+        survive a language switch on screen — same reasoning as ShopSetupWindow's currency picker).
+  - [x] Label moved ABOVE the control rather than beside it: a long label plus a control on one line
+        reintroduces exactly the width problem being fixed.
+  - [x] **Found the same fault one control over**: the Save button was a fixed `Width="90"` and
+        rendered French "Enregistrer" as "Enregistre". Changed to `MinWidth` + padding, so the pair
+        still look matched in Chinese but either can grow.
+- Notes: build 0/0, Sonar zero, **255 assertions across 7 harnesses**, 0 binding errors.
+  - `scratchpad/gendercheck` — 34 assertions, no database or credentials (the dialog needs only the
+    string table). The assertions are GEOMETRIC on purpose: the point was never "a ComboBox exists"
+    but "the control no longer overflows in a language with long labels". It also asserts no
+    RadioButton survives, the value round-trips, the picker stays hidden in garment mode, and
+    **every button in the dialog is wide enough for its own label in every language** — the check
+    that would have caught the Save button without anyone looking at a screenshot.
+
+### 2026-07-28 04:00 — Sonar to zero, French as a third language, unused-key cleanup  [DONE]
+- Ask: "首先把该fix的bug要fix了，持续做下去，做到完成。做完之后添加一整套的法语作为第三种语言" +
+  "add a new testing store with French language" + "with 40 records" +
+  "remove Legacy Keys in language files and not in used code".
+- **Sonar is at zero for the first time** — all 31 standing findings cleared, not suppressed wholesale:
+  - 18 × S6602/S6603/S6605 → the collection-specific `Find` / `TrueForAll` / `Exists`. One was wrong
+    (`values` was an ARRAY, needing `Array.Exists`) and the compiler caught it, which is why these
+    were done as mechanical edits behind a build rather than by eye.
+  - 3 × S125 "commented out code" → all three were explanatory PROSE that happened to parse as code
+    (a trailing `;`, a `Directory.Move` reference). Reworded rather than suppressed.
+  - 7 × S2325 "make static" → split empirically, not assumed. 5 are wired from XAML and CANNOT be
+    static (the generated InitializeComponent emits `this.Handler`); those got justified
+    suppressions. 2 are attached only from code and were genuinely made static — which then
+    cascaded a 3rd (`RegisterDecimalTextBox`) that no longer touched the instance.
+  - 1 × S3267 → a `foreach`+`if`+`break` that was a search; rewritten as `FirstOrDefault`.
+- **Bug found and fixed: `\"{0}\"` in the delete dialog.** XML text has no backslash escaping, so the
+  confirmation literally read `订单 \"ORD-123\"` with visible backslashes. Present in BOTH shipped
+  languages since forever. Replaced with proper quotes per language (“ ” / « »).
+- **French (fr-FR) added as a real third system language**, 497 keys, exercising exactly what Phase 1
+  was for: a file was dropped into Settings/System/Languages and nothing else changed.
+  - Two failures the harness caught that review would not have: `Paging.Summary` was word-identical
+    to English (so it was silently "translated" by falling back), and the duplicate-code error
+    message named the WRONG file — de-DE sorts before en-US, so the blameless original was reported.
+    The message now names BOTH files.
+  - Column widths: French runs ~25% longer than English. `Order Date` → `Date de la commande` and
+    `Custom Service` → `Service sur mesure` truncated their headers; both columns widened, sized for
+    the LONGEST language rather than whichever was open when they were set. `Payment.Status.Refunded`
+    was shortened in French instead of widening a column the user had explicitly sized.
+- **French test shop seeded**: #4 Atelier Montréal, fr-FR, CAD, MTL-0001…MTL-0040, 40 orders, 16 with
+  a custom service. `Garments` populated from the start — the legacy flat-field shape is what made an
+  earlier seeding run report "no custom service" on every order.
+- **Unused keys removed**: `Order.Fields.Tax`, `Shop.Picker.RoleHere`, `Users.PasswordChanged`.
+  Only 3 of 500, and the scan is the interesting part: 34 keys are never written literally anywhere
+  because they are composed at runtime (`$"Measure.Term.{id}"`, `$"PaymentMethod.{method}"`, …).
+  Deleting one of those is SILENT — the lookup returns the key and the screen shows
+  "Measure.Term.waist". A key survives if its full name appears in source OR its prefix is one the
+  code interpolates. Now a permanent guard in the harness.
+- Notes: build 0/0, **Sonar zero**, **221 assertions across 6 harnesses**, 0 binding errors.
+  Verified visually at 2560 (the app's default size) against the LIVE database, read-only.
+  A pre-seed backup was taken first: `Backups/orders.db.bak-preFrenchShop`.
+
+### 2026-07-28 03:05 — Config refactor, PHASE 3: the runtime data folder  [DONE]
+- Ask: continuation of the phased plan ("keep going").
+- Done:
+  - [x] `Configuration/UserDataPaths` — ONE definition of `%LOCALAPPDATA%\CameywareOrder`. It had
+        been spelled out in SIX independent places (credentials, currency, language preference,
+        measurement terms, branding, database). The product has already been renamed once
+        (LeeYongeOrdering → CameywareOrder); six copies is six chances to miss one next time.
+  - [x] `Backups/` — new safety copies go there, and `SweepLegacyBackups` collects the ones earlier
+        versions left loose at the root (23 on this machine). **The sweep never deletes**: an old
+        backup is the user's, and reorganising around it is no reason to discard it.
+  - [x] `Config/` — credentials / currency / language-preference migrate there LAZILY, per file, on
+        first access. **On failure it returns the OLD path** so the file keeps being read where it
+        is. Being unable to tidy up must never make credentials.json unreadable.
+  - [x] Retention via `backupRetentionCount` in app-defaults.json (default 10, 0 = keep all).
+        Deleting backups is the user's call, so the number is visible and editable rather than a
+        constant in code. Applied ONLY after a new backup is written — never on startup — so nothing
+        is deleted unless it has just been superseded. Ordered by write time, not by the name, since
+        one real backup is called `orders.db.bak-preShopRules` and has no date to parse.
+- **Deliberately NOT moved, with reasons in the code:**
+  - `Documents/` — `DatabasePathProvider` writes export packages with entry paths RELATIVE TO the
+    data root and extracts them the same way, so "Documents/…" is baked into every export zip a user
+    already holds. The on-disk layout here is a data interchange format, not just a folder.
+  - `orders.db` — named at top level in that same package, and every connection string resolves
+    through it.
+  - `measurement-terms-<publicId>.json` — keyed on the shop's PublicId in the FILE NAME.
+  - Tidiness was not worth reopening any of the three.
+- Notes: build 0/0, Sonar clean on every Phase 3 file. **212 assertions across 6 harnesses, green.**
+  - `scratchpad/userdatacheck` — **40/40**, entirely against throwaway folders shaped like the real
+    one. To make that possible the operations take the data root as a PARAMETER rather than each
+    reaching for the real one; the alternative was a test-only seam on the class that decides where
+    credentials live, and a migration that has only ever run against the machine it must not break
+    is not one worth shipping. It proves: nothing deleted (5 in, 5 out), idempotent over three runs,
+    live data untouched, a name collision leaves the stray rather than overwriting, retention
+    removes the OLDEST by write time, and — the one that matters — **a locked file falls back to the
+    original path instead of locking the user out**, then migrates once the lock is gone.
+  - The last assertion proves the live folder was not touched by the harness itself.
+- Live-folder state after this session: `Config/` now holds credentials.json and
+  currency-setting.json (migrated lazily when `headercheck` constructed MainWindow — the app was
+  closed, verified first). language-preference.json and the 23 loose backups migrate on next launch,
+  since nothing in the harnesses runs `App.OnStartup`. Content hash of credentials.json verified
+  identical across the move.
+
+### 2026-07-28 02:35 — Config refactor, PHASE 2: the last unlocalized UI strings  [DONE]
+- Ask: continuation of the phased plan ("可以 开始吧").
+- **The phase was smaller than I had scoped it, and re-scanning is why.** I had listed 8 strings.
+  Two of them — the startup-failure MessageBox and the data-folder migration message — are
+  ALREADY deliberately unlocalized, each carrying a comment saying why, and both are right:
+  - `App.xaml.cs` catches around the whole of startup, and loading the language table is PART of
+    startup. A localized message there could depend on the very thing that failed.
+  - `LocalDataFolderMigration` runs at `StartApplicationAsync` line ~87, BEFORE the table loads at
+    ~93. (The load could be moved earlier — it only touches the app directory, not AppData — but
+    weakening a deliberate "this runs FIRST" invariant to translate a rare error message is a bad
+    trade.) Left alone; "localize everything" would have undone working design.
+- Done:
+  - [x] Six formatting-ribbon tooltips in `ReceiptBrandingWindow` (Bold / Italic / Underline /
+        Align left / center / right) — the only literal `ToolTip=` left in the application.
+  - [x] `SignOut.Failed` — the sign-out failure MessageBox showed a bare `ex.ToString()` under the
+        caption "Cameyware Order". Now a plain-language line first (a stack trace alone does not
+        tell the person whether they are still signed in), with the caption from `App.MainTitle`.
+        Localized here BECAUSE the table is loaded by this point, unlike the two above.
+  - [x] Left as-is on purpose: the `B` / `I` / `U` button faces, the alignment glyphs, `×` and `—`.
+        Typographic convention, not prose — every word processor shows the same three letters in
+        either language.
+- Notes: build 0/0. Sonar: no new findings (the two `MainWindow.xaml.cs` S2325 are pre-existing and
+  merely line-shifted). 500 keys per language file, key sets verified identical.
+  **172 assertions across 5 harnesses, all green.**
+  - New guards in `formatcheck`: every new key resolves in BOTH languages AND differs between them
+    (identical text usually means only one file was edited), plus a source guard that **no literal
+    `ToolTip=` exists in any XAML** — those six were the last, so any literal is now a new one.
+
+### 2026-07-28 02:10 — Config refactor, PHASE 1: Settings/System + per-language files  [DONE]
+- Ask: continuation of the phased plan ("可以那么按阶段来" / "继续吧").
+- Done:
+  - [x] `Languages.xml` (1058 lines) split into `Settings/System/Languages/{zh-CN,en-US}.lang.xml`,
+        493 keys each. Split with **byte-level tooling, not XDocument** — `XDocument.Save` would have
+        rewritten the `&#32;` character references back into literal spaces, undoing Phase 0's
+        protection. Content verified IDENTICAL key-by-key before deleting the original.
+  - [x] `Settings/System/Defaults/app-defaults.json` — home for `default="zh-CN"`, which lost its
+        home in the split. It is a fact ABOUT the set, so no single language's file can own it:
+        two of them could each claim to be the default.
+  - [x] `Configuration/SystemSettingsPaths` (probes app dir then working dir, as the old single-file
+        resolver did) and `Configuration/AppDefaults` (degrades on every failure — startup reads it
+        before any window exists, so a throw means a process that dies with no UI to explain itself).
+  - [x] `LocalizationService.LoadFromDirectory` — discovery from `*.lang.xml`, no registry anywhere.
+        `LoadFromFile` kept for the single-file shape; both share one core.
+  - [x] **Key-parity detection** (`KeyGaps`), the condition on which the split was worth doing.
+        Reported, not thrown: a translation gap is a defect to fix, not a reason to refuse to start
+        in front of a user, and the fallback already renders something readable. The harness is what
+        turns the list into a failure.
+  - [x] Duplicate language code REFUSED — the likeliest mistake when adding a language is copying
+        `en-US.lang.xml` and forgetting the `code` inside, which would silently replace the original.
+  - [x] Explicit display ordering (default first, then by code). Discovery order is file-system
+        order, and `en-US.lang.xml` sorts before `zh-CN.lang.xml` — the split would otherwise have
+        quietly reshuffled the language picker and demoted the default from the top.
+  - [x] csproj ships `Settings\**\*`; confirmed the three files land in the build output.
+- Notes: build 0/0. Sonar clean on all Phase 1 files. **157 assertions across 5 harnesses, green on
+  two consecutive sweeps.**
+  - **Chasing a Sonar warning on the JSON DTO uncovered a real bug the test was MASKING.**
+    `System.Text.Json` matches property names case-SENSITIVELY by default, so the hand-written
+    `"defaultLanguage"` never bound to `DefaultLanguage` — `AppDefaults` was always returning its
+    fallback. It passed because the fallback and the file both say `zh-CN`. Fixed with
+    `PropertyNameCaseInsensitive`, and the test now uses a value the fallback cannot produce.
+    Lesson recorded: **a fixture equal to the fallback proves nothing.**
+  - Three harnesses were non-idempotent and failed on re-run looking exactly like regressions:
+    shopcheck's save round-trip overwrites the fields its own edit-mode assertions read; headercheck
+    inherited shopcheck's leftovers; migcheck asserts a pre-migration schema that its own first run
+    destroys. Each now seeds or rewinds its own fixture (migcheck DROPs the columns rather than
+    re-copying, so it keeps working once no pre-migration database exists anywhere).
+
+### 2026-07-28 01:30 — Systematic config refactor, PHASE 0: language punctuation is data  [DONE]
+- Ask: "系统性的针对整体文件结构优化和调整… Move all static text, content from the code into an
+  architectural way… 可以那么按阶段来" (proceed phase by phase)
+- Scan first. The premise turned out to be mostly already satisfied: **244 localization lookups in
+  C#, 441 bindings in XAML, 986 keys across 24 namespaces.** Of 21 CJK literals in .cs, nearly all
+  are COMMENTS. Only 8 user-facing strings are genuinely unlocalized (deferred to Phase 2). The plan
+  was rescoped around what is actually broken rather than a wholesale text migration.
+- Done (Phase 0 — what actually blocks adding a language):
+  - [x] `Format.ListSeparator` / `Format.BulletSeparator` per language, replacing
+        `code.StartsWith("zh") ? "、" : ", "` **duplicated across 5 files**. One of them carried a
+        comment admitting it had to be kept in step with another.
+  - [x] `LocalizationService.JoinList(values)` / `JoinList(values, languageCode)` /
+        `JoinFragments(values)`. Exposed as JOINS, not as a raw separator property — handing out the
+        separator is what invited five private copies of the rule in the first place.
+  - [x] Currency symbols: `CNY ? "￥" : "$"` → a table over `CurrencyType`, with `¤` for an
+        undefined value. Falling back to `$` would state something FALSE about an amount.
+        Deliberately NOT externalized to JSON: the enum is persisted as integers, so a currency
+        cannot be added without a code change anyway, and a JSON file would just be a second place
+        that has to agree with the enum.
+  - [x] The exported measurements PDF's suffix (`Measurements_zh.pdf`) derived from the BCP-47
+        primary subtag instead of `StartsWith("zh") ? "zh" : "en"` — which named every future
+        language "en". NOT a Format.* entry: it is the same mechanical rule for every language, and
+        derivable data should not be maintained by hand.
+- Notes: build 0/0. Sonar: **zero new findings**; every hit in the changed files is pre-existing at a
+  line my edits merely shifted. Key parity re-verified: 986 keys, every one present exactly twice.
+  - `scratchpad/formatcheck` — **25/25**, no database / credentials / UI involved. The load-bearing
+    test ADDS a third language (fr-FR) to a copy of the table and asserts it gets its own
+    punctuation: under the replaced rule fr-FR would have rendered `a, b`, because it does not start
+    with "zh".
+  - **The source-level guard found a 5th site my own scan had missed** —
+    `CustomMadeServiceWindow.ShortLanguageName` sniffs the language code with no CJK literal on the
+    line, so the CJK grep never saw it. Worth keeping: the guard greps the tree for
+    `StartsWith("zh"` and for hard-coded separator literals, so the pattern cannot be pasted back.
+  - Spaces in the separators are written `&#32;` in the XML. A trailing space IS the format, and a
+    whitespace-trimming editor would silently turn `Jacket, Shirt` into `Jacket,Shirt`.
+- Remaining phases agreed with the user: **1** Settings/System/ + split language files +
+  auto-discovery + **key-parity validation** (without which splitting is a downgrade, since a missing
+  key becomes a silent fallback); **2** the 8 unlocalized strings; **3** the AppData runtime folder
+  (flat, 11 doc backups + 12 db backups at the root, no retention) — highest risk, needs migration,
+  goes last. **Deferred deliberately:** externalizing `MeasurementTerm.cs` seed data — the ids are
+  `const string` referenced by compile-checked code, so JSON would turn compile errors into runtime
+  errors, and the per-shop file users already edit is the real config.
+
 ### 2026-07-28 00:50 — Shop address in the header; stop seeding "admin"  [DONE]
 - Ask: "当前的main application view 的店名下面要标出地址，这样用户就知道操作的是哪个店了。然后当login
   重启时不要透露"admin"作为起始的登录名称"

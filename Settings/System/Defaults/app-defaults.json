@@ -1,0 +1,24 @@
+{
+  "$comment": [
+    "System defaults that ship WITH the application. Read-only at runtime: per-machine and per-shop",
+    "choices are stored elsewhere (LocalAppData\\CameywareOrder and the Shops table respectively),",
+    "and nothing in the application writes back to this file.",
+    "",
+    "defaultLanguage is the language a fresh installation starts in, and the fallback used when a",
+    "key is missing from the language the user is running. It used to be the `default` attribute on",
+    "the <Languages> root of the old single-file table; splitting that file into one document per",
+    "language left it without a home, and a per-language file cannot own it — two of them could",
+    "each claim to be the default. It must be a value ABOUT the set, so it lives here.",
+    "",
+    "It must name a language that Settings/System/Languages actually ships; if it does not, the",
+    "loader falls back to the first language it discovered rather than failing to start.",
+    "",
+    "backupRetentionCount is how many safety copies to keep in LocalAppData\\CameywareOrder\\Backups.",
+    "One is taken automatically before every database import, so without a limit they accumulate",
+    "forever — and a Documents backup is a full copy of every attached image, not a small file.",
+    "Only ever applied after a NEW backup is written, so nothing is deleted unless it has just been",
+    "superseded. Set it to 0 to keep every backup indefinitely."
+  ],
+  "defaultLanguage": "zh-CN",
+  "backupRetentionCount": 10
+}

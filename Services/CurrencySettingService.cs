@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using CameywareOrder.Models;
 using Path = System.IO.Path;
+using CameywareOrder.Configuration;
 
 namespace CameywareOrder.Services;
 
@@ -48,11 +49,36 @@ public sealed class CurrencySettingService : INotifyPropertyChanged
         RaiseChanged();
     }
 
-    /// <summary>Display symbol for the current currency (￥ for CNY, otherwise $).</summary>
+    /// <summary>
+    /// Symbol per currency. A table rather than the `CNY ? "￥" : "$"` it replaces: that shape has
+    /// no place to put a new currency, so adding one silently inherited dollars — and a CNY total
+    /// rendered as "$1,695.00" is not a cosmetic bug, it is the wrong number.
+    ///
+    /// Deliberately NOT moved out to a JSON config. <see cref="CurrencyType"/> is a C# enum whose
+    /// values are persisted as integers, so a new currency cannot be added without a code change in
+    /// any case; an external file would only add a second place that has to agree with the enum.
+    /// What keeps this honest is the harness, which asserts the table is total over the enum.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<CurrencyType, string> Symbols =
+        new Dictionary<CurrencyType, string>
+        {
+            [CurrencyType.CAD] = "$",
+            [CurrencyType.USD] = "$",
+            [CurrencyType.CNY] = "￥"
+        };
+
+    /// <summary>
+    /// Shown for a value that is not a defined <see cref="CurrencyType"/> — reachable only from a
+    /// corrupt or downgraded database row. The generic currency sign is deliberate: it reads as
+    /// "unknown", where falling back to "$" would state something false about the amount.
+    /// </summary>
+    private const string UnknownCurrencySymbol = "¤";
+
+    /// <summary>Display symbol for the current currency.</summary>
     public string Symbol => GetSymbol(Current);
 
     public static string GetSymbol(CurrencyType currencyType)
-        => currencyType == CurrencyType.CNY ? "￥" : "$";
+        => Symbols.TryGetValue(currencyType, out var symbol) ? symbol : UnknownCurrencySymbol;
 
     public void SetCurrency(CurrencyType currencyType)
     {
@@ -81,12 +107,9 @@ public sealed class CurrencySettingService : INotifyPropertyChanged
         CurrencyChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    private static string SettingDirectory =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "CameywareOrder");
+    private static string SettingFilePath => UserDataPaths.ResolveConfigFile(FileName);
 
-    private static string SettingFilePath => Path.Combine(SettingDirectory, FileName);
+    private static string SettingDirectory => Path.GetDirectoryName(SettingFilePath)!;
 
     private static CurrencyType? TryLoad()
     {

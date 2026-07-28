@@ -26,7 +26,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Languages.xml">
+    <!-- Shipped configuration: the per-language string tables and the system defaults. A glob
+         rather than a list of files, so adding a language is dropping zh-TW.lang.xml into
+         Settings/System/Languages with no project edit — which is the point of the folder.
+         Read-only at runtime; anything the application writes lives under %LOCALAPPDATA%. -->
+    <None Update="Settings\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

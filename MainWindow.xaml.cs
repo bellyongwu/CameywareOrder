@@ -14,6 +14,7 @@ using CameywareOrder.Models;
 using CameywareOrder.Services;
 using CameywareOrder.ViewModels;
 using CameywareOrder.Views;
+using System.Diagnostics.CodeAnalysis;
 
 namespace CameywareOrder;
 
@@ -178,7 +179,16 @@ public partial class MainWindow : Window
             // This handler is async void and the window it belongs to is already closing, so an
             // exception here would otherwise take the whole dispatcher down with no explanation.
             // No owner window: by this point there may not be one.
-            MessageBox.Show(ex.ToString(), "Cameyware Order", MessageBoxButton.OK, MessageBoxImage.Error);
+            //
+            // Localized, unlike the startup and data-folder failures, because by here the string
+            // table is loaded — those two run before it and say so in their own comments. The
+            // exception text is kept below a plain-language line: a stack trace alone tells the
+            // person nothing about whether they are still signed in.
+            MessageBox.Show(
+                $"{_localization["SignOut.Failed"]}{Environment.NewLine}{Environment.NewLine}{ex}",
+                _localization["App.MainTitle"],
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
@@ -322,6 +332,10 @@ public partial class MainWindow : Window
 
     // Right-clicking a row selects it first so context-menu actions operate on the
     // intended order (WPF does not select on right-click by default).
+    [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "Named from XAML (EventSetter Handler=\"OnOrderRowRightClick\"). The generated " +
+                        "InitializeComponent wires it as this.OnOrderRowRightClick, which does not compile " +
+                        "against a static method.")]
     private void OnOrderRowRightClick(object sender, MouseButtonEventArgs e)
     {
         if (sender is ListViewItem item)
@@ -329,6 +343,8 @@ public partial class MainWindow : Window
     }
 
     // Keeps the trailing (Notes) column filling the remaining width as the list resizes.
+    [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "Named from XAML (SizeChanged=\"OnOrdersListSizeChanged\"); see OnOrderRowRightClick.")]
     private void OnOrdersListSizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (sender is not ListView { View: GridView grid } list || grid.Columns.Count == 0)
@@ -988,8 +1004,7 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(payload.LanguageCode))
             parts.Add(_localization["Toolbar.Language"]);
 
-        var separator = _localization.CurrentLanguageCode.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "、" : ", ";
-        return string.Join(separator, parts);
+        return _localization.JoinList(parts);
     }
 
     private FlowDocument BuildReceiptDocument(Order order, double pageWidth)

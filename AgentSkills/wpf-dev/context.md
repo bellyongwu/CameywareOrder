@@ -124,6 +124,136 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   language-keyed JSON (`NamesJson`, `AddressesJson`). Phone, email, website and
   `ReceiptBrandingSettings.TaxRegistrationNumber` are identifiers, identical whoever reads them;
   only their labels translate. Ask which kind a new field is before adding it.
+- **Adding a language: what actually breaks (2026-07-28).** fr-FR was added as a third language and
+  these are the things that were NOT obvious:
+  - **A translation identical to English is invisible.** `Paging.Summary` came out word-for-word the
+    same, which is indistinguishable from a missing key falling back. Assert that each key DIFFERS
+    between languages, with an allow-list for values that are legitimately shared (currency codes,
+    "cm", the qipao).
+  - **French runs ~25% longer than English.** Fixed-width GridView columns sized against English or
+    Chinese truncate their headers. Size such columns for the LONGEST language, and where that would
+    disturb a width the user chose deliberately, shorten the TRANSLATION instead.
+  - **Look for an existing symbol before drawing one.** The gender picker needed ♂/♀ marks; the
+    measurement-terms list had been badging rows with those exact characters all along. A second,
+    hand-drawn version would have been a definition to keep in step for no gain.
+    `Views/MeasurementGenderPresentation` is now the single table both screens read, the way
+    `UserPresentation` already served role names. Where a third symbol is needed and no safe glyph
+    exists (⚥ / U+26A5 is not reliably in a UI font), COMBINE the ones that are proven — "♂♀" says
+    "both" using only glyphs already drawing on screen here.
+  - **A fixed `Width` on a glyph clips it, and the clipping looks like a font problem.** "♂♀" needs
+    38.4px; at `Width="26"` the second mark was cut and read as a missing-glyph box. Use
+    `Width="Auto"` with a `SharedSizeGroup` when several rows must align — it measures the widest
+    instead of guessing, and `Grid.IsSharedSizeScope` on the ComboBox covers the closed face as well
+    as the drop-down list.
+  - **Fixed `Width` on a button is the same bug in miniature.** `Width="90"` rendered the French
+    "Enregistrer" as "Enregistre". Use `MinWidth` + `Padding`: the buttons still look matched in a
+    short language and either can grow. Assert it — measure each button's label against its
+    `ActualWidth` — rather than trusting a screenshot.
+  - **Radio groups do not survive translation.** A row of radios needs the width of EVERY label at
+    once; a drop-down needs only the widest, and only while open. Measured in a 420px dialog: the
+    three gender options needed ~291px in Chinese (fine), ~429px in English and ~463px in French
+    (both overflow). Radios are for two or three genuinely short, stable options — in a bilingual+
+    application that is rarer than it looks. Put the label ABOVE such a control, not beside it, or
+    the width problem comes straight back.
+  - **A stray `{1}` in a translation is a runtime crash**, not a cosmetic issue — `string.Format`
+    throws `FormatException` when the string references more arguments than the call site passes.
+    Assert placeholder sets match across every language.
+  - Adding one really is just dropping a file into `Settings/System/Languages` — no .cs, no .csproj,
+    no registry. That is the whole return on the Phase 1 split.
+- **Deleting an "unused" language key is dangerous (2026-07-28).** ~34 of 500 keys are never written
+  literally anywhere: they are composed at runtime as `$"Measure.Term.{id}"`,
+  `$"PaymentMethod.{method}"`, `$"ServiceType.{type}"` and so on. Deleting one is SILENT — the lookup
+  returns the key itself and the screen reads "Measure.Term.waist". A key is unused only if its full
+  name is absent from the source AND its prefix is not one the code interpolates. `formatcheck`
+  enforces this; only 3 keys were genuinely dead.
+- **Sonar S2325 "make static" on an event handler: check how it is WIRED (2026-07-28).** A handler
+  named in XAML cannot be static — the generated InitializeComponent emits `this.Handler`, which does
+  not compile against a static method. A handler attached only from code (`+=`,
+  `DataObject.AddPastingHandler`) can be. Of 7 findings, 5 were the former (suppressed with the
+  reason) and 2 the latter (fixed) — and fixing those cascaded a third onto their caller.
+- **Sonar S125 on a comment is usually prose that parses as code (2026-07-28).** All three instances
+  were explanatory comments containing a trailing `;` or a `Type.Method` reference. Reword them;
+  do not suppress, and do not delete the comment.
+- **Language-dependent PUNCTUATION is data, not code (2026-07-28).** `Format.ListSeparator` and
+  `Format.BulletSeparator` live in the language table. They replaced
+  `code.StartsWith("zh") ? "、" : ", "`, which had been copy-pasted into FIVE files — so a new
+  language silently got English punctuation in all five, with nothing to catch it.
+  - Use `LocalizationService.JoinList(...)` / `JoinFragments(...)`. The API is deliberately a JOIN
+    rather than a separator property: handing out the separator is exactly what let five private
+    copies of the rule accumulate.
+  - Spaces in a separator are written `&#32;` in the XML. The trailing space in `", "` IS the
+    format, and a whitespace-trimming editor would silently produce `Jacket,Shirt`.
+  - **Not everything belongs in the language file.** The short language name for an export filename
+    (`Measurements_zh.pdf`) is the BCP-47 primary subtag — the same mechanical rule for every
+    language, so it is DERIVED, not listed. Data that can be derived should not be maintained by
+    hand. Likewise currency symbols: `CurrencyType` is an enum persisted as integers, so a currency
+    needs a code change regardless and a JSON file would only add a second place to keep in sync.
+  - A silent wrong default on a MONEY field is not cosmetic. An unknown currency renders `¤`, never
+    `$` — the fallback must not state something false about an amount.
+- **Three messages are unlocalized ON PURPOSE — do not "fix" them (2026-07-28).** Each carries a
+  comment saying so at the site:
+  - `App.OnStartup`'s catch-all MessageBox. It wraps the whole of startup, and loading the language
+    table is part of startup — a localized message there could depend on exactly what failed.
+  - `LocalDataFolderMigration`'s failure. It runs BEFORE the table is loaded, deliberately, because
+    it must move the data folder before anything resolves a storage path.
+  - By contrast the sign-out failure in `MainWindow` IS localized (`SignOut.Failed`), because by
+    that point the table is loaded. The rule is "localize where the table is available", not
+    "localize everything".
+  - Also not translated, and correctly so: the `B` / `I` / `U` formatting-button faces, alignment
+    glyphs, `×`, `—`. Typographic convention, not prose.
+- **Shipped configuration vs per-installation state (2026-07-28).** Two different things that both
+  sound like "settings", and conflating them is how a user's data gets overwritten by an upgrade:
+  - `Settings/System/**` next to the executable — language tables, `app-defaults.json`. Read-only,
+    versioned in git, REPLACED wholesale by an upgrade. Located via `SystemSettingsPaths`.
+  - `%LOCALAPPDATA%\CameywareOrder` — credentials, the database, branding, measurement terms.
+    Read-write, never in git, must SURVIVE an upgrade and therefore needs migration code. Located
+    via `UserDataPaths` — never re-derive the folder name, it was duplicated in six files once.
+  - Ask which one a new file is before choosing where it goes.
+- **Migrating the user's data folder (2026-07-28).** Rules that came out of doing it:
+  - **Some layout is a data INTERCHANGE format, not just folders.** `Documents/` and `orders.db`
+    cannot move: export packages store entry paths relative to the data root, so those names are
+    baked into every zip a user already holds. Check what serialises a path before relocating it.
+  - **Migrate lazily and FALL BACK.** `ResolveConfigFile` moves a file on first access and returns
+    the OLD path if the move fails. Being unable to tidy up must never make credentials.json
+    unreadable — a cosmetic folder change that can lock someone out of their own application is not
+    worth shipping at any level of confidence.
+  - **A sweep may move, never delete.** Deleting is a separate, explicitly-configured step
+    (`backupRetentionCount` in app-defaults.json), applied only AFTER a new backup supersedes an old
+    one — never on startup.
+  - **Order backups by write time, not by name.** One real backup is `orders.db.bak-preShopRules`;
+    name parsing has to guess at a suffix that is not a date, and guessing deletes the wrong file.
+  - **Take the root as a PARAMETER so the migration is testable.** Every operation has an overload
+    accepting the data root, so `userdatacheck` exercises it against throwaway folders. A migration
+    that can only ever be run against the machine it must not break cannot be verified at all — and
+    the alternative, a test-only seam on the class that locates credentials, is worse.
+- **Splitting a translation table needs a parity check, or it is a downgrade (2026-07-28).** While
+  every language lived in one file a missing key was a one-line grep; once each language is its own
+  document the gap is invisible, because `TryGetText` quietly falls back to the default language and
+  the screen looks fine in testing. `LocalizationService.KeyGaps` computes it. Reported, not thrown:
+  a translation gap is a defect, not a reason to refuse to start in front of a user.
+  - Also explicitly ORDER the discovered languages. File-system order is not the old file's order —
+    `en-US.lang.xml` sorts before `zh-CN.lang.xml`, so the picker silently reshuffles.
+  - Also REFUSE a duplicate language code. Copying `en-US.lang.xml` to `fr-FR.lang.xml` and
+    forgetting the `code` attribute inside is the likeliest way to add a language, and letting the
+    second win means the new language silently replacing the one it was copied from.
+  - Split such a file with **byte-level tooling, never `XDocument.Save`** — it rewrites `&#32;`
+    character references into literal spaces, which is exactly the fragility they exist to prevent.
+- **`System.Text.Json` matches property names CASE-SENSITIVELY by default (2026-07-28).** A
+  hand-written `"defaultLanguage"` does not bind to `DefaultLanguage`; the value comes back null and
+  the code silently uses its fallback. Set `PropertyNameCaseInsensitive = true` for any file a human
+  edits. This shipped undetected because the test fixture named the same language as the fallback —
+  **a fixture whose expected value equals the fallback proves nothing.** Pick one it cannot produce.
+- **Harnesses must seed or rewind their own fixture (2026-07-28).** They share one database copy, and
+  a harness that WRITES (shopcheck drives the real Save handler; migcheck migrates the schema)
+  destroys the precondition of its own next run — and of any other harness reading the same rows.
+  The failure looks exactly like a regression and costs a round of diagnosis every time. Seed what
+  you assert at the start of the run; for schema, rewind (`ALTER TABLE … DROP COLUMN`) rather than
+  re-copying, so it still works once no pre-migration database exists anywhere.
+- **Grep the source tree in a test to stop a pattern coming back (2026-07-28).** `formatcheck`
+  asserts no `.cs` file contains `StartsWith("zh"` or a hard-coded separator literal. This is how
+  the FIFTH copy of the language-sniffing rule was found, in
+  `CustomMadeServiceWindow.ShortLanguageName` — it had no CJK character on the line, so the manual
+  CJK grep that found the other four missed it entirely. Cheap, and it catches what review does not.
 - **The login screen must not name accounts (2026-07-28).** `OnSignInClick` deliberately gives ONE
   message for an unknown user name and a wrong password, so the dialog cannot be used to discover
   account names. Pre-filling the box with `admin` handed that away before the first keystroke — and

@@ -176,7 +176,7 @@ public partial class UserManagementWindow : Window
             ? new[] { currency, _localization["Users.ArchivedShop"] }
             : new[] { currency };
 
-        return string.Join("  ·  ", parts.Where(part => !string.IsNullOrWhiteSpace(part)));
+        return _localization.JoinFragments(parts.Where(part => !string.IsNullOrWhiteSpace(part)));
     }
 
     private void OnUserSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)

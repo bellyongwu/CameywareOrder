@@ -79,8 +79,8 @@ public class MeasurementTermsConfig
 /// </summary>
 public static class MeasurementTermDefaults
 {
-    // Term ids reused across the predefined list and the default garment mappings;
-    // named to keep the tables literal-free (avoids duplicated string literals).
+    // Term ids reused across the predefined list and the default garment mappings, named so the
+    // tables below stay free of duplicated string literals.
     private const string Length = "length";
     private const string Chest = "chest";
     private const string Waist = "waist";

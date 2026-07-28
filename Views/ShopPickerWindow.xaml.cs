@@ -172,7 +172,7 @@ public partial class ShopPickerWindow : Window
         var parts = new[] { currency, language, orders }
             .Where(part => !string.IsNullOrWhiteSpace(part));
 
-        return string.Join("  ·  ", parts);
+        return _localization.JoinFragments(parts);
     }
 
     private void UpdateOpenButtonState()

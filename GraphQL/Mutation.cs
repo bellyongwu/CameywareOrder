@@ -147,7 +147,7 @@ public class Mutation
             .Include(o => o.Items)
             .FirstOrDefaultAsync(o => o.Items.Any(i => i.Id == itemId));
 
-        var item = order?.Items.FirstOrDefault(i => i.Id == itemId);
+        var item = order?.Items.Find(i => i.Id == itemId);
         if (order is null || item is null)
             return false;
 

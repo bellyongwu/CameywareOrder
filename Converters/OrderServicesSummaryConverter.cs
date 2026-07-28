@@ -37,7 +37,7 @@ public class OrderServicesSummaryConverter : IValueConverter
             services.Add(string.Equals(localized, key, StringComparison.Ordinal) ? order.ServiceType.ToString() : localized);
         }
 
-        return string.Join("、", services);
+        return loc.JoinList(services);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

@@ -36,8 +36,7 @@ public class CustomMadeServiceFlagConverter : IValueConverter
             if (!hasNames)
                 return string.Empty;
 
-            var separator = languageCode.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ? "、" : ", ";
-            return $"({string.Join(separator, names)})";
+            return $"({LocalizationService.Instance.JoinList(names, languageCode)})";
         }
 
         return LocalizationService.Instance[hasNames ? "CustomMade.Flag.Yes" : "CustomMade.Flag.No"];

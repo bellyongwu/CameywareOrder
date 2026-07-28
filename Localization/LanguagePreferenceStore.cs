@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CameywareOrder.Configuration;
 
 namespace CameywareOrder.Localization;
 
@@ -6,10 +7,9 @@ public sealed class LanguagePreferenceStore
 {
     private const string FileName = "language-preference.json";
 
-    private static string PreferenceDirectory =>
-        System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CameywareOrder");
+    private static string PreferenceFilePath => UserDataPaths.ResolveConfigFile(FileName);
 
-    private static string PreferenceFilePath => System.IO.Path.Combine(PreferenceDirectory, FileName);
+    private static string PreferenceDirectory => System.IO.Path.GetDirectoryName(PreferenceFilePath)!;
 
     public static string? TryLoadLanguageCode()
     {

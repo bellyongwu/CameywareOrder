@@ -133,7 +133,7 @@ public partial class StoreMembersWindow : Window
         if (shift.Length > 0)
             parts.Add(shift);
 
-        return string.Join("  ·  ", parts);
+        return _localization.JoinFragments(parts);
     }
 
     private string RoleSummary(IReadOnlyList<UserRole> roles)
@@ -242,7 +242,7 @@ public partial class StoreMembersWindow : Window
     }
 
     private void SelectTime(ComboBox box, TimeOnly? value)
-        => box.SelectedItem = _timeOptions.FirstOrDefault(option => option.Value == value) ?? _timeOptions[0];
+        => box.SelectedItem = _timeOptions.Find(option => option.Value == value) ?? _timeOptions[0];
 
     private static TimeOnly? ReadTime(ComboBox box) => (box.SelectedItem as TimeOption)?.Value;
 

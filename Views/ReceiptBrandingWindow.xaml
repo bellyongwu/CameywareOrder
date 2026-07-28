@@ -158,13 +158,19 @@
         <!-- Formatting ribbon -->
         <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="10,8" Margin="0,0,0,14" BorderBrush="#E2E7EC" BorderThickness="1">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnBoldClick" ToolTip="Bold">
+                <!-- The button FACES stay B / I / U: they are typographic convention, not prose,
+                     and every word processor in either language shows the same three letters. Only
+                     the tooltips are translated. -->
+                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnBoldClick"
+                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Branding.Bold], Mode=OneWay}">
                     <TextBlock Text="B" FontWeight="Bold"/>
                 </Button>
-                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnItalicClick" ToolTip="Italic">
+                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnItalicClick"
+                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Branding.Italic], Mode=OneWay}">
                     <TextBlock Text="I" FontStyle="Italic" FontFamily="Georgia"/>
                 </Button>
-                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnUnderlineClick" ToolTip="Underline">
+                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnUnderlineClick"
+                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Branding.Underline], Mode=OneWay}">
                     <TextBlock Text="U" TextDecorations="Underline"/>
                 </Button>
 
@@ -177,13 +183,16 @@
 
                 <Border Width="1" Background="#E2E7EC" Margin="8,2"/>
 
-                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnAlignLeftClick" ToolTip="Align left">
+                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnAlignLeftClick"
+                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Branding.AlignLeft], Mode=OneWay}">
                     <TextBlock Text="&#x2261;" FontSize="18"/>
                 </Button>
-                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnAlignCenterClick" ToolTip="Align center">
+                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnAlignCenterClick"
+                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Branding.AlignCenter], Mode=OneWay}">
                     <TextBlock Text="&#x2263;" FontSize="18"/>
                 </Button>
-                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnAlignRightClick" ToolTip="Align right">
+                <Button Style="{StaticResource RibbonButtonStyle}" Click="OnAlignRightClick"
+                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Branding.AlignRight], Mode=OneWay}">
                     <TextBlock Text="&#x2261;" FontSize="18" FlowDirection="RightToLeft"/>
                 </Button>
 

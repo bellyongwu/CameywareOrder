@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using CameywareOrder.Models;
 using Path = System.IO.Path;
+using CameywareOrder.Configuration;
 
 namespace CameywareOrder.Services;
 
@@ -267,7 +268,7 @@ public sealed class AuthenticationService
             .Select(record => new
             {
                 Record = record,
-                Membership = record.Memberships.FirstOrDefault(m => m.ShopPublicId == shopPublicId)
+                Membership = record.Memberships.Find(m => m.ShopPublicId == shopPublicId)
             })
             .Where(entry => entry.Membership is not null)
             .Select(entry => new StoreMember(
@@ -327,7 +328,7 @@ public sealed class AuthenticationService
         if (record is null)
             return AccountOperationResult.NotFound;
 
-        if (record.Memberships.All(membership => membership.ShopPublicId != shopPublicId))
+        if (record.Memberships.TrueForAll(membership => membership.ShopPublicId != shopPublicId))
             return AccountOperationResult.NotFound;
 
         if (profile.Roles.Count == 0)
@@ -507,7 +508,7 @@ public sealed class AuthenticationService
     private static void ApplyShopRoles(
         CredentialRecord record, Guid shopPublicId, IReadOnlyList<UserRole> roles)
     {
-        var existing = record.Memberships.FirstOrDefault(m => m.ShopPublicId == shopPublicId);
+        var existing = record.Memberships.Find(m => m.ShopPublicId == shopPublicId);
 
         if (roles.Count == 0)
         {
@@ -592,7 +593,7 @@ public sealed class AuthenticationService
     }
 
     private CredentialRecord? FindRecord(string userName)
-        => _file.Users.FirstOrDefault(user =>
+        => _file.Users.Find(user =>
             string.Equals(user.UserName, userName, StringComparison.OrdinalIgnoreCase));
 
     // Copied rather than handed out: the session snapshot and the screens must not be able to edit
@@ -665,12 +666,14 @@ public sealed class AuthenticationService
         };
     }
 
-    private static string SettingDirectory =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "CameywareOrder");
+    /// <summary>
+    /// Resolved through <see cref="UserDataPaths.ResolveConfigFile"/>, which moves the file out of
+    /// the flat data-folder root into Config/ the first time — and returns the OLD path if it
+    /// cannot, so a failed tidy-up can never make credentials unreadable.
+    /// </summary>
+    private static string SettingFilePath => UserDataPaths.ResolveConfigFile(FileName);
 
-    private static string SettingFilePath => Path.Combine(SettingDirectory, FileName);
+    private static string SettingDirectory => Path.GetDirectoryName(SettingFilePath)!;
 
     private static CredentialFile LoadOrSeed()
     {
@@ -740,7 +743,7 @@ public sealed class AuthenticationService
             });
 
         foreach (var membership in grouped.Where(candidate =>
-                     record.Memberships.All(existing => existing.ShopPublicId != candidate.ShopPublicId)))
+                     record.Memberships.TrueForAll(existing => existing.ShopPublicId != candidate.ShopPublicId)))
         {
             record.Memberships.Add(membership);
         }
@@ -752,7 +755,7 @@ public sealed class AuthenticationService
 
         foreach (var (userName, password, isAdministrator) in SeedAccounts)
         {
-            var exists = file.Users.Any(user =>
+            var exists = file.Users.Exists(user =>
                 string.Equals(user.UserName, userName, StringComparison.OrdinalIgnoreCase));
 
             if (exists)

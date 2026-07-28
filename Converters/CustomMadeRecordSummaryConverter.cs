@@ -38,7 +38,7 @@ public class CustomMadeRecordSummaryConverter : IValueConverter
         {
             var languageCode = LocalizationService.Instance.CurrentLanguageCode;
             return record.Garments
-                .Where(g => g.Values.Any(v => !string.IsNullOrWhiteSpace(v.Cm) || !string.IsNullOrWhiteSpace(v.In)))
+                .Where(g => g.Values.Exists(v => !string.IsNullOrWhiteSpace(v.Cm) || !string.IsNullOrWhiteSpace(v.In)))
                 .Select(g => MeasurementTermsService.Instance.ResolveGarmentName(g.GarmentId, languageCode))
                 .ToList();
         }
@@ -53,7 +53,7 @@ public class CustomMadeRecordSummaryConverter : IValueConverter
     }
 
     private static string? SectionName(string sectionKey, params string?[] values)
-        => values.Any(part => !string.IsNullOrWhiteSpace(part))
+        => Array.Exists(values, part => !string.IsNullOrWhiteSpace(part))
             ? LocalizationService.Instance[sectionKey]
             : null;
 }

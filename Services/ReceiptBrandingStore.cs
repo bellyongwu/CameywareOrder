@@ -2,6 +2,7 @@ using System.IO;
 using System.Text.Json;
 using CameywareOrder.Models;
 using Path = System.IO.Path;
+using CameywareOrder.Configuration;
 
 namespace CameywareOrder.Services;
 
@@ -65,11 +66,7 @@ public static class ReceiptBrandingStore
 {
     private const string FileName = "receipt-branding.json";
 
-    private static string BrandingRoot =>
-        Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "CameywareOrder",
-            "Branding");
+    private static string BrandingRoot => UserDataPaths.BrandingDirectory;
 
     /// <summary>
     /// Branding folder for the open shop, or the shared root before a shop is open — which is also

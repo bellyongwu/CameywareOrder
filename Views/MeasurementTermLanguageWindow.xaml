@@ -26,17 +26,57 @@
 
             <TextBlock Grid.Row="1" x:Name="TermNameText" Foreground="#9CA3AF" Margin="0,0,0,14"/>
 
-            <!-- Gender classification: shown only when editing a measurement term (not a garment) -->
-            <StackPanel Grid.Row="2" x:Name="GenderPanel" Orientation="Horizontal" Margin="0,0,0,14" Visibility="Collapsed">
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.Gender], Mode=OneWay}"
-                           VerticalAlignment="Center" Foreground="#4F46E5" Margin="0,0,10,0"/>
-                <RadioButton x:Name="GenderCommonRadio" GroupName="TermGender" Margin="0,0,14,0" VerticalAlignment="Center"
-                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.GenderCommon], Mode=OneWay}"/>
-                <RadioButton x:Name="GenderMaleRadio" GroupName="TermGender" Margin="0,0,14,0" VerticalAlignment="Center"
-                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.GenderMale], Mode=OneWay}"/>
-                <RadioButton x:Name="GenderFemaleRadio" GroupName="TermGender" VerticalAlignment="Center"
-                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.GenderFemale], Mode=OneWay}"/>
-            </StackPanel>
+            <!-- Gender classification: shown only when editing a measurement term (not a garment).
+
+                 A drop-down rather than three radios in a row. Radios put every option on screen at
+                 once, which only works while every option is SHORT — true of 通用 / 仅男装 / 仅女装
+                 and of nothing else. "Common (both genders)" and "Mixte (les deux genres)" do not
+                 fit three-abreast in a 420px dialog, and any alphabetic language will be the same.
+                 A drop-down costs one click and is indifferent to label length.
+
+                 Label above the control, not beside it, for the same reason: a long label plus a
+                 control on one line reintroduces the width problem it was meant to solve. -->
+            <!-- Laid out as one of the language rows below: a 120px label column and the control in
+                 the remaining width. That is what makes the gender box line up with, and measure the
+                 same as, the per-language name boxes — the two blocks read as one form rather than
+                 as a header stuck above a list. -->
+            <Grid Grid.Row="2" x:Name="GenderPanel" Margin="0,0,0,10" Visibility="Collapsed">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0" VerticalAlignment="Center" Foreground="#4F46E5"
+                           Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.Gender], Mode=OneWay}"/>
+
+                <!-- The item template drives the closed face too: WPF copies ItemTemplate into
+                     SelectionBoxItemTemplate, which the themed ComboBox's face presenter binds to.
+                     So the symbol shows both in the list and on the collapsed control. -->
+                <ComboBox Grid.Column="1" x:Name="GenderBox" SelectedValuePath="Value"
+                          Grid.IsSharedSizeScope="True">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <!-- The symbol sits in a SHARED-SIZE column, not one of a fixed width.
+                                 The three marks are different widths — "♂♀" is twice "♂" — so the
+                                 labels only line up if the column takes the widest, and a guessed
+                                 fixed width CLIPS: at 26px the pair lost its second glyph and read
+                                 as a missing-glyph box. Auto + SharedSizeGroup measures it instead
+                                 of guessing, and covers the closed face as well as the open list
+                                 because the scope is declared on the ComboBox itself. -->
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="GenderSymbol"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="0" Text="{Binding Symbol}" FontSize="14"
+                                           Foreground="#4F46E5" VerticalAlignment="Center"
+                                           Margin="0,0,9,0"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </Grid>
 
             <ItemsControl Grid.Row="3" x:Name="LanguageRows">
                 <ItemsControl.ItemTemplate>
@@ -54,11 +94,15 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <!-- MinWidth, not Width. At a fixed 90px the French "Enregistrer" rendered as
+                 "Enregistre" — the same fixed-size-for-the-shortest-language fault as the radios
+                 above, just on a button. A minimum keeps the two buttons evenly matched in Chinese
+                 while letting either grow for a longer label. -->
             <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
                 <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.Cancel], Mode=OneWay}"
-                        Width="90" Height="32" Margin="0,0,10,0" IsCancel="True" Click="OnCancelClick"/>
+                        MinWidth="90" Height="32" Padding="14,0" Margin="0,0,10,0" IsCancel="True" Click="OnCancelClick"/>
                 <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[TermLanguage.Save], Mode=OneWay}"
-                        Width="90" Height="32" IsDefault="True" Click="OnSaveClick"
+                        MinWidth="90" Height="32" Padding="14,0" IsDefault="True" Click="OnSaveClick"
                         Background="#4F46E5" Foreground="White" BorderThickness="0"/>
             </StackPanel>
         </Grid>

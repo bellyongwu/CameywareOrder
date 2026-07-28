@@ -2,6 +2,7 @@ using System.IO;
 using CameywareOrder.Data;
 using CameywareOrder.Models;
 using Path = System.IO.Path;
+using CameywareOrder.Configuration;
 
 namespace CameywareOrder.Services;
 
@@ -16,7 +17,7 @@ public static class DocumentStorageService
     };
 
     public static string RootDirectory =>
-        Path.Combine(DatabasePathProvider.AppDataDirectory, "Documents", "CustomMade");
+        Path.Combine(UserDataPaths.DocumentsDirectory, "CustomMade");
 
     public static string ImageFileFilter =>
         "Image files|*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.webp|All files|*.*";
