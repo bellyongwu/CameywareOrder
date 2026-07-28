@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Markup;
 using System.Windows.Media;
 using CameywareOrder.Localization;
 using CameywareOrder.Models;
@@ -43,6 +44,11 @@ public partial class StoreMembersWindow : Window
 
         _localization = localization;
         _shop = shop ?? throw new ArgumentNullException(nameof(shop));
+
+        // The calendar drop-down renders its month and day names from FrameworkElement.Language, not
+        // from the app's string table, so without this it stays English whatever the user picked.
+        // Language is an inherited property, so setting it on the window reaches every picker in it.
+        Language = XmlLanguage.GetLanguage(_localization.CurrentLanguageCode);
 
         _timeOptions = BuildTimeOptions(_localization["Members.NoTime"]);
 
@@ -220,7 +226,10 @@ public partial class StoreMembersWindow : Window
         var show = !membership.IsActive && membership.DeactivatedOn is not null;
 
         DeactivatedPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
-        DeactivatedOnText.Text = membership.DeactivatedOn?.ToString("g", CultureInfo.CurrentCulture)
+
+        // Formatted in the WINDOW's culture — the same one the calendar drop-downs render in — so the
+        // delisting date reads like every other date on this screen rather than like the thread's.
+        DeactivatedOnText.Text = membership.DeactivatedOn?.ToString("g", Language.GetSpecificCulture())
             ?? string.Empty;
     }
 
@@ -455,8 +464,19 @@ public partial class StoreMembersWindow : Window
     }
 }
 
-/// <summary>One selectable time in the shift pickers; <c>null</c> is the "not set" entry.</summary>
-internal sealed record TimeOption(TimeOnly? Value, string Text);
+/// <summary>
+/// One selectable time in the shift pickers; <c>null</c> is the "not set" entry.
+/// </summary>
+/// <remarks>
+/// <see cref="ToString"/> is overridden because the themed time picker draws its own face, and a
+/// custom ComboBox face renders the ITEM rather than resolving <c>DisplayMemberPath</c> — without
+/// this the closed picker reads "TimeOption { Value = …, Text = 09:30 }". A record's generated
+/// ToString is exactly the wrong thing to show a user, so the display text is the record's identity.
+/// </remarks>
+internal sealed record TimeOption(TimeOnly? Value, string Text)
+{
+    public override string ToString() => Text;
+}
 
 /// <summary>
 /// One roster row.

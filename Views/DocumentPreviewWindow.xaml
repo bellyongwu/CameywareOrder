@@ -14,7 +14,7 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock x:Name="FileNameText" Grid.Row="0" Foreground="White" FontSize="14"
+        <TextBlock x:Name="FileNameText" Grid.Row="0" Foreground="White" FontSize="15"
                    Margin="16,12" TextTrimming="CharacterEllipsis"/>
 
         <Image x:Name="PreviewImage" Grid.Row="1" Stretch="Uniform" StretchDirection="DownOnly"

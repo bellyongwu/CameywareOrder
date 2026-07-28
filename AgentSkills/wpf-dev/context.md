@@ -24,6 +24,116 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **One theme for the whole app: `Themes/AppTheme.xaml`, merged in `App.xaml` (2026-07-27).** Palette
+  brushes (`PrimaryBrush` #4F46E5, `AccentBrush` #7C3AED, `HeaderGradientBrush`, the neutral ramp, the
+  danger/success/warning pairs) plus implicit styles for Button / TextBox / PasswordBox / ComboBoxItem /
+  DatePicker / CheckBox / RadioButton, and keyed `CardBorder` / `CardHeading` / `FieldLabel` /
+  `SectionHeading` / `RosterCardContainer`. A window needing a variant should base its style on one of
+  these and never restate a colour.
+  - **Colours that ENCODE MEANING stay literal at their use sites** — balance status (green / light
+    green / orange / red), the refunded-order strike. A theme sweep must never quietly change what a
+    colour tells the user.
+  - **A custom `ComboBox` ControlTemplate must reimplement TWO things, and both are easy to miss**
+    (each cost a round trip here before the template finally worked):
+    1. **`DisplayMemberPath` is resolved by a template SELECTOR, not by `SelectionBoxItemTemplate`.**
+       `ItemsControl` installs an internal selector into `ItemTemplateSelector`, so the face needs
+       `ContentTemplateSelector="{Binding ItemTemplateSelector, RelativeSource={RelativeSource
+       AncestorType=ComboBox}}"` on top of the Content/ContentTemplate bindings. Without it the face
+       falls back to `ToString()` — `LanguageOption { Code = …, Name = 简体中文 }` on screen.
+    2. **`IsEditable` needs a `PART_EditableTextBox`** plus a trigger that swaps it for the face; the
+       branding editor's font-size box is editable and silently stops accepting input otherwise.
+    Bind with `RelativeSource`, never `TemplateBinding`: a TemplateBinding re-resolves against the
+    NEAREST templated parent, which is the wrong element once the face sits inside the ToggleButton's
+    own template.
+  - **A localized `DatePicker` needs two separate fixes.** The watermark ("Select a date") comes from
+    PresentationFramework's own resources and ignores the app's string table, so `DatePickerTextBox` is
+    re-templated with a `Common.SelectDate` watermark; the calendar's month/day names come from
+    `FrameworkElement.Language`, which each window carrying a picker sets from the current UI language
+    (it is inherited, so setting it on the Window is enough).
+  - 货币设置 is gone from 本地配置 — the currency is a property of a shop and is edited in 店铺设置.
+    `CurrencySettingWindow` was deleted; `Toolbar.CurrencySetting` is still LIVE because the
+    global-settings package description names it.
+- **Put a menu where its drop-down can open, rather than mirroring the drop-down (2026-07-27).** A
+  menu at the extreme right of a bar fights the window edge, because a drop-down opens down-and-LEFT
+  from its item. A mirrored `MenuItem` template (labels right-aligned, caret pointing left, submenus
+  `Placement="Left"`) was built for exactly this and then **reverted — it looked wrong.** Moving
+  本地配置 one slot left, so 店铺成员 sits to its right, solved it with no template at all. Reach for
+  ordering before reaching for a mirrored control.
+  - If a mirrored menu is ever genuinely needed: it must be opt-in per menu (the orders row's context
+    menu opens at the pointer and must stay normal), and it propagates with
+    `ItemContainerStyle="{DynamicResource ...}"` naming itself — a StaticResource cannot refer to the
+    style being declared, and without it only the first level of items mirrors.
+  - **Screenshotting a menu:** a `Popup` lives in its own window and never appears in the parent
+    window's `RenderTargetBitmap`. Render `popup.Child` instead — it is an ordinary visual.
+- **An explicit `Style` REPLACES the implicit one — always `BasedOn` (2026-07-27).** A keyed style
+  applied to a control with no `BasedOn` opts that control out of the theme completely, silently.
+  That is how the login screen's two boxes ended up as the only unthemed inputs in the app
+  (`FieldInputStyle`, TargetType=Control), and `ShopSetupWindow` had the same fault twice. When
+  adding any keyed input/button style, base it on the themed one.
+- **The DatePicker's calendar needs THREE separate hook-ups, and every miss is silent (2026-07-27).**
+  1. `DatePicker` BINDS its Calendar's `Style` to `DatePicker.CalendarStyle`, and a bound null Style
+     **suppresses implicit-style lookup** — so an implicit `Style TargetType="Calendar"` never
+     applies. It must be named: `<Setter Property="CalendarStyle" Value="{DynamicResource ...}"/>`.
+  2. The day buttons likewise come from `Calendar.CalendarDayButtonStyle`, so the themed day-button
+     style has to be set there too.
+  3. WIDTH cannot be bound at all: the Calendar is created in code inside a `Popup` — a separate
+     visual tree — so `RelativeSource AncestorType=DatePicker` finds nothing and reports NO error.
+     `Controls/CalendarSizing.cs` sets it on Loaded/SizeChanged, before the first open.
+  - None of these produce a binding error, so screenshots alone will mislead you. Assert the state
+    (`calendar.CalendarDayButtonStyle is null`, `day.Template.FindName("Bd", day)`) in the harness.
+- **A TextBox applies its `Padding` itself (2026-07-27).** `PART_ContentHost` already honours it, so
+  a custom template that ALSO sets `Margin="{TemplateBinding Padding}"` applies it twice — text boxes
+  measured 47px next to a 33px DatePicker on the same row. Every input now carries `MinHeight` 38 so
+  a row lines up regardless of padding differences.
+- **Typography is modular: three families, six sizes, semantic styles (2026-07-27).** An audit found
+  17 sizes in use (11.5 / 12.5 / 13.5 / 14.5 among them), so the same kind of label was a different
+  size on two screens. Now: `AppFontFamily` for prose and labels, `NumericFontFamily` for figures
+  compared down a column (same face, **tabular numerals** so decimal points align), `IconFontFamily`
+  for the Segoe MDL2 glyph set — and a scale of 11 / 12 / 13 / 15 / 18 / 22 exposed as
+  `FontSizeCaption` … `FontSizePageTitle`.
+  - Screens should say WHAT text is (`PageTitleText`, `ValueText`, `CaptionText`, `MoneyText`,
+    `IconGlyph`), not how big it is. Reach for a raw `FontSize` only when nothing fits; if that
+    happens twice, add a style to the theme instead.
+  - **`NumericCellText` sets NO size and NO colour on purpose.** An orders-list row takes its size
+    from the font-size slider and its colour from the completed/refunded gray-out trigger; setting
+    either in the cell style overrides both.
+  - An implicit `Style TargetType="Window"` carries the family and the base size, so everything
+    inherits without each window restating it.
+- **Panels open and close with one global transition (2026-07-27).** `Animations/PanelTransition.cs`
+  — attached `Mode` (None / Fade / FadeSlide), 0.5s, `CubicEase` EaseInOut, 10px slide; duration and
+  curve are defined once. Opt in with `anim:PanelTransition.Mode="FadeSlide"`.
+  - **It never assigns `Visibility`.** A local assignment permanently replaces any `{Binding}` on
+    that property, and several panels here are bound. The closing half animates Visibility with an
+    `ObjectAnimationUsingKeyFrames` track (`FillBehavior.Stop`), which outranks the binding while it
+    runs and hands the property straight back afterwards.
+  - **The closing animation re-shows the panel, so it re-enters.** By the time `IsVisibleChanged`
+    fires the panel is already gone, so the storyboard puts it back at t=0 to have something to
+    fade — which raises the event again. `IsAnimatingProperty` guards it, and is cleared one
+    dispatcher turn AFTER completion so the property reverting to its real value is suppressed too.
+  - The `!element.IsLoaded` test is what stops every window playing its whole set of panels on first
+    show.
+- **Navigation is split by WHAT the control acts on (2026-07-27).** Order actions (新增/编辑/删除/刷新)
+  live in the records panel's own action bar, beside the records they operate on; the top bar is
+  SYSTEM only — 本地配置 on the left, and on the right the identity block in a fixed order: greeting →
+  language → 店铺成员 → 退出登录. The greeting (`Main.Greeting`) uses the account's DISPLAY NAME when it
+  has one; a user name is what you sign in with, not what anybody calls you.
+  - The top bar is a `Border` + `Grid`, **not a `ToolBar`** — a ToolBar cannot right-align part of its
+    content and adds an overflow chevron nobody asked for.
+  - `MainViewModel.FilteredCount` backs the count badge; it is raised everywhere `PageSummary` is,
+    because both derive from `_filteredCount`.
+- **Seeded data must populate `Garments`, not the legacy measurement fields (2026-07-27).**
+  `Order.HasCustomMadeService` and `CustomMadeMeasurementReader.GetGarmentNames` both read
+  `record.Garments`; the flat `JacketLengthCm` / `ShirtChestCm` fields only migrate into it when a
+  record is re-saved through the editor. The first mock-data run filled only the legacy fields, so
+  every seeded custom-made order reported 无 in the 定制服务 column. Anything that writes
+  `CustomMadeServiceRecord` outside the editor has to build `Garments` with real predefined garment and
+  term ids (`jacket`/`shirt`/`dress`/`qipao`… × `length`/`chest`/`sleeve`…).
+- **The printed receipt is panels, not a column (2026-07-27).** `ReceiptCard(background, topBorder)`
+  wraps the customer block and the totals block in padded `Section`s (the totals one tinted, with a
+  2px top rule) so the page reads as a few groups; section titles are primary-coloured; info-line
+  leading is 3px, not 1px; page padding is 48/40. The payment-or-refund narrative lives in
+  `AddReceiptPaymentNarrative` OUTSIDE the totals panel — folding explanation into it dilutes the one
+  block the eye is meant to land on.
 - **Activation is per MEMBERSHIP, not per account (2026-07-27).** `ShopMembership` (one record per person
   per shop) carries `Roles`, `IsActive`, `JoinedOn`, `DeactivatedOn` and a `TimeOnly?` shift. It replaced
   the flat `ShopAssignment` (shop, role) pairs, because activation and shift are facts about a person AT A

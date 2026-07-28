@@ -27,7 +27,7 @@
                 <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasurePrint.Cancel], Mode=OneWay}"
                         Padding="18,7" Margin="0,0,10,0" Click="OnCancelClick" IsCancel="True"/>
                 <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasurePrint.Print], Mode=OneWay}"
-                        Padding="22,7" Background="#2980B9" Foreground="White" FontWeight="SemiBold"
+                        Padding="22,7" Background="#4F46E5" Foreground="White" FontWeight="SemiBold"
                         Click="OnPrintClick" IsDefault="True"/>
             </StackPanel>
         </StackPanel>

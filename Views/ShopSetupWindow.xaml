@@ -7,7 +7,7 @@
         MinHeight="620" MinWidth="760"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="#EEF2F7">
+        Background="{StaticResource PageBackgroundBrush}">
     <!-- Creates a shop, and edits one (本地配置 → 店铺设置). Both modes write the same fields, so
          they share one window rather than drifting apart as two. Everything here is per shop: two
          branches can charge different tax on the same payment method and number their receipts
@@ -16,16 +16,16 @@
         <Style x:Key="CardStyle" TargetType="Border">
             <Setter Property="Background" Value="White"/>
             <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="BorderBrush" Value="#E3E8EF"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="20"/>
             <Setter Property="Margin" Value="0,0,0,14"/>
         </Style>
 
         <Style x:Key="CardTitleStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="14.5"/>
+            <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Foreground" Value="#1F2937"/>
+            <Setter Property="Foreground" Value="#111827"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
@@ -35,13 +35,13 @@
             <Setter Property="Width" Value="4"/>
             <Setter Property="Height" Value="17"/>
             <Setter Property="CornerRadius" Value="2"/>
-            <Setter Property="Background" Value="#2980B9"/>
+            <Setter Property="Background" Value="#4F46E5"/>
             <Setter Property="Margin" Value="0,0,9,0"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
         <Style x:Key="SectionLabelStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="FontSize" Value="13"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="#374151"/>
             <Setter Property="Margin" Value="0,0,0,6"/>
@@ -57,18 +57,18 @@
         <Style x:Key="ColumnHeaderStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#8592A3"/>
+            <Setter Property="Foreground" Value="#9CA3AF"/>
             <Setter Property="VerticalAlignment" Value="Bottom"/>
         </Style>
 
-        <Style x:Key="InputStyle" TargetType="TextBox">
+        <Style x:Key="InputStyle" TargetType="TextBox" BasedOn="{StaticResource ThemedTextBox}">
             <Setter Property="Padding" Value="7,5"/>
             <Setter Property="FontSize" Value="13"/>
-            <Setter Property="BorderBrush" Value="#D3DAE3"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
-        <Style x:Key="PickerStyle" TargetType="ComboBox">
+        <Style x:Key="PickerStyle" TargetType="ComboBox" BasedOn="{StaticResource ThemedComboBox}">
             <Setter Property="Padding" Value="7,5"/>
             <Setter Property="FontSize" Value="13"/>
         </Style>
@@ -80,7 +80,7 @@
 
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">
             <Setter Property="Padding" Value="26,8"/>
-            <Setter Property="Background" Value="#2980B9"/>
+            <Setter Property="Background" Value="#4F46E5"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -93,7 +93,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#1F6690"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#4338CA"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -118,7 +118,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#EEF2F6"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#F9FAFB"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -134,12 +134,15 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- ── Title band ──────────────────────────────────────────────────── -->
-        <Border Grid.Row="0" Background="White" BorderBrush="#E3E8EF" BorderThickness="0,0,0,1" Padding="24,18">
+        <!-- ── Title band ──────────────────────────────────────────────────────
+             The same gradient every other top-level screen wears, so 店铺设置 reads as part of the
+             application rather than as a dialog that escaped it. -->
+        <Border Grid.Row="0" Background="{StaticResource HeaderGradientBrush}" Padding="26,20">
             <StackPanel>
-                <TextBlock x:Name="TitleText" FontSize="18" FontWeight="Bold" Foreground="#1F2937"/>
+                <TextBlock x:Name="TitleText" FontSize="22" FontWeight="Bold" Foreground="White"/>
                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Subtitle], Mode=OneWay}"
-                           FontSize="12" Foreground="#7A8794" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                           FontSize="13" Foreground="{StaticResource TextOnHeaderSubtleBrush}"
+                           Margin="0,6,0,0" TextWrapping="Wrap"/>
             </StackPanel>
         </Border>
 
@@ -170,7 +173,7 @@
                                                    FontSize="12" Foreground="#4B5563"/>
                                         <!-- PropertyChanged, not the default LostFocus: Save must see what is on
                                              screen even when the box still has focus. -->
-                                        <TextBox Grid.Column="1" Padding="7,5" FontSize="13" BorderBrush="#D3DAE3"
+                                        <TextBox Grid.Column="1" Padding="7,5" FontSize="13" BorderBrush="#E5E7EB"
                                                  Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
                                     </Grid>
                                 </DataTemplate>
@@ -207,7 +210,7 @@
                 <Border Style="{StaticResource CardStyle}">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                            <Border Style="{StaticResource AccentBarStyle}" Background="#27AE60"/>
+                            <Border Style="{StaticResource AccentBarStyle}" Background="#047857"/>
                             <TextBlock Style="{StaticResource CardTitleStyle}"
                                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.Section], Mode=OneWay}"/>
                         </StackPanel>
@@ -234,7 +237,7 @@
                         <ItemsControl x:Name="PaymentTaxItems">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#F8FAFC" CornerRadius="8" BorderBrush="#E8EDF3" BorderThickness="1"
+                                    <Border Background="#F9FAFB" CornerRadius="8" BorderBrush="#E8EDF3" BorderThickness="1"
                                             Padding="0,0,12,0" Margin="0,0,0,8">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -247,8 +250,8 @@
                                             <Border Grid.Column="0" Width="4" CornerRadius="8,0,0,8" Background="{Binding AccentColor}"/>
 
                                             <StackPanel Grid.Column="1" Margin="9,12,0,12">
-                                                <TextBlock Text="{Binding DisplayName}" FontSize="13.5" FontWeight="SemiBold" Foreground="#1F2937"/>
-                                                <TextBlock Text="{Binding StateSummary}" FontSize="11" Foreground="#8592A3" Margin="0,2,0,0"/>
+                                                <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" Foreground="#111827"/>
+                                                <TextBlock Text="{Binding StateSummary}" FontSize="11" Foreground="#9CA3AF" Margin="0,2,0,0"/>
                                             </StackPanel>
 
                                             <RadioButton Grid.Column="2" GroupName="{Binding GroupName}" VerticalAlignment="Center"
@@ -259,7 +262,7 @@
                                                 <RadioButton GroupName="{Binding GroupName}" VerticalAlignment="Center"
                                                              IsChecked="{Binding IsTaxable, Mode=TwoWay}"
                                                              Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.Charge], Mode=OneWay}"/>
-                                                <TextBox Width="66" Margin="10,0,0,0" Padding="6,4" FontSize="13" BorderBrush="#D3DAE3"
+                                                <TextBox Width="66" Margin="10,0,0,0" Padding="6,4" FontSize="13" BorderBrush="#E5E7EB"
                                                          TextAlignment="Right" VerticalContentAlignment="Center"
                                                          IsEnabled="{Binding IsTaxable}"
                                                          Text="{Binding RateText, UpdateSourceTrigger=PropertyChanged}"/>
@@ -332,13 +335,13 @@
                                          Checked="OnReceiptModeChanged"/>
                         </StackPanel>
 
-                        <Border Background="#F1F7FB" BorderBrush="#CFE3F0" BorderThickness="1" CornerRadius="8"
+                        <Border Background="#F9FAFB" BorderBrush="#CFE3F0" BorderThickness="1" CornerRadius="8"
                                 Padding="14,10" Margin="13,6,0,0">
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Receipt.Preview], Mode=OneWay}"
                                            Foreground="#5A6773" VerticalAlignment="Center"/>
                                 <TextBlock x:Name="ReceiptPreviewText" Margin="10,0,0,0" FontSize="15" FontWeight="Bold"
-                                           Foreground="#1F6690" VerticalAlignment="Center"/>
+                                           Foreground="#4338CA" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>
@@ -367,14 +370,14 @@
         </ScrollViewer>
 
         <!-- ── Actions ─────────────────────────────────────────────────────── -->
-        <Border Grid.Row="2" Background="White" BorderBrush="#E3E8EF" BorderThickness="0,1,0,0" Padding="24,14">
+        <Border Grid.Row="2" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0" Padding="24,14">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <TextBlock x:Name="ErrorText" Grid.Column="0" Foreground="#C0392B" FontSize="12" TextWrapping="Wrap"
+                <TextBlock x:Name="ErrorText" Grid.Column="0" Foreground="#B91C1C" FontSize="12" TextWrapping="Wrap"
                            VerticalAlignment="Center" Visibility="Collapsed" Margin="0,0,16,0"/>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal">

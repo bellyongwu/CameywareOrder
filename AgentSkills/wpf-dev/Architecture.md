@@ -214,7 +214,9 @@ components are added/renamed or the way pieces fit together changes.
     instance).
   - `RelayCommand` — `ICommand` helper.
 - **Views/**
-  - `MainWindow` — order list + detail + paging. The list is a **`ListView` +
+  - `MainWindow` — split into a SYSTEM bar (本地配置 on the left; greeting, language, 店铺成员 and
+    退出登录 on the right) and a RECORDS panel that owns its own action bar (新增/编辑/删除/刷新 plus a
+    count badge bound to `MainViewModel.FilteredCount`). Order list + detail + paging. The list is a **`ListView` +
     `GridView`** (not a DataGrid) with a right-click `ListView.ContextMenu`
     (Edit/Copy/Delete/Print) and a `PreviewMouseRightButtonDown` row-select
     `EventSetter`, keyboard shortcuts (`Enter` = open/details, `Delete` = delete
@@ -348,6 +350,25 @@ components are added/renamed or the way pieces fit together changes.
 - **Migrations/** — `InitialCreate`, `AddOrderPaymentFields`, and the model
   snapshot. Columns added after those two migrations arrive through the runtime
   guards in `App.xaml.cs` instead (see Startup above).
+- **Animations/**
+  - `PanelTransition` — the global open/close transition for panels: attached `Mode`
+    (None / Fade / FadeSlide), 0.5s, cubic ease-in-out, 10px slide, with the duration and curve
+    defined once. Binding-safe (it animates `Visibility` with a key-frame track rather than
+    assigning it) and re-entrancy-guarded; see context.md before changing either.
+- **Themes/**
+  - `AppTheme.xaml` — the application's single visual language, merged in `App.xaml` so every window
+    inherits it: **typography** (three families by job — UI / tabular-numeric / icon — a six-step
+    size scale, and semantic text styles), the palette as named brushes (`PrimaryBrush`,
+    `AccentBrush`, `HeaderGradientBrush`,
+    the neutral ramp, danger/success/warning), implicit styles for Button / TextBox / PasswordBox /
+    ComboBoxItem / DatePicker / CheckBox / RadioButton, the ToolBar button key, and the keyed
+    `CardBorder` / `CardHeading` / `FieldLabel` / `SectionHeading` / `RosterCardContainer` /
+    `TimePickerComboBox`, plus themed `Menu` / `MenuItem` / `ContextMenu` / `Separator` (one
+    MenuItem template covering all four roles, switched by `Role` triggers). Colours that encode
+    MEANING (balance status, the refund strike) stay at their use sites deliberately. CheckBox and
+    RadioButton are recoloured but NOT re-templated — the order editor drives dozens of them from
+    code and swaps templates on some. The ComboBox template handles `IsEditable` and resolves
+    `DisplayMemberPath` through `ItemTemplateSelector`; see context.md before touching it.
 - **Languages.xml** (project root) — the single source string table (Chinese
   block first, English block second).
 

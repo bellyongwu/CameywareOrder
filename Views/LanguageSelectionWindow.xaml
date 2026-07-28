@@ -8,7 +8,7 @@
         ResizeMode="NoResize"
         ShowInTaskbar="False"
         Icon="/Assets/ICONS/app-icon.ico"
-        Background="#F5F6FA">
+        Background="#F4F5F9">
     <Window.Resources>
         <Style x:Key="EnterButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
@@ -63,9 +63,9 @@
                 </Border>
                 <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="24,0,24,16">
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Welcome], Mode=OneWay}"
-                               Foreground="White" FontSize="24" FontWeight="Bold"/>
+                               Foreground="White" FontSize="22" FontWeight="Bold"/>
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.WelcomeMessage], Mode=OneWay}"
-                               Foreground="#F0F0F0" FontSize="12" Margin="0,4,0,0"/>
+                               Foreground="#F3F4F6" FontSize="12" Margin="0,4,0,0"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -73,7 +73,7 @@
         <!-- Language options -->
         <StackPanel Grid.Row="1" Margin="32,24,32,0">
             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[LanguageSelection.Prompt], Mode=OneWay}"
-                       FontSize="14" FontWeight="SemiBold" Foreground="#374151" Margin="0,0,0,14"/>
+                       FontSize="15" FontWeight="SemiBold" Foreground="#374151" Margin="0,0,0,14"/>
             <StackPanel x:Name="LanguageOptionsPanel"/>
         </StackPanel>
 

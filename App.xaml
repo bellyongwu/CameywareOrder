@@ -1,5 +1,14 @@
 <Application x:Class="CameywareOrder.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Application.Resources/>
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- One visual language for the whole application. Merged here rather than per
+                     window so a control picks the theme up wherever it is used, including the
+                     windows that were written before the theme existed. -->
+                <ResourceDictionary Source="/Themes/AppTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
 </Application>

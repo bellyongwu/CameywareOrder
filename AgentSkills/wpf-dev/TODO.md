@@ -17,6 +17,216 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-27 22:20 — Login inputs, date picker sizing and calendar theme  [DONE]
+- Ask: "》优化登录主界面的input, 没有加载theme的input 》优化date time picker, date time picker 应该保持跟主色调
+  一致的字体和颜色，现在字体太小。并且要跟date picker input的长度一致，如果做不到一致，那就整个选择面板右对齐。
+  》然后datetime picker input height，要与面板内的 同一行的 input等高。"
+- Done:
+  - [x] **Login inputs were unthemed because an explicit Style REPLACES the implicit one.**
+        `FieldInputStyle` (TargetType=Control, no BasedOn) opted both boxes out of the theme entirely.
+        Split into `FieldTextBoxStyle` / `FieldPasswordStyle`, both `BasedOn` the themed styles. The
+        same fault was found and fixed in `ShopSetupWindow` (`InputStyle`, `PickerStyle`).
+  - [x] LoginWindow and LanguageSelectionWindow were never in the original palette sweep — swept now.
+  - [x] Input heights: TextBox applied its `Padding` TWICE (the text host already honours it; the
+        template also set it as the content host's `Margin`), making text boxes 47px against the
+        picker's 33px. Fixed at the cause, then MinHeight 38 pinned on TextBox / PasswordBox /
+        ComboBox / DatePicker so a row lines up. Verified by measurement: **38 = 38**.
+  - [x] Calendar now matches the picker's width exactly (287px, not the stock 179), at 13px instead
+        of 10, with the primary colour on today and on selection, and muted adjacent-month days.
+- Notes: build 0/0, Sonar zero findings, 28 window opens with 0 binding errors.
+  - **The whole Calendar style was silently inert until it was named on `DatePicker.CalendarStyle`.**
+    DatePicker BINDS its Calendar's `Style` to that property, and a bound null Style suppresses
+    implicit-style lookup — so the implicit `Style TargetType="Calendar"` never applied, with no
+    binding error to show for it. Same for the day buttons via `Calendar.CalendarDayButtonStyle`.
+    Diagnosed by asserting in the harness (`dayButtonStyle=null day=stock fontSize=10`) rather than
+    by staring at screenshots, which had already misled me twice on this one.
+  - Calendar WIDTH could not be done in XAML at all: the Calendar is created in code inside a Popup,
+    a separate visual tree, so `RelativeSource AncestorType=DatePicker` finds nothing — silently.
+    `Controls/CalendarSizing.cs` sets it on Loaded/SizeChanged instead, which is before the first
+    open, so there is no wrong-width frame. The user's right-align fallback was not needed.
+
+### 2026-07-27 21:55 — Reverted the mirrored menu; swapped 本地配置 and 店铺成员 instead  [DONE]
+- Ask: "It doesn't look good. now, lets roll back the original version of the caret right and content
+  left. but switching the position for store members and local configuration. that will be better"
+- Done:
+  - [x] `RightAlignedMenuItem` deleted; the 本地配置 menu is back on the shared `ThemedMenuItem` —
+        content left, caret right, submenus opening rightward.
+  - [x] 本地配置 moved to column 3 and 店铺成员 to column 4, so the bar reads
+        greeting → 语言 → 本地配置 → 店铺成员 → 退出登录.
+- Notes: the swap is the better fix and makes the mirrored style unnecessary. A drop-down opens
+  down-and-LEFT from its item, so a menu at the extreme right edge fights the window boundary;
+  keeping a button to its right gives it room to open normally. Position solved what a mirrored
+  template was compensating for.
+
+### 2026-07-27 21:45 — Right-anchored 本地配置 menu  [REVERTED — see the entry above]
+- Ask: "UI的一个小问题：现在local configuration 靠右，那么需要把所有选项右对齐，然后expandable icon 要caret left"
+- Done:
+  - [x] `RightAlignedMenuItem` in the theme — the mirror of `ThemedMenuItem`: labels right-aligned,
+        icon column on the right, expander caret on the LEFT pointing left, submenus opening leftward
+        (`Placement="Left"`). Applied to the 本地配置 item only.
+  - [x] It hands itself down the tree via `ItemContainerStyle="{DynamicResource RightAlignedMenuItem}"`
+        — a self-referencing style needs Dynamic, since a StaticResource cannot name the style being
+        declared. Without it only the first level of items would mirror.
+- Notes: opt-in per menu ON PURPOSE. The orders row's context menu opens at the pointer on the left
+  side of the window and keeps the normal left-aligned style; a global flip would have broken it.
+  - Verified by rendering the popup CONTENT: a Popup lives in its own window, so it never appears in
+    the parent window's `RenderTargetBitmap` — but `popup.Child` is an ordinary visual and renders on
+    its own. Worth remembering for any future menu or drop-down screenshot.
+
+### 2026-07-27 21:20 — Panel open/close transition + modular typography  [DONE]
+- Ask (three messages, one thread): "Add a open/close panel global 0.5s easin easeout non linear
+  transition" → "然后，查看一下整个系统字体是否乱用，保证字体的一致性" → "字体需要模块化，根据不同情况，使用不同的字体，请自行斟酌"
+- Done:
+  - [x] `Animations/PanelTransition.cs` (NEW): attached `Mode` property (None / Fade / FadeSlide),
+        0.5s, `CubicEase` EaseInOut, 10px slide. Duration and curve live in ONE place.
+        Applied to 20 panels — the three swap panels in each management window, the roster's
+        notice/editor/deactivated/password cards, the picker's empty state, and the order editor's
+        service, pricing and final-payment blocks.
+  - [x] Font audit: **17 sizes in use**, including 11.5 / 12.5 / 13.5 / 14.5 — differences too small
+        to read as intent. Collapsed to a **six-step scale** (11 / 12 / 13 / 15 / 18 / 22), covering
+        both the attribute form and the `<Setter Property="FontSize">` form.
+  - [x] Modular typography: THREE families by job — `AppFontFamily` (Segoe UI, Microsoft YaHei UI),
+        `NumericFontFamily` (same face, tabular numerals), `IconFontFamily` (Segoe MDL2 Assets) —
+        plus semantic styles (`PageTitleText` / `SectionTitleText` / `BodyText` / `ValueText` /
+        `CaptionText` / `NumericText` / `MoneyText` / `NumericCellText` / `IconGlyph`).
+  - [x] The orders list's order-number, phone, date and amount columns converted from
+        `DisplayMemberBinding` to a cell template using `NumericCellText`, so figures line up down
+        the column. All 21 hard-coded `FontFamily="Segoe MDL2 Assets"` now reference the theme.
+- Notes: build 0/0, Sonar zero findings, 24 window opens with 0 binding errors.
+  - **The transition is binding-safe and re-entrancy-safe, and both took thought.** It never assigns
+    Visibility (that would replace a `{Binding}` permanently); the closing half animates Visibility
+    with a key-frame track, which borrows the property and hands it straight back. And because that
+    track re-shows the panel at t=0, it re-raises IsVisibleChanged — guarded, with the guard cleared
+    one dispatcher turn AFTER completion so the hand-back is suppressed too. Verified by a harness
+    test that pumps real time past 0.5s and asserts the end state in both directions.
+  - `NumericCellText` deliberately sets NO size and NO colour: a list row takes its size from the
+    font-size slider and its colour from the completed/refunded gray-out trigger.
+  - Sonar S3220 on `new PropertyPath(x)` — it sits between `PropertyPath(object)` and
+    `PropertyPath(string, params object[])`. Resolved by a `TargetPath` helper that names the string
+    overload explicitly, rather than by suppressing it at three call sites.
+
+### 2026-07-27 20:55 — System-bar order, records width, balance column, list font  [DONE]
+- Ask: "整体做的很好，有个小问题，balance status改成原有的两倍长最好，然后Hi admin, you are login....这个应该放在最左边，替换local configuration 的位置，然后local configuration 放置再store members button 和signout button 之间。然后整体的records section 把界面宽度提升到70%， balance status改成1.5倍宽度，然后字体改成18号字体。"
+- Done:
+  - [x] System bar reordered: greeting far left, then 语言 → 店铺成员 → 本地配置 → 退出登录. Laid out in
+        GRID COLUMNS rather than two aligned stacks, so `Grid.Column` sets the visual order and the
+        ~90-line 本地配置 menu block stays where it is in the file instead of being moved.
+  - [x] Records column 65* → **70***, detail 35* → 30*.
+  - [x] Balance-status column 180 → **270 (1.5×)**; record list font 20 → **18**.
+- Notes: the ask names the balance column twice — "两倍长" first, "1.5倍宽度" later. Took the later,
+  more specific figure (1.5×) and said so; changing it is one number.
+  - The 1600-wide harness screenshot still clipped that column, which reads as "too narrow" but is
+    the VIEWPORT, not the column — re-rendered at 2200 (the user runs maximized at 2560) and both
+    余额状态 and 定制服务 render in full. Worth remembering before "fixing" a width from a screenshot
+    taken at the wrong size.
+
+### 2026-07-27 20:10 — Seeded garments bug, dropdown/menu theme, navigation split  [DONE]
+- Ask: "Bug: You have inserted a bounch of records, for instance: Order number 20260723-192307 in Guangzhou Tianbao store, it has Custom Service, it should state as YES (Jacket, Shirt) as we designed. I created a similar order number 20260727-193940, please adjust all orders for all records. Features TODO (UI update): >maintain the theme UI. >Adjust UI. for all dropdowns, follow the same theme, Local Configuration should follow same theme as well. >Split Navigation in to two differnent section. -Now, order adjustments such as New order, edit order, delete order, refresh, should be inside the main record section. -Redesign this section, padding and margin is reasonable. -The rest selections are system related. reorder like this: ->Hi, {client's real name}, you are logged in as {role}. ->After that has language toggle, if it has ->after button Store Members ->Remove the current label for format like admin(Administrator) ->Sign Out"
+- **Bug root cause (found before planning):** `Order.HasCustomMadeService` and
+  `CustomMadeMeasurementReader.GetGarmentNames` both read `record.Garments` — the garment-driven model.
+  The seeder only filled the LEGACY `JacketLengthCm` / `ShirtChestCm` fields, which migrate into
+  `Garments` only when the record is re-saved through the editor. So every seeded custom-made order
+  reports 无. My bug, in the mock data, not in the flag.
+- Plan:
+  - [ ] Repair pass over every seeded record: build `Garments` (jacket / shirt / dress / qipao by age
+        type) with real term ids, so the flag and the bracketed names resolve.
+  - [ ] ComboBox: full themed template this time, handling BOTH `IsEditable` and `DisplayMemberPath`
+        (the earlier attempt was reverted for exactly those two — RelativeSource instead of
+        TemplateBinding is the fix for the face).
+  - [ ] Theme the 本地配置 `Menu` / `MenuItem` / `ContextMenu` / `Separator`.
+  - [ ] Split the navigation: order actions (新增/编辑/删除/刷新) move into the orders panel's own
+        action bar; the toolbar keeps 本地配置 plus the system block, reordered to
+        greeting → language → 店铺成员 → 退出登录, with the `admin（管理员）` chip replaced by
+        "Hi, {name}, you are logged in as {role}".
+- Done:
+  - [x] Every seeded custom-made record repaired in place — `Garments` built from the predefined
+        garment/term ids (menswear vs womenswear by age type). 13 + 17 + 7 orders fixed; the 定制服务
+        column now renders **有（外套、衬衫）/ YES (Jacket, Shirt)** as designed, verified by resolving
+        the names through `CustomMadeMeasurementReader` with the string table loaded.
+  - [x] ComboBox fully themed at last. **The bit that had defeated two attempts:** a ComboBox does
+        NOT turn `DisplayMemberPath` into `SelectionBoxItemTemplate` — `ItemsControl` installs an
+        internal template SELECTOR, so the face must also bind
+        `ContentTemplateSelector="{Binding ItemTemplateSelector, …}"`. Without it the face falls back
+        to `ToString()` and shows `LanguageOption { Code = …, Name = 简体中文 }`. Also added
+        `PART_EditableTextBox` + an `IsEditable` trigger, so the branding editor's font-size box still
+        accepts typing.
+  - [x] `Menu` / `MenuItem` / `ContextMenu` / `Separator` themed: one MenuItem template covering all
+        four roles, with the submenu arrow and popup placement driven by `Role` triggers.
+  - [x] Navigation split. The ToolBar is gone — it cannot right-align content and adds an overflow
+        chevron. A `Border` + `Grid` now holds 本地配置 on the left and, on the right in the order asked
+        for: greeting → language → 店铺成员 → 退出登录. The `admin（管理员）` chip is replaced by
+        `Main.Greeting` ("你好 {0}，您当前的身份是{1}。"), which greets by DISPLAY NAME where the account
+        has one — an account name is what you sign in with, not what anybody calls you.
+  - [x] 新增/编辑/删除/刷新 moved into a new records-panel action bar (white card, 16,13 padding, count
+        badge bound to a new `MainViewModel.FilteredCount`). Order-column rows renumbered 0-3 in the
+        same edit as the new `RowDefinition` — per the SKILL gotcha, an out-of-range `Grid.Row` is
+        clamped silently rather than reported.
+  - [x] `OrderEditWindow`'s local implicit `TextBox` style now derives from `ThemedTextBox` instead of
+        shadowing it — the editor holds most of the app's inputs, so a bare implicit style there
+        quietly opted the biggest screen out of the theme.
+- Notes: build **0 warnings / 0 errors**; Sonar **zero findings**; string table 485 keys per block,
+  identical. 22 window opens across both languages with **0 binding errors**, including the order
+  editor and the main window, both reviewed as screenshots.
+  - `Toolbar.SignedInAs` pruned (orphaned by the greeting); `Main.Greeting` + `Main.Records` added.
+
+### 2026-07-27 19:05 — App-wide theme, receipt layout, mock data  [DONE]
+- Ask: "目前来说改动很不错。下一步: >Redesign 所有的 Theme, 根据之前所用的比如，theme颜色， button那些，需要重新设计 -main application UI -Order (edit/view) -店铺设置UI（这个还可以，但是主色没有添加）-量身项目设置的theme也同步一下 -货币设置可以从navigation去掉了，现在已经在店铺设置里有了，多余了 >订单打印的PDF 文件结构和UI也优化一下，注意留好spacing和padding 和margin。>最后给当前的db添加一些mockingdata，再添加一个店，并且给 每个店添加30 到50个records不等。"
+- Reading of the ask:
+  - The management screens built earlier (选择店铺 / 用户管理 / 店铺成员) already carry the target design
+    language — indigo #4F46E5 → violet #7C3AED, white cards on #F4F5F9, rounded buttons. "Redesign 所有的
+    Theme" means bringing the REST of the app onto it, not inventing a third look.
+  - The legacy palette is dominated by #2980B9 / #2C3E50 (27 + 11 uses) plus a spread of near-identical
+    greys and borders; those are chrome and get mapped. Status colours that ENCODE MEANING (balance
+    status green/orange/red, the refund strike) are left semantic.
+- Plan:
+  - [ ] `Themes/AppTheme.xaml`: palette brushes + implicit control styles, merged in `App.xaml` so every
+        window inherits. Fold `Views/ManagementStyles.xaml` into it.
+  - [ ] Map the legacy chrome colours onto the palette across MainWindow / OrderEditWindow /
+        ShopSetupWindow / MeasurementTermsWindow / CustomMadeServiceWindow / ReceiptBrandingWindow.
+  - [ ] 店铺设置 gains the gradient header the other screens have.
+  - [ ] Drop 货币设置 from the 本地配置 menu (superseded by 店铺设置) and prune what it orphans.
+  - [ ] Rework the printed receipt's structure and spacing.
+  - [ ] Seed one more shop and 30–50 orders per shop into the live database (back it up first).
+  - [ ] Both gates green; build clean; every window opened and screenshotted.
+- Follow-up asked mid-task: "员工管理的date time picker缺少Localization。并且time picker界面太单调和难看。
+  优化一下，采用主色调。" — folded into the theme work.
+- Done:
+  - [x] `Themes/AppTheme.xaml` (NEW), merged in `App.xaml`: the palette as named brushes plus implicit
+        styles for Button / TextBox / PasswordBox / ComboBoxItem / DatePicker / CheckBox / RadioButton,
+        and the keyed card / heading / label / roster-row styles. `Views/ManagementStyles.xaml` folded
+        into it and deleted.
+  - [x] Legacy palette mapped onto the theme across nine XAML files — 92 lines in MainWindow +
+        OrderEditWindow alone, all of them colour-only (`git diff` shows zero changed lines containing
+        CJK). #2980B9/#2C3E50 → the indigo primary, the six near-identical greys → three, the eight
+        near-identical borders → one.
+  - [x] MainWindow: gradient header band, indigo list headers with a readable sort glyph, primary-tinted
+        row selection, white toolbar and status bar. 店铺设置 gained the same gradient header.
+  - [x] **DatePicker localized**: the stock "Select a date" watermark comes from PresentationFramework
+        and stays English whatever the app language is, so `DatePickerTextBox` is re-templated with a
+        `Common.SelectDate` watermark; each window carrying a picker sets `FrameworkElement.Language`
+        so the calendar's month and day names follow the UI language too.
+  - [x] **Time picker redesigned**: `TimePickerComboBox` — clock glyph, primary tint, primary drop-down
+        with a coloured shadow. `TimeOption.ToString()` was needed because a custom ComboBox face
+        renders the ITEM rather than resolving `DisplayMemberPath`.
+  - [x] 货币设置 removed from 本地配置 (it is part of 店铺设置 now); `CurrencySettingWindow` deleted and
+        its two orphaned keys pruned. `Toolbar.CurrencySetting` KEPT — the global-settings package
+        description still names it.
+  - [x] Receipt restructured: customer block and totals block are now padded panels (the totals one
+        tinted, with a heavier top rule), section titles are primary-coloured, line leading 1→3px, page
+        padding 40 → 48/40, and the payment-or-refund narrative moved out of the totals panel into its
+        own helper so the block the eye lands on stays money only.
+  - [x] Mock data seeded through the app's own model/formatter: a third shop (Vancouver Atelier, daily
+        sequential numbering) plus 38 / 44 / 30 orders per shop, spread over eight months, with a mix of
+        services, statuses, payment methods and refund reasons. **0 orders with no shop.**
+- Notes: build **0 warnings / 0 errors**; full Sonar pass **zero findings**. String table 484 keys per
+  block, identical, no duplicates. 20 window opens across both languages with **0 binding errors**;
+  the main window, the roster, the pickers and a rendered receipt were all reviewed as screenshots.
+  - **A hand-rolled ComboBox ControlTemplate was reverted on purpose** — see context.md. It broke
+    `DisplayMemberPath` on the selection face app-wide and would have broken `IsEditable`. Generic
+    drop-downs keep the stock template and get the theme through setters + the `ComboBoxItem` style.
+  - Live database backed up to `scratchpad/orders.pre-mock.db` before seeding (53 KB, 16 real orders,
+    all preserved).
+
 ### 2026-07-27 18:15 — Store members panel (per-shop membership, activation, schedule)  [DONE]
 - Ask: "Use the similar UI as above to design and do features: Manage store members in current opened store. >Manager is able to view all active users in the store. >Can see how many workers in the store. >What roles are they currently are >Active user control. if ever active, but deactive, next time even he login with the right auth, it should say something like you are not valid to login, something like that, or your account is deactivated. >But if he belongs to another active store, he can still login to view the store. Admin user in current opened store. >Including all features for manager's role. >Add delete user ability. The Management panel is called by a link with beautified icon on the main application. >trigger will open a beautifed UI with all users. >Besides the regular info(name, birthday), also include the time schedule they worked from and until, when they started work and if deactivated, show when delisted from the role. show a timepicker for that. >Manager can add new user to manage the store, plus create username and password, role in the store for the user. >Manager can create a new user as manager too. can also demote him/her to staff."
 - Reading of the ask, taken as assumptions:

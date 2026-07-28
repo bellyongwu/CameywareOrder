@@ -94,7 +94,6 @@ public partial class MainWindow : Window
         // A manager configures the shop they run; staff take orders in it.
         var configure = Show(auth.CanConfigureShop);
         ShopSettingsMenuItem.Visibility = configure;
-        CurrencySettingMenuItem.Visibility = configure;
         MeasurementTermsMenuItem.Visibility = configure;
         HeaderFooterMenuItem.Visibility = configure;
 
@@ -127,15 +126,17 @@ public partial class MainWindow : Window
 
         if (user is null)
         {
-            SignedInUserText.Text = string.Empty;
+            GreetingText.Text = string.Empty;
             return;
         }
 
-        // The role shown is the one held in the OPEN shop, because that is the one the surrounding
-        // toolbar has just been gated by.
+        // Greeted by NAME where there is one — an account name is what you sign in with, not what
+        // anybody calls you. The role shown is the one held in the OPEN shop, because that is the
+        // one the surrounding chrome has just been gated by.
+        var who = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName;
         var role = UserPresentation.RoleText(_localization, auth.CurrentRole);
-        SignedInUserText.Text = _localization.Format("Toolbar.SignedInAs", user.UserName, role);
-        SignedInUserText.ToolTip = _localization.Format("Shop.Picker.SignedInAs", user.UserName, role);
+        GreetingText.Text = _localization.Format("Main.Greeting", who, role);
+        GreetingText.ToolTip = _localization.Format("Shop.Picker.SignedInAs", user.UserName, role);
     }
 
     /// <summary>
@@ -493,7 +494,9 @@ public partial class MainWindow : Window
         {
             FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
             FontSize = 12,
-            PagePadding = new Thickness(40),
+            // Wider side margins than top/bottom: printed output is read as a narrow column, and
+            // the extra gutter is what keeps the panels off the paper edge.
+            PagePadding = new Thickness(48, 40, 48, 40),
             PageWidth = pageWidth,
             ColumnWidth = pageWidth
         };
@@ -519,7 +522,7 @@ public partial class MainWindow : Window
 
         document.Blocks.Add(ReceiptInfoLine(
             _localization.GetText("Order.Fields.OrderNumber", languageCode), order.OrderNumber));
-        AddReceiptInfoLineIfHasValue(document,
+        AddReceiptInfoLineIfHasValue(document.Blocks,
             _localization.GetText("Order.Fields.CustomerName", languageCode), order.CustomerName);
 
         var unitLabel = _localization.GetText("Measure.Unit.Label", languageCode);
@@ -553,16 +556,6 @@ public partial class MainWindow : Window
 
         var window = new ReceiptBrandingWindow(_localization) { Owner = this };
         window.ShowDialog();
-    }
-
-    private void OnCurrencySettingClick(object sender, RoutedEventArgs e)
-    {
-        if (!AuthenticationService.Instance.CanConfigureShop)
-            return;
-
-        var window = new CurrencySettingWindow(_localization) { Owner = this };
-        if (window.ShowDialog() == true)
-            _viewModel.LoadOrdersCommand.Execute(null);
     }
 
     private void OnMeasurementTermsClick(object sender, RoutedEventArgs e)
@@ -1007,7 +1000,9 @@ public partial class MainWindow : Window
         {
             FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
             FontSize = 12,
-            PagePadding = new Thickness(40),
+            // Wider side margins than top/bottom: printed output is read as a narrow column, and
+            // the extra gutter is what keeps the panels off the paper edge.
+            PagePadding = new Thickness(48, 40, 48, 40),
             PageWidth = pageWidth,
             ColumnWidth = pageWidth
         };
@@ -1054,18 +1049,24 @@ public partial class MainWindow : Window
         });
     }
 
+    // Who and when, grouped into one panel so the money below reads as a separate thing.
     private void AddReceiptCustomerInfo(FlowDocument document, Order order)
     {
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderNumber"], order.OrderNumber));
-        AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.CustomerName"], order.CustomerName);
-        AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.PhoneNumber"], order.PhoneNumber);
-        AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.Email"], order.Email);
-        AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.Address"], order.Address);
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderDate"], order.OrderDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Status"], _localization[$"Status.{order.Status}"]));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.CurrencyType"], _localization[$"CurrencyType.{CurrencySettingService.Instance.Current}"]));
+        var card = ReceiptCard(ReceiptCardBrush);
+        var blocks = card.Blocks;
+
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderNumber"], order.OrderNumber, bold: true));
+        AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.CustomerName"], order.CustomerName);
+        AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.PhoneNumber"], order.PhoneNumber);
+        AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.Email"], order.Email);
+        AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.Address"], order.Address);
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderDate"], order.OrderDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Status"], _localization[$"Status.{order.Status}"]));
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.CurrencyType"], _localization[$"CurrencyType.{CurrencySettingService.Instance.Current}"]));
         var servicesSummary = new OrderServicesSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
-        AddReceiptInfoLineIfHasValue(document, _localization["Order.Fields.ServiceType"], servicesSummary);
+        AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.ServiceType"], servicesSummary);
+
+        document.Blocks.Add(card);
     }
 
     // Alterations service detail. Only shown when the section carries a charge and a
@@ -1131,27 +1132,51 @@ public partial class MainWindow : Window
         document.Blocks.Add(ReceiptServiceDivider());
     }
 
+    /// <summary>
+    /// The money the customer actually cares about, in its own tinted panel with a heavier top
+    /// rule — on a printed page this is the block people look at first, and it should not have to
+    /// be found among the service lines above it.
+    /// </summary>
     private void AddReceiptTotals(FlowDocument document, Order order, string symbol)
     {
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TotalAmount"], Money(symbol, order.TotalAmount), bold: true));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Downpayment"], Money(symbol, order.TotalDownpayment)));
+        var card = ReceiptCard(ReceiptTotalsBrush, topBorder: 2);
+        var blocks = card.Blocks;
+
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TotalAmount"], Money(symbol, order.TotalAmount), bold: true));
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Downpayment"], Money(symbol, order.TotalDownpayment)));
         // Show the actually-received deposit only when a card surcharge made it differ
         // from the nominal deposit, so cash/e-transfer receipts stay uncluttered.
         if (order.ReceivedDownpayment != order.TotalDownpayment)
-            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedDownpayment"], Money(symbol, order.ReceivedDownpayment)));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedFinalBalance"], Money(symbol, order.ReceivedFinalBalance)));
+            blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedDownpayment"], Money(symbol, order.ReceivedDownpayment)));
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedFinalBalance"], Money(symbol, order.ReceivedFinalBalance)));
         if (order.TotalTax > 0m)
-            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PaidTax"], Money(symbol, order.TotalTax)));
+            blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PaidTax"], Money(symbol, order.TotalTax)));
         // AddReceiptTotals runs for every order regardless of refund status (full parity
         // with the on-screen detail panel), so 剩余尾款 is always shown here too.
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(symbol, order.FinalBalance)));
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(symbol, order.FinalBalance)));
         var balanceStatusText = new OrderPaymentSummaryConverter().Convert(order, typeof(string), "Status", CultureInfo.CurrentCulture) as string;
-        document.Blocks.Add(ReceiptStatusLine(_localization["Order.Fields.BalanceStatus"],
+        blocks.Add(ReceiptStatusLine(_localization["Order.Fields.BalanceStatus"],
             balanceStatusText, BalanceStatusBrush(order.PaymentStatusKind)));
 
-        // A cancelled or returned order no longer has a meaningful payment-method breakdown.
-        // The receipt prints the cancellation or return reason in its place, matching what the
-        // on-screen order-details panel shows.
+        document.Blocks.Add(card);
+
+        // The breakdown and the notes sit OUTSIDE the totals panel: they are explanation, and
+        // folding them in would dilute the block the eye is meant to land on.
+        AddReceiptPaymentNarrative(document, order);
+
+        if (!string.IsNullOrWhiteSpace(order.Notes))
+        {
+            document.Blocks.Add(ReceiptSectionTitle(_localization["Order.Fields.Notes"]));
+            document.Blocks.Add(ReceiptMultilineParagraph(order.Notes));
+        }
+    }
+
+    /// <summary>
+    /// Either how the order was paid, or — for a cancelled/returned one, where a payment-method
+    /// breakdown means nothing — why it was refunded. Matches the on-screen detail panel.
+    /// </summary>
+    private void AddReceiptPaymentNarrative(FlowDocument document, Order order)
+    {
         if (order.IsRefunded)
         {
             var reasonLabelKey = order.Status == OrderStatus.Cancelled
@@ -1160,22 +1185,15 @@ public partial class MainWindow : Window
             document.Blocks.Add(ReceiptSectionTitle(_localization[reasonLabelKey]));
             document.Blocks.Add(ReceiptMultilineParagraph(
                 ReturnReasonSummaryConverter.Resolve(order.StatusReasonCategory, order.StatusReason)));
-        }
-        else
-        {
-            var paymentBreakdown = new OrderPaymentSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
-            if (!string.IsNullOrWhiteSpace(paymentBreakdown) && paymentBreakdown != "-")
-            {
-                document.Blocks.Add(ReceiptSectionTitle(_localization["Order.Fields.PaymentBreakdown"]));
-                document.Blocks.Add(ReceiptMultilineParagraph(paymentBreakdown));
-            }
+            return;
         }
 
-        if (!string.IsNullOrWhiteSpace(order.Notes))
-        {
-            document.Blocks.Add(ReceiptSectionTitle(_localization["Order.Fields.Notes"]));
-            document.Blocks.Add(ReceiptMultilineParagraph(order.Notes));
-        }
+        var paymentBreakdown = new OrderPaymentSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
+        if (string.IsNullOrWhiteSpace(paymentBreakdown) || paymentBreakdown == "-")
+            return;
+
+        document.Blocks.Add(ReceiptSectionTitle(_localization["Order.Fields.PaymentBreakdown"]));
+        document.Blocks.Add(ReceiptMultilineParagraph(paymentBreakdown));
     }
 
     private static string Money(string symbol, decimal value) => $"{symbol}{value:N2}";
@@ -1247,8 +1265,10 @@ public partial class MainWindow : Window
 
     private static Paragraph ReceiptInfoLine(string label, string? value, bool bold = false)
     {
-        var paragraph = new Paragraph { Margin = new Thickness(0, 1, 0, 1) };
-        paragraph.Inlines.Add(new Run($"{label}: ") { Foreground = System.Windows.Media.Brushes.Gray });
+        // 3px of leading rather than 1: at 12pt the old spacing ran the lines together, which is
+        // what made the receipt look like a wall rather than a list.
+        var paragraph = new Paragraph { Margin = new Thickness(0, 3, 0, 3) };
+        paragraph.Inlines.Add(new Run($"{label}: ") { Foreground = ReceiptLabelBrush });
         var valueRun = new Run(value ?? string.Empty);
         if (bold)
             valueRun.FontWeight = FontWeights.Bold;
@@ -1256,12 +1276,12 @@ public partial class MainWindow : Window
         return paragraph;
     }
 
-    private static void AddReceiptInfoLineIfHasValue(FlowDocument document, string label, string? value)
+    private static void AddReceiptInfoLineIfHasValue(BlockCollection blocks, string label, string? value)
     {
         if (string.IsNullOrWhiteSpace(value))
             return;
 
-        document.Blocks.Add(ReceiptInfoLine(label, value.Trim()));
+        blocks.Add(ReceiptInfoLine(label, value.Trim()));
     }
 
     // Balance-status line whose value is coloured by status: green / light green /
@@ -1283,14 +1303,51 @@ public partial class MainWindow : Window
             _ => new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xEF, 0x6C, 0x00))                                      // orange
         };
 
+    // --- Receipt chrome -------------------------------------------------------------------------
+    // The printed receipt follows the same palette as the application. Declared here as frozen
+    // brushes rather than inline, so a colour change is one edit and the printer never re-renders
+    // an unfrozen brush per paragraph.
+    private static readonly System.Windows.Media.Brush ReceiptAccentBrush = FrozenBrush(0x4F, 0x46, 0xE5);
+    private static readonly System.Windows.Media.Brush ReceiptRuleBrush = FrozenBrush(0xE5, 0xE7, 0xEB);
+    private static readonly System.Windows.Media.Brush ReceiptCardBrush = FrozenBrush(0xF9, 0xFA, 0xFB);
+    private static readonly System.Windows.Media.Brush ReceiptTotalsBrush = FrozenBrush(0xEE, 0xF2, 0xFF);
+    private static readonly System.Windows.Media.Brush ReceiptLabelBrush = FrozenBrush(0x6B, 0x72, 0x80);
+
+    private static System.Windows.Media.Brush FrozenBrush(byte r, byte g, byte b)
+    {
+        var brush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(r, g, b));
+        brush.Freeze();
+        return brush;
+    }
+
+    /// <summary>
+    /// A padded block that groups related lines, so the receipt reads as a few panels rather than
+    /// one uninterrupted column of text. Padding is generous on purpose: a printed page has no
+    /// hover or spacing cues, so whitespace is the only grouping the reader gets.
+    /// </summary>
+    private static Section ReceiptCard(System.Windows.Media.Brush background, double topBorder = 1)
+        => new()
+        {
+            Margin = new Thickness(0, 0, 0, 14),
+            Padding = new Thickness(14, 11, 14, 11),
+            Background = background,
+            BorderBrush = ReceiptRuleBrush,
+            BorderThickness = new Thickness(1, topBorder, 1, 1)
+        };
+
     private static Paragraph ReceiptSectionTitle(string title)
-        => new(new Bold(new Run(title))) { FontSize = 14, Margin = new Thickness(0, 6, 0, 4) };
+        => new(new Bold(new Run(title)))
+        {
+            FontSize = 13.5,
+            Foreground = ReceiptAccentBrush,
+            Margin = new Thickness(0, 10, 0, 6)
+        };
 
     private static Paragraph ReceiptDivider()
         => new()
         {
-            Margin = new Thickness(0, 6, 0, 6),
-            BorderBrush = System.Windows.Media.Brushes.LightGray,
+            Margin = new Thickness(0, 10, 0, 10),
+            BorderBrush = ReceiptRuleBrush,
             BorderThickness = new Thickness(0, 0, 0, 1)
         };
 
@@ -1298,8 +1355,8 @@ public partial class MainWindow : Window
     private static Paragraph ReceiptServiceDivider()
         => new()
         {
-            Margin = new Thickness(0, 4, 0, 4),
-            BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0xE6, 0xE6, 0xE6)),
+            Margin = new Thickness(0, 8, 0, 8),
+            BorderBrush = ReceiptRuleBrush,
             BorderThickness = new Thickness(0, 0, 0, 0.7)
         };
 

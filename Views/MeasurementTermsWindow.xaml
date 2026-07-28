@@ -7,7 +7,7 @@
         MinHeight="600" MinWidth="960"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        Background="#EEF1F5">
+        Background="#F9FAFB">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
@@ -15,12 +15,12 @@
         <Style x:Key="ColumnCard" TargetType="Border">
             <Setter Property="Background" Value="White"/>
             <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="BorderBrush" Value="#E1E6EC"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect Color="#2C3E50" BlurRadius="14" ShadowDepth="0" Opacity="0.08"/>
+                    <DropShadowEffect Color="#4F46E5" BlurRadius="14" ShadowDepth="0" Opacity="0.08"/>
                 </Setter.Value>
             </Setter>
         </Style>
@@ -28,7 +28,7 @@
         <Style x:Key="ColumnTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Foreground" Value="#4F46E5"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
@@ -39,7 +39,7 @@
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Width" Value="26"/>
             <Setter Property="Height" Value="26"/>
-            <Setter Property="Foreground" Value="#7F8C8D"/>
+            <Setter Property="Foreground" Value="#9CA3AF"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
@@ -48,7 +48,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#EDF1F5"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#F9FAFB"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -59,7 +59,7 @@
         <!-- Add button (accent, pill) -->
         <Style x:Key="AddButton" TargetType="Button">
             <Setter Property="Background" Value="#EAF2FB"/>
-            <Setter Property="Foreground" Value="#2980B9"/>
+            <Setter Property="Foreground" Value="#4F46E5"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Padding" Value="12,7"/>
@@ -84,11 +84,11 @@
             <Setter Property="Padding" Value="12,6"/>
             <Setter Property="Margin" Value="0,0,6,0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="#5D6D7E"/>
+            <Setter Property="Foreground" Value="#6B7280"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="RadioButton">
-                        <Border x:Name="Bd" Background="#F0F3F6" CornerRadius="14" BorderBrush="#E1E6EC" BorderThickness="1" Padding="{TemplateBinding Padding}">
+                        <Border x:Name="Bd" Background="#F9FAFB" CornerRadius="14" BorderBrush="#E5E7EB" BorderThickness="1" Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -96,8 +96,8 @@
                                 <Setter TargetName="Bd" Property="Background" Value="#E3E9EE"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#2980B9"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#2980B9"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#4F46E5"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#4F46E5"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -113,7 +113,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Bd" Background="#F7F9FB" CornerRadius="8" BorderThickness="1" BorderBrush="#E7ECF1" Padding="10,9">
+                        <Border x:Name="Bd" Background="#F9FAFB" CornerRadius="8" BorderThickness="1" BorderBrush="#E7ECF1" Padding="10,9">
                             <ContentPresenter/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -121,8 +121,8 @@
                                 <Setter TargetName="Bd" Property="Background" Value="#EDF3F9"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#2980B9"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#2980B9"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#4F46E5"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#4F46E5"/>
                                 <Setter Property="TextElement.Foreground" Value="White"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -133,22 +133,22 @@
 
         <!-- Draggable measurement chip (right column) -->
         <DataTemplate x:Key="TermRowTemplate">
-            <Border x:Name="Chip" Background="#F7F9FB" CornerRadius="8" BorderBrush="#E1E6EC" BorderThickness="1"
+            <Border x:Name="Chip" Background="#F9FAFB" CornerRadius="8" BorderBrush="#E5E7EB" BorderThickness="1"
                     Padding="10,7" Margin="0,0,0,6" Cursor="SizeAll"
                     PreviewMouseLeftButtonDown="OnTermPreviewMouseDown"
                     PreviewMouseMove="OnTermPreviewMouseMove">
                 <DockPanel LastChildFill="True">
-                    <TextBlock DockPanel.Dock="Left" FontFamily="Segoe MDL2 Assets" Text="&#xE700;" FontSize="13"
-                               Foreground="#B0BAC4" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock DockPanel.Dock="Left" FontFamily="{StaticResource IconFontFamily}" Text="&#xE700;" FontSize="13"
+                               Foreground="#D1D5DB" VerticalAlignment="Center" Margin="0,0,10,0"/>
 
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                         <!-- Gender badge -->
-                        <TextBlock FontSize="13" Foreground="#2980B9" VerticalAlignment="Center" Margin="0,0,8,0"
+                        <TextBlock FontSize="13" Foreground="#4F46E5" VerticalAlignment="Center" Margin="0,0,8,0"
                                    Text="{Binding GenderGlyph}"
                                    Visibility="{Binding ShowGenderGlyph, Converter={StaticResource BoolToVis}}"
                                    ToolTip="{Binding GenderTooltip}"/>
                         <!-- Preset lock -->
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72E;" FontSize="13" Foreground="#B0BAC4"
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE72E;" FontSize="13" Foreground="#D1D5DB"
                                    VerticalAlignment="Center"
                                    Visibility="{Binding IsPredefined, Converter={StaticResource BoolToVis}}"
                                    ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Preset], Mode=OneWay}"/>
@@ -156,32 +156,32 @@
                         <Button Style="{StaticResource IconButton}" Click="OnTermEditClick" Tag="{Binding}"
                                 Visibility="{Binding ShowEditButton, Converter={StaticResource BoolToVis}}"
                                 ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Edit], Mode=OneWay}">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70F;" FontSize="13"/>
+                            <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE70F;" FontSize="13"/>
                         </Button>
                         <Button Style="{StaticResource IconButton}" Click="OnTermSaveClick" Tag="{Binding}"
-                                Foreground="#2980B9"
+                                Foreground="#4F46E5"
                                 Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"
                                 ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Save], Mode=OneWay}">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE73E;" FontSize="13"/>
+                            <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE73E;" FontSize="13"/>
                         </Button>
                         <Button Style="{StaticResource IconButton}" Click="OnTermAltLanguageClick" Tag="{Binding}"
                                 Visibility="{Binding IsCustom, Converter={StaticResource BoolToVis}}"
                                 ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.ViewAltLanguage], Mode=OneWay}">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xF2B7;" FontSize="13"/>
+                            <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xF2B7;" FontSize="13"/>
                         </Button>
                         <Button Style="{StaticResource IconButton}" Click="OnTermDeleteClick" Tag="{Binding}"
-                                Foreground="#C0392B"
+                                Foreground="#B91C1C"
                                 Visibility="{Binding IsCustom, Converter={StaticResource BoolToVis}}"
                                 ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Delete], Mode=OneWay}">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="13"/>
+                            <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE74D;" FontSize="13"/>
                         </Button>
                     </StackPanel>
 
                     <Grid VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Name}" Foreground="#2C3E50" VerticalAlignment="Center"
+                        <TextBlock Text="{Binding Name}" Foreground="#4F46E5" VerticalAlignment="Center"
                                    Visibility="{Binding IsNotEditing, Converter={StaticResource BoolToVis}}"/>
                         <TextBox Text="{Binding EditName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                 Padding="4,2" BorderBrush="#2980B9" BorderThickness="1"
+                                 Padding="4,2" BorderBrush="#4F46E5" BorderThickness="1"
                                  Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
                     </Grid>
                 </DockPanel>
@@ -193,17 +193,17 @@
             <Border Background="#EAF3FB" CornerRadius="8" BorderBrush="#CBE1F5" BorderThickness="1"
                     Padding="10,7" Margin="0,0,0,6">
                 <DockPanel LastChildFill="True">
-                    <TextBlock DockPanel.Dock="Left" FontFamily="Segoe MDL2 Assets" Text="&#xF0E2;" FontSize="13"
-                               Foreground="#2980B9" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <TextBlock DockPanel.Dock="Left" FontFamily="Segoe MDL2 Assets" Text="&#xE72E;" FontSize="12"
+                    <TextBlock DockPanel.Dock="Left" FontFamily="{StaticResource IconFontFamily}" Text="&#xF0E2;" FontSize="13"
+                               Foreground="#4F46E5" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <TextBlock DockPanel.Dock="Left" FontFamily="{StaticResource IconFontFamily}" Text="&#xE72E;" FontSize="12"
                                Foreground="#9FB4C6" VerticalAlignment="Center" Margin="0,0,8,0"
                                Visibility="{Binding IsLocked, Converter={StaticResource BoolToVis}}"
                                ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Preset], Mode=OneWay}"/>
-                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Foreground="#C0392B"
+                    <Button DockPanel.Dock="Right" Style="{StaticResource IconButton}" Foreground="#B91C1C"
                             Click="OnAssignedRemoveClick" Tag="{Binding}"
                             Visibility="{Binding CanRemove, Converter={StaticResource BoolToVis}}"
                             ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Remove], Mode=OneWay}">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;" FontSize="13"/>
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE711;" FontSize="13"/>
                     </Button>
                     <TextBlock Text="{Binding Name}" Foreground="#1F5F8B" FontWeight="SemiBold" VerticalAlignment="Center"/>
                 </DockPanel>
@@ -221,12 +221,12 @@
         <!-- Header -->
         <StackPanel Grid.Row="0" Margin="4,0,4,16">
             <StackPanel Orientation="Horizontal">
-                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE9D9;" FontSize="24" Foreground="#2980B9" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE9D9;" FontSize="22" Foreground="#4F46E5" VerticalAlignment="Center" Margin="0,0,12,0"/>
                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Title], Mode=OneWay}"
-                           FontSize="22" FontWeight="Bold" Foreground="#2C3E50" VerticalAlignment="Center"/>
+                           FontSize="22" FontWeight="Bold" Foreground="#4F46E5" VerticalAlignment="Center"/>
             </StackPanel>
             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Subtitle], Mode=OneWay}"
-                       Foreground="#7F8C8D" Margin="36,4,0,0" TextWrapping="Wrap"/>
+                       Foreground="#9CA3AF" Margin="36,4,0,0" TextWrapping="Wrap"/>
         </StackPanel>
 
         <!-- Three columns -->
@@ -246,7 +246,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE7F6;" FontSize="16" Foreground="#2980B9" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE7F6;" FontSize="15" Foreground="#4F46E5" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Style="{StaticResource ColumnTitle}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Garments], Mode=OneWay}"/>
                     </StackPanel>
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -257,19 +257,19 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <DockPanel LastChildFill="True">
-                                        <TextBlock DockPanel.Dock="Left" FontFamily="Segoe MDL2 Assets" Text="&#xEA8C;" FontSize="14" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock DockPanel.Dock="Left" FontFamily="{StaticResource IconFontFamily}" Text="&#xEA8C;" FontSize="15" VerticalAlignment="Center" Margin="0,0,10,0"/>
                                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72E;" FontSize="12" VerticalAlignment="Center" Opacity="0.6"
+                                            <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE72E;" FontSize="12" VerticalAlignment="Center" Opacity="0.6"
                                                        Visibility="{Binding IsPredefined, Converter={StaticResource BoolToVis}}"/>
                                             <Button Style="{StaticResource IconButton}" Click="OnGarmentAltLanguageClick" Tag="{Binding}"
                                                     Visibility="{Binding IsCustom, Converter={StaticResource BoolToVis}}"
                                                     ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.ViewAltLanguage], Mode=OneWay}">
-                                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xF2B7;" FontSize="12"/>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xF2B7;" FontSize="12"/>
                                             </Button>
                                             <Button Style="{StaticResource IconButton}" Click="OnGarmentDeleteClick" Tag="{Binding}"
                                                     Visibility="{Binding IsCustom, Converter={StaticResource BoolToVis}}"
                                                     ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Delete], Mode=OneWay}">
-                                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="12"/>
+                                                <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE74D;" FontSize="12"/>
                                             </Button>
                                         </StackPanel>
                                         <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
@@ -280,7 +280,7 @@
                     </ScrollViewer>
                     <Button Grid.Row="2" Style="{StaticResource AddButton}" Margin="0,12,0,0" Click="OnAddGarmentClick" HorizontalAlignment="Stretch">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" FontSize="13" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                            <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE710;" FontSize="13" Margin="0,0,7,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.AddGarment], Mode=OneWay}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -297,20 +297,20 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE9D2;" FontSize="16" Foreground="#2980B9" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE9D2;" FontSize="15" Foreground="#4F46E5" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Style="{StaticResource ColumnTitle}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Assigned], Mode=OneWay}"/>
-                        <TextBlock x:Name="AssignedGarmentText" Style="{StaticResource ColumnTitle}" Foreground="#2980B9" Margin="8,0,0,0"/>
+                        <TextBlock x:Name="AssignedGarmentText" Style="{StaticResource ColumnTitle}" Foreground="#4F46E5" Margin="8,0,0,0"/>
                     </StackPanel>
 
                     <!-- Default-vs-customized mode switch: only shown for predefined garments, since
                          user-added garments are already fully editable with no locked default set. -->
-                    <Border Grid.Row="1" x:Name="MeasurementModePanel" Background="#F7F9FB" CornerRadius="8" Padding="12,9" Margin="0,0,0,12">
+                    <Border Grid.Row="1" x:Name="MeasurementModePanel" Background="#F9FAFB" CornerRadius="8" Padding="12,9" Margin="0,0,0,12">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" x:Name="MeasurementModeStatusText" Foreground="#5D6D7E" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                            <TextBlock Grid.Column="0" x:Name="MeasurementModeStatusText" Foreground="#6B7280" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0"/>
                             <Button Grid.Column="1" x:Name="MeasurementModeActionButton" Style="{StaticResource AddButton}" Click="OnMeasurementModeActionClick"/>
                         </Grid>
                     </Border>
@@ -320,8 +320,8 @@
                             <ItemsControl x:Name="AssignedList" ItemTemplate="{StaticResource AssignedRowTemplate}"/>
                         </ScrollViewer>
                         <StackPanel x:Name="AssignedHintPanel" VerticalAlignment="Center" HorizontalAlignment="Center" IsHitTestVisible="False">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE896;" FontSize="34" Foreground="#C6D2DE" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                            <TextBlock x:Name="AssignedHintText" Foreground="#9FB0C0" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="260"/>
+                            <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE896;" FontSize="22" Foreground="#C6D2DE" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                            <TextBlock x:Name="AssignedHintText" Foreground="#D1D5DB" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="260"/>
                         </StackPanel>
                     </Grid>
                 </Grid>
@@ -338,7 +338,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12">
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE71D;" FontSize="16" Foreground="#2980B9" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE71D;" FontSize="15" Foreground="#4F46E5" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Style="{StaticResource ColumnTitle}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.AllProps], Mode=OneWay}"/>
                     </StackPanel>
 
@@ -355,7 +355,7 @@
                     <!-- Search box -->
                     <Grid Grid.Row="2" Margin="0,0,0,10">
                         <TextBox x:Name="AllTermsSearchBox" Padding="8,6" BorderBrush="#CBD3DA" BorderThickness="1" TextChanged="OnTermSearchTextChanged"/>
-                        <TextBlock x:Name="AllTermsSearchHint" IsHitTestVisible="False" Foreground="#9FB0C0" Margin="10,0,0,0" VerticalAlignment="Center"
+                        <TextBlock x:Name="AllTermsSearchHint" IsHitTestVisible="False" Foreground="#D1D5DB" Margin="10,0,0,0" VerticalAlignment="Center"
                                    Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.SearchPlaceholder], Mode=OneWay}"/>
                     </Grid>
 
@@ -364,7 +364,7 @@
                     </ScrollViewer>
                     <Button Grid.Row="4" Style="{StaticResource AddButton}" Margin="0,12,0,0" Click="OnAddPropClick" HorizontalAlignment="Stretch">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" FontSize="13" Margin="0,0,7,0" VerticalAlignment="Center"/>
+                            <TextBlock FontFamily="{StaticResource IconFontFamily}" Text="&#xE710;" FontSize="13" Margin="0,0,7,0" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.AddProp], Mode=OneWay}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -376,7 +376,7 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Done], Mode=OneWay}"
                     Width="110" Height="34" IsDefault="True" IsCancel="True" Click="OnDoneClick"
-                    Background="#2980B9" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+                    Background="#4F46E5" Foreground="White" BorderThickness="0" Cursor="Hand"/>
         </StackPanel>
     </Grid>
 </Window>

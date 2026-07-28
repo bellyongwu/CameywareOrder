@@ -1,0 +1,984 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:loc="clr-namespace:CameywareOrder.Localization"
+                    xmlns:ctrl="clr-namespace:CameywareOrder.Controls">
+    <!-- The application's single visual language, merged in App.xaml so every window inherits it.
+         Three copies of a button template drift, and they drift silently — nothing fails when only
+         two of them get a fix.
+
+         WHAT LIVES HERE: the palette, implicit styles for the controls every screen uses, and the
+         keyed card/label/heading styles the forms are built from. A window that needs a variant
+         should base its own style on one of these, never restate the colours.
+
+         WHAT DOES NOT: anything that encodes MEANING rather than chrome. Balance-status colours
+         (green / orange / red) and the refunded-order strike are deliberately left as literals at
+         their use sites — re-theming must never quietly change what a colour tells the user. -->
+
+    <!-- ══ Palette ══════════════════════════════════════════════════════════════════════════ -->
+    <Color x:Key="PrimaryColor">#FF4F46E5</Color>
+    <Color x:Key="PrimaryDarkColor">#FF4338CA</Color>
+    <Color x:Key="AccentColor">#FF7C3AED</Color>
+
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource PrimaryColor}"/>
+    <SolidColorBrush x:Key="PrimaryDarkBrush" Color="{StaticResource PrimaryDarkColor}"/>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}"/>
+    <SolidColorBrush x:Key="PrimarySoftBrush" Color="#FFEEF2FF"/>
+    <SolidColorBrush x:Key="PrimaryMutedBrush" Color="#FFC7D2FE"/>
+    <SolidColorBrush x:Key="PrimaryHoverBorderBrush" Color="#FFA5B4FC"/>
+    <SolidColorBrush x:Key="PrimaryDeepBrush" Color="#FF3730A3"/>
+
+    <!-- The header band every top-level screen wears. -->
+    <LinearGradientBrush x:Key="HeaderGradientBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="{StaticResource PrimaryColor}" Offset="0"/>
+        <GradientStop Color="{StaticResource AccentColor}" Offset="1"/>
+    </LinearGradientBrush>
+
+    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#FFF4F5F9"/>
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#FFF9FAFB"/>
+    <SolidColorBrush x:Key="BorderBrush" Color="#FFE5E7EB"/>
+    <SolidColorBrush x:Key="BorderStrongBrush" Color="#FFD1D5DB"/>
+    <SolidColorBrush x:Key="DividerBrush" Color="#FFF3F4F6"/>
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FF111827"/>
+    <SolidColorBrush x:Key="TextBodyBrush" Color="#FF374151"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FF6B7280"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#FF9CA3AF"/>
+    <SolidColorBrush x:Key="TextOnPrimaryBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="TextOnHeaderSubtleBrush" Color="#FFDDD6FE"/>
+
+    <SolidColorBrush x:Key="DangerBrush" Color="#FFB91C1C"/>
+    <SolidColorBrush x:Key="DangerBorderBrush" Color="#FFFCA5A5"/>
+    <SolidColorBrush x:Key="DangerSoftBrush" Color="#FFFEE2E2"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="#FF047857"/>
+    <SolidColorBrush x:Key="SuccessSoftBrush" Color="#FFD1FAE5"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#FF92400E"/>
+    <SolidColorBrush x:Key="WarningSoftBrush" Color="#FFFEF3C7"/>
+
+    <SolidColorBrush x:Key="DisabledBackgroundBrush" Color="#FFF3F4F6"/>
+    <SolidColorBrush x:Key="DisabledForegroundBrush" Color="#FF9CA3AF"/>
+
+    <CornerRadius x:Key="ControlCornerRadius">6</CornerRadius>
+    <CornerRadius x:Key="CardCornerRadius">10</CornerRadius>
+
+    <!-- ══ Type ═════════════════════════════════════════════════════════════════════════════
+         ONE family and SIX sizes for the whole application. An audit found seventeen sizes in use,
+         including 11.5 / 12.5 / 13.5 — differences too small to read as intent and too many to keep
+         straight, so the same kind of label ended up a different size on two screens.
+
+         Latin first, CJK second: WPF walks this list per glyph, so Segoe UI renders the Latin and
+         Microsoft YaHei UI the Chinese, the same way on an English and a Chinese Windows. Left to the
+         system default the two locales pick different fonts for the same screen — and the printed
+         receipt already pins Segoe UI, so the app disagreed with its own output. -->
+    <!-- THREE families, one per job:
+         · AppFontFamily     — everything a person reads as prose or a label.
+         · NumericFontFamily — figures that sit in a column and get compared: money, order numbers,
+           counts, dates. Same face, but the styles below switch on TABULAR numerals so every digit
+           takes the same width and the decimal points line up down the list. Proportional digits
+           are what makes a column of prices look ragged.
+         · IconFontFamily    — the Segoe MDL2 glyph set. Named here so a screen never hard-codes it
+           and nobody has to remember which of the two font names it is. -->
+    <FontFamily x:Key="AppFontFamily">Segoe UI, Microsoft YaHei UI</FontFamily>
+    <FontFamily x:Key="NumericFontFamily">Segoe UI, Microsoft YaHei UI</FontFamily>
+    <FontFamily x:Key="IconFontFamily">Segoe MDL2 Assets</FontFamily>
+
+    <sys:Double x:Key="FontSizeCaption" xmlns:sys="clr-namespace:System;assembly=mscorlib">11</sys:Double>
+    <sys:Double x:Key="FontSizeSmall" xmlns:sys="clr-namespace:System;assembly=mscorlib">12</sys:Double>
+    <sys:Double x:Key="FontSizeBody" xmlns:sys="clr-namespace:System;assembly=mscorlib">13</sys:Double>
+    <sys:Double x:Key="FontSizeLarge" xmlns:sys="clr-namespace:System;assembly=mscorlib">15</sys:Double>
+    <sys:Double x:Key="FontSizeTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">18</sys:Double>
+    <sys:Double x:Key="FontSizePageTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">22</sys:Double>
+
+    <!-- Inherited by everything in a window that does not say otherwise. -->
+    <Style TargetType="Window">
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    </Style>
+
+    <!-- ══ Buttons ══════════════════════════════════════════════════════════════════════════
+         Built as a template rather than Background setters: the WPF default button chrome paints
+         its own gradient over any Background you set, and hover reverts to the system blue. -->
+    <Style x:Key="ThemedButton" TargetType="Button">
+        <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+        <Setter Property="Padding" Value="16,8"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Chrome" CornerRadius="{StaticResource ControlCornerRadius}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Opacity" Value="0.88"/>
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Chrome" Property="Opacity" Value="0.75"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Chrome" Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Implicit: every plain Button in the app picks the shape up. -->
+    <Style TargetType="Button" BasedOn="{StaticResource ThemedButton}"/>
+
+    <!-- A ToolBar substitutes its OWN button style for its children, so the implicit style above
+         never reaches them. Re-pointing the toolbar's key is what puts the theme on the toolbar. -->
+    <Style x:Key="{x:Static ToolBar.ButtonStyleKey}" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
+        <Setter Property="Margin" Value="2"/>
+    </Style>
+
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
+        <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="24,8"/>
+    </Style>
+
+    <!-- Irreversible actions are the one control that does not look like the others. -->
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
+        <Setter Property="BorderBrush" Value="{StaticResource DangerBorderBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+    </Style>
+
+    <!-- Sits on a coloured header band, so it is outlined rather than filled. -->
+    <Style x:Key="OnHeaderButton" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
+        <Setter Property="Background" Value="#26FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#59FFFFFF"/>
+        <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+        <Setter Property="Padding" Value="14,7"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <Style x:Key="ThemedToggleButton" TargetType="ToggleButton">
+        <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border x:Name="Chrome" CornerRadius="{StaticResource ControlCornerRadius}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryHoverBorderBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource PrimaryDeepBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Chrome" Property="Opacity" Value="0.45"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ Text inputs ══════════════════════════════════════════════════════════════════════
+         Templated for the rounded corner (TextBox has no CornerRadius) and so focus can show the
+         primary colour instead of the system blue. -->
+    <Style x:Key="ThemedTextBox" TargetType="TextBox">
+        <Setter Property="Padding" Value="9,7"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CaretBrush" Value="{StaticResource PrimaryBrush}"/>
+        <Setter Property="SelectionBrush" Value="{StaticResource PrimaryBrush}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Chrome" CornerRadius="{StaticResource ControlCornerRadius}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryHoverBorderBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                        </Trigger>
+                        <!-- A read-only box must read as locked, not merely as a box that ignores
+                             you. The app uses IsReadOnly (not IsEnabled) wherever a value has to
+                             stay selectable and copyable. -->
+                        <Trigger Property="IsReadOnly" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{StaticResource DisabledBackgroundBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Chrome" Property="Background" Value="{StaticResource DisabledBackgroundBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForegroundBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="TextBox" BasedOn="{StaticResource ThemedTextBox}"/>
+
+    <Style x:Key="ThemedPasswordBox" TargetType="PasswordBox">
+        <Setter Property="Padding" Value="9,7"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CaretBrush" Value="{StaticResource PrimaryBrush}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="PasswordBox">
+                    <Border x:Name="Chrome" CornerRadius="{StaticResource ControlCornerRadius}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            SnapsToDevicePixels="True">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryHoverBorderBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="PasswordBox" BasedOn="{StaticResource ThemedPasswordBox}"/>
+
+    <!-- ══ Drop-downs ═══════════════════════════════════════════════════════════════════════ -->
+    <Style x:Key="ThemedComboBoxItem" TargetType="ComboBoxItem">
+        <Setter Property="Padding" Value="10,7"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="Chrome" Background="Transparent" CornerRadius="5"
+                            Padding="{TemplateBinding Padding}" Margin="3,1" SnapsToDevicePixels="True">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Chrome" Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource ThemedComboBoxItem}"/>
+
+    <!-- Borderless inner editor for an editable ComboBox: the rounded chrome belongs to the combo,
+         so the text box must not draw a second border inside it. -->
+    <Style x:Key="ComboBoxEditor" TargetType="TextBox">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource PrimaryBrush}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <ScrollViewer x:Name="PART_ContentHost" Focusable="False" VerticalAlignment="Center"
+                                  HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A full template this time, covering the two things that made the first attempt a regression:
+           * IsEditable — the branding editor's font-size box needs a PART_EditableTextBox, and a
+             template without one silently stops accepting typed input;
+           * the selection FACE and `DisplayMemberPath`. THE PART THAT IS EASY TO MISS: a ComboBox
+             does NOT turn DisplayMemberPath into `SelectionBoxItemTemplate` — `ItemsControl`
+             installs an internal template SELECTOR instead, so the face must bind
+             `ContentTemplateSelector` to `ItemTemplateSelector` as well. Without it the face falls
+             back to ToString() and renders "LanguageOption { Code = …, Name = 简体中文 }". The stock
+             template does exactly this; two earlier attempts here did not, and looked broken. -->
+    <!-- Bindings use RelativeSource rather than TemplateBinding on purpose: a TemplateBinding
+         re-resolves against the nearest templated parent, which is the wrong element for anything
+         nested inside the ToggleButton's own template. -->
+    <Style x:Key="ThemedComboBox" TargetType="ComboBox">
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <!-- Behind everything and full size, so a click anywhere on the face opens
+                             the list (except over the editable box, which takes its own input). -->
+                        <ToggleButton x:Name="PART_ToggleButton" Focusable="False" ClickMode="Press"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="Chrome" CornerRadius="{StaticResource ControlCornerRadius}"
+                                            Background="{Binding Background, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                            BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                            BorderThickness="1" SnapsToDevicePixels="True">
+                                        <Path HorizontalAlignment="Right" VerticalAlignment="Center"
+                                              Margin="0,0,11,0" Width="9" Height="5" Stretch="Fill"
+                                              Data="M 0 0 L 4.5 5 L 9 0"
+                                              Fill="{StaticResource TextMutedBrush}" SnapsToDevicePixels="True"/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryHoverBorderBrush}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+
+                        <ContentPresenter x:Name="Face" IsHitTestVisible="False"
+                                          Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Left" VerticalAlignment="Center"
+                                          Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                          ContentTemplate="{Binding SelectionBoxItemTemplate, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                          ContentStringFormat="{Binding SelectionBoxItemStringFormat, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                          ContentTemplateSelector="{Binding ItemTemplateSelector, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
+
+                        <TextBox x:Name="PART_EditableTextBox" Style="{StaticResource ComboBoxEditor}"
+                                 Margin="{TemplateBinding Padding}" Visibility="Collapsed"
+                                 IsReadOnly="{TemplateBinding IsReadOnly}"/>
+
+                        <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Bottom"
+                               IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                               PopupAnimation="Fade" Focusable="False">
+                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                    MinWidth="{Binding ActualWidth, ElementName=PART_ToggleButton}"
+                                    MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                    Margin="0,4,0,8" SnapsToDevicePixels="True">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.16" Color="#FF111827"/>
+                                </Border.Effect>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,4">
+                                    <ItemsPresenter/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEditable" Value="True">
+                            <Setter TargetName="Face" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="PART_EditableTextBox" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ComboBox" BasedOn="{StaticResource ThemedComboBox}"/>
+
+    <!-- A time of day, with a clock so the field reads as a time at a glance rather than as one
+         more anonymous drop-down. Same behaviour as a ComboBox — only the face changes. -->
+    <Style x:Key="TimePickerComboBox" TargetType="ComboBox" BasedOn="{StaticResource ThemedComboBox}">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource PrimaryDeepBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <ToggleButton x:Name="PART_ToggleButton" Focusable="False" ClickMode="Press"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border x:Name="Chrome" CornerRadius="{StaticResource ControlCornerRadius}"
+                                            Background="{StaticResource PrimarySoftBrush}"
+                                            BorderBrush="{StaticResource PrimaryMutedBrush}"
+                                            BorderThickness="1" SnapsToDevicePixels="True">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <!-- Clock: a ring and two hands. -->
+                                            <Canvas Grid.Column="0" Width="16" Height="16" Margin="10,0,0,0"
+                                                    VerticalAlignment="Center">
+                                                <Ellipse Width="13.5" Height="13.5" Canvas.Left="1.2" Canvas.Top="1.2"
+                                                         Stroke="{StaticResource PrimaryBrush}" StrokeThickness="1.4"/>
+                                                <Path Stroke="{StaticResource PrimaryBrush}" StrokeThickness="1.4"
+                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      Data="M 8 4.6 L 8 8.2 L 10.6 9.8"/>
+                                            </Canvas>
+
+                                            <ContentPresenter Grid.Column="1" Margin="8,7,6,7" VerticalAlignment="Center"/>
+
+                                            <Path Grid.Column="2" Data="M 0 0 L 4.5 5 L 9 0" Width="9" Height="5"
+                                                  Stretch="Fill" Margin="0,0,11,0" VerticalAlignment="Center"
+                                                  Fill="{StaticResource PrimaryBrush}" SnapsToDevicePixels="True"/>
+                                        </Grid>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                            <Setter TargetName="Chrome" Property="BorderThickness" Value="1.6"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+
+                            <ContentPresenter
+                                Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                ContentTemplate="{Binding SelectionBoxItemTemplate, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                ContentStringFormat="{Binding SelectionBoxItemStringFormat, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                ContentTemplateSelector="{Binding ItemTemplateSelector, RelativeSource={RelativeSource AncestorType=ComboBox}}"/>
+                        </ToggleButton>
+
+                        <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Bottom"
+                               IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                               PopupAnimation="Fade" Focusable="False">
+                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8"
+                                    BorderBrush="{StaticResource PrimaryMutedBrush}" BorderThickness="1"
+                                    MinWidth="{Binding ActualWidth, ElementName=PART_ToggleButton}"
+                                    MaxHeight="260" Margin="0,4,0,8" SnapsToDevicePixels="True">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.18" Color="#FF4F46E5"/>
+                                </Border.Effect>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,4">
+                                    <ItemsPresenter/>
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Opacity" Value="0.5"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ══ Date picker ══════════════════════════════════════════════════════════════════════
+         The stock watermark ("Select a date") comes from PresentationFramework's own resources and
+         stays English whatever the app language is, so it is replaced here with a string-table
+         value. The calendar's month and day names follow FrameworkElement.Language, which each
+         window carrying a picker sets from the current UI language. -->
+    <Style x:Key="ThemedDatePickerTextBox" TargetType="DatePickerTextBox">
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="CaretBrush" Value="{StaticResource PrimaryBrush}"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DatePickerTextBox">
+                    <Grid>
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      VerticalAlignment="Center"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+                        <TextBlock x:Name="Watermark" IsHitTestVisible="False" VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextMutedBrush}" FontSize="13"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Common.SelectDate], Mode=OneWay}"
+                                   Visibility="Collapsed"/>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <!-- The stock template keys its watermark off this same part name. -->
+                        <Trigger Property="Text" Value="">
+                            <Setter TargetName="Watermark" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="Text" Value="{x:Null}">
+                            <Setter TargetName="Watermark" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="DatePickerTextBox" BasedOn="{StaticResource ThemedDatePickerTextBox}"/>
+
+    <Style x:Key="ThemedDatePicker" TargetType="DatePicker">
+        <Setter Property="MinHeight" Value="38"/>
+        <!-- DatePicker BINDS its Calendar.Style to this property, and a bound null Style suppresses
+             implicit lookup entirely — which is why the themed Calendar style never applied until it
+             was named here. Same reason CalendarDayButtonStyle has to be set on the Calendar style. -->
+        <Setter Property="CalendarStyle" Value="{DynamicResource ThemedCalendar}"/>
+        <Setter Property="ctrl:CalendarSizing.MatchOwnerWidth" Value="True"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="10,7"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="DatePicker">
+                    <Border x:Name="Chrome" CornerRadius="{StaticResource ControlCornerRadius}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" SnapsToDevicePixels="True">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <DatePickerTextBox x:Name="PART_TextBox" Grid.Column="0"
+                                               Margin="{TemplateBinding Padding}"
+                                               Focusable="{TemplateBinding Focusable}"/>
+
+                            <!-- Calendar glyph doubles as the drop-down button. -->
+                            <Button x:Name="PART_Button" Grid.Column="1" Focusable="False"
+                                    Margin="0,0,6,0" Padding="6" Background="Transparent"
+                                    BorderBrush="Transparent" Cursor="Hand">
+                                <Canvas Width="16" Height="16">
+                                    <Border Width="14" Height="12.5" Canvas.Left="1" Canvas.Top="2.2"
+                                            CornerRadius="2" BorderThickness="1.4"
+                                            BorderBrush="{StaticResource PrimaryBrush}"/>
+                                    <Path Stroke="{StaticResource PrimaryBrush}" StrokeThickness="1.4"
+                                          StrokeStartLineCap="Round"
+                                          Data="M 1 6.2 L 15 6.2 M 5 1 L 5 3.4 M 11 1 L 11 3.4"/>
+                                </Canvas>
+                            </Button>
+
+                            <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Bottom"
+                                   PlacementTarget="{Binding ElementName=Chrome}" StaysOpen="False"/>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryHoverBorderBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Chrome" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Chrome" Property="Background" Value="{StaticResource DisabledBackgroundBrush}"/>
+                            <Setter Property="Opacity" Value="0.6"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="DatePicker" BasedOn="{StaticResource ThemedDatePicker}"/>
+
+    <!-- Calendar: recoloured and resized, but NOT re-templated — the month/year/decade navigation is
+         intricate and works. The stock panel is ~185px of 10pt text, which reads as an afterthought
+         next to the rest of the app.
+
+         WIDTH: bound to the DatePicker that owns it, so the drop-down is exactly as wide as the box
+         it belongs to. The Calendar is created in code and lives inside a Popup — a separate visual
+         tree — so the binding walks out through the Popup's LOGICAL parent to reach the DatePicker.
+         It resolves; if a future WPF change breaks it the binding fails silently to the natural
+         width, and the harness's binding-error count is what catches that. -->
+    <Style x:Key="ThemedCalendar" TargetType="Calendar">
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <!-- Set EXPLICITLY, not left to the implicit style: Calendar hands each day button whatever
+             CalendarDayButtonStyle holds, so relying on the implicit lookup left the stock grey
+             selection in place. DynamicResource because the style is declared further down. -->
+        <Setter Property="CalendarDayButtonStyle" Value="{DynamicResource ThemedCalendarDayButton}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+    </Style>
+
+    <Style TargetType="Calendar" BasedOn="{StaticResource ThemedCalendar}"/>
+
+    <Style TargetType="CalendarItem">
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+    </Style>
+
+    <!-- The one part of the calendar worth re-templating: the stock day button paints its selection
+         in the system grey-blue, which is the only place the app still looked like stock WPF.
+         The month/year navigation above it is left alone — it is intricate and it works. -->
+    <Style x:Key="ThemedCalendarDayButton" TargetType="CalendarDayButton">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CalendarDayButton">
+                    <Border x:Name="Bd" CornerRadius="5" Background="Transparent" Margin="1"
+                            BorderThickness="1" BorderBrush="Transparent" SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Days spilling in from the neighbouring month: present, but not competing. -->
+                        <Trigger Property="IsInactive" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsToday" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
+                        </Trigger>
+                        <!-- Selection last, so it wins over hover and today. -->
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                        <Trigger Property="IsBlackedOut" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForegroundBrush}"/>
+                            <Setter Property="IsEnabled" Value="False"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="CalendarDayButton" BasedOn="{StaticResource ThemedCalendarDayButton}"/>
+
+    <!-- The month and year buttons in the drill-up views. -->
+    <Style TargetType="CalendarButton">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+
+    <!-- ══ Selection controls: recoloured, NOT re-templated ═════════════════════════════════
+         The order editor drives dozens of radios and checkboxes through code (payment methods,
+         cleared flags, the not-applicable strike) and swaps templates on some of them. Restyling
+         the box itself here would fight that; only the text follows the theme. -->
+    <Style TargetType="CheckBox">
+        <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style TargetType="RadioButton">
+        <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <!-- ══ Menus ════════════════════════════════════════════════════════════════════════════
+         ONE template for every MenuItem role. The stock style swaps between four templates by Role,
+         so a single Template setter has to cover them all — the differences (submenu arrow, popup
+         placement) are handled by the Role triggers at the bottom rather than by separate styles. -->
+    <Style x:Key="ThemedMenuItem" TargetType="MenuItem">
+        <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="Padding" Value="11,7"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Grid>
+                        <Border x:Name="Bd" CornerRadius="5" Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}" Margin="3,1" SnapsToDevicePixels="True">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" SharedSizeGroup="MenuIcon"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <ContentPresenter Grid.Column="0" ContentSource="Icon" VerticalAlignment="Center"
+                                                  Margin="0,0,8,0"/>
+                                <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True"
+                                                  VerticalAlignment="Center"/>
+                                <!-- Only a submenu header shows it; see the Role trigger below. -->
+                                <Path x:Name="Arrow" Grid.Column="2" Data="M 0 0 L 4 3.5 L 0 7" Width="4" Height="7"
+                                      Stretch="Fill" Margin="16,0,0,0" VerticalAlignment="Center"
+                                      Stroke="{StaticResource TextMutedBrush}" StrokeThickness="1.3"
+                                      Visibility="Collapsed"/>
+                            </Grid>
+                        </Border>
+
+                        <Popup x:Name="PART_Popup" AllowsTransparency="True" Placement="Right"
+                               HorizontalOffset="-6" VerticalOffset="-6" Focusable="False"
+                               PopupAnimation="Fade"
+                               IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+                            <Border Background="{StaticResource SurfaceBrush}" CornerRadius="8"
+                                    BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                                    Padding="0,5" Margin="6,4,10,10" MinWidth="170" SnapsToDevicePixels="True">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.18" Color="#FF111827"/>
+                                </Border.Effect>
+                                <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle"
+                                            Grid.IsSharedSizeScope="True"/>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="Role" Value="TopLevelHeader">
+                            <Setter TargetName="PART_Popup" Property="Placement" Value="Bottom"/>
+                            <Setter TargetName="PART_Popup" Property="HorizontalOffset" Value="-6"/>
+                            <Setter TargetName="PART_Popup" Property="VerticalOffset" Value="2"/>
+                        </Trigger>
+                        <Trigger Property="Role" Value="SubmenuHeader">
+                            <Setter TargetName="Arrow" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource PrimaryDeepBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSubmenuOpen" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForegroundBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="MenuItem" BasedOn="{StaticResource ThemedMenuItem}"/>
+
+
+    <Style TargetType="Menu">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
+    </Style>
+
+    <Style TargetType="ContextMenu">
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="0,5"/>
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="HasDropShadow" Value="True"/>
+        <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+    </Style>
+
+    <!-- Used both between menu items and in the toolbar, so it stays a plain hairline. -->
+    <Style TargetType="Separator">
+        <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="Margin" Value="8,4"/>
+    </Style>
+
+    <!-- ══ Cards and typography ═════════════════════════════════════════════════════════════ -->
+    <Style x:Key="CardBorder" TargetType="Border">
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="{StaticResource CardCornerRadius}"/>
+        <Setter Property="Padding" Value="18,16"/>
+    </Style>
+
+    <Style x:Key="MutedCardBorder" TargetType="Border" BasedOn="{StaticResource CardBorder}">
+        <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}"/>
+    </Style>
+
+    <Style x:Key="AccentCardBorder" TargetType="Border" BasedOn="{StaticResource CardBorder}">
+        <Setter Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource PrimaryMutedBrush}"/>
+    </Style>
+
+    <!-- ══ Semantic text styles ═════════════════════════════════════════════════════════════
+         Screens should say WHAT a piece of text is, not how big it is. Every style below sets size,
+         weight and colour together, because those three are what make a role recognisable — a
+         12pt grey label and a 12pt black value are different things and should not be written the
+         same way. Reach for a raw FontSize only when none of these fits, and if that happens twice,
+         add a style here instead. -->
+    <Style x:Key="PageTitleText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizePageTitle}"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style x:Key="SectionTitleText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeTitle}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style x:Key="BodyText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
+    </Style>
+
+    <!-- A stored value, as opposed to the label naming it. -->
+    <Style x:Key="ValueText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+    </Style>
+
+    <Style x:Key="CaptionText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCaption}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+    </Style>
+
+    <!-- Figures meant to be compared down a column. Tabular numerals give every digit the same
+         advance width, so decimal points and order numbers line up instead of drifting. -->
+    <Style x:Key="NumericText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource NumericFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
+    </Style>
+
+    <Style x:Key="MoneyText" TargetType="TextBlock" BasedOn="{StaticResource NumericText}">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <!-- The same tabular treatment for a list cell, but WITHOUT size or colour: a row in the orders
+         list takes its size from the font-size slider and its colour from the gray-out trigger for
+         completed and refunded orders. Setting either here would override both. -->
+    <Style x:Key="NumericCellText" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource NumericFontFamily}"/>
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- Segoe MDL2 glyph. Screens reference this instead of naming the font. -->
+    <Style x:Key="IconGlyph" TargetType="TextBlock">
+        <Setter Property="FontFamily" Value="{StaticResource IconFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style x:Key="CardHeading" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+        <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+
+    <Style x:Key="SectionHeading" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="15"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Margin" Value="0,0,0,12"/>
+    </Style>
+
+    <Style x:Key="FieldLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+        <Setter Property="Margin" Value="0,0,0,5"/>
+    </Style>
+
+    <Style x:Key="HintText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="12"/>
+        <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+
+    <!-- ══ List rows ════════════════════════════════════════════════════════════════════════
+         The whole row is the hit target, and the selected one reads as an accent rather than the
+         system highlight colour. -->
+    <Style x:Key="RosterCardContainer" TargetType="ListBoxItem">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Margin" Value="0,0,0,7"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="Card" CornerRadius="8" Background="{StaticResource SurfaceBrush}"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                            Padding="11,9" SnapsToDevicePixels="True">
+                        <ContentPresenter/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource PrimaryHoverBorderBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Card" Property="BorderThickness" Value="2"/>
+                            <Setter TargetName="Card" Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
+                            <Setter TargetName="Card" Property="Padding" Value="10,8"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+</ResourceDictionary>

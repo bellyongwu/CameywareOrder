@@ -63,7 +63,8 @@
     <Text key="Toolbar.SignOut">退出登录</Text>
     <!-- Punctuation differs by language (full-width vs half-width brackets), so this is a
          translated format string rather than a hard-coded one. -->
-    <Text key="Toolbar.SignedInAs">{0}（{1}）</Text>
+    <Text key="Main.Greeting">你好 {0}，您当前的身份是{1}。</Text>
+    <Text key="Main.Records">订单记录</Text>
     <Text key="SignOut.Confirm">确定要退出登录吗？</Text>
     <Text key="SignOut.CloseEditors">请先关闭所有订单窗口，再退出登录。</Text>
     <Text key="Shop.Picker.Title">选择店铺</Text>
@@ -150,6 +151,7 @@
     <Text key="Members.Deleted">{0} 的账户已删除。</Text>
     <Text key="Members.Error.RoleRequired">请至少选择一个角色，否则该成员不属于本店铺。</Text>
     <Text key="Members.Error.Protected">无法停用您本人在当前所在店铺的成员身份。</Text>
+    <Text key="Common.SelectDate">选择日期</Text>
     <Text key="Shop.Setup.CreateTitle">新建店铺</Text>
     <Text key="Shop.Setup.EditTitle">店铺设置</Text>
     <Text key="Shop.Setup.Name">店名</Text>
@@ -484,8 +486,6 @@
     <Text key="CurrencyType.CAD">加元</Text>
     <Text key="CurrencyType.USD">美元</Text>
     <Text key="CurrencyType.CNY">人民币</Text>
-    <Text key="Currency.Title">货币设置</Text>
-    <Text key="Currency.Prompt">请选择本店使用的货币，此设置将应用于所有订单。</Text>
 
     <Text key="ServiceType.Alterations">修改衣服</Text>
     <Text key="ServiceType.CustomMade">定制服务</Text>
@@ -577,7 +577,8 @@
     <Text key="Toolbar.SwitchShop">Switch Shop</Text>
     <Text key="Toolbar.ShopSettings">Shop Settings</Text>
     <Text key="Toolbar.SignOut">Sign Out</Text>
-    <Text key="Toolbar.SignedInAs">{0} ({1})</Text>
+    <Text key="Main.Greeting">Hi {0}, you are logged in as {1}.</Text>
+    <Text key="Main.Records">Order Records</Text>
     <Text key="SignOut.Confirm">Sign out of the application?</Text>
     <Text key="SignOut.CloseEditors">Close all order windows before signing out.</Text>
     <Text key="Shop.Picker.Title">Select Shop</Text>
@@ -664,6 +665,7 @@
     <Text key="Members.Deleted">The account for {0} was deleted.</Text>
     <Text key="Members.Error.RoleRequired">Choose at least one role, or the person is not a member of this shop.</Text>
     <Text key="Members.Error.Protected">You cannot deactivate your own membership of the shop you are working in.</Text>
+    <Text key="Common.SelectDate">Select a date</Text>
     <Text key="Shop.Setup.CreateTitle">Create Shop</Text>
     <Text key="Shop.Setup.EditTitle">Shop Settings</Text>
     <Text key="Shop.Setup.Name">Shop name</Text>
@@ -998,8 +1000,6 @@
     <Text key="CurrencyType.CAD">CAD</Text>
     <Text key="CurrencyType.USD">USD</Text>
     <Text key="CurrencyType.CNY">CNY</Text>
-    <Text key="Currency.Title">Currency Setup</Text>
-    <Text key="Currency.Prompt">Choose the currency used by your shop. This setting applies to all orders.</Text>
 
     <Text key="ServiceType.Alterations">Alterations</Text>
     <Text key="ServiceType.CustomMade">Custom Made Service</Text>

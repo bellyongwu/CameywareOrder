@@ -33,7 +33,7 @@
         <!-- Right-click context menu styling -->
         <Style x:Key="OrderContextMenuStyle" TargetType="ContextMenu">
             <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#D9DCE1"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="4"/>
             <Setter Property="FontSize" Value="13"/>
@@ -47,8 +47,8 @@
 
         <!-- Card container used to lift the detail sections off the flat background -->
         <Style x:Key="DetailSectionCard" TargetType="Border">
-            <Setter Property="Background" Value="#F8FAFC"/>
-            <Setter Property="BorderBrush" Value="#E1E5EA"/>
+            <Setter Property="Background" Value="#F9FAFB"/>
+            <Setter Property="BorderBrush" Value="#E5E7EB"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="14"/>
@@ -57,14 +57,14 @@
 
         <!-- Column header styling for the orders ListView/GridView -->
         <Style x:Key="OrderListHeaderStyle" TargetType="GridViewColumnHeader">
-            <Setter Property="Background" Value="#2C3E50"/>
+            <Setter Property="Background" Value="#4F46E5"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="FontSize" Value="13"/>
             <Setter Property="Height" Value="38"/>
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Padding" Value="10,0"/>
-            <Setter Property="BorderBrush" Value="#22303C"/>
+            <Setter Property="BorderBrush" Value="#6D68EA"/>
             <Setter Property="BorderThickness" Value="0,0,1,0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="ContentTemplate">
@@ -72,7 +72,7 @@
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
-                            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="#9FD0FF"
+                            <TextBlock VerticalAlignment="Center" FontSize="11" Foreground="#DDD6FE"
                                        Text="{Binding Column.(local:OrderColumnSort.SortGlyph), RelativeSource={RelativeSource AncestorType=GridViewColumnHeader}}"/>
                         </StackPanel>
                     </DataTemplate>
@@ -92,11 +92,11 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ListViewItem">
-                        <Border x:Name="Bd" Background="Transparent" BorderBrush="#ECEFF2" BorderThickness="0,0,0,1" SnapsToDevicePixels="True">
+                        <Border x:Name="Bd" Background="Transparent" BorderBrush="#F3F4F6" BorderThickness="0,0,0,1" SnapsToDevicePixels="True">
                             <Grid>
                                 <!-- Selection/focus color that fades in and out (Requirement D) -->
-                                <Border x:Name="Highlight" Background="#D6E9F8" Opacity="0" SnapsToDevicePixels="True"/>
-                                <Border x:Name="Accent" Width="4" HorizontalAlignment="Left" Background="#2980B9" Opacity="0"/>
+                                <Border x:Name="Highlight" Background="#EEF2FF" Opacity="0" SnapsToDevicePixels="True"/>
+                                <Border x:Name="Accent" Width="4" HorizontalAlignment="Left" Background="#4F46E5" Opacity="0"/>
                                 <GridViewRowPresenter Content="{TemplateBinding Content}"
                                                       Columns="{TemplateBinding GridView.ColumnCollection}"
                                                       VerticalAlignment="Center"
@@ -105,7 +105,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#F3F7FB"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#F9FAFB"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
                                 <Trigger.EnterActions>
@@ -145,19 +145,20 @@
     <DockPanel>
 
         <!-- ── Header ──────────────────────────────────────────────────── -->
-        <Border DockPanel.Dock="Top" Background="#2C3E50" Padding="16,10">
+        <Border DockPanel.Dock="Top" Background="{StaticResource HeaderGradientBrush}" Padding="20,13">
             <Grid>
                 <!-- The open shop's own name, in the current UI language. Falls back to the
                      Main.HeaderTitle string when no shop is open, so it never renders blank. -->
                 <TextBlock Text="{Binding Source={x:Static svc:ShopContext.Instance}, Path=CurrentName, Mode=OneWay}" Foreground="White"
-                           FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Main.HeaderSubtitle], Mode=OneWay}" Foreground="#7F8C8D"
-                           FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                           FontSize="22" FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Main.HeaderSubtitle], Mode=OneWay}"
+                           Foreground="{StaticResource TextOnHeaderSubtleBrush}"
+                           FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
         <!-- ── Status bar ──────────────────────────────────────────────── -->
-        <StatusBar DockPanel.Dock="Bottom" Background="#ECF0F1">
+        <StatusBar DockPanel.Dock="Bottom" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0">
             <StatusBarItem>
                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[StatusBar.Label], Mode=OneWay}" Margin="4,0,8,0" FontWeight="SemiBold"/>
             </StatusBarItem>
@@ -175,15 +176,33 @@
             </StatusBarItem>
         </StatusBar>
 
-        <!-- ── Toolbar ─────────────────────────────────────────────────── -->
-        <ToolBar DockPanel.Dock="Top" Background="#F5F6FA">
-                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.NewOrder], Mode=OneWay}" Click="OnAddOrderClick"   Padding="10,4" Margin="2"/>
-                <Button x:Name="EditOrderButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnEditOrderClick"  Padding="10,4" Margin="2"
-                    IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility},
-                                        ConverterParameter=NotNull}"/>
-                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Command="{Binding DeleteOrderCommand}" Padding="10,4" Margin="2"/>
-            <Separator/>
-                <Menu Background="Transparent" VerticalAlignment="Center">
+        <!-- ── System bar ──────────────────────────────────────────────────
+             SYSTEM concerns only. Everything that acts on an ORDER moved into the records panel
+             below, next to the records it acts on. A Border + Grid rather than a ToolBar, because a
+             ToolBar cannot right-align part of its content and adds an overflow chevron nobody
+             asked for. -->
+        <Border DockPanel.Dock="Top" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1"
+                Padding="16,9">
+            <!-- Laid out in COLUMNS rather than as a left/right pair of stacks, so the visual order
+                 is set by Grid.Column and the 本地配置 block below can keep its place in the file
+                 while sitting second on screen. An Auto column collapses to nothing when its child
+                 is hidden, so the language pair leaves no gap for the users who never see it.
+
+                 本地配置 sits well BEFORE 店铺成员, not last: its drop-down opens down-and-left from
+                 the item, so the further right it sits the more it fights the window edge. Keeping
+                 controls to its right leaves the menu room to open normally, which is why the
+                 right-aligned menu variant this once needed could be dropped again. -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <Menu Grid.Column="1" Background="Transparent" VerticalAlignment="Center" Margin="0,0,18,0">
                     <MenuItem Padding="10,4"
                               AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalConfig], Mode=OneWay}"
                               ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalConfig], Mode=OneWay}">
@@ -205,7 +224,9 @@
                         <!-- Administrators only; accounts span every shop. -->
                         <MenuItem x:Name="UserManagementMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.UserManagement], Mode=OneWay}" Click="OnUserManagementClick"/>
                         <Separator x:Name="ConfigSeparator"/>
-                        <MenuItem x:Name="CurrencySettingMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CurrencySetting], Mode=OneWay}" Click="OnCurrencySettingClick"/>
+                        <!-- 货币设置 used to sit here. The currency is now part of 店铺设置, where it
+                             belongs — it is a property OF a shop, and two places to set one value is
+                             one place too many. -->
                         <MenuItem x:Name="MeasurementTermsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.MeasurementTerms], Mode=OneWay}" Click="OnMeasurementTermsClick"/>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick"
@@ -246,10 +267,21 @@
                         </MenuItem>
                     </MenuItem>
                 </Menu>
-            <Separator/>
+
+                <!-- The greeting leads: it names who is signed in, which is the first thing the bar
+                     should answer. Everything after it is what you can do as that person. -->
+                <TextBlock x:Name="GreetingText" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,24,0"
+                           HorizontalAlignment="Left"
+                           Foreground="#4B5563" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                <!-- The language pair is hidden in code for non-administrators, who run in the
+                     language their shop is configured for. -->
+                <TextBlock x:Name="LanguageSwitchLabel" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Language], Mode=OneWay}"
+                           VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#6B7280" FontSize="13"/>
+                <ComboBox x:Name="LanguageSwitchBox" Grid.Column="3" Width="132" Margin="0,0,12,0" VerticalAlignment="Center"
+                          SelectionChanged="OnLanguageChanged"/>
                 <!-- The open shop's roster. Manager + administrator only; hidden in code. The glyph
                      is a vector rather than an image so it stays crisp at any DPI and needs no asset. -->
-                <Button x:Name="StoreMembersButton" Click="OnStoreMembersClick" Padding="8,4" Margin="2"
+                <Button x:Name="StoreMembersButton" Grid.Column="4" Click="OnStoreMembersClick" Padding="12,7" Margin="0,0,10,0"
                         ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Title], Mode=OneWay}"
                         AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Title], Mode=OneWay}">
                     <StackPanel Orientation="Horizontal">
@@ -270,19 +302,7 @@
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-            <Separator/>
-                <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Refresh], Mode=OneWay}" Command="{Binding LoadOrdersCommand}"  Padding="10,4" Margin="2"/>
-            <Separator/>
-                <!-- Both hidden in code for non-administrators, who run in the language their shop
-                     is configured for. -->
-                <TextBlock x:Name="LanguageSwitchLabel" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Language], Mode=OneWay}" VerticalAlignment="Center" Margin="8,0,4,0"/>
-            <ComboBox x:Name="LanguageSwitchBox" Width="130" Margin="2" VerticalAlignment="Center" SelectionChanged="OnLanguageChanged"/>
-            <Separator/>
-                <!-- Signed-in user, then sign out. The glyph is a vector rather than an image so it
-                     stays crisp at any DPI and needs no asset. -->
-                <TextBlock x:Name="SignedInUserText" VerticalAlignment="Center" Margin="6,0,4,0"
-                           Foreground="#4B5563" FontSize="12"/>
-                <Button Click="OnSignOutClick" Padding="8,4" Margin="2"
+                <Button Grid.Column="5" Click="OnSignOutClick" Padding="12,7"
                         ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}"
                         AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}">
                     <StackPanel Orientation="Horizontal">
@@ -299,24 +319,60 @@
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-        </ToolBar>
+            </Grid>
+        </Border>
 
         <!-- ── Main area ───────────────────────────────────────────────── -->
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="65*"/>
+                <ColumnDefinition Width="70*"/>
                 <ColumnDefinition Width="5"/>
-                <ColumnDefinition Width="35*" MinWidth="200"/>
+                <ColumnDefinition Width="30*" MinWidth="200"/>
             </Grid.ColumnDefinitions>
 
-            <Grid Grid.Column="0" Margin="8">
+            <Grid Grid.Column="0" Margin="14,14,10,14">
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Background="#F8FAFC" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,8">
+                <!-- ── Records: title, count, and the actions that act on a record ──────
+                     These four used to live in the top toolbar, two panels away from the list they
+                     operate on. They belong to the records, so they sit with the records. -->
+                <Border Grid.Row="0" Background="White" BorderBrush="#E5E7EB" BorderThickness="1"
+                        CornerRadius="10" Padding="16,13" Margin="0,0,0,10">
+                    <Grid>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Main.Records], Mode=OneWay}"
+                                       FontSize="15" FontWeight="Bold" Foreground="#111827" VerticalAlignment="Center"/>
+                            <Border CornerRadius="10" Background="#EEF2FF" Padding="9,3" Margin="10,0,0,0"
+                                    VerticalAlignment="Center">
+                                <TextBlock Text="{Binding FilteredCount}" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="#3730A3"/>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                            <Button Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Padding="18,8"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.NewOrder], Mode=OneWay}"
+                                    Click="OnAddOrderClick"/>
+                            <Button x:Name="EditOrderButton" Margin="0,0,8,0"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}"
+                                    Click="OnEditOrderClick"
+                                    IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility},
+                                                        ConverterParameter=NotNull}"/>
+                            <Button Style="{StaticResource DangerButton}" Margin="0,0,8,0"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}"
+                                    Command="{Binding DeleteOrderCommand}"/>
+                            <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Refresh], Mode=OneWay}"
+                                    Command="{Binding LoadOrdersCommand}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="10" Padding="16,12" Margin="0,0,0,10">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -348,7 +404,7 @@
                         <StackPanel Grid.Column="6" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.RecordFontSize], Mode=OneWay}" VerticalAlignment="Center" Margin="16,0,8,0"/>
                             <Slider x:Name="RecordFontSizeSlider" Width="150" VerticalAlignment="Center"
-                                    Minimum="12" Maximum="40" Value="20"
+                                    Minimum="12" Maximum="40" Value="18"
                                     TickFrequency="1" IsSnapToTickEnabled="True"
                                     SmallChange="1" LargeChange="2"/>
                             <TextBlock Text="{Binding Value, ElementName=RecordFontSizeSlider, StringFormat={}{0:0}px}" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="40"/>
@@ -356,7 +412,7 @@
                     </Grid>
                 </Border>
 
-                <ListView Grid.Row="1"
+                <ListView Grid.Row="2"
                           x:Name="OrdersListView"
                           ItemsSource="{Binding Orders}"
                           SelectedItem="{Binding SelectedOrder}"
@@ -373,50 +429,68 @@
                         <ContextMenu Style="{StaticResource OrderContextMenuStyle}">
                             <MenuItem x:Name="EditContextMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnContextEditClick" Style="{StaticResource OrderMenuItemStyle}">
                                 <MenuItem.Icon>
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70F;" FontSize="13" Foreground="#2980B9"/>
+                                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE70F;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyOrder], Mode=OneWay}" Click="OnContextCopyClick" Style="{StaticResource OrderMenuItemStyle}">
                                 <MenuItem.Icon>
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8C8;" FontSize="13" Foreground="#2980B9"/>
+                                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8C8;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Click="OnContextDeleteClick" Style="{StaticResource OrderMenuItemStyle}">
                                 <MenuItem.Icon>
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="13" Foreground="#C0392B"/>
+                                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE74D;" Foreground="{StaticResource DangerBrush}"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <Separator/>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnContextPrintClick" Style="{StaticResource OrderMenuItemStyle}">
                                 <MenuItem.Icon>
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE749;" FontSize="13" Foreground="#2980B9"/>
+                                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE749;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnContextPrintMeasurementsClick" Style="{StaticResource OrderMenuItemStyle}"
                                       Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}">
                                 <MenuItem.Icon>
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE1D3;" FontSize="13" Foreground="#2980B9"/>
+                                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE1D3;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnContextPrintReceiptAndMeasurementsClick" Style="{StaticResource OrderMenuItemStyle}"
                                       Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}">
                                 <MenuItem.Icon>
-                                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE749;" FontSize="13" Foreground="#2980B9"/>
+                                    <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE749;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                         </ContextMenu>
                     </ListView.ContextMenu>
                     <ListView.View>
                         <GridView ColumnHeaderContainerStyle="{StaticResource OrderListHeaderStyle}">
-                            <GridViewColumn local:OrderColumnSort.SortKey="OrderNumber" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Width="200" DisplayMemberBinding="{Binding OrderNumber}"/>
+                            <GridViewColumn local:OrderColumnSort.SortKey="OrderNumber" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Width="200">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Style="{StaticResource NumericCellText}" Text="{Binding OrderNumber}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                             <GridViewColumn local:OrderColumnSort.SortKey="CustomerName" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Width="170" DisplayMemberBinding="{Binding CustomerName}"/>
-                            <GridViewColumn local:OrderColumnSort.SortKey="PhoneNumber" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" Width="150" DisplayMemberBinding="{Binding PhoneNumber}"/>
-                            <GridViewColumn local:OrderColumnSort.SortKey="OrderDate" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Width="130" DisplayMemberBinding="{Binding OrderDate, StringFormat=yyyy-MM-dd}"/>
+                            <GridViewColumn local:OrderColumnSort.SortKey="PhoneNumber" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" Width="150">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Style="{StaticResource NumericCellText}" Text="{Binding PhoneNumber}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
+                            <GridViewColumn local:OrderColumnSort.SortKey="OrderDate" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Width="130">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Style="{StaticResource NumericCellText}" Text="{Binding OrderDate, StringFormat=yyyy-MM-dd}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                             <GridViewColumn local:OrderColumnSort.SortKey="Status" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Width="110" DisplayMemberBinding="{Binding Status, Converter={StaticResource OrderStatusToLocalizedTextConverter}}"/>
                             <GridViewColumn local:OrderColumnSort.SortKey="TotalAmount" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TotalAmount], Mode=OneWay}" Width="150">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock VerticalAlignment="Center">
+                                        <TextBlock Style="{StaticResource NumericCellText}" FontWeight="SemiBold">
                                             <TextBlock.Text>
                                                 <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
                                                     <Binding Path="TotalAmount"/>
@@ -427,7 +501,7 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn local:OrderColumnSort.SortKey="BalanceStatus" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Width="180" DisplayMemberBinding="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}"/>
+                            <GridViewColumn local:OrderColumnSort.SortKey="BalanceStatus" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Width="270" DisplayMemberBinding="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}"/>
                             <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomMadeFlag], Mode=OneWay}" Width="170">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
@@ -445,7 +519,7 @@
                     </ListView.View>
                 </ListView>
 
-                <DockPanel Grid.Row="2" Margin="0,8,0,0">
+                <DockPanel Grid.Row="3" Margin="0,10,0,0">
                     <TextBlock Text="{Binding PageSummary}" VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right">
                         <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Paging.Previous], Mode=OneWay}" Command="{Binding PreviousPageCommand}" Margin="0,0,8,0" Padding="10,4"/>
@@ -459,13 +533,13 @@
             <!-- Detail panel (visible only when an order is selected) -->
             <ScrollViewer Grid.Column="2" Margin="0,8,8,8"
                           VerticalScrollBarVisibility="Auto"
-                          Background="#EDF1F5"
+                          Background="#F9FAFB"
                           Visibility="{Binding SelectedOrder, Converter={StaticResource NullToVisibility}}">
                 <Border Background="White" CornerRadius="10" Margin="6" Padding="20"
-                        BorderBrush="#E1E5EA" BorderThickness="1">
+                        BorderBrush="#E5E7EB" BorderThickness="1">
                 <StackPanel>
-                    <Border Margin="0,0,0,14" Padding="0,0,0,10" BorderBrush="#2980B9" BorderThickness="0,0,0,2">
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.Title], Mode=OneWay}" FontSize="17" FontWeight="Bold" Foreground="#2C3E50"/>
+                    <Border Margin="0,0,0,14" Padding="0,0,0,10" BorderBrush="#4F46E5" BorderThickness="0,0,0,2">
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.Title], Mode=OneWay}" FontSize="18" FontWeight="Bold" Foreground="#4F46E5"/>
                     </Border>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}" Foreground="#777" FontSize="11"/>
@@ -498,7 +572,7 @@
                     <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource OrderServicesSummaryConverter}}" Margin="0,2,0,10" FontSize="13"/>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TotalAmount], Mode=OneWay}" Foreground="#777" FontSize="11"/>
-                    <TextBlock Margin="0,2,0,10" FontSize="14" FontWeight="Bold" Foreground="#27AE60">
+                    <TextBlock Margin="0,2,0,10" FontSize="15" FontWeight="Bold" Foreground="#047857">
                         <TextBlock.Text>
                             <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
                                 <Binding Path="SelectedOrder.TotalAmount"/>
@@ -515,7 +589,7 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Downpayment], Mode=OneWay}" Foreground="#777" FontSize="11"/>
-                            <TextBlock Margin="0,2,0,0" FontSize="13" FontWeight="SemiBold" Foreground="#27AE60">
+                            <TextBlock Margin="0,2,0,0" FontSize="13" FontWeight="SemiBold" Foreground="#047857">
                                 <TextBlock.Text>
                                     <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
                                         <Binding Path="SelectedOrder.TotalDownpayment"/>
@@ -526,7 +600,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="1">
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedDownpayment], Mode=OneWay}" Foreground="#777" FontSize="11"/>
-                            <TextBlock Margin="0,2,0,0" FontSize="13" FontWeight="SemiBold" Foreground="#27AE60">
+                            <TextBlock Margin="0,2,0,0" FontSize="13" FontWeight="SemiBold" Foreground="#047857">
                                 <TextBlock.Text>
                                     <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
                                         <Binding Path="SelectedOrder.ReceivedDownpayment"/>
@@ -545,7 +619,7 @@
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0">
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" Foreground="#777" FontSize="11"/>
-                            <TextBlock Margin="0,2,0,0" FontSize="13" FontWeight="SemiBold" Foreground="#C0392B">
+                            <TextBlock Margin="0,2,0,0" FontSize="13" FontWeight="SemiBold" Foreground="#B91C1C">
                                 <TextBlock.Text>
                                     <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
                                         <Binding Path="SelectedOrder.FinalBalance"/>
@@ -556,7 +630,7 @@
                         </StackPanel>
                         <StackPanel Grid.Column="1">
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedFinalBalance], Mode=OneWay}" Foreground="#777" FontSize="11"/>
-                            <TextBlock Margin="0,2,0,0" FontSize="13" FontWeight="SemiBold" Foreground="#27AE60">
+                            <TextBlock Margin="0,2,0,0" FontSize="13" FontWeight="SemiBold" Foreground="#047857">
                                 <TextBlock.Text>
                                     <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">
                                         <Binding Path="SelectedOrder.ReceivedFinalBalance"/>
@@ -608,7 +682,7 @@
                     <!-- Alterations service -->
                     <Border Style="{StaticResource DetailSectionCard}" Visibility="{Binding SelectedOrder.AlterationAddedToReceipt, Converter={StaticResource BoolToVisibility}}">
                         <StackPanel>
-                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Alterations], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#2C3E50" Margin="0,4,0,4"/>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Alterations], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#4F46E5" Margin="0,4,0,4"/>
                             <TextBlock Text="{Binding SelectedOrder.ServiceDetails, Converter={StaticResource LocalizationLookupConverter}, ConverterParameter=Alteration.Category}" FontSize="12" TextWrapping="Wrap"/>
                             <Grid Margin="0,6,0,0">
                                 <Grid.ColumnDefinitions>
@@ -671,7 +745,7 @@
                             </Style>
                         </Border.Style>
                         <StackPanel>
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.ReadyMade], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#2C3E50" Margin="0,4,0,4"/>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.ReadyMade], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#4F46E5" Margin="0,4,0,4"/>
                     <ItemsControl ItemsSource="{Binding SelectedOrder.Items}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
@@ -780,7 +854,7 @@
                             </Style>
                         </Border.Style>
                         <StackPanel>
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.CustomMadeRecords], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#2C3E50" Margin="0,0,0,8"/>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Detail.CustomMadeRecords], Mode=OneWay}" FontSize="13" FontWeight="SemiBold" Foreground="#4F46E5" Margin="0,0,0,8"/>
 
                     <ItemsControl ItemsSource="{Binding SelectedOrder.CustomMadeRecords}">
                         <ItemsControl.ItemTemplate>

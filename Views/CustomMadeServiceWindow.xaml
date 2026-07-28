@@ -17,8 +17,8 @@
         <Style TargetType="TextBox">
             <Style.Triggers>
                 <Trigger Property="IsReadOnly" Value="True">
-                    <Setter Property="Background" Value="#F0F0F0"/>
-                    <Setter Property="Foreground" Value="#808080"/>
+                    <Setter Property="Background" Value="#F3F4F6"/>
+                    <Setter Property="Foreground" Value="#9CA3AF"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -27,8 +27,8 @@
             <Setter Property="Padding" Value="12,5"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#B8C2CC"/>
-            <Setter Property="Background" Value="#F7F9FB"/>
-            <Setter Property="Foreground" Value="#2C3E50"/>
+            <Setter Property="Background" Value="#F9FAFB"/>
+            <Setter Property="Foreground" Value="#4F46E5"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -41,8 +41,8 @@
                                 <Setter TargetName="Border" Property="Background" Value="#EEF3F7"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="#2980B9"/>
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#2980B9"/>
+                                <Setter TargetName="Border" Property="Background" Value="#4F46E5"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="#4F46E5"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -56,7 +56,7 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="#2980B9"/>
+            <Setter Property="Foreground" Value="#4F46E5"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -79,7 +79,7 @@
             </Style.Triggers>
         </Style>
         <Style x:Key="LinkDangerButtonStyle" TargetType="Button" BasedOn="{StaticResource LinkButtonStyle}">
-            <Setter Property="Foreground" Value="#C0392B"/>
+            <Setter Property="Foreground" Value="#B91C1C"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
                     <Setter Property="Foreground" Value="#96281B"/>
@@ -96,7 +96,7 @@
                 <DockPanel LastChildFill="True">
                     <!-- Square thumbnail: center-cropped via UniformToFill + rounded clip; click to view -->
                     <Border DockPanel.Dock="Left" Width="60" Height="60" Margin="0,0,12,0"
-                            Background="#F0F2F5" BorderBrush="#D9DCE1" BorderThickness="1"
+                            Background="#F0F2F5" BorderBrush="#E5E7EB" BorderThickness="1"
                             CornerRadius="8" ClipToBounds="True" Cursor="Hand"
                             ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[CustomMade.Documents.View], Mode=OneWay}"
                             MouseLeftButtonUp="OnViewDocumentClick">
@@ -109,27 +109,27 @@
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button Style="{StaticResource LinkButtonStyle}" Margin="0,0,14,0" Click="OnViewDocumentClick">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE890;" FontSize="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE890;" Margin="0,0,5,0"/>
                                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[CustomMade.Documents.View], Mode=OneWay}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource LinkButtonStyle}" Margin="0,0,14,0" Click="OnDownloadDocumentClick">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE896;" FontSize="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE896;" Margin="0,0,5,0"/>
                                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[CustomMade.Documents.Download], Mode=OneWay}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource LinkButtonStyle}" Margin="0,0,14,0" Click="OnReplaceDocumentClick"
                                 IsEnabled="{Binding CanEditDocuments, RelativeSource={RelativeSource AncestorType=Window}}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72C;" FontSize="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE72C;" Margin="0,0,5,0"/>
                                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[CustomMade.Documents.Replace], Mode=OneWay}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Style="{StaticResource LinkDangerButtonStyle}" Click="OnDeleteDocumentClick"
                                 IsEnabled="{Binding CanEditDocuments, RelativeSource={RelativeSource AncestorType=Window}}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE74D;" Margin="0,0,5,0"/>
                                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[CustomMade.Documents.Delete], Mode=OneWay}" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -153,7 +153,7 @@
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="FormRoot">
-                <Border Padding="14" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6">
+                <Border Padding="14" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Customer.Measurements.Title], Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
 
@@ -199,7 +199,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6">
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
                     <StackPanel>
                         <DockPanel Margin="0,0,0,12">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -209,7 +209,7 @@
                             </StackPanel>
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Measures], Mode=OneWay}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </DockPanel>
-                        <TextBlock x:Name="MeasurementContextText" Foreground="#2C3E50" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                        <TextBlock x:Name="MeasurementContextText" Foreground="#4F46E5" FontWeight="SemiBold" Margin="0,0,0,12"/>
                         <StackPanel>
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.SelectGarments], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,8"/>
                             <WrapPanel x:Name="GarmentSelectorPanel"/>
@@ -220,7 +220,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6">
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.CustomPrice], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
                         <Grid>
@@ -243,11 +243,11 @@
                     </StackPanel>
                 </Border>
 
-                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6">
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[CustomMade.Documents.Title], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,12"/>
 
-                        <Border Margin="0,0,0,12" Padding="12" Background="#FAFBFC" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="6">
+                        <Border Margin="0,0,0,12" Padding="12" Background="#FAFBFC" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,6">
                                     <Button x:Name="HandwritingUploadButton" DockPanel.Dock="Right"
@@ -255,7 +255,7 @@
                                             Style="{StaticResource LinkButtonStyle}" Click="OnUploadDocumentClick"
                                             IsEnabled="{Binding CanEditDocuments, RelativeSource={RelativeSource AncestorType=Window}}">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE898;" FontSize="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                            <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE898;" Margin="0,0,5,0"/>
                                             <TextBlock x:Name="HandwritingUploadText" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
@@ -265,7 +265,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Margin="0,0,0,12" Padding="12" Background="#FAFBFC" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="6">
+                        <Border Margin="0,0,0,12" Padding="12" Background="#FAFBFC" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,6">
                                     <Button x:Name="FabricUploadButton" DockPanel.Dock="Right"
@@ -273,7 +273,7 @@
                                             Style="{StaticResource LinkButtonStyle}" Click="OnUploadDocumentClick"
                                             IsEnabled="{Binding CanEditDocuments, RelativeSource={RelativeSource AncestorType=Window}}">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE898;" FontSize="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                            <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE898;" Margin="0,0,5,0"/>
                                             <TextBlock x:Name="FabricUploadText" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
@@ -283,7 +283,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Margin="0,0,0,12" Padding="12" Background="#FAFBFC" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="6">
+                        <Border Margin="0,0,0,12" Padding="12" Background="#FAFBFC" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,6">
                                     <Button x:Name="PhotoUploadButton" DockPanel.Dock="Right"
@@ -291,7 +291,7 @@
                                             Style="{StaticResource LinkButtonStyle}" Click="OnUploadDocumentClick"
                                             IsEnabled="{Binding CanEditDocuments, RelativeSource={RelativeSource AncestorType=Window}}">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE898;" FontSize="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                            <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE898;" Margin="0,0,5,0"/>
                                             <TextBlock x:Name="PhotoUploadText" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
@@ -301,7 +301,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Padding="12" Background="#FAFBFC" BorderBrush="#E1E5EA" BorderThickness="1" CornerRadius="6">
+                        <Border Padding="12" Background="#FAFBFC" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,6">
                                     <Button x:Name="OtherUploadButton" DockPanel.Dock="Right"
@@ -309,7 +309,7 @@
                                             Style="{StaticResource LinkButtonStyle}" Click="OnUploadDocumentClick"
                                             IsEnabled="{Binding CanEditDocuments, RelativeSource={RelativeSource AncestorType=Window}}">
                                         <StackPanel Orientation="Horizontal">
-                                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE898;" FontSize="13" Margin="0,0,5,0" VerticalAlignment="Center"/>
+                                            <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE898;" Margin="0,0,5,0"/>
                                             <TextBlock x:Name="OtherUploadText" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
@@ -321,19 +321,19 @@
                     </StackPanel>
                 </Border>
 
-                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#D9DCE1" BorderThickness="1" CornerRadius="6">
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.DownloadMeasurement], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Download.Language.Label], Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,12,0"/>
                             <RadioButton x:Name="DownloadChineseRadio" GroupName="DownloadLanguage" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Download.Language.Chinese], Mode=OneWay}" IsChecked="True" VerticalAlignment="Center" Margin="0,0,16,0"/>
                             <RadioButton x:Name="DownloadEnglishRadio" GroupName="DownloadLanguage" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Download.Language.English], Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                            <Button x:Name="DownloadSubmitButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownloadSubmit], Mode=OneWay}" Width="110" Height="30" Padding="12,5" Click="OnDownloadSubmitClick" Background="#2980B9" Foreground="White"/>
+                            <Button x:Name="DownloadSubmitButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownloadSubmit], Mode=OneWay}" Width="110" Height="30" Padding="12,5" Click="OnDownloadSubmitClick" Background="#4F46E5" Foreground="White"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <TextBlock x:Name="ErrorText" Foreground="#E74C3C" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                <TextBlock x:Name="ErrorText" Foreground="#DC2626" TextWrapping="Wrap" Margin="0,12,0,0"/>
             </StackPanel>
         </ScrollViewer>
 
@@ -343,7 +343,7 @@
                        Margin="0,0,10,0"
                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.ReadOnlyNotice], Mode=OneWay}"/>
             <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Cancel], Mode=OneWay}" Width="82" Height="32" Margin="0,0,10,0" IsCancel="True" Click="OnCancelClick"/>
-            <Button x:Name="SaveButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Save], Mode=OneWay}" Width="82" Height="32" IsDefault="True" Click="OnSaveClick" Background="#2980B9" Foreground="White"/>
+            <Button x:Name="SaveButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Save], Mode=OneWay}" Width="82" Height="32" IsDefault="True" Click="OnSaveClick" Background="#4F46E5" Foreground="White"/>
         </StackPanel>
     </Grid>
 </Window>

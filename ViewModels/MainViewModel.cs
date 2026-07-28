@@ -52,6 +52,7 @@ public class MainViewModel : INotifyPropertyChanged
     {
         StatusMessage = _localization["Status.Ready"];
         OnPropertyChanged(nameof(PageSummary));
+        OnPropertyChanged(nameof(FilteredCount));
     }
 
     /// <summary>
@@ -143,6 +144,7 @@ public class MainViewModel : INotifyPropertyChanged
             _currentPage = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(PageSummary));
+            OnPropertyChanged(nameof(FilteredCount));
             OnPropertyChanged(nameof(CanGoToPreviousPage));
             OnPropertyChanged(nameof(CanGoToNextPage));
         }
@@ -159,6 +161,7 @@ public class MainViewModel : INotifyPropertyChanged
             _totalPages = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(PageSummary));
+            OnPropertyChanged(nameof(FilteredCount));
             OnPropertyChanged(nameof(CanGoToPreviousPage));
             OnPropertyChanged(nameof(CanGoToNextPage));
         }
@@ -167,6 +170,13 @@ public class MainViewModel : INotifyPropertyChanged
     public IReadOnlyList<int> PageSizeOptions { get; } = new[] { 20, 50, 100 };
 
     public string PageSummary => _localization.Format("Paging.Summary", CurrentPage, TotalPages, _filteredCount);
+
+    /// <summary>
+    /// How many orders match the current search and status filter, across every page — the badge
+    /// beside the records heading. Kept in step with <see cref="PageSummary"/>, which is derived
+    /// from the same count.
+    /// </summary>
+    public int FilteredCount => _filteredCount;
 
     public bool CanGoToPreviousPage => CurrentPage > 1;
 
@@ -337,6 +347,7 @@ public class MainViewModel : INotifyPropertyChanged
             SelectedOrder = Orders.FirstOrDefault();
 
         OnPropertyChanged(nameof(PageSummary));
+        OnPropertyChanged(nameof(FilteredCount));
         OnPropertyChanged(nameof(CanGoToPreviousPage));
         OnPropertyChanged(nameof(CanGoToNextPage));
     }

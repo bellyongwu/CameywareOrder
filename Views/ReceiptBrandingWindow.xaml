@@ -29,7 +29,7 @@
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Background" Value="#EAF1F8"/>
-                                <Setter TargetName="Bd" Property="BorderBrush" Value="#2980B9"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#4F46E5"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -56,7 +56,7 @@
 
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">
             <Setter Property="Padding" Value="22,8"/>
-            <Setter Property="Background" Value="#2980B9"/>
+            <Setter Property="Background" Value="#4F46E5"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -69,7 +69,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#1F6690"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#4338CA"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -93,7 +93,7 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#EEF2F6"/>
+                                <Setter TargetName="Bd" Property="Background" Value="#F9FAFB"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -114,9 +114,9 @@
         <!-- Heading -->
         <StackPanel Grid.Row="0" Margin="0,0,0,14">
             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Branding.Title], Mode=OneWay}"
-                       FontSize="20" FontWeight="Bold" Foreground="#25313C"/>
+                       FontSize="18" FontWeight="Bold" Foreground="#25313C"/>
             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Branding.Description], Mode=OneWay}"
-                       FontSize="12.5" Foreground="#7A8794" Margin="0,3,0,0" TextWrapping="Wrap"/>
+                       FontSize="13" Foreground="#7A8794" Margin="0,3,0,0" TextWrapping="Wrap"/>
         </StackPanel>
 
         <!-- Logo -->
@@ -178,13 +178,13 @@
                 <Border Width="1" Background="#E2E7EC" Margin="8,2"/>
 
                 <Button Style="{StaticResource RibbonButtonStyle}" Click="OnAlignLeftClick" ToolTip="Align left">
-                    <TextBlock Text="&#x2261;" FontSize="17"/>
+                    <TextBlock Text="&#x2261;" FontSize="18"/>
                 </Button>
                 <Button Style="{StaticResource RibbonButtonStyle}" Click="OnAlignCenterClick" ToolTip="Align center">
-                    <TextBlock Text="&#x2263;" FontSize="17"/>
+                    <TextBlock Text="&#x2263;" FontSize="18"/>
                 </Button>
                 <Button Style="{StaticResource RibbonButtonStyle}" Click="OnAlignRightClick" ToolTip="Align right">
-                    <TextBlock Text="&#x2261;" FontSize="17" FlowDirection="RightToLeft"/>
+                    <TextBlock Text="&#x2261;" FontSize="18" FlowDirection="RightToLeft"/>
                 </Button>
 
                 <Border Width="1" Background="#E2E7EC" Margin="8,2"/>
@@ -192,10 +192,10 @@
                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Branding.Color], Mode=OneWay}"
                            VerticalAlignment="Center" Foreground="#5A6773" Margin="2,0,6,0"/>
                 <Button Style="{StaticResource ColorSwatchStyle}" Background="#000000" Tag="#000000" Click="OnColorSwatchClick"/>
-                <Button Style="{StaticResource ColorSwatchStyle}" Background="#7F8C8D" Tag="#7F8C8D" Click="OnColorSwatchClick"/>
-                <Button Style="{StaticResource ColorSwatchStyle}" Background="#C0392B" Tag="#C0392B" Click="OnColorSwatchClick"/>
-                <Button Style="{StaticResource ColorSwatchStyle}" Background="#2980B9" Tag="#2980B9" Click="OnColorSwatchClick"/>
-                <Button Style="{StaticResource ColorSwatchStyle}" Background="#27AE60" Tag="#27AE60" Click="OnColorSwatchClick"/>
+                <Button Style="{StaticResource ColorSwatchStyle}" Background="#9CA3AF" Tag="#9CA3AF" Click="OnColorSwatchClick"/>
+                <Button Style="{StaticResource ColorSwatchStyle}" Background="#B91C1C" Tag="#B91C1C" Click="OnColorSwatchClick"/>
+                <Button Style="{StaticResource ColorSwatchStyle}" Background="#4F46E5" Tag="#4F46E5" Click="OnColorSwatchClick"/>
+                <Button Style="{StaticResource ColorSwatchStyle}" Background="#047857" Tag="#047857" Click="OnColorSwatchClick"/>
                 <Button Style="{StaticResource ColorSwatchStyle}" Background="#D4AC0D" Tag="#D4AC0D" Click="OnColorSwatchClick"/>
             </StackPanel>
         </Border>
@@ -205,7 +205,7 @@
 
         <!-- Actions -->
         <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-            <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="#27AE60" Margin="0,0,16,0"/>
+            <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="#047857" Margin="0,0,16,0"/>
             <Button Style="{StaticResource SecondaryButtonStyle}" IsCancel="True"
                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Branding.Cancel], Mode=OneWay}"
                     Click="OnCancelClick"/>
