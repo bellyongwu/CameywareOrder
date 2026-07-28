@@ -25,6 +25,9 @@
   <Text key="Toolbar.LocalDatabase">Base de données locale</Text>
   <Text key="Toolbar.Refresh">Actualiser</Text>
   <Text key="Toolbar.Language">Langue</Text>
+  <!-- Singular and plural are separate keys: French, like English, inflects the noun and the verb. -->
+  <Text key="Language.Installed.One">Langue installée : {0}</Text>
+  <Text key="Language.Installed.Many">Langues installées : {0}</Text>
   <Text key="Toolbar.OpenDataFolder">Ouvrir le dossier de données</Text>
   <Text key="Toolbar.CopyDataPath">Copier le chemin de la base de données</Text>
   <Text key="Toolbar.RevealDataFile">Afficher le fichier de base de données</Text>
@@ -176,8 +179,11 @@
   <Text key="Shop.Setup.ContactHint">Facultatif. Le téléphone, le courriel et le site web ne dépendent pas de la langue — toutes les langues affichent la même valeur.</Text>
   <Text key="Shop.Setup.TaxNumber">Numéro de taxe (TPS/TVH)</Text>
   <Text key="Shop.Setup.TaxNumberHint">Facultatif. Imprimé sur les reçus de cette boutique afin qu’ils servent aussi de justificatif fiscal. Un numéro saisi dans l’éditeur d’en-tête et de pied de page remplace celui-ci.</Text>
+  <Text key="Shop.Setup.InstalledLanguages">Langues installées</Text>
+  <Text key="Shop.Setup.InstalledLanguagesHint">Les langues dans lesquelles cette boutique fonctionne. Ses responsables et son personnel peuvent passer de l’une à l’autre ; avec une seule langue installée, aucun sélecteur de langue n’est affiché. Les administrateurs voient toujours toutes les langues.</Text>
+  <Text key="Shop.Setup.InstalledLanguagesRequired">Installez au moins une langue pour cette boutique.</Text>
   <Text key="Shop.Setup.PreferredLanguage">Langue par défaut</Text>
-  <Text key="Shop.Setup.PreferredLanguageHint">Les non-administrateurs utilisent toujours cette boutique dans cette langue.</Text>
+  <Text key="Shop.Setup.PreferredLanguageHint">La langue dans laquelle cette boutique s’ouvre, choisie parmi les langues installées ci-dessus.</Text>
   <Text key="Shop.Setup.Currency">Devise</Text>
   <Text key="Shop.Setup.MeasurementTerms">Mesures</Text>
   <Text key="Shop.Setup.SeedDefaults">Partir de l’ensemble prédéfini</Text>

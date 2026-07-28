@@ -5,6 +5,9 @@ components are added/renamed or the way pieces fit together changes.
 
 ## Stack
 
+- **Languages:** shipped per file under `Settings/System/Languages` and DISCOVERED, but a shop
+  installs a subset — see `Services/ShopLanguages`, which is what every language picker in the app
+  resolves through.
 - **UI:** WPF, `net8.0-windows`, C# with `Nullable` + `ImplicitUsings` enabled.
 - **Persistence:** EF Core 8 + SQLite. Schema is evolved at startup with
   idempotent runtime column guards in addition to the initial migration.
@@ -76,6 +79,8 @@ components are added/renamed or the way pieces fit together changes.
     capabilities resolve against: `CanCreateShops` / `CanManageUsers` / `CanUseDataTools` /
     `CanDeleteAccounts` (administrator, whole-installation) and `CanConfigureShop` /
     `CanManageStoreMembers` (administrator or the open shop's manager).
+    `CanChooseAnyLanguage` (administrator only) means "any SHIPPED language" — NOT "may switch
+    language at all", which is `ShopLanguages`' question now that a shop installs its own set.
     `RoleFor` / `CanAccessShop` / `FilterAccessibleShops` answer per shop and ignore deactivated
     memberships; `StrongestRole` takes the MINIMUM `UserRole` because the enum is ordered
     strongest-first. `Authenticate` returns a `SignInResult` whose `SignInFailure` distinguishes bad
@@ -143,6 +148,20 @@ components are added/renamed or the way pieces fit together changes.
     ordered by the garment's configured term order; per-garment work factored
     into `BuildGarmentSection`). Resolves names via `MeasurementTermsService`;
     used by the 定制服务 list column and the measurement print paths.
+  - `ShopLanguages` — static; the one answer to **which languages this session may pick
+    from**. `Installed(shop)` is the set a branch runs in (never empty: a shop with
+    nothing installed falls back to its `PreferredLanguageCode`, which reproduces the
+    behaviour every shop had before the setting existed; one that has said nothing at
+    all has restricted nothing and gets everything). `Selectable(shop, canChooseAnyLanguage)`
+    narrows that by role — every shipped language for an administrator, the installed set
+    for a manager or staff member. `PreferredCode(shop)` is the language a shop OPENS in:
+    its preference when it installs it, otherwise the first language it does, because the
+    two fields can disagree and a branch must never open in a language its own toggle
+    cannot return to. `InstalledSummary(shop)` is the line under the greeting, and always
+    describes the SHOP rather than an administrator's wider choice.
+    Lives outside both `AuthenticationService` and `ShopContext` because the answer is a
+    product of both. Consumed by `MainWindow`'s toggle, `ShopSetupWindow`,
+    `MeasurementPrintOptionsWindow` and `CustomMadeServiceWindow`'s download panel.
   - `ShopLetterhead` — the letterhead the application GENERATES when the
     header/footer editor has supplied none: `Name`, `Subtitle`, `ContactLines`
     (`ShopLetterheadLine` label+value), `TaxLine`. `Build(localization, languageCode,
@@ -275,7 +294,12 @@ components are added/renamed or the way pieces fit together changes.
 - **Views/**
   - `MainWindow` — split into a SYSTEM bar (本地配置 on the left; greeting, language, 店铺成员 and
     退出登录 on the right) and a RECORDS panel that owns its own action bar (新增/编辑/删除/刷新 plus a
-    count badge bound to `MainViewModel.FilteredCount`). Order list + detail + paging. The list is a **`ListView` +
+    count badge bound to `MainViewModel.FilteredCount`). The greeting block carries a second line
+    naming the languages the open shop installs (`ShopLanguages.InstalledSummary`); the language
+    toggle beside it is scoped by `ShopLanguages.Selectable` and HIDDEN when that leaves one
+    option. Both are rebuilt by `RefreshLanguageScope` from `ApplyRolePermissions`, so a shop
+    switch re-scopes them, and both are re-rendered from `OnLanguageChangedGlobally` because they
+    are written from code rather than bound. Order list + detail + paging. The list is a **`ListView` +
     `GridView`** (not a DataGrid) with a right-click `ListView.ContextMenu`
     (Edit/Copy/Delete/Print) and a `PreviewMouseRightButtonDown` row-select
     `EventSetter`, keyboard shortcuts (`Enter` = open/details, `Delete` = delete
@@ -354,8 +378,9 @@ components are added/renamed or the way pieces fit together changes.
   - `MeasurementTermLanguageWindow` — alt-language name editor popup (one name row
     per `LocalizationService.AvailableLanguages`); returns a langCode→name dict.
   - `MeasurementPrintOptionsWindow` — small pre-print dialog asking for the
-    measurement **language** (radios from `LocalizationService.AvailableLanguages`,
-    default = current) and **unit** (cm default / inch); exposes
+    measurement **language** (radios from `ShopLanguages.Selectable()`, default =
+    current, prompt and radios collapsed together when the shop runs in one language)
+    and **unit** (cm default / inch); exposes
     `SelectedLanguageCode` + `IsInch` (set on Print). Feeds the 打印量身尺寸 /
     打印小票和所有尺寸 print paths (a print method, not save-to-PDF).
   - `ReceiptBrandingWindow` — the 页眉页脚 rich-text editor: a logo card
@@ -400,7 +425,9 @@ components are added/renamed or the way pieces fit together changes.
     toolbar so the role-name switch is not copied a fourth time.
   - `ShopSetupWindow` — creates a shop and edits one (本地配置 → 店铺设置). A scrolling card
     layout: shop identity (per-language names, **per-language address**, **phone / email / website**,
-    preferred language, currency), the **payment /
+    **installed languages** — a tick box per shipped language, at least one required, with the
+    preferred-language picker listing ONLY what is ticked so "a shop opens in a language it runs in"
+    is enforced by what the control contains rather than validated afterwards — currency), the **payment /
     tax matrix** (one row per `PaymentTaxRules.ConfigurableMethods` entry — tax free vs. charge at
     its own rate, generated from a `PaymentTaxRow` view-model so a method added later needs no
     XAML change), the **receipt-number format** (prefix / padding / next number / mode with a live
@@ -503,6 +530,15 @@ components are added/renamed or the way pieces fit together changes.
   in the handler — a hidden menu is a fact about the UI, not a permission. `App.ApplyActiveShop`
   binds the shop before publishing it, and `MainWindow` re-gates from `ShopContext.ShopChanged`,
   because the same person can be a manager in one branch and staff in the next.
+- **Which languages a person may use is a SHOP setting crossed with a capability, not a role rule.**
+  A shop installs one or more of the shipped languages (`Shop.InstalledLanguagesJson`); its managers
+  and staff switch between exactly those, and see no toggle at all when there is one. An
+  administrator keeps every shipped language, because they work across branches. Every language
+  picker in the app — the toolbar toggle, the shop editor, the measurement print dialog, the PDF
+  download panel — resolves through `ShopLanguages`, never through
+  `LocalizationService.AvailableLanguages` directly. The login and shop-picker screens are the
+  exception and stay unrestricted: no shop is open yet, and a user has to be able to read the screen
+  they sign in on.
 - **Membership is the unit of access, and it can be switched off.** A person's standing at a shop —
   role(s), activation, start date, shift — is one `ShopMembership`; deactivating it removes that shop
   from their view without touching any other. Sign-in is refused only when EVERY membership is

@@ -292,12 +292,20 @@
                 </Menu>
 
                 <!-- The greeting leads: it names who is signed in, which is the first thing the bar
-                     should answer. Everything after it is what you can do as that person. -->
-                <TextBlock x:Name="GreetingText" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,24,0"
-                           HorizontalAlignment="Left"
-                           Foreground="#4B5563" FontSize="13" TextTrimming="CharacterEllipsis"/>
-                <!-- The language pair is hidden in code for non-administrators, who run in the
-                     language their shop is configured for. -->
+                     should answer. Everything after it is what you can do as that person. The
+                     languages this branch runs in sit directly under it, in the same block, because
+                     they are the same kind of fact — the standing state of the session, not an
+                     action. Both are written from code, so both re-render on a language switch. -->
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,24,0"
+                            HorizontalAlignment="Left">
+                    <TextBlock x:Name="GreetingText"
+                               Foreground="#4B5563" FontSize="13" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock x:Name="InstalledLanguagesText" Margin="0,1,0,0"
+                               Foreground="#6B7280" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+                <!-- The language pair is hidden in code whenever there is only ONE language to pick
+                     from: the shop's installed set for a manager or staff member, every shipped
+                     language for an administrator. -->
                 <TextBlock x:Name="LanguageSwitchLabel" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Language], Mode=OneWay}"
                            VerticalAlignment="Center" Margin="0,0,8,0" Foreground="#6B7280" FontSize="13"/>
                 <ComboBox x:Name="LanguageSwitchBox" Grid.Column="3" Width="132" Margin="0,0,12,0" VerticalAlignment="Center"
@@ -408,7 +416,12 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Label], Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"/>
+                        <!-- Named so it can be addressed directly. Reaching it as "the first TextBox
+                             in the window" is fragile: a ComboBox template carries an internal
+                             PART_EditableTextBox, so a control appearing earlier in the bar silently
+                             becomes "the search box" to anything walking the visual tree. -->
+                        <TextBox x:Name="SearchBox" Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"
+                                 AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Label], Mode=OneWay}"/>
 
                         <TextBlock Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.Status.Label], Mode=OneWay}" VerticalAlignment="Center" Margin="16,0,8,0"/>
                         <ComboBox Grid.Column="3" Width="150" VerticalAlignment="Center"

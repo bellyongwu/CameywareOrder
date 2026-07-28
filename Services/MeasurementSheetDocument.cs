@@ -108,7 +108,7 @@ public static class MeasurementSheetDocument
                     if (!BrandingRenderer.IsEmpty(content.HeaderXaml)
                         && !string.IsNullOrWhiteSpace(content.Letterhead?.Subtitle))
                     {
-                        column.Item().Text(content.Letterhead!.Subtitle)
+                        column.Item().Text(content.Letterhead.Subtitle)
                             .Bold().FontSize(13.5f).FontColor(AccentColor);
                     }
 

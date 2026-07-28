@@ -205,16 +205,23 @@ public partial class CustomMadeServiceWindow : Window
     }
 
     /// <summary>
-    /// One radio per installed language, discovered rather than listed — dropping a new
-    /// <c>*.lang.xml</c> into Settings/System/Languages must make it downloadable with no code
-    /// change, which is the whole point of the per-language split. Two fixed radios lived here, so
-    /// French shipped as a system language that measurements could not be exported in.
+    /// One radio per language this session may export in — the open shop's installed set, or every
+    /// shipped language for an administrator. Discovered rather than listed, so dropping a new
+    /// <c>*.lang.xml</c> into Settings/System/Languages makes it downloadable with no code change:
+    /// two fixed radios lived here once, and French shipped as a system language that measurements
+    /// could not be exported in.
     /// </summary>
     private void BuildDownloadLanguageOptions()
     {
         var current = _localization.CurrentLanguageCode;
+        var selectable = ShopLanguages.Selectable();
 
-        foreach (var language in _localization.AvailableLanguages)
+        // A single option is not a choice; the row collapses and the export simply uses it.
+        var visibility = selectable.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        DownloadLanguageLabel.Visibility = visibility;
+        DownloadLanguagePanel.Visibility = visibility;
+
+        foreach (var language in selectable)
         {
             DownloadLanguagePanel.Items.Add(new RadioButton
             {

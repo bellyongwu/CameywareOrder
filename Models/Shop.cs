@@ -84,6 +84,24 @@ public class Shop
     /// <summary>Language applied when this shop is opened. Null falls back to the global preference.</summary>
     public string? PreferredLanguageCode { get; set; }
 
+    /// <summary>
+    /// The language codes this shop has installed, as a JSON array — the set its managers and staff
+    /// may switch between. A branch serving a bilingual neighbourhood installs two; one that does
+    /// not installs one and its people never see a language toggle at all.
+    /// </summary>
+    /// <remarks>
+    /// Null means "never configured", which reads back through
+    /// <see cref="InstalledLanguageCodes"/> as just <see cref="PreferredLanguageCode"/> — exactly
+    /// how the app behaved before a shop could install more than one language, so no existing
+    /// branch changes until somebody installs a second.
+    ///
+    /// Codes rather than a count or a flag set: a language is identified by the <c>code</c>
+    /// attribute inside its <c>*.lang.xml</c>, and languages are DISCOVERED rather than registered,
+    /// so there is no enum to point at. A stored code whose file has since been removed is simply
+    /// dropped when the set is resolved.
+    /// </remarks>
+    public string? InstalledLanguagesJson { get; set; }
+
     public CurrencyType CurrencyType { get; set; } = CurrencyType.CAD;
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
@@ -138,8 +156,34 @@ public class Shop
     [NotMapped]
     public Dictionary<string, string> Addresses => DecodeLocalized(AddressesJson);
 
+    /// <summary>
+    /// Language codes stored on this shop, exactly as saved. May be empty, which means the shop has
+    /// never been told which languages it runs in — <c>ShopLanguages</c> owns what to do about that,
+    /// because deciding it here would need the list of languages that actually ship.
+    /// </summary>
+    [NotMapped]
+    public IReadOnlyList<string> InstalledLanguageCodes => DecodeLanguages(InstalledLanguagesJson);
+
     public void SetNames(IReadOnlyDictionary<string, string> names)
         => NamesJson = JsonSerializer.Serialize(names);
+
+    /// <summary>
+    /// Records the languages this shop installs. Blanks and duplicates are dropped so the stored
+    /// array says what it means; the caller is responsible for there being at least one, since
+    /// "which languages does this branch run in" is a question only a person can answer.
+    /// </summary>
+    public void SetInstalledLanguages(IEnumerable<string> languageCodes)
+    {
+        ArgumentNullException.ThrowIfNull(languageCodes);
+
+        var codes = languageCodes
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Select(code => code.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        InstalledLanguagesJson = codes.Count == 0 ? null : JsonSerializer.Serialize(codes);
+    }
 
     public void SetAddresses(IReadOnlyDictionary<string, string> addresses)
         => AddressesJson = JsonSerializer.Serialize(addresses);
@@ -175,6 +219,26 @@ public class Shop
         catch (JsonException)
         {
             return new Dictionary<string, string>();
+        }
+    }
+
+    /// <summary>
+    /// Reads the installed-language array. Bad JSON reads back as "nothing set" for the same reason
+    /// <see cref="DecodeLocalized"/> does: a corrupt column should cost the shop its language list,
+    /// not stop the shop picker from opening.
+    /// </summary>
+    private static IReadOnlyList<string> DecodeLanguages(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return Array.Empty<string>();
+
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json) ?? (IReadOnlyList<string>)Array.Empty<string>();
+        }
+        catch (JsonException)
+        {
+            return Array.Empty<string>();
         }
     }
 

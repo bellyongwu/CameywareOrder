@@ -497,6 +497,10 @@ public partial class App : Application
         ("Email", "ALTER TABLE Shops ADD COLUMN Email TEXT NULL; "),
         ("Website", "ALTER TABLE Shops ADD COLUMN Website TEXT NULL; "),
         ("TaxRegistrationNumber", "ALTER TABLE Shops ADD COLUMN TaxRegistrationNumber TEXT NULL; "),
+        // The languages a shop runs in, as a JSON array. Nullable, and null is meaningful: it means
+        // the shop has never been told, which Shop.InstalledLanguageCodes reads back as just its
+        // preferred language — the behaviour every existing branch already had.
+        ("InstalledLanguagesJson", "ALTER TABLE Shops ADD COLUMN InstalledLanguagesJson TEXT NULL; "),
     };
 
     /// <summary>
@@ -644,10 +648,14 @@ public partial class App : Application
         // then opened in Chinese. It also matters on a switch: an administrator working across
         // branches should not have the UI language change under them every time they move shop.
         //
-        // Everyone else runs in the language their shop is configured for, so a branch's staff all
-        // see the same thing. The login picker itself stays usable for everyone, or a user could
-        // not read the screen they sign in on.
-        var keepCurrentLanguage = AuthenticationService.Instance.CanChooseLanguage;
+        // The same reasoning now reaches everyone else, but only as far as their shop goes: a
+        // language the branch actually installs is one it has no reason to refuse, so a staff
+        // member who picked English on the login screen keeps it in a shop that runs in English.
+        // A language the shop does NOT install is overridden by its preferred one — that is the
+        // whole point of installing a set.
+        var keepCurrentLanguage =
+            AuthenticationService.Instance.CanChooseAnyLanguage
+            || ShopLanguages.Offers(shop, LocalizationService.Instance.CurrentLanguageCode, LocalizationService.Instance);
 
         // BEFORE SetActive, never after: a manager in one branch can be staff in the next, so the
         // capability answers have to change in the same instant the shop does. SetActive raises
@@ -656,17 +664,21 @@ public partial class App : Application
         AuthenticationService.Instance.BindShop(shop);
         ShopContext.Instance.SetActive(shop);
 
-        // The shop's own language wins once it is open — UNLESS the user just picked one by hand
-        // on the login screen. An explicit choice beats a stored default; overriding it a second
-        // later reads as the app ignoring the user. Suppress the global-preference save while
-        // applying it: that file is what the pre-shop screens use, and letting a shop overwrite it
-        // would make the login screen's language a side effect of whichever shop was opened last.
-        if (!keepCurrentLanguage && !string.IsNullOrWhiteSpace(shop.PreferredLanguageCode))
+        // The shop's own language wins once it is open — UNLESS the language already on screen is
+        // one it runs in. Suppress the global-preference save while applying it: that file is what
+        // the pre-shop screens use, and letting a shop overwrite it would make the login screen's
+        // language a side effect of whichever shop was opened last.
+        //
+        // Resolved through ShopLanguages rather than read straight off the shop, because the two
+        // fields can disagree: a preferred language the shop does not install would open the branch
+        // in a language its own toggle cannot get back to.
+        if (!keepCurrentLanguage)
         {
             _suppressGlobalLanguageSave = true;
             try
             {
-                LocalizationService.Instance.SetLanguage(shop.PreferredLanguageCode);
+                LocalizationService.Instance.SetLanguage(
+                    ShopLanguages.PreferredCode(shop, LocalizationService.Instance));
             }
             finally
             {
@@ -722,7 +734,8 @@ public partial class App : Application
                 PhoneNumber TEXT NULL,
                 Email TEXT NULL,
                 Website TEXT NULL,
-                TaxRegistrationNumber TEXT NULL
+                TaxRegistrationNumber TEXT NULL,
+                InstalledLanguagesJson TEXT NULL
             );");
 
         // A database created by an earlier build already HAS the table, so CREATE TABLE IF NOT

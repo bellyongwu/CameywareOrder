@@ -24,6 +24,82 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A per-shop setting needs a fallback that reproduces the OLD behaviour, or it is a
+  migration (2026-07-28).** `Shop.InstalledLanguagesJson` decides which languages a branch runs in.
+  Null — every existing shop — reads back through `ShopLanguages.Installed` as just the shop's
+  `PreferredLanguageCode`, which is exactly one language and therefore exactly the behaviour those
+  shops already had. Nothing changes until somebody installs a second. Had the fallback been "all
+  shipped languages", every branch in the world would have gained a language toggle on upgrade,
+  from a change nobody asked them about.
+  - The other end of the same rule: a shop with **neither** an installed set nor a preference has
+    restricted nothing, so it gets everything. Both answers are the shop's own statement read as
+    literally as possible, which is what makes them defensible without a table of special cases.
+  - Resolve such a set against what actually SHIPS, in the shipped order — a stored code whose
+    `*.lang.xml` was removed must be dropped, or the screen renders every key as its own name.
+- **`ShopLanguages` is a product of a CAPABILITY and a SHOP, so it lives in neither (2026-07-28).**
+  "Which languages may this session pick from" = administrator ? all shipped : the shop's installed
+  set. Putting it on `AuthenticationService` would have had it reaching into `ShopContext` and vice
+  versa. Four surfaces consume it — the toolbar toggle, the shop editor, the measurement print
+  dialog and the PDF download panel — which is the count at which a copied rule reliably drifts.
+  - **Rename a capability when its meaning narrows.** `CanChooseLanguage` became
+    `CanChooseAnyLanguage`: under the old name, `false` read as "no language toggle", which stopped
+    being true once a shop could install several. The rename forced both call sites to be re-read,
+    which is the whole point.
+  - **Enforce a pairing by what the control CONTAINS, not by validating it afterwards.** The
+    preferred-language picker lists only the languages ticked as installed, so "a shop opens in a
+    language it runs in" cannot be violated in the first place — no error message, no rule to keep
+    in step. Where the two CAN still disagree (rows written before the setting existed),
+    `ShopLanguages.PreferredCode` resolves it rather than each caller reading the raw field.
+- **Text written from code does not follow a language switch (2026-07-28).** `MainWindow`'s greeting
+  had been going stale since it was added: it is assigned in `RefreshSignedInUser`, and
+  `OnLanguageChangedGlobally` re-bound the DataContext but never re-ran it. Anything set as
+  `Control.Text = ...` rather than `{Binding}` needs an explicit call from that handler. Worth a
+  sweep whenever a code-written label is added next to a bound one — on screen they look identical
+  until the language changes.
+- **Reaching a control as "the first X in the window" is a latent bug (2026-07-28).** `pagingcheck`
+  found the orders search box that way, and it silently became a ComboBox's internal
+  `PART_EditableTextBox` the moment the language picker stopped being collapsed for a
+  nobody-signed-in harness — the assertion then failed on focus, which reads as a paging regression.
+  Give a control an `x:Name` when a test needs to address it; a themed ComboBox/DatePicker carries
+  inner TextBoxes that will happily answer to a type-based search.
+- **A harness must establish the ACCOUNTS it reads, and "deleted" is a legitimate state
+  (2026-07-28).** `authcheck` asserted that the seeded `test1` / `test2` accounts exist with no
+  memberships. They had been deleted in the running application, and `ProvisionedAccounts` makes
+  that deletion **permanent by design** — so they never come back and five checks failed over a
+  correct user action. It now calls `CreateAccount` for each fixture account first (success or
+  `UserNameTaken`, either way it exists) and still restores the file byte-for-byte, so the user's
+  deletion stands. This is the FOURTH way this one harness has rotted against live user data —
+  path, shop list, passwords, and now account existence. The rule generalises: a harness reading
+  `credentials.json` or `orders.db` must create everything it asserts on, because every one of
+  those things is something a person is entitled to change.
+- **Watch a harness's assertion COUNT, not just its pass/fail (2026-07-28).** `menucheck` reported
+  32 on some runs and 35 on others, always green: its `ContextMenu` closes when the window loses
+  foreground, and the three highlight assertions were quietly not running. A skipped assertion
+  reports identically to a passing one. Where a harness can skip work, either fail on the skip or
+  assert a minimum check count — a run that quietly does less is not a passing run. (Left as an
+  observation, not yet fixed.)
+- **A harness must establish the SCHEMA it reads, not just the rows (2026-07-28).** `headercheck`
+  shares a fixture database with `migcheck`, which rewinds it. Every column added to `Shops`
+  afterwards made headercheck fail with "no such column" — but only when it ran BEFORE migcheck, an
+  ordering dependency nobody would think to look for. It now calls the application's own
+  `EnsureShopSchemaAsync` first. Same rule as seeding rows: if a harness depends on a state, it
+  creates that state.
+- **A harness can be red for weeks if the suite is run selectively (2026-07-28).** `uicheck`'s menu
+  check had been throwing a `NullReferenceException` since the menus were themed — a MenuItem
+  inside a popup has no `Template` until it is realized, so `submenu.Template.FindName(...)` was a
+  null dereference that reads as "the menu is broken". `ApplyTemplate()` fixes it. Two consequences
+  worth keeping: run the WHOLE suite before claiming it is green (`scratchpad/run-suite.ps1` does,
+  and handles the three different tally formats the harnesses print), and when a check's NAME
+  describes a reverted feature — this one still said "right-aligned with left carets" — rename it,
+  because the next person reads the name as the specification.
+  - Proving a failure is pre-existing is cheap and worth doing before touching anything: build a
+    throwaway copy of the harness pointed at an older `CameywareOrder.dll` and run it. It settles
+    "did I break this" in one step instead of by reasoning.
+- **All harnesses now compile against `bin/Debug/net8.0-windows` (2026-07-28).** Fourteen of them
+  pointed at `scratchpad/navswap/bin`, a build from an earlier session — so they compiled and
+  PASSED against stale code, the worst possible failure mode. Repointed. The reason the split
+  existed (the app locks its own output while running, so builds get redirected with
+  `-p:OutputPath`) is real but rare: kill the app and build normally instead.
 - **One theme for the whole app: `Themes/AppTheme.xaml`, merged in `App.xaml` (2026-07-27).** Palette
   brushes (`PrimaryBrush` #4F46E5, `AccentBrush` #7C3AED, `HeaderGradientBrush`, the neutral ramp, the
   danger/success/warning pairs) plus implicit styles for Button / TextBox / PasswordBox / ComboBoxItem /
@@ -1286,21 +1362,26 @@ for.
 
 ## Which assembly the harnesses actually compile against
 
-The scratchpad harnesses do NOT all reference the same DLL. Most point at
-`scratchpad/navswap/bin/CameywareOrder.dll`; `authcheck`, `seeder` and `uicheck`
-point at the project's own `bin/Debug/net8.0-windows/`.
+**Every harness now references `c:\Projects\CameywareOrder\bin\Debug\net8.0-windows\
+CameywareOrder.dll`.** Fourteen of them used to point at
+`scratchpad/navswap/bin/CameywareOrder.dll` instead; they were repointed on
+2026-07-28.
 
-This matters because the app locks its own output while running, so builds get
+That split existed because the app locks its own output while running, so builds get
 redirected with `-p:OutputPath=<scratch>`. A redirected build leaves the project's
 `bin/` untouched, and any harness pointing there silently tests **old code** —
-compiling and passing, which is the worst possible failure mode. It cost a full
-round of "why does this method not exist" here, and a green suite reported against
-code that had not been built.
+compiling and passing, which is the worst possible failure mode. It cost a full round
+of "why does this method not exist", and a green suite once reported against code that
+had never been built.
 
-**Build to the normal output path whenever the app is not running** (check with
-`tasklist //FI "IMAGENAME eq CameywareOrder.exe"`). Only redirect when it is, and
-then remember which harnesses have gone stale. After any redirected build, treat
-those three harnesses' results as unverified.
+**Build to the normal output path.** Kill the app first
+(`tasklist //FI "IMAGENAME eq CameywareOrder.exe"`) rather than redirecting around it.
+If a redirected build ever is unavoidable, EVERY harness result from it is unverified,
+not just some.
+
+`scratchpad/run-suite.ps1` runs the whole set and prints one line each. Use it rather
+than picking harnesses by hand — `uicheck` sat red for a week because it was not being
+run, and a partial suite reads exactly like a green one.
 
 ## Enumerating languages
 

@@ -153,12 +153,18 @@ public sealed class AuthenticationService
     public bool CanDeleteAccounts => IsAdministrator;
 
     /// <summary>
-    /// Whether the user may run the application in a language of their choosing. Only an
-    /// administrator can; everyone else follows the language the shop is configured for, so a
-    /// branch's staff all see the same thing. (The login screen itself stays switchable for
-    /// everyone — otherwise a user could not read the screen they sign in on.)
+    /// Whether the user may run the application in ANY shipped language. Only an administrator can,
+    /// because they work across branches; everyone else is confined to the languages their shop
+    /// installs — which may well be several, so this being false does NOT mean "no language toggle".
+    /// <c>ShopLanguages</c> owns that question.
     /// </summary>
-    public bool CanChooseLanguage => IsAdministrator;
+    /// <remarks>
+    /// Named "any" deliberately. As plain <c>CanChooseLanguage</c> it read as the switch that turns
+    /// the toggle on and off, which it stopped being the moment a shop could install more than one
+    /// language. (The login screen stays switchable for everyone regardless — no shop is open there,
+    /// and a user has to be able to read the screen they sign in on.)
+    /// </remarks>
+    public bool CanChooseAnyLanguage => IsAdministrator;
 
     /// <summary>
     /// Points the capability properties at a shop. Called from <c>App.ApplyActiveShop</c> BEFORE the

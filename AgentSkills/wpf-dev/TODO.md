@@ -17,6 +17,121 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 19:40 — An English-only shop with 40 orders  [DONE]
+- Ask: "Update local DB, and add a new store with 40 orders, assign only english
+  lanuage to it."
+- Plan:
+  - [x] `scratchpad/englishshop` — new shop, `InstalledLanguages = ["en-US"]`
+  - [x] 40 orders through the application's own model / money / numbering
+  - [x] Verify against the live database and re-run the suite
+- Shop #5 **Toronto Bespoke**, code TOR, CAD, installs `en-US` and nothing else, so
+  its staff and managers get NO language toggle while an administrator standing in it
+  still sees all three. 40 orders: 13 with custom-made measurements, 19 with
+  ready-made lines, 63,102.76 CAD total.
+- Its NAME and ADDRESS are still per language (zh/en/fr). What a shop RUNS IN and
+  what it is CALLED are different questions — an administrator working in Chinese
+  should read a Chinese name for an English-only branch.
+- Numbering is **YearlySequential** (`TOR-2026-0001`), the fourth mode, so Timestamp /
+  Sequential / DailySequential / Yearly are now all represented across the
+  installation.
+- **Worth knowing:** seeded orders are back-dated up to 240 days, which crosses a year
+  boundary, so the yearly counter legitimately runs two series and RESTARTS between
+  them — 36 numbers in 2026 and 4 in 2025. No duplicates: `Reserve` scans for numbers
+  already taken, which is exactly the guard that makes a thrashing counter safe. The
+  seeder now asserts the distinct count and prints what the next real order would take
+  (`TOR-2026-0037`, free) rather than printing first/last by id, which had made 40
+  orders look like 36.
+- Idempotent (a second run adds 0) and backs the database up to
+  `orders.db.bak-preEnglishShop` once, not on every run.
+- Notes: suite **602 passed / 0 failed across 15 harnesses**.
+  `authcheck` had to be repaired first — see context.md. It asserted on the seeded
+  `test1`/`test2` accounts, which had been deleted in the application; that deletion is
+  permanent by design (`ProvisionedAccounts`), so five checks were failing over a
+  legitimate user action. It now CREATES the fixture accounts if they are missing and
+  still restores the file byte-for-byte, so the user's deletion stands.
+
+### 2026-07-28 18:20 — Store-scoped languages: install 1..N per shop  [DONE]
+- Ask: "TODO features: Improve Store lanuages.\n\n>Change roles lanuage
+  visibility, staff user now can view multiple lanuages. if the store is binding
+  with lanuages. \n\nFor example, if Store 1 is installed with Chinese and English,
+  then any user can view at least two lanuages with toggle. \n\n>Store needs to pick
+  minimum of 1 but support as many as the system supports. \n\n>Do a moocking data
+  update on the existing DB, and assign lanuages accepted for them for testing
+  purpose.\n\n-Be aware of the printing functionality for lanuages. \n\n>Manage and
+  staff user can view installed lanuage(s), but Admin can view all languages., show
+  a simple message under login status message, say that The installed languages is:
+  xx or are: xx,xx\n\n>If the store support only 1 lanauge, do not show language
+  toggle.\n\nUse WPF-dev role to run this, harness QA is required."
+- Plan:
+  - [x] `Shop.InstalledLanguagesJson` + `ShopColumnMigrations` guard
+  - [x] `Services/ShopLanguages` — the one answer to "which languages may this
+        session pick from", installed set vs. administrator's all
+  - [x] `MainWindow`: scoped toggle, hidden at one language; installed-languages
+        line under the greeting
+  - [x] `ShopSetupWindow`: multi-select install list, preferred picked from it
+  - [x] Print + PDF language pickers use the same scope
+  - [x] String-table keys in all three languages
+  - [x] Mock data on the live database
+  - [x] `scratchpad/langcheck` harness
+- **The rule, in one place.** `Services/ShopLanguages` answers three questions and
+  nothing else reimplements any of them: `Installed(shop)` — the languages a branch
+  runs in; `Selectable(shop, canChooseAnyLanguage)` — what THIS user may pick, which
+  is every shipped language for an administrator and the installed set for everyone
+  else; `PreferredCode(shop)` — the language the shop opens in. It sits outside both
+  `AuthenticationService` and `ShopContext` because the answer is a product of both,
+  and it is consumed by four surfaces (toolbar toggle, shop editor, measurement print
+  dialog, PDF download panel) — the number at which a copied rule starts drifting.
+- **`Installed` is never empty, and the fallback is what keeps the change
+  invisible.** A shop with nothing installed reads back as just its
+  `PreferredLanguageCode`, which reproduces the previous behaviour exactly: one
+  language, no toggle. A shop that has said nothing at all — no installed set AND no
+  preference — has restricted nothing, so it gets everything. Both are the shop's own
+  statement read as literally as possible. Codes whose `*.lang.xml` no longer ships
+  are dropped, and the set comes back in SHIPPED order rather than stored order.
+- `AuthenticationService.CanChooseLanguage` → **`CanChooseAnyLanguage`**. Under the
+  old name `false` read as "no language toggle", which stopped being true the moment
+  a shop could install more than one. Renaming forced both call sites to be re-read.
+- **`App.ApplyActiveShop` keeps the language on screen when the shop installs it.**
+  Previously only an administrator's choice survived opening a shop; now a staff
+  member who picked English at login keeps it in a shop that runs in English, and is
+  moved only when the shop does not install their language. The move goes through
+  `ShopLanguages.PreferredCode`, not `shop.PreferredLanguageCode` — the two can
+  disagree, and opening a branch in a language its own toggle cannot return to is
+  worse than either.
+- Editor: `Shop.Setup.InstalledLanguages` is a tick box per shipped language, and the
+  preferred-language picker lists **only what is ticked** — enforcing "opens in a
+  language it installs" by what the control CONTAINS rather than by validating it
+  afterwards. Save refuses an empty set (`Shop.Setup.InstalledLanguagesRequired`); a
+  new shop starts with the administrator's current language and nothing else, since
+  installing a language a branch's staff cannot read is not a neutral default.
+- Print paths share the scope and collapse their language row at one option — the
+  radio is still created, so an export is never languageless.
+- Keys added to all three files: `Language.Installed.One` / `.Many` (separate keys:
+  English and French both inflect "language is" / "languages are"),
+  `Shop.Setup.InstalledLanguages` + `Hint` + `Required`.
+  `Shop.Setup.PreferredLanguageHint` reworded — it said non-administrators are always
+  stuck in this language, which is no longer true.
+- Mock data (`scratchpad/langseed`, backs the database up first, idempotent): #1
+  LeeYonge zh+en, #2 Tianbao all three, #3 Vancouver en only (the hidden-toggle case),
+  #4 Montréal fr+en. Runs the shipping `EnsureShopSchemaAsync` by reflection rather
+  than re-typing the ALTER, so the seeded column is the one the app adds.
+- **Fixed alongside, same block:** the greeting went stale on a language switch —
+  it is written from code and `OnLanguageChangedGlobally` never re-ran it. The new
+  installed-languages line sits directly under it and would have done the same.
+- **Fixed alongside:** the orders search box had no `x:Name`. `pagingcheck` reached it
+  as "the first TextBox in the window", which silently became a ComboBox's internal
+  `PART_EditableTextBox` as soon as the language picker stopped being collapsed for a
+  harness with nobody signed in. Named `SearchBox`, with an `AutomationProperties.Name`.
+- Notes: build 0/0, Sonar 0 findings on every changed file (one pre-existing S8969 in
+  `MeasurementSheetDocument` cleared while the analyzer was installed). Suite
+  **599 passed / 0 failed across 15 harnesses**; `langcheck` is 68 of them.
+  Two harness repairs were needed to get there and neither was caused by this work —
+  see the entries in context.md: `headercheck` had an undeclared ordering dependency
+  on migcheck migrating their shared fixture, and `uicheck`'s menu check had been
+  failing silently since the menus were themed. All 14 harnesses that pointed at
+  `scratchpad/navswap/bin` were repointed at the project's own `bin/Debug`, which
+  removes the stale-assembly trap for good.
+
 ### 2026-07-28 15:45 — Cancelling the shop picker signs out instead of exiting  [DONE]
 - Ask: "After login and in Select store panel, the Cancel button should
   automatically logout. do not close the application."

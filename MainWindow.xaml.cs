@@ -46,7 +46,6 @@ public partial class MainWindow : Window
         _localization = localization;
         DataContext = _viewModel;
 
-        InitializeLanguageSwitcher();
         ApplyRolePermissions();
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _localization.LanguageChanged += OnLanguageChangedGlobally;
@@ -89,11 +88,7 @@ public partial class MainWindow : Window
     {
         var auth = AuthenticationService.Instance;
 
-        // Non-administrators run in the language their shop is configured for, so a branch's staff
-        // all see the same thing.
-        var language = Show(auth.CanChooseLanguage);
-        LanguageSwitchLabel.Visibility = language;
-        LanguageSwitchBox.Visibility = language;
+        RefreshLanguageScope();
 
         // A manager configures the shop they run; staff take orders in it.
         var configure = Show(auth.CanConfigureShop);
@@ -196,14 +191,67 @@ public partial class MainWindow : Window
         }
     }
 
-    private void InitializeLanguageSwitcher()
+    /// <summary>
+    /// Points the language toggle at the languages this session may actually pick from, and states
+    /// under the greeting which ones the open shop runs in.
+    /// </summary>
+    /// <remarks>
+    /// Re-run on every shop switch, like the rest of <see cref="ApplyRolePermissions"/>: the set is
+    /// a property of the SHOP for everyone but an administrator, so a toggle that was right when
+    /// the window opened is not necessarily right after 切换店铺 — a manager may move from a
+    /// bilingual branch to one that runs in a single language.
+    ///
+    /// Hidden outright at one language rather than shown disabled. A picker holding a single option
+    /// is chrome that cannot do anything, and the Auto grid column collapses with it, so the bar
+    /// leaves no gap for the users who never see it.
+    /// </remarks>
+    private void RefreshLanguageScope()
     {
+        var shop = ShopContext.Instance.Current;
+        var selectable = ShopLanguages.Selectable(
+            shop, AuthenticationService.Instance.CanChooseAnyLanguage, _localization);
+
+        // Assigning ItemsSource raises SelectionChanged, which would otherwise re-apply whatever
+        // landed in the box as a deliberate language choice.
         _isLanguageSwitchInitializing = true;
-        LanguageSwitchBox.ItemsSource = _localization.AvailableLanguages;
-        LanguageSwitchBox.DisplayMemberPath = nameof(LanguageOption.Name);
-        LanguageSwitchBox.SelectedValuePath = nameof(LanguageOption.Code);
-        LanguageSwitchBox.SelectedValue = _localization.CurrentLanguageCode;
-        _isLanguageSwitchInitializing = false;
+        try
+        {
+            LanguageSwitchBox.ItemsSource = selectable;
+            LanguageSwitchBox.DisplayMemberPath = nameof(LanguageOption.Name);
+            LanguageSwitchBox.SelectedValuePath = nameof(LanguageOption.Code);
+            LanguageSwitchBox.SelectedValue = _localization.CurrentLanguageCode;
+        }
+        finally
+        {
+            _isLanguageSwitchInitializing = false;
+        }
+
+        var toggle = Show(selectable.Count > 1);
+        LanguageSwitchLabel.Visibility = toggle;
+        LanguageSwitchBox.Visibility = toggle;
+
+        RefreshInstalledLanguagesText();
+    }
+
+    /// <summary>
+    /// States which languages the open shop runs in, under the greeting.
+    /// </summary>
+    /// <remarks>
+    /// Describes the SHOP, never the administrator's wider choice: "which languages is this branch
+    /// set up for" is the useful fact, and it is the one an administrator standing in the branch
+    /// wants too. Separate from <see cref="RefreshLanguageScope"/> because a language switch changes
+    /// this line's wording while leaving the toggle's contents alone — each language names itself in
+    /// its own file, so the options do not need rebuilding.
+    /// </remarks>
+    private void RefreshInstalledLanguagesText()
+    {
+        var shop = ShopContext.Instance.Current;
+
+        // Nothing to say before a shop is open.
+        InstalledLanguagesText.Visibility = Show(shop is not null);
+        InstalledLanguagesText.Text = shop is null
+            ? string.Empty
+            : ShopLanguages.InstalledSummary(shop, _localization);
     }
 
     private void OnLanguageChanged(object sender, SelectionChangedEventArgs e)
@@ -228,6 +276,12 @@ public partial class MainWindow : Window
             DataContext = null;
             DataContext = _viewModel;
             RefreshToolbarLabels();
+
+            // Both are written from code rather than bound, so a language switch does not reach
+            // them on its own. The greeting had been going stale here since it was added; the
+            // installed-languages line under it would have done the same.
+            RefreshSignedInUser();
+            RefreshInstalledLanguagesText();
         }
         finally
         {

@@ -25,6 +25,10 @@
   <Text key="Toolbar.LocalDatabase">Local Database</Text>
   <Text key="Toolbar.Refresh">Refresh</Text>
   <Text key="Toolbar.Language">Language</Text>
+  <!-- Singular and plural are separate keys rather than one string with a count: English needs
+       "language is" against "languages are", and this line sits where it will be skimmed. -->
+  <Text key="Language.Installed.One">Installed language: {0}</Text>
+  <Text key="Language.Installed.Many">Installed languages: {0}</Text>
   <Text key="Toolbar.OpenDataFolder">Open Data Folder</Text>
   <Text key="Toolbar.CopyDataPath">Copy Database Path</Text>
   <Text key="Toolbar.RevealDataFile">Reveal Database File</Text>
@@ -176,8 +180,11 @@
   <Text key="Shop.Setup.ContactHint">Optional. Phone, email and website are not per language — every language shows the same value.</Text>
   <Text key="Shop.Setup.TaxNumber">Tax number (GST/HST)</Text>
   <Text key="Shop.Setup.TaxNumberHint">Optional. Printed on this shop's receipts so they double as a tax slip. A number entered in the header &amp; footer editor overrides this one.</Text>
+  <Text key="Shop.Setup.InstalledLanguages">Installed languages</Text>
+  <Text key="Shop.Setup.InstalledLanguagesHint">The languages this shop runs in. Its managers and staff can switch between them; with only one installed, no language toggle is shown at all. Administrators always see every language.</Text>
+  <Text key="Shop.Setup.InstalledLanguagesRequired">Install at least one language for this shop.</Text>
   <Text key="Shop.Setup.PreferredLanguage">Preferred language</Text>
-  <Text key="Shop.Setup.PreferredLanguageHint">Non-administrators always use this shop in this language.</Text>
+  <Text key="Shop.Setup.PreferredLanguageHint">The language this shop opens in. Chosen from the languages installed above.</Text>
   <Text key="Shop.Setup.Currency">Currency</Text>
   <Text key="Shop.Setup.MeasurementTerms">Measurement terms</Text>
   <Text key="Shop.Setup.SeedDefaults">Start from the predefined set</Text>

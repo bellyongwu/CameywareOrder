@@ -29,6 +29,10 @@
   <Text key="Toolbar.LocalDatabase">本地数据库</Text>
   <Text key="Toolbar.Refresh">刷新</Text>
   <Text key="Toolbar.Language">语言</Text>
+  <!-- Chinese does not inflect for number, so both keys carry the same text here. They are separate
+       keys because English needs "language is" against "languages are". -->
+  <Text key="Language.Installed.One">本店已安装语言：{0}</Text>
+  <Text key="Language.Installed.Many">本店已安装语言：{0}</Text>
   <Text key="Toolbar.OpenDataFolder">打开数据目录</Text>
   <Text key="Toolbar.CopyDataPath">复制数据库路径</Text>
   <Text key="Toolbar.RevealDataFile">定位数据库文件</Text>
@@ -182,8 +186,11 @@
   <Text key="Shop.Setup.ContactHint">选填。电话、邮箱和网址不区分语言，各语言显示同一内容。</Text>
   <Text key="Shop.Setup.TaxNumber">税号（GST/HST）</Text>
   <Text key="Shop.Setup.TaxNumberHint">选填。将打印在本店铺的小票上，使其可作为税务凭证。页眉页脚设置中填写的税号会覆盖此处。</Text>
+  <Text key="Shop.Setup.InstalledLanguages">已安装语言</Text>
+  <Text key="Shop.Setup.InstalledLanguagesHint">本店铺可使用的语言。店长与店员可在其中切换；仅安装一种语言时，不显示语言切换。管理员始终可使用全部语言。</Text>
+  <Text key="Shop.Setup.InstalledLanguagesRequired">请至少为本店铺安装一种语言。</Text>
   <Text key="Shop.Setup.PreferredLanguage">默认语言</Text>
-  <Text key="Shop.Setup.PreferredLanguageHint">非管理员用户将始终以该语言使用本店铺。</Text>
+  <Text key="Shop.Setup.PreferredLanguageHint">打开本店铺时使用的语言，只能从上方已安装的语言中选择。</Text>
   <Text key="Shop.Setup.Currency">货币</Text>
   <Text key="Shop.Setup.MeasurementTerms">量身项目</Text>
   <Text key="Shop.Setup.SeedDefaults">使用系统预设项目</Text>

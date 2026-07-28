@@ -10,7 +10,11 @@
         Background="#F4F6F9">
     <Border Padding="24" MinWidth="360">
         <StackPanel>
-            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasurePrint.LanguagePrompt], Mode=OneWay}"
+            <!-- Prompt and options are hidden together when the shop runs in a single language:
+                 asking which of one language to print in is not a question. Both are named so the
+                 code-behind can collapse the pair. -->
+            <TextBlock x:Name="LanguagePromptText"
+                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasurePrint.LanguagePrompt], Mode=OneWay}"
                        FontSize="13" FontWeight="SemiBold" Foreground="#333" Margin="0,0,0,8"/>
             <StackPanel x:Name="LanguageOptionsPanel" Margin="4,0,0,16"/>
 

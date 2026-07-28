@@ -34,8 +34,7 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 ## Open
 
-Nothing in flight. The last multi-phase effort (systematic config refactor, phases
-0–3) is complete.
+Nothing in flight.
 
 **Deferred, deliberately** — revisit only if asked:
 
@@ -51,6 +50,52 @@ Nothing in flight. The last multi-phase effort (systematic config refactor, phas
 ---
 
 ## Recent work (2026-07-27 → 07-28)
+
+### Test shops now cover every language shape
+Five shops on the developer machine, chosen so each branch of `ShopLanguages` has
+something real to exercise: #1 LeeYonge zh+en, #2 Tianbao all three, #3 Vancouver
+en only, #4 Montréal fr+en, **#5 Toronto Bespoke en only with 40 orders**
+(`scratchpad/englishshop`, modelled on `frenchshop`). #5 also takes the fourth
+numbering mode, YearlySequential, so all four are in use.
+
+A shop's NAME and ADDRESS stay per language even when it runs in one: what a shop
+runs in and what it is called are different questions, and an administrator working
+in Chinese should read a Chinese name for an English-only branch.
+
+> Seeded orders back-dated across a year boundary make a YEARLY counter restart, so
+> #5 legitimately has two series (4 in 2025, 36 in 2026). No duplicates — `Reserve`
+> scans for numbers already taken, which is what makes a thrashing counter safe. A
+> seeder reporting "first … last by id" hid this; report the DISTINCT count.
+
+### A shop installs 1..N languages; the toggle follows the shop, not the role
+Language choice used to be a pure capability: administrators could switch, nobody
+else could. Now a shop declares which of the shipped languages it runs in, and its
+managers and staff switch between exactly those — hidden entirely at one, because a
+picker with a single option is chrome that cannot do anything. An administrator keeps
+all of them, since they work across branches.
+
+`Services/ShopLanguages` is the only place the rule lives, consumed by four surfaces
+(toolbar toggle, shop editor, measurement print dialog, PDF download panel). It sits
+outside both `AuthenticationService` and `ShopContext` because the answer is a product
+of both — a capability and a shop's configuration.
+
+> **The fallback is what made this shippable without a data migration.** A shop with
+> nothing installed reads back as just its `PreferredLanguageCode`: one language, no
+> toggle, exactly the old behaviour. A shop that has said nothing at all has
+> restricted nothing, so it gets everything. Both are the shop's own statement read
+> literally, and no existing branch changes until somebody installs a second language.
+
+Two names carry weight. `CanChooseLanguage` became **`CanChooseAnyLanguage`** — under
+the old name `false` read as "no toggle", which stopped being true. And the language a
+shop opens in resolves through `ShopLanguages.PreferredCode`, never
+`shop.PreferredLanguageCode` directly: the two can disagree, and opening a branch in a
+language its own toggle cannot return to is worse than either.
+
+The editor enforces "opens in a language it installs" by what the picker CONTAINS —
+it lists only the ticked languages — rather than validating the pair afterwards.
+Opening a shop keeps the language already on screen whenever the shop installs it, so
+a staff member who picked English at login is no longer overridden by a shop that
+runs in English.
 
 ### Cancel in the shop picker means "go back", not "quit"
 It called `Shutdown()`, on both the startup and the sign-out path. Sign-in and shop
@@ -107,9 +152,9 @@ two spellings of "no phone number" print differently depending on the reader.
 ### Every language list is discovered, never listed
 The download-measurement picker was two literal radios plus
 `IsChecked ? "en-US" : "zh-CN"`, so French shipped as a system language that
-measurements could not be exported in — while the PRINT dialog beside it was
-already dynamic. Now built from `LocalizationService.AvailableLanguages`, like the
-print dialog and the login screen.
+measurements could not be exported in — while the PRINT dialog beside it was already
+dynamic. Every such list is now built from a discovered set (since superseded by
+`ShopLanguages`, which narrows it to what the shop installs).
 
 Each option is labelled with the language's OWN name from its own file, so a new
 language names itself instead of needing a translated entry added to every existing
