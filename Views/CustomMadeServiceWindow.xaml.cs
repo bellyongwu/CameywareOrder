@@ -11,9 +11,6 @@ using CameywareOrder.Localization;
 using CameywareOrder.Models;
 using CameywareOrder.Services;
 using Microsoft.Win32;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
 using System.Diagnostics.CodeAnalysis;
 
 namespace CameywareOrder.Views;
@@ -606,75 +603,42 @@ public partial class CustomMadeServiceWindow : Window
         AddInfoRow(infoRows, L("OrderEdit.Panel.AgeType"), $"{GetAgeGroupLabel(languageCode)} / {GetAgeTypeLabel(_workingRecord.AgeType, languageCode)}");
         AddInfoRow(infoRows, L("Measure.Unit.Label"), L(_isInch ? "Measure.Unit.Inch" : "Measure.Unit.Cm"));
 
-        var garmentSections = BuildPdfGarmentSections(languageCode);
-
-        QuestPDF.Settings.License = LicenseType.Community;
-
         var brandingSettings = ReceiptBrandingStore.Load();
         var branding = brandingSettings.ForLanguage(languageCode);
-        var logoBytes = ReceiptBrandingStore.GetLogoBytes(brandingSettings);
-        var hasHeader = !BrandingRenderer.IsEmpty(branding.HeaderXaml);
 
-        Document.Create(container =>
-        {
-            container.Page(page =>
+        // Every string is resolved HERE, where L() knows the language chosen in the print dialog —
+        // which is not necessarily the UI language. The document composer localizes nothing.
+        var taxNumber = ReceiptBrandingStore.ResolveTaxRegistrationNumber(brandingSettings);
+
+        MeasurementSheetDocument.Save(
+            new MeasurementSheetContent
             {
-                page.Size(PageSizes.A4);
-                page.Margin(28);
-                page.DefaultTextStyle(text => text.FontSize(11));
-
-                page.Content().Column(column =>
-                {
-                    column.Spacing(6);
-
-                    if (logoBytes is not null)
-                        BrandingRenderer.AlignLogo(column.Item(), brandingSettings.LogoPlacement).MaxHeight(70).Image(logoBytes);
-                    BrandingRenderer.RenderToPdf(column, branding.HeaderXaml);
-
-                    // Directly under the header, matching where the printed receipt puts it.
-                    if (!string.IsNullOrWhiteSpace(brandingSettings.TaxRegistrationNumber))
-                    {
-                        // L(), not Format(): this document is generated in the language the user
-                        // picked in the print dialog, which is not necessarily the UI language.
-                        column.Item().Text(string.Format(
-                                System.Globalization.CultureInfo.CurrentCulture,
-                                L("Receipt.TaxNumberLine"),
-                                brandingSettings.TaxRegistrationNumber.Trim()))
-                            .FontSize(9.5f)
-                            .FontColor(QuestPDF.Helpers.Colors.Grey.Darken1);
-                    }
-
-                    // Only fall back to the default document title when the header editor is empty.
-                    if (!hasHeader)
-                        column.Item().Text(L("Customer.Measurements.PrintTitle")).Bold().FontSize(18);
-
-                    foreach (var (label, value) in infoRows)
-                    {
-                        column.Item().Row(row =>
-                        {
-                            row.ConstantItem(190).Text(label).SemiBold();
-                            row.RelativeItem().Text($": {value}");
-                        });
-                    }
-
-                    foreach (var (title, rows) in garmentSections)
-                        AddPdfMeasurementSection(column, title, rows);
-
-                    BrandingRenderer.RenderToPdf(column, branding.FooterXaml);
-                });
-            });
-        }).GeneratePdf(filePath);
+                Title = L("Customer.Measurements.PrintTitle"),
+                InfoRows = infoRows.Select(row => new MeasurementSheetRow(row.Label, row.Value)).ToList(),
+                Sections = BuildPdfGarmentSections(languageCode),
+                TaxLine = string.IsNullOrWhiteSpace(taxNumber)
+                    ? null
+                    : string.Format(
+                        System.Globalization.CultureInfo.CurrentCulture,
+                        L("Receipt.TaxNumberLine"),
+                        taxNumber.Trim()),
+                HeaderXaml = branding.HeaderXaml,
+                FooterXaml = branding.FooterXaml,
+                LogoBytes = ReceiptBrandingStore.GetLogoBytes(brandingSettings),
+                LogoPlacement = brandingSettings.LogoPlacement,
+            },
+            filePath);
     }
 
-    private static List<(string Label, string Value)> FilterMeasurementRows(IEnumerable<(string Label, string? Value)> rows)
+    private static List<MeasurementSheetRow> FilterMeasurementRows(IEnumerable<(string Label, string? Value)> rows)
         => rows
             .Where(row => !string.IsNullOrWhiteSpace(row.Value))
-            .Select(row => (row.Label, row.Value!.Trim()))
+            .Select(row => new MeasurementSheetRow(row.Label, row.Value!.Trim()))
             .ToList();
 
-    private List<(string Title, List<(string Label, string Value)> Rows)> BuildPdfGarmentSections(string languageCode)
+    private List<MeasurementSheetSection> BuildPdfGarmentSections(string languageCode)
     {
-        var sections = new List<(string Title, List<(string Label, string Value)> Rows)>();
+        var sections = new List<MeasurementSheetSection>();
 
         var orderedIds = _terms.Garments
             .Select(g => g.Id)
@@ -699,7 +663,11 @@ public partial class CustomMadeServiceWindow : Window
 
             var filtered = FilterMeasurementRows(rows);
             if (filtered.Count > 0)
-                sections.Add((MeasurementTermsService.ResolveGarmentName(_terms.FindGarment(garmentId)!, languageCode), filtered));
+            {
+                sections.Add(new MeasurementSheetSection(
+                    MeasurementTermsService.ResolveGarmentName(_terms.FindGarment(garmentId)!, languageCode),
+                    filtered));
+            }
         }
 
         return sections;
@@ -711,29 +679,6 @@ public partial class CustomMadeServiceWindow : Window
             return;
 
         rows.Add((label, value.Trim()));
-    }
-
-    private static void AddPdfMeasurementSection(ColumnDescriptor column, string sectionTitle, IReadOnlyList<(string Label, string Value)> rows)
-    {
-        if (rows.Count == 0)
-            return;
-
-        column.Item().PaddingTop(8).Text(sectionTitle).Bold().FontSize(13);
-
-        column.Item().Table(table =>
-        {
-            table.ColumnsDefinition(columns =>
-            {
-                columns.ConstantColumn(190);
-                columns.RelativeColumn();
-            });
-
-            foreach (var (label, value) in rows)
-            {
-                table.Cell().PaddingVertical(2).Text(label).SemiBold();
-                table.Cell().PaddingVertical(2).Text(value);
-            }
-        });
     }
 
     private string BuildPdfFileName(string languageCode)
@@ -1000,7 +945,7 @@ public partial class CustomMadeServiceWindow : Window
             {
                 Text = MeasurementTermsService.ResolveTermName(term),
                 Margin = new Thickness(0, 4, 8, 4),
-                VerticalAlignment = System.Windows.VerticalAlignment.Center
+                VerticalAlignment = VerticalAlignment.Center
             };
             Grid.SetRow(label, row);
             Grid.SetColumn(label, columnPair);

@@ -9,7 +9,7 @@ full **and** lands here condensed, after which nearby entries are merged and
 superseded instructions are deleted rather than annotated. Durable engineering
 lessons move to `context.md`; this file keeps *what was done and where it stands*.
 
-Condensed 2026-07-28 from 83 entries.
+Condensed 2026-07-28 from 84 entries.
 
 ---
 
@@ -27,8 +27,10 @@ GraphQL, FlowDocument/QuestPDF printing.
   `Settings/System/Languages`; adding a language is dropping a file in.
 - **Configuration** — shipped config in `Settings/System/**` (read-only, in git);
   per-installation state under `%LOCALAPPDATA%\CameywareOrder` via `UserDataPaths`.
-- **Quality gates** — build 0 warnings / 0 errors, Sonar zero findings, and a
-  scratchpad harness suite (~341 assertions across 9 harnesses) that must stay green.
+- **Quality gates** — build 0 warnings / 0 errors, Sonar zero findings, and the
+  scratchpad harness suite, which must stay green. A harness that reads live user
+  data has to **establish** the state it asserts on: several have gone red months
+  later over drifted real data and read like regressions when nothing had broken.
 
 ## Open
 
@@ -49,6 +51,29 @@ Nothing in flight. The last multi-phase effort (systematic config refactor, phas
 ---
 
 ## Recent work (2026-07-27 → 07-28)
+
+### The measurements PDF — rebuilt, and moved out of the window
+Composed into `page.Content()`, the letterhead rendered **once**: a one-page sheet
+looked right, a two-page sheet carried branding on page one alone with the footer
+stranded wherever the last garment ended. Only `page.Header()` / `page.Footer()`
+repeat. Rendering a two-page sheet then exposed a second fault — a garment name at
+the foot of one page with its measurements orphaned overleaf. Wrapping heading and
+table in one `column.Item().Column(...)` does **not** make them atomic; the name is
+now the table's `Header` row, which QuestPDF repeats per page.
+
+The layout lives in `Services/MeasurementSheetDocument`, taking plain
+already-localized data (no string keys — the sheet is generated in the language
+picked in the print dialog, not the UI language). It left the window because a
+window needs a message loop, so a layout inside one can only be checked by a human
+clicking Export.
+
+Visual: page numbers, a bordered card for the order details, accent-barred garment
+headings, striped rows. The colon belongs to the label — as `": 9051234567"` it
+read as a missing field name. Info labels 132pt, garment terms 190pt, because a
+term name runs ~25% longer in French and a wrapped label costs more than a gap.
+
+`ResolveTaxRegistrationNumber` moved to `ReceiptBrandingStore`: the receipt and the
+PDF both print it and each had its own copy of the override rule.
 
 ### Bug: printing measurements in inches produced an empty sheet — FIXED
 `CustomMadeMeasurementReader` read `value.In` directly and skipped any row where it

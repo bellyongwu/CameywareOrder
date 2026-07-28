@@ -75,6 +75,21 @@ public static class ReceiptBrandingStore
     private static string BrandingRoot => UserDataPaths.BrandingDirectory;
 
     /// <summary>
+    /// The GST/HST number to print, or null when neither surface has one.
+    /// </summary>
+    /// <remarks>
+    /// A number typed into the header/footer editor overrides the shop's own, being the more
+    /// specific surface — someone who edits the letterhead directly means what they typed there.
+    ///
+    /// Lives here rather than in either printer because BOTH print it: the receipt and the
+    /// measurements PDF each resolved it, and two copies of an override rule drift.
+    /// </remarks>
+    public static string? ResolveTaxRegistrationNumber(ReceiptBrandingSettings settings)
+        => !string.IsNullOrWhiteSpace(settings.TaxRegistrationNumber)
+            ? settings.TaxRegistrationNumber
+            : ShopContext.Instance.Current?.TaxRegistrationNumber;
+
+    /// <summary>
     /// Branding folder for the open shop, or the shared root before a shop is open — which is also
     /// where the pre-multi-shop branding already lives, so the first shop inherits it unchanged.
     ///

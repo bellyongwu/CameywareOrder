@@ -1174,9 +1174,11 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   `CustomMadeServiceWindow`:
   - Measures section header has `CmRadio` (default) / `InchRadio`
     (GroupName `MeasureUnit`). Toggling converts the 8 measurement boxes via
-    `ConvertMeasurement` — only the leading number is converted (÷/×2.54,
+    `Models/MeasurementUnits` — only the leading number is converted (÷/×2.54,
     rounded to 2), the optional trailing `+`/`-` is preserved
-    (`MeasurementNumberPattern = ^(\d+(?:\.\d*)?)([+-]?)$`). **Storage stays
+    (`^(\d+(?:\.\d*)?)([+-]?)$`). The conversion lives in that one model, not in
+    each caller; the editor, the printed sheet and the PDF each had a copy and the
+    print path drifted out of step. **Storage stays
     canonical cm**: `MeasurementForStorage` converts inch→cm on save so the
     receipt/summary/detail panels (which read the raw strings) never see inch.
   - A "Download Measurement" section under Custom Price has language radios
@@ -1192,10 +1194,66 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   - Gotcha: `Path` is ambiguous (`HotChocolate.Path` vs `System.IO.Path`) in
     this file — fully qualify `System.IO.Path`.
 
+## QuestPDF — page structure and print verification
+
+- **`page.Header()` / `page.Footer()` repeat on every page; `page.Content()` does
+  not.** A letterhead composed into Content renders once and stops, so a sheet
+  that runs to a second page carries branding on page one only and drops its
+  footer wherever the last block happened to end. This is invisible on any
+  one-page test document, which is why it survived so long in the measurements
+  export.
+- **Wrapping a heading and its table in a single `column.Item().Column(...)` does
+  NOT make them atomic.** A Column splits across pages like anything else, so the
+  heading can still end a page with its rows orphaned overleaf. For a repeating
+  section label use `table.Header(...)` — QuestPDF re-draws a table header on
+  every page the table spans, which also answers "what are these numbers?" on the
+  continuation page.
+- **`BrandingRenderer` parses branding with `XamlReader.Parse(xaml) as
+  FlowDocument`.** Any other root element (a `Section`, say) casts to null and
+  renders **nothing at all**, with no error. Header/footer XAML must have a
+  `FlowDocument` root.
+- Creating a FlowDocument from XAML needs an **STA** thread — a console harness
+  must mark `Main` with `[STAThread]` or the parse fails silently into the same
+  empty result.
+
+### Verifying a print layout by rendering it
+
+`IDocument.GenerateImages(...)` rasterises pages, which is the only way to check a
+property like "the header repeats" — reading the composition code cannot tell you.
+Two rules learned the hard way here:
+
+- **Locate bands by landmarks the layout actually draws, not by fractions of page
+  height.** Bands guessed as "the top 10%" ran past the letterhead into the
+  content area and reported that the header differed between pages when what
+  differed was the measurements underneath it. Find the rule (a row inked across
+  >75% of the width) and compare everything above it.
+- **Never compare pixels across content at different offsets.** A taller header
+  shifts the body by a fractional number of pixels, so identical content
+  rasterises to different bytes — the comparison then tests the anti-aliaser.
+  Compare a measured *structural* quantity instead (body height, rule position).
+  Byte-identical comparison is still the right tool for the same band on
+  different pages, where nothing has moved.
+
+## Harnesses that read live user data
+
+`authcheck` runs against the real `credentials.json` and had rotted in two ways at
+once, both of which read like authorization regressions and were neither:
+
+- It asserted "a Manager in **every** existing shop" against an already-migrated
+  file. Two shops were created after that migration ran, and a new shop correctly
+  grants nobody access. The fixture, not the assertion, was stale — it now rewinds
+  the file to version 1 first so the migration has something to migrate.
+- It signed in as `staff`/`staff`, and that password had since been changed in the
+  application. It now pins the fixture passwords via `SetPassword` during setup.
+
+The general rule: a harness reading live data must **establish** the state it
+asserts on, not assume the state it found the day it was written.
+
 ## Gotchas
 
-- Only edit the root `Languages.xml`; copies under `bin/`, `publish/` are build
-  outputs.
+- Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies
+  under `bin/`, `publish/` are build outputs. (The single root `Languages.xml`
+  this once named no longer exists — it was split one-file-per-language.)
 - The running exe locks itself — always kill before building. If launched under
   the VS Code debugger it can't be killed from the terminal (Access denied);
   ask the user to stop it.

@@ -17,6 +17,50 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 12:20 — Measurements PDF: keep the header/footer, improve the layout  [DONE]
+- Ask: "打印量身尺寸的PDF 文件应该要保留header 和footer， 优化一下PDF的UI。"
+- Root cause of the missing letterhead: the logo, the branded header, the tax line
+  and the branded footer were all composed into `page.Content()`. QuestPDF renders
+  Content once, flowing across pages; only `page.Header()` / `page.Footer()`
+  repeat. So a sheet that fitted on one page looked right, and a sheet that ran to
+  two carried branding on page one alone with the footer stranded wherever the
+  last garment ended. Both now sit in the page's own slots.
+- Second defect, found only by rendering a two-page sheet: a garment's name sat at
+  the foot of page one with its four measurements orphaned, unlabelled, at the top
+  of page two. Wrapping heading + table in one `column.Item().Column(...)` does
+  **not** make them atomic — a Column splits like anything else. The garment name
+  is now the table's `Header` row, so QuestPDF repeats it on every page the table
+  spans.
+- Extracted `Services/MeasurementSheetDocument.cs` (+ `MeasurementSheetContent`,
+  `MeasurementSheetSection`, `MeasurementSheetRow`). `CustomMadeServiceWindow` now
+  only gathers already-localized data and calls `Save`. The window cannot be
+  opened without a message loop, so while the layout lived there it could only be
+  checked by a human clicking Export.
+- Layout changes: page numbers ("1 / 2") centred under the footer; order/customer
+  details grouped into a bordered tinted card; garment headings in the app accent
+  `#4F46E5` with a left accent bar; measurement rows striped. The colon moved from
+  the value (`": 9051234567"`, which reads as a missing field name) to the label.
+  Info labels get a 132pt column, garment terms keep 190pt — term names run ~25%
+  longer in French and a wrapped label costs more than a wide gap.
+- `ResolveTaxRegistrationNumber` moved to `ReceiptBrandingStore`; `MainWindow`
+  delegates. The receipt and the PDF both print it and both had their own copy.
+- Fixture bug in my own harness, worth recording because it fails **silently**:
+  `BrandingRenderer` does `XamlReader.Parse(xaml) as FlowDocument`, so branding
+  with a `Section` root casts to null and renders nothing. Needs `[STAThread]` too.
+- Two harness assertions were wrong before the code was: bands guessed as
+  "the top 10%" ran into the content area, and pixel comparison across a taller
+  header tests the anti-aliaser rather than the layout. Both replaced — bands are
+  located from the rules the layout draws, and the title-fallback check compares
+  body *height*.
+- Notes: new `scratchpad/pdfcheck` (26 assertions) renders the real document to
+  images and asserts the letterhead is byte-identical on all 4 pages, the footer
+  likewise, the page number differs between pages, and no continuation page opens
+  with orphaned measurements. Repaired `authcheck`, which had rotted twice over
+  (asserted an already-migrated file against a shop list that had since grown; and
+  signed in with a `staff` password that had been changed in the app) — it now
+  rewinds its own fixture and pins its passwords, 52/52 and idempotent.
+  Suite 419/0 across 11 harnesses; build 0 warnings / 0 errors; Sonar clean.
+
 ### 2026-07-28 11:10 — Bug: printing measurements in inches printed nothing  [DONE]
 - Ask: "打印量身尺寸转换成inch功能似乎有问题，没有打印的内容。"
 - Root cause, measured rather than guessed: `CustomMadeMeasurementReader` did

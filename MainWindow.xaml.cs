@@ -1365,12 +1365,7 @@ public partial class MainWindow : Window
     /// should not be silently ignored in favour of the general one.
     /// </remarks>
     private static string? ResolveTaxRegistrationNumber(ReceiptBrandingSettings settings)
-    {
-        if (!string.IsNullOrWhiteSpace(settings.TaxRegistrationNumber))
-            return settings.TaxRegistrationNumber;
-
-        return ShopContext.Instance.Current?.TaxRegistrationNumber;
-    }
+        => ReceiptBrandingStore.ResolveTaxRegistrationNumber(settings);
 
     /// <summary>
     /// The GST/HST line, or null when neither the shop nor the header/footer editor has a number.

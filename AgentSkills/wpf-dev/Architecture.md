@@ -91,6 +91,11 @@ components are added/renamed or the way pieces fit together changes.
     `LogoFileName` + `LogoPlacement` (Left/Center/Right, default Center) and the shop's
     `TaxRegistrationNumber` (GST/HST — NOT per language; printed directly under the
     receipt header, and edited under the Header card in the branding editor).
+    `ResolveTaxRegistrationNumber(settings)` applies the override rule — the number
+    typed into the header/footer editor wins over the shop's own, being the more
+    specific surface. It lives here rather than in either printer because the
+    receipt and the measurements PDF both print it, and two copies of an override
+    rule drift apart.
     `ExportConfigJson` / `TryParseConfigJson` / `ImportConfig` (+ `BrandingExport`
     DTO) make the 页眉页脚 export **self-contained** — the logo travels as base64
     inside the JSON.
@@ -107,7 +112,8 @@ components are added/renamed or the way pieces fit together changes.
     (`AppendToFlowDocument`, `CreateLogoBlock`), and renders the same XAML into
     QuestPDF spans for the measurements PDF (`RenderToPdf`, `AlignLogo`).
     `IsEmpty(headerXaml)` is the gate that decides whether the built-in document
-    title is printed.
+    title is printed. Parses with `XamlReader.Parse(xaml) as FlowDocument`, so
+    branding whose root is not a `FlowDocument` renders as nothing, silently.
   - `OrderNumberFormatter` — static; builds a shop's order/receipt numbers from its configured
     format (`OrderNumberMode` Timestamp/Sequential/DailySequential/YearlySequential + prefix +
     padding). `Preview` (no reservation), `Reserve` (skips numbers already taken),
@@ -121,6 +127,18 @@ components are added/renamed or the way pieces fit together changes.
     ordered by the garment's configured term order; per-garment work factored
     into `BuildGarmentSection`). Resolves names via `MeasurementTermsService`;
     used by the 定制服务 list column and the measurement print paths.
+  - `MeasurementSheetDocument` — static; lays out the custom-made measurements
+    PDF. `Compose(content)` returns the `IDocument`, `Save(content, path)` writes
+    it. Takes `MeasurementSheetContent` (title, `MeasurementSheetRow` info rows,
+    `MeasurementSheetSection` garment blocks, tax line, header/footer XAML, logo)
+    — **plain, already-localized data with no string keys**, because the sheet is
+    generated in the language chosen in the print dialog rather than the UI
+    language, so the composer must not look anything up. Branding sits in the
+    page's own `Header()`/`Footer()` slots so it repeats on every page; each
+    garment's name is its table's repeating `Header` row.
+    Lives outside `CustomMadeServiceWindow` (which now only gathers the data)
+    because a window cannot be opened without a message loop, and a print layout
+    checkable only by a human clicking Export is one whose regressions ship.
 - **Models/**
   - `Order` — customer + per-section (Alteration / CustomMade / Clothing) money
     fields, **a payment method per portion** (deposit + final balance), **a tax rate
