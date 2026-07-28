@@ -236,6 +236,11 @@ public partial class CustomMadeServiceWindow : Window
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "False positive: DownloadLanguagePanel is an x:Name instance field from the " +
+                        "XAML-generated partial, which the analyzer does not see. The method reads instance " +
+                        "data and cannot be static.")]
     private IEnumerable<RadioButton> DownloadLanguageRadios()
         => DownloadLanguagePanel.Items.OfType<RadioButton>();
 

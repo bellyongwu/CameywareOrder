@@ -143,6 +143,8 @@
   <Text key="Members.Profile">Personne</Text>
   <Text key="Members.Name">Nom</Text>
   <Text key="Members.Birthday">Date de naissance</Text>
+  <Text key="Members.Phone">Numéro de contact</Text>
+  <Text key="Members.Email">Courriel</Text>
   <Text key="Members.RoleAndStatus">Rôle et statut dans cette boutique</Text>
   <Text key="Members.RoleInShop">Rôle dans cette boutique</Text>
   <Text key="Members.IsActive">Travaille actuellement ici</Text>

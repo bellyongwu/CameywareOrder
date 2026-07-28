@@ -48,8 +48,6 @@ public partial class OrderEditWindow : Window
     // Amber, for a service that carries items but no charge — a flag, not an error.
     private static readonly System.Windows.Media.SolidColorBrush UnpricedLineBrush =
         CreateFrozenBrush(0xC1, 0x7A, 0x0B);
-    private static readonly Regex EmailPattern =
-        new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.None, RegexTimeout);
     // The ready-made categories used to be a fixed list here, so every shop in every installation
     // sold the same five things and adding a sixth meant a rebuild. They now come from the SHOP's
     // own catalogue (ProductCatalogService); the ids live on in ProductCatalogDefaults, which is
@@ -1210,8 +1208,7 @@ public partial class OrderEditWindow : Window
     // here because the payment flow separately enforces email for e-transfer.
     private bool ValidateEmailField()
     {
-        var email = EmailBox.Text?.Trim() ?? string.Empty;
-        var valid = email.Length == 0 || EmailPattern.IsMatch(email);
+        var valid = ContactValidation.IsValidEmail(EmailBox.Text);
         SetFieldError(EmailErrorText, valid ? null : _localization["OrderEdit.Validate.EmailInvalid"]);
         return valid;
     }
@@ -1220,19 +1217,9 @@ public partial class OrderEditWindow : Window
     // separators only, with 7-15 actual digits.
     private bool ValidatePhoneField()
     {
-        var phone = PhoneNumberBox.Text?.Trim() ?? string.Empty;
-        var valid = phone.Length == 0 || IsValidPhone(phone);
+        var valid = ContactValidation.IsValidPhone(PhoneNumberBox.Text);
         SetFieldError(PhoneErrorText, valid ? null : _localization["OrderEdit.Validate.PhoneInvalid"]);
         return valid;
-    }
-
-    private static bool IsValidPhone(string phone)
-    {
-        if (!Regex.IsMatch(phone, @"^\+?[\d\s\-().]+$", RegexOptions.None, RegexTimeout))
-            return false;
-
-        var digits = phone.Count(char.IsDigit);
-        return digits is >= 7 and <= 15;
     }
 
     private static void SetFieldError(TextBlock target, string? message)

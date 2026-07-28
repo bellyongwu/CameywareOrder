@@ -143,6 +143,8 @@
   <Text key="Members.Profile">Person</Text>
   <Text key="Members.Name">Name</Text>
   <Text key="Members.Birthday">Birthday</Text>
+  <Text key="Members.Phone">Contact Number</Text>
+  <Text key="Members.Email">Email</Text>
   <Text key="Members.RoleAndStatus">Role and status in this shop</Text>
   <Text key="Members.RoleInShop">Role in this shop</Text>
   <Text key="Members.IsActive">Currently works here</Text>

@@ -183,6 +183,7 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
                                 <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,14">
@@ -216,6 +217,17 @@
                                     <TextBlock Style="{StaticResource FieldLabel}"
                                                Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.JoinedOn], Mode=OneWay}"/>
                                     <DatePicker x:Name="NewJoinedDatePicker"/>
+                                </StackPanel>
+
+                                <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,10,14">
+                                    <TextBlock Style="{StaticResource FieldLabel}"
+                                               Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Phone], Mode=OneWay}"/>
+                                    <TextBox x:Name="NewPhoneNumberBox"/>
+                                </StackPanel>
+                                <StackPanel Grid.Row="3" Grid.Column="1" Margin="10,0,0,14">
+                                    <TextBlock Style="{StaticResource FieldLabel}"
+                                               Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Email], Mode=OneWay}"/>
+                                    <TextBox x:Name="NewEmailBox"/>
                                 </StackPanel>
                             </Grid>
 
@@ -304,6 +316,27 @@
                                             <TextBlock Style="{StaticResource FieldLabel}"
                                                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Birthday], Mode=OneWay}"/>
                                             <DatePicker x:Name="BirthDatePicker"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0,12,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                            <TextBlock Style="{StaticResource FieldLabel}"
+                                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Phone], Mode=OneWay}"/>
+                                            <TextBox x:Name="PhoneNumberBox" LostFocus="OnPhoneNumberBoxLostFocus"/>
+                                            <TextBlock x:Name="PhoneErrorText" Foreground="#B91C1C" FontSize="12"
+                                                       TextWrapping="Wrap" Margin="0,4,0,0" Visibility="Collapsed"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                            <TextBlock Style="{StaticResource FieldLabel}"
+                                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Email], Mode=OneWay}"/>
+                                            <TextBox x:Name="EmailBox" LostFocus="OnEmailBoxLostFocus"/>
+                                            <TextBlock x:Name="EmailErrorText" Foreground="#B91C1C" FontSize="12"
+                                                       TextWrapping="Wrap" Margin="0,4,0,0" Visibility="Collapsed"/>
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>

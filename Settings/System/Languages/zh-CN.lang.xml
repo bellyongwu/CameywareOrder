@@ -149,6 +149,8 @@
   <Text key="Members.Profile">个人信息</Text>
   <Text key="Members.Name">姓名</Text>
   <Text key="Members.Birthday">生日</Text>
+  <Text key="Members.Phone">联系电话</Text>
+  <Text key="Members.Email">电子邮箱</Text>
   <Text key="Members.RoleAndStatus">本店铺中的角色与状态</Text>
   <Text key="Members.RoleInShop">本店铺中的角色</Text>
   <Text key="Members.IsActive">目前在本店铺任职</Text>

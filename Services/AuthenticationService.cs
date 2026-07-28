@@ -275,6 +275,8 @@ public sealed class AuthenticationService
                 entry.Record.UserName,
                 entry.Record.DisplayName,
                 entry.Record.BirthDate,
+                entry.Record.PhoneNumber,
+                entry.Record.Email,
                 entry.Record.IsAdministrator,
                 Clone(entry.Membership!)))
             .OrderByDescending(member => member.Membership.IsActive)
@@ -355,6 +357,8 @@ public sealed class AuthenticationService
     {
         record.DisplayName = string.IsNullOrWhiteSpace(profile.DisplayName) ? null : profile.DisplayName.Trim();
         record.BirthDate = profile.BirthDate;
+        record.PhoneNumber = Blank(profile.PhoneNumber);
+        record.Email = Blank(profile.Email);
 
         var membership = record.Memberships.First(candidate => candidate.ShopPublicId == shopPublicId);
 
@@ -369,6 +373,14 @@ public sealed class AuthenticationService
         membership.ShiftStart = profile.ShiftStart;
         membership.ShiftEnd = profile.ShiftEnd;
     }
+
+    /// <summary>Trimmed, or null when the caller left the field empty — never a blank string.</summary>
+    /// <remarks>
+    /// "" and null must not both mean "no phone number": one of them would print as an empty
+    /// labelled line and the other would be skipped, depending on which screen read it.
+    /// </remarks>
+    private static string? Blank(string? value)
+        => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     /// <summary>
     /// Whether the signed-in user may replace another account's password.
@@ -408,6 +420,31 @@ public sealed class AuthenticationService
             .OrderByDescending(account => account.IsAdministrator)
             .ThenBy(account => account.UserName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
+
+    /// <summary>
+    /// Sets an account's contact details without touching any membership.
+    /// </summary>
+    /// <remarks>
+    /// The roster's <see cref="UpdateMember"/> can only reach people who belong to a shop, and
+    /// <see cref="CreateAccount"/> deliberately makes accounts that belong to none — so without
+    /// this those accounts could never be given a phone number or an address at all.
+    ///
+    /// Unlike a role change this is safe to apply to one's own account and to the administrator:
+    /// it grants nothing. The caller still gates on <see cref="CanManageUsers"/>.
+    /// </remarks>
+    public AccountOperationResult UpdateAccountContact(string userName, string? phoneNumber, string? email)
+    {
+        var record = FindRecord(userName);
+        if (record is null)
+            return AccountOperationResult.NotFound;
+
+        record.PhoneNumber = Blank(phoneNumber);
+        record.Email = Blank(email);
+
+        Save(_file);
+        RefreshCurrentUser(record);
+        return AccountOperationResult.Success;
+    }
 
     /// <summary>
     /// Creates an account with no memberships. Deliberately no way to create an administrator: the
@@ -599,8 +636,8 @@ public sealed class AuthenticationService
     // Copied rather than handed out: the session snapshot and the screens must not be able to edit
     // the file's in-memory state behind Save's back.
     private static UserAccount ToAccount(CredentialRecord record)
-        => new(record.UserName, record.DisplayName, record.IsAdministrator,
-            record.Memberships.Select(Clone).ToList());
+        => new(record.UserName, record.DisplayName, record.PhoneNumber, record.Email,
+            record.IsAdministrator, record.Memberships.Select(Clone).ToList());
 
     private static ShopMembership Clone(ShopMembership membership) => new()
     {
@@ -852,6 +889,8 @@ public enum AccountOperationResult
 public sealed record UserAccount(
     string UserName,
     string? DisplayName,
+    string? PhoneNumber,
+    string? Email,
     bool IsAdministrator,
     IReadOnlyList<ShopMembership> Memberships);
 
@@ -860,6 +899,8 @@ public sealed record StoreMember(
     string UserName,
     string? DisplayName,
     DateTime? BirthDate,
+    string? PhoneNumber,
+    string? Email,
     bool IsAdministrator,
     ShopMembership Membership)
 {
@@ -874,6 +915,8 @@ public sealed record StoreMember(
 public sealed record MemberProfile(
     string? DisplayName,
     DateTime? BirthDate,
+    string? PhoneNumber,
+    string? Email,
     IReadOnlyList<UserRole> Roles,
     bool IsActive,
     DateTime? JoinedOn,
@@ -942,6 +985,18 @@ public sealed class CredentialRecord
     public string? DisplayName { get; set; }
 
     public DateTime? BirthDate { get; set; }
+
+    /// <summary>
+    /// How to reach this person. Account-level, NOT per shop: someone who works at two branches has
+    /// one phone and one mailbox, and storing them per membership would let the two disagree.
+    /// </summary>
+    /// <remarks>
+    /// Both optional and stored null when blank, so an existing credentials file is already valid
+    /// under this schema — no version bump and no migration; a record simply has no number yet.
+    /// </remarks>
+    public string? PhoneNumber { get; set; }
+
+    public string? Email { get; set; }
 
     /// <summary>Full access everywhere. Held by exactly one account, which cannot be deleted.</summary>
     public bool IsAdministrator { get; set; }

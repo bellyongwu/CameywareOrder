@@ -137,7 +137,56 @@ public partial class UserManagementWindow : Window
         ResetPasswordConfirmBox.Clear();
         StatusText.Text = string.Empty;
 
+        // Contact details are account-level, so they load for the administrator too — unlike the
+        // assignment matrix above, filling them in grants nobody anything.
+        var selected = FindAccount(row.UserName);
+        ContactPhoneBox.Text = selected?.PhoneNumber ?? string.Empty;
+        ContactEmailBox.Text = selected?.Email ?? string.Empty;
+        ContactErrorText.Visibility = Visibility.Collapsed;
+
         BuildAssignmentRows(row.UserName);
+    }
+
+    private static UserAccount? FindAccount(string userName)
+        => AuthenticationService.Instance.ListAccounts()
+            .FirstOrDefault(candidate =>
+                string.Equals(candidate.UserName, userName, StringComparison.OrdinalIgnoreCase));
+
+    private void OnSaveContactClick(object sender, RoutedEventArgs e)
+    {
+        if (UserList.SelectedItem is not UserListRow row)
+            return;
+
+        // The same rules the order form applies to a customer's details.
+        if (!ContactValidation.IsValidPhone(ContactPhoneBox.Text))
+        {
+            ShowContactError("OrderEdit.Validate.PhoneInvalid");
+            return;
+        }
+
+        if (!ContactValidation.IsValidEmail(ContactEmailBox.Text))
+        {
+            ShowContactError("OrderEdit.Validate.EmailInvalid");
+            return;
+        }
+
+        var result = AuthenticationService.Instance.UpdateAccountContact(
+            row.UserName, ContactPhoneBox.Text, ContactEmailBox.Text);
+
+        if (result != AccountOperationResult.Success)
+        {
+            ShowContactError("Users.Error.NotFound");
+            return;
+        }
+
+        ContactErrorText.Visibility = Visibility.Collapsed;
+        StatusText.Text = _localization.Format("Users.Saved", row.UserName);
+    }
+
+    private void ShowContactError(string key)
+    {
+        ContactErrorText.Text = _localization[key];
+        ContactErrorText.Visibility = Visibility.Visible;
     }
 
     private void BuildAssignmentRows(string userName)

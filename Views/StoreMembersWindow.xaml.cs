@@ -200,6 +200,15 @@ public partial class StoreMembersWindow : Window
 
         DisplayNameBox.Text = member.DisplayName ?? string.Empty;
         BirthDatePicker.SelectedDate = member.BirthDate;
+        PhoneNumberBox.Text = member.PhoneNumber ?? string.Empty;
+        EmailBox.Text = member.Email ?? string.Empty;
+
+        // Any complaint belongs to the member who was on screen a moment ago, not this one.
+        // Inlined rather than a ClearContactErrors() helper: SonarLint's single-file pass cannot
+        // see XAML-generated fields, so such a helper reads to it as touching no instance data and
+        // trips S2325 (see context.md).
+        SetFieldError(PhoneErrorText, null);
+        SetFieldError(EmailErrorText, null);
 
         ManagerCheck.IsChecked = member.Membership.Roles.Contains(UserRole.Manager);
         StaffCheck.IsChecked = member.Membership.Roles.Contains(UserRole.Staff);
@@ -269,9 +278,14 @@ public partial class StoreMembersWindow : Window
         if (!TryApplyPasswordChange(row.UserName))
             return;
 
+        if (!ValidateContactFields())
+            return;
+
         var profile = new MemberProfile(
             DisplayNameBox.Text,
             BirthDatePicker.SelectedDate,
+            PhoneNumberBox.Text,
+            EmailBox.Text,
             ReadRoles(ManagerCheck, StaffCheck),
             ActiveCheck.IsChecked.GetValueOrDefault(),
             JoinedDatePicker.SelectedDate,
@@ -361,6 +375,8 @@ public partial class StoreMembersWindow : Window
         NewPasswordBox.Clear();
         NewPasswordConfirmBox.Clear();
         NewBirthDatePicker.SelectedDate = null;
+        NewPhoneNumberBox.Clear();
+        NewEmailBox.Clear();
         NewJoinedDatePicker.SelectedDate = DateTime.Today;
         NewManagerCheck.IsChecked = false;
         NewStaffCheck.IsChecked = true;
@@ -392,9 +408,23 @@ public partial class StoreMembersWindow : Window
 
         var userName = NewUserNameBox.Text.Trim();
 
+        if (!ContactValidation.IsValidPhone(NewPhoneNumberBox.Text))
+        {
+            ShowCreateError("OrderEdit.Validate.PhoneInvalid");
+            return;
+        }
+
+        if (!ContactValidation.IsValidEmail(NewEmailBox.Text))
+        {
+            ShowCreateError("OrderEdit.Validate.EmailInvalid");
+            return;
+        }
+
         var profile = new MemberProfile(
             NewDisplayNameBox.Text,
             NewBirthDatePicker.SelectedDate,
+            NewPhoneNumberBox.Text,
+            NewEmailBox.Text,
             ReadRoles(NewManagerCheck, NewStaffCheck),
             IsActive: true,
             NewJoinedDatePicker.SelectedDate,
@@ -445,6 +475,38 @@ public partial class StoreMembersWindow : Window
     {
         StatusText.Foreground = ErrorBrush;
         StatusText.Text = _localization[key];
+    }
+
+    // --- Contact details --------------------------------------------------------------------
+    //
+    // Validated with ContactValidation, the same rules the order form applies to a customer's
+    // details. A member address the roster accepts but the order form rejects would be a defect
+    // nobody sees until mail bounces.
+
+    private void OnPhoneNumberBoxLostFocus(object sender, RoutedEventArgs e)
+        => SetFieldError(PhoneErrorText, ContactValidation.IsValidPhone(PhoneNumberBox.Text)
+            ? null
+            : "OrderEdit.Validate.PhoneInvalid");
+
+    private void OnEmailBoxLostFocus(object sender, RoutedEventArgs e)
+        => SetFieldError(EmailErrorText, ContactValidation.IsValidEmail(EmailBox.Text)
+            ? null
+            : "OrderEdit.Validate.EmailInvalid");
+
+    /// <summary>Re-checks both fields on save, since neither may ever have lost focus.</summary>
+    private bool ValidateContactFields()
+    {
+        OnPhoneNumberBoxLostFocus(this, new RoutedEventArgs());
+        OnEmailBoxLostFocus(this, new RoutedEventArgs());
+
+        return PhoneErrorText.Visibility != Visibility.Visible
+            && EmailErrorText.Visibility != Visibility.Visible;
+    }
+
+    private void SetFieldError(TextBlock target, string? messageKey)
+    {
+        target.Text = messageKey is null ? string.Empty : _localization[messageKey];
+        target.Visibility = messageKey is null ? Visibility.Collapsed : Visibility.Visible;
     }
 
     private void ShowCreateError(string key)
