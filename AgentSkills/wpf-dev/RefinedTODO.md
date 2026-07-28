@@ -52,6 +52,37 @@ Nothing in flight. The last multi-phase effort (systematic config refactor, phas
 
 ## Recent work (2026-07-27 → 07-28)
 
+### Contact details on every account
+`PhoneNumber` / `Email` on `CredentialRecord` — **account-level, not per
+membership**: one person working at two branches has one phone and one mailbox.
+Nullable, so existing credential files are already valid; no migration.
+
+Editable in two places on purpose. 店铺成员 reaches people who belong to a shop;
+`CreateAccount` deliberately makes accounts that belong to none, which the roster
+cannot reach at all, so User Management has a matching card over
+`UpdateAccountContact`. That call touches no membership, so unlike a role change it
+is safe on the administrator and on one's own account.
+
+Validation lives in `Models/ContactValidation`, shared with the order form rather
+than copied — an address the roster accepts but the order form rejects is a defect
+nobody sees until mail bounces. Blank is valid and persists as `null`, never `""`:
+two spellings of "no phone number" print differently depending on the reader.
+
+### Every language list is discovered, never listed
+The download-measurement picker was two literal radios plus
+`IsChecked ? "en-US" : "zh-CN"`, so French shipped as a system language that
+measurements could not be exported in — while the PRINT dialog beside it was
+already dynamic. Now built from `LocalizationService.AvailableLanguages`, like the
+print dialog and the login screen.
+
+Each option is labelled with the language's OWN name from its own file, so a new
+language names itself instead of needing a translated entry added to every existing
+file. Adding a language stays "drop a file in", which is the point of the split.
+
+> When testing a "supports N languages" claim, assert the install HAS more than two
+> first. Without that guard the whole check passes vacuously on a two-language
+> install and proves nothing.
+
 ### The measurements PDF — rebuilt, and moved out of the window
 Composed into `page.Content()`, the letterhead rendered **once**: a one-page sheet
 looked right, a two-page sheet carried branding on page one alone with the footer
@@ -71,6 +102,23 @@ Visual: page numbers, a bordered card for the order details, accent-barred garme
 headings, striped rows. The colon belongs to the label — as `": 9051234567"` it
 read as a missing field name. Info labels 132pt, garment terms 190pt, because a
 term name runs ~25% longer in French and a wrapped label costs more than a gap.
+
+**The letterhead itself is `Services/ShopLetterhead`** — name, subtitle, contact
+lines, tax line, as plain strings resolved for an explicitly passed language (the
+sheet is generated in the language chosen in the print dialog, not the UI one).
+Receipt, printed sheet and PDF all build from it, because they had drifted: the
+receipt grew a letterhead while both measurement paths went on injecting the GST/HST
+number at the top of the page, so a sheet opened with a bare "GST/HST 税号：…" above
+its own title and never named the shop.
+
+Its rules, all taken from the receipt:
+- the tax number is the **last** letterhead line, never the first;
+- a custom header **replaces** the generated letterhead rather than stacking on it —
+  a shop that typed its address into the editor must not also get the shop record's
+  address printed underneath;
+- the document title is the letterhead's subtitle, and moves into the **body** when a
+  custom header replaces the letterhead — in both formats, so print and download stay
+  structurally identical whether or not branding is configured.
 
 `ResolveTaxRegistrationNumber` moved to `ReceiptBrandingStore`: the receipt and the
 PDF both print it and each had its own copy of the override rule.

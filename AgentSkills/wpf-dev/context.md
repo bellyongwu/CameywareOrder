@@ -1234,6 +1234,38 @@ Two rules learned the hard way here:
   Byte-identical comparison is still the right tool for the same band on
   different pages, where nothing has moved.
 
+## Which assembly the harnesses actually compile against
+
+The scratchpad harnesses do NOT all reference the same DLL. Most point at
+`scratchpad/navswap/bin/CameywareOrder.dll`; `authcheck`, `seeder` and `uicheck`
+point at the project's own `bin/Debug/net8.0-windows/`.
+
+This matters because the app locks its own output while running, so builds get
+redirected with `-p:OutputPath=<scratch>`. A redirected build leaves the project's
+`bin/` untouched, and any harness pointing there silently tests **old code** —
+compiling and passing, which is the worst possible failure mode. It cost a full
+round of "why does this method not exist" here, and a green suite reported against
+code that had not been built.
+
+**Build to the normal output path whenever the app is not running** (check with
+`tasklist //FI "IMAGENAME eq CameywareOrder.exe"`). Only redirect when it is, and
+then remember which harnesses have gone stale. After any redirected build, treat
+those three harnesses' results as unverified.
+
+## Enumerating languages
+
+Never enumerate the installed languages in code — no radio per language, no
+`code == "zh-CN" ? … : …`. Build every language list from
+`LocalizationService.AvailableLanguages`, which is discovered from
+`Settings/System/Languages`. Label each option with the language's OWN name from its
+own file (`LanguageOption.Name`) rather than a per-language string-table entry, so a
+new language names itself and adding one stays "drop a file in".
+
+Two fixed radios in the download-measurement section meant fr-FR shipped as a full
+system language whose measurements could not be exported, while the print dialog
+right beside it was already dynamic. When asserting a "supports N languages" claim,
+first assert the install HAS more than two — otherwise the check passes vacuously.
+
 ## Harnesses that read live user data
 
 `authcheck` runs against the real `credentials.json` and had rotted in two ways at
@@ -1244,7 +1276,10 @@ once, both of which read like authorization regressions and were neither:
   grants nobody access. The fixture, not the assertion, was stale — it now rewinds
   the file to version 1 first so the migration has something to migrate.
 - It signed in as `staff`/`staff`, and that password had since been changed in the
-  application. It now pins the fixture passwords via `SetPassword` during setup.
+  application. It now pins the fixture passwords via `SetPassword` during setup —
+  including `admin`, whose password had ALSO drifted. `SetPassword` is gated by its
+  callers rather than by the service, so it can be called before signing in, which
+  is what makes pinning the administrator possible at all.
 
 The general rule: a harness reading live data must **establish** the state it
 asserts on, not assume the state it found the day it was written.

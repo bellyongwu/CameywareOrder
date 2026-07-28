@@ -17,6 +17,92 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 14:10 — Contact number and email on every login account  [DONE]
+- Ask: "给所有login user添加contact number 和email"
+- `PhoneNumber` / `Email` added to `CredentialRecord`, and through it to `MemberProfile`,
+  `StoreMember` and `UserAccount`. **Account-level, not per membership**: someone
+  who works at two branches has one phone and one mailbox, and per-membership
+  storage would let the two disagree. Both nullable, so an existing
+  `credentials.json` is already valid — no schema bump, no migration.
+- Editable in TWO places on purpose. 店铺成员 covers people who belong to a shop;
+  `CreateAccount` deliberately makes accounts that belong to none (`test1`,
+  `test2` show "No shops assigned"), and the roster cannot reach those at all. So
+  User Management gained a matching card backed by a new `UpdateAccountContact`,
+  which touches no membership and is therefore safe on the administrator and on
+  one's own account — unlike a role change, filling in a phone number grants
+  nothing.
+- Validation extracted to `Models/ContactValidation` and shared with the order
+  form rather than copied. A member address the roster accepts but the order form
+  rejects is a defect nobody sees until mail bounces. Blank is valid — both fields
+  are optional — and persists as `null`, never `""`, so "no phone number" has one
+  spelling rather than two that print differently.
+- Labels reuse the existing `Members.*` namespace (`Members.Phone` /
+  `Members.Email`, added to all three files); the Save button reuses `Users.Save`.
+- Notes: `authcheck` +11 assertions covering round-trip, trimming, null-on-blank,
+  the account-level path, that a role change does not wipe contact details, and
+  the shared validator's accept/reject sets. `uicheck` repaired — it had been dead
+  since the config refactor (loading the removed root `Languages.xml`) and its
+  credentials backup pointed at the pre-`UserDataPaths` location, so it was
+  silently backing up nothing; it now renders both changed screens, 0 binding
+  errors. Suite 460/0; build 0/0.
+- **Found, not caused:** `admin`'s password is no longer `admin` in the live data
+  folder, exactly as `staff`'s was earlier. The record is structurally intact
+  (salt, hash, iterations, `IsAdministrator: true`). `authcheck` now pins `admin`
+  too — `SetPassword` is gated by its callers, not by the service, so it can be
+  called without signing in first, which is what makes pinning admin possible.
+
+### 2026-07-28 13:30 — Download-measurement language picker made dynamic  [DONE]
+- Ask: "In download measurement section, it should detect a third language as well.
+  right now only Chinese and English. Make this section dynamic."
+- Two literal radios (`DownloadChineseRadio` / `DownloadEnglishRadio`) and
+  `DownloadEnglishRadio.IsChecked ? "en-US" : "zh-CN"`. French shipped as a full
+  system language that measurements could not be exported in, and a fourth would
+  have been invisible the same way. The PRINT dialog
+  (`MeasurementPrintOptionsWindow`) was already dynamic, so print offered three
+  languages while download offered two.
+- Now an `ItemsControl` filled from `LocalizationService.AvailableLanguages`, the
+  same list the print dialog and the login screen use. Each radio is labelled with
+  the language's OWN name from its own file, so a new language names itself rather
+  than needing a translated entry added to every existing file — which also made
+  `Download.Language.Chinese` / `.English` dead, and they were removed.
+- Default follows the UI language, with a fallback so a selection always exists.
+  `ShortLanguageName` already derived the file suffix generically.
+- Notes: `gendercheck` +19, opening the real window under each of zh-CN/en-US/fr-FR
+  and asserting one radio per installed language, each labelled with its own name,
+  exactly one selected, the UI language default, and — the part that matters — that
+  the export method actually reads the picked code. It also asserts three or more
+  languages are installed FIRST, without which the whole check passes vacuously on
+  a two-language install and proves nothing.
+
+### 2026-07-28 12:50 — Measurements sheet: the receipt's generated letterhead  [DONE]
+- Ask: the downloaded PDF opened "GST/HST 税号：… / 量体打印单 / 订单编号: …" — the tax
+  number above the title, and the shop never named. "For downloaded PDF and printed
+  PDF for measurements, they should be aligned in the same structure... follow the
+  same logic like printing header&footer for receipt. This is a global setting."
+- Both measurement paths injected the registration number at the TOP of the page
+  and built no letterhead at all. The receipt had grown one (`AddReceiptTitle` →
+  shop name → subtitle → contact lines → tax number LAST) and the two measurement
+  paths never followed; the old code comment even said so.
+- New `Services/ShopLetterhead` holds it as plain resolved strings — name,
+  subtitle, contact lines, tax line — built for an explicitly passed language,
+  since the sheet is generated in the language chosen in the print dialog. All
+  three consumers now build from it: receipt, printed sheet, PDF export.
+- Rules, taken from the receipt: the tax number is the LAST letterhead line; a
+  custom header REPLACES the generated letterhead rather than stacking on it (a
+  shop that typed its address into the editor must not get the shop record's
+  address printed underneath as well); and the document title is the letterhead's
+  subtitle, moving into the BODY when a custom header replaces the letterhead — in
+  both formats, so print and download stay structurally identical either way.
+- Notes: `pdfcheck` +5 — the decisive one renders with and without the tax line and
+  asserts the band above it is byte-identical, which only holds if it is last.
+  `headercheck` +6 reflects into the real `BuildMeasurementDocument` and asserts
+  the printed block order matches. Suite 449/0.
+- **Correction to the previous entry's claim:** I reported "all harnesses now
+  reference a single artifact" after changing only `pdfcheck`. `authcheck`,
+  `seeder` and `uicheck` point at the project's own `bin`, which the scratch
+  `OutputPath` builds never update — so those ran against stale code. Build to the
+  normal output path whenever the app is not running.
+
 ### 2026-07-28 12:20 — Measurements PDF: keep the header/footer, improve the layout  [DONE]
 - Ask: "打印量身尺寸的PDF 文件应该要保留header 和footer， 优化一下PDF的UI。"
 - Root cause of the missing letterhead: the logo, the branded header, the tax line

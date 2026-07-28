@@ -74,7 +74,15 @@ components are added/renamed or the way pieces fit together changes.
     credentials from an account deactivated in EVERY shop it belongs to. Roster CRUD
     (`ListMembers` / `AddMember` / `UpdateMember` / `CanSetPasswordFor` → `AccountOperationResult`)
     backs 店铺成员; installation-wide CRUD (`CreateAccount` / `DeleteAccount` / `SetPassword` /
-    `SetShopRoles`) backs 用户管理. The administrator cannot be deleted or given memberships, and no
+    `SetShopRoles` / `UpdateAccountContact`) backs 用户管理.
+    `PhoneNumber` and `Email` are **account-level**, not per membership — one person
+    working at two branches has one phone and one mailbox. Both nullable and stored
+    null-when-blank (never `""`), so existing files need no migration.
+    `UpdateAccountContact` exists because `UpdateMember` can only reach people who
+    belong to a shop while `CreateAccount` deliberately makes accounts that belong to
+    none; it touches no membership, so unlike a role change it is safe on the
+    administrator and on one's own account. Validation is `ContactValidation`, shared
+    with the order form. The administrator cannot be deleted or given memberships, and no
     account can be promoted to administrator. File schema version 3: the version-2 fold (flat
     assignments → memberships) runs on load, `ApplyLegacyShopMemberships` completes the version-1
     upgrade once shops are readable, and `ProvisionedAccounts` makes deleting a seeded account
@@ -127,10 +135,24 @@ components are added/renamed or the way pieces fit together changes.
     ordered by the garment's configured term order; per-garment work factored
     into `BuildGarmentSection`). Resolves names via `MeasurementTermsService`;
     used by the 定制服务 list column and the measurement print paths.
+  - `ShopLetterhead` — the letterhead the application GENERATES when the
+    header/footer editor has supplied none: `Name`, `Subtitle`, `ContactLines`
+    (`ShopLetterheadLine` label+value), `TaxLine`. `Build(localization, languageCode,
+    subtitleKey)` resolves every string for an explicitly passed language, because
+    the measurements sheet is produced in the language chosen in the print dialog
+    rather than the UI one. Plain strings, not blocks or spans, because both the
+    FlowDocument printer and the QuestPDF exporter consume it.
+    Its rules: the tax number is the **last** line; a custom header **replaces**
+    this block rather than stacking on it; the document title is `Subtitle`, and
+    moves into the body when a custom header replaces the letterhead. Used by the
+    receipt (`AddReceiptTitle`), the printed measurements sheet
+    (`AddMeasurementLetterhead`) and `MeasurementSheetDocument` alike — they had
+    drifted, and the measurement paths printed a bare GST/HST line above the title
+    while never naming the shop.
   - `MeasurementSheetDocument` — static; lays out the custom-made measurements
     PDF. `Compose(content)` returns the `IDocument`, `Save(content, path)` writes
     it. Takes `MeasurementSheetContent` (title, `MeasurementSheetRow` info rows,
-    `MeasurementSheetSection` garment blocks, tax line, header/footer XAML, logo)
+    `MeasurementSheetSection` garment blocks, a `ShopLetterhead`, header/footer XAML, logo)
     — **plain, already-localized data with no string keys**, because the sheet is
     generated in the language chosen in the print dialog rather than the UI
     language, so the composer must not look anything up. Branding sits in the
@@ -140,6 +162,17 @@ components are added/renamed or the way pieces fit together changes.
     because a window cannot be opened without a message loop, and a print layout
     checkable only by a human clicking Export is one whose regressions ship.
 - **Models/**
+  - `ContactValidation` — static; the one definition of a usable phone number and
+    email address (`IsValidPhone`, `IsValidEmail`). Shared by the order form's
+    customer fields and the roster's member fields; blank is VALID in both, since
+    "required" is a separate question the caller answers. The rules were private to
+    `OrderEditWindow`, and a second copy would have been free to drift — an address
+    one screen accepts and the other rejects is a bug nobody sees until mail bounces.
+  - `MeasurementUnits` — static; owns cm↔inch conversion for the editor, the printed
+    sheet and the PDF export alike. `Convert` preserves a tailor's trailing `+`/`-`
+    and returns free text unchanged; `Resolve(cm, inch, wantInches)` converts from
+    whichever unit WAS filled in, which is what stopped inch printing from dropping
+    95% of stored values.
   - `Order` — customer + per-section (Alteration / CustomMade / Clothing) money
     fields, **a payment method per portion** (deposit + final balance), **a tax rate
     per portion** (`XxxTaxRate` = deposit stage, `XxxFinalTaxRate` = final stage;
