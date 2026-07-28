@@ -37,6 +37,34 @@ public class Shop
     /// </summary>
     public string NamesJson { get; set; } = "{}";
 
+    /// <summary>
+    /// Language code to street address, serialized — the same shape as <see cref="NamesJson"/> and
+    /// for the same reason. An address is prose: "广州市天河区体育西路 101 号" and "101 Tiyu West Rd,
+    /// Tianhe, Guangzhou" are the same place written for two different readers, and a receipt
+    /// printed in one language should not carry the other's wording.
+    ///
+    /// Contrast <see cref="PhoneNumber"/> / <see cref="Email"/> / <see cref="Website"/> below,
+    /// which are deliberately NOT per language: they are identifiers, identical whoever reads them,
+    /// exactly like <c>ReceiptBrandingSettings.TaxRegistrationNumber</c>. Only their labels
+    /// translate.
+    ///
+    /// Nullable, unlike <see cref="NamesJson"/>, and following <see cref="PaymentTaxRulesJson"/>:
+    /// null means "never filled in", which is a perfectly ordinary state for an optional field.
+    /// It also keeps the migration honest — SQLite's ALTER TABLE ADD COLUMN demands a default for a
+    /// NOT NULL column, and a literal '{}' cannot be written in this codebase's DDL (see the note
+    /// in EnsureShopSchemaAsync: the raw SQL is treated as a composite format string).
+    /// </summary>
+    public string? AddressesJson { get; set; }
+
+    /// <summary>Shop contact number. One string for every language; see <see cref="AddressesJson"/>.</summary>
+    public string? PhoneNumber { get; set; }
+
+    /// <summary>Shop contact email. One string for every language; see <see cref="AddressesJson"/>.</summary>
+    public string? Email { get; set; }
+
+    /// <summary>Shop website. One string for every language; see <see cref="AddressesJson"/>.</summary>
+    public string? Website { get; set; }
+
     /// <summary>Language applied when this shop is opened. Null falls back to the global preference.</summary>
     public string? PreferredLanguageCode { get; set; }
 
@@ -88,40 +116,58 @@ public class Shop
 
     /// <summary>Language code to display name, decoded from <see cref="NamesJson"/>.</summary>
     [NotMapped]
-    public Dictionary<string, string> Names
-    {
-        get
-        {
-            if (string.IsNullOrWhiteSpace(NamesJson))
-                return new Dictionary<string, string>();
+    public Dictionary<string, string> Names => DecodeLocalized(NamesJson);
 
-            try
-            {
-                return JsonSerializer.Deserialize<Dictionary<string, string>>(NamesJson)
-                    ?? new Dictionary<string, string>();
-            }
-            catch (JsonException)
-            {
-                return new Dictionary<string, string>();
-            }
-        }
-    }
+    /// <summary>Language code to street address, decoded from <see cref="AddressesJson"/>.</summary>
+    [NotMapped]
+    public Dictionary<string, string> Addresses => DecodeLocalized(AddressesJson);
 
     public void SetNames(IReadOnlyDictionary<string, string> names)
         => NamesJson = JsonSerializer.Serialize(names);
+
+    public void SetAddresses(IReadOnlyDictionary<string, string> addresses)
+        => AddressesJson = JsonSerializer.Serialize(addresses);
 
     /// <summary>
     /// Display name in the requested language, falling back to any other language that has one and
     /// finally to an empty string, so a shop is never nameless on screen.
     /// </summary>
-    public string ResolveName(string languageCode)
-    {
-        var names = Names;
+    public string ResolveName(string languageCode) => Resolve(Names, languageCode);
 
-        if (names.TryGetValue(languageCode, out var exact) && !string.IsNullOrWhiteSpace(exact))
+    /// <summary>
+    /// Street address in the requested language, with the same fallback as <see cref="ResolveName"/>.
+    /// Unlike the name, an empty result is entirely normal — the address is optional, and callers
+    /// are expected to omit the line rather than print a blank one.
+    /// </summary>
+    public string ResolveAddress(string languageCode) => Resolve(Addresses, languageCode);
+
+    /// <summary>
+    /// Reads one of the per-language JSON columns. Bad JSON reads back as "nothing set" rather than
+    /// throwing: this runs on every display of every shop, and a corrupt column should cost the
+    /// shop its address, not stop the picker from opening.
+    /// </summary>
+    private static Dictionary<string, string> DecodeLocalized(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return new Dictionary<string, string>();
+
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+                ?? new Dictionary<string, string>();
+        }
+        catch (JsonException)
+        {
+            return new Dictionary<string, string>();
+        }
+    }
+
+    private static string Resolve(Dictionary<string, string> values, string languageCode)
+    {
+        if (values.TryGetValue(languageCode, out var exact) && !string.IsNullOrWhiteSpace(exact))
             return exact;
 
-        return names.Values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
+        return values.Values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
     }
 }
 

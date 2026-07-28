@@ -17,30 +17,25 @@ public partial class LoginWindow : Window
     private readonly LocalizationService _localization;
     private bool _isLoadingLanguages;
 
-    /// <param name="seedDefaultUserName">
-    /// True on the startup path, false when signing back in after a sign-out — see the comment
-    /// below on why a returning user gets an empty box.
-    /// </param>
-    public LoginWindow(LocalizationService localization, bool seedDefaultUserName = true)
+    public LoginWindow(LocalizationService localization)
     {
         InitializeComponent();
         _localization = localization;
 
         PopulateLanguages();
 
-        if (seedDefaultUserName)
-        {
-            // Seeded so the very first sign-in on a new installation needs no guesswork; the
-            // password is still typed, so this is a convenience rather than a bypass.
-            UserNameBox.Text = "admin";
-            Loaded += (_, _) => PasswordBox.Focus();
-        }
-        else
-        {
-            // Signing out is overwhelmingly "somebody else takes over", so the name is theirs to
-            // enter and the caret starts there.
-            Loaded += (_, _) => UserNameBox.Focus();
-        }
+        // The user name box starts EMPTY on every path, including a fresh installation's first
+        // launch. It used to be seeded with "admin" as a convenience, which meant the login screen
+        // announced to anyone who opened the application that an account by that name exists — and
+        // that account is the one that can never be deleted, demoted or locked out. OnSignInClick
+        // already refuses to say whether a failure was an unknown name or a wrong password,
+        // precisely so the screen cannot be used to discover account names; pre-filling one handed
+        // that away before the first keystroke.
+        //
+        // Signing out is also overwhelmingly "somebody else takes over", so the caret starting in
+        // an empty name box is the right behaviour there too — which is why there is no longer a
+        // parameter distinguishing the two paths.
+        Loaded += (_, _) => UserNameBox.Focus();
     }
 
     /// <summary>The account that signed in, or null when the window was closed without signing in.</summary>

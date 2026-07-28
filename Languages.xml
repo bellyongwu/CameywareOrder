@@ -156,6 +156,12 @@
     <Text key="Shop.Setup.EditTitle">店铺设置</Text>
     <Text key="Shop.Setup.Name">店名</Text>
     <Text key="Shop.Setup.NameHint">每种语言各填一次。留空的语言将显示其他语言的店名。</Text>
+    <Text key="Shop.Setup.Address">地址</Text>
+    <Text key="Shop.Setup.AddressHint">选填。每种语言各填一次，留空的语言将显示其他语言的地址。</Text>
+    <Text key="Shop.Setup.Phone">联系电话</Text>
+    <Text key="Shop.Setup.Email">电子邮箱</Text>
+    <Text key="Shop.Setup.Website">网址</Text>
+    <Text key="Shop.Setup.ContactHint">选填。电话、邮箱和网址不区分语言，各语言显示同一内容。</Text>
     <Text key="Shop.Setup.PreferredLanguage">默认语言</Text>
     <Text key="Shop.Setup.PreferredLanguageHint">非管理员用户将始终以该语言使用本店铺。</Text>
     <Text key="Shop.Setup.Currency">货币</Text>
@@ -167,7 +173,7 @@
     <Text key="Shop.Setup.NameDuplicate">已存在同名店铺，请换一个名称。</Text>
     <Text key="Shop.Setup.Save">保存</Text>
     <Text key="Shop.Setup.Cancel">取消</Text>
-    <Text key="Shop.Setup.Subtitle">此处的设置仅适用于本店铺：店名、货币、各支付方式的税率以及小票编号规则。</Text>
+    <Text key="Shop.Setup.Subtitle">此处的设置仅适用于本店铺：店名、地址与联系方式、货币、各支付方式的税率以及小票编号规则。</Text>
     <Text key="Shop.Setup.IdentitySection">店铺信息</Text>
     <Text key="Shop.Switch.CloseEditors">请先关闭所有订单窗口，再切换店铺。</Text>
 
@@ -670,6 +676,12 @@
     <Text key="Shop.Setup.EditTitle">Shop Settings</Text>
     <Text key="Shop.Setup.Name">Shop name</Text>
     <Text key="Shop.Setup.NameHint">One name per language. A blank language falls back to a language that has one.</Text>
+    <Text key="Shop.Setup.Address">Address</Text>
+    <Text key="Shop.Setup.AddressHint">Optional. One address per language; a blank language falls back to a language that has one.</Text>
+    <Text key="Shop.Setup.Phone">Phone</Text>
+    <Text key="Shop.Setup.Email">Email</Text>
+    <Text key="Shop.Setup.Website">Website</Text>
+    <Text key="Shop.Setup.ContactHint">Optional. Phone, email and website are not per language — every language shows the same value.</Text>
     <Text key="Shop.Setup.PreferredLanguage">Preferred language</Text>
     <Text key="Shop.Setup.PreferredLanguageHint">Non-administrators always use this shop in this language.</Text>
     <Text key="Shop.Setup.Currency">Currency</Text>
@@ -681,7 +693,7 @@
     <Text key="Shop.Setup.NameDuplicate">A shop with this name already exists. Choose another name.</Text>
     <Text key="Shop.Setup.Save">Save</Text>
     <Text key="Shop.Setup.Cancel">Cancel</Text>
-    <Text key="Shop.Setup.Subtitle">These settings apply to this shop only: its name, currency, the tax charged on each payment method, and how its receipts are numbered.</Text>
+    <Text key="Shop.Setup.Subtitle">These settings apply to this shop only: its name, address and contact details, currency, the tax charged on each payment method, and how its receipts are numbered.</Text>
     <Text key="Shop.Setup.IdentitySection">Shop Details</Text>
 
     <Text key="Shop.Tax.Section">Payment Methods &amp; Tax</Text>

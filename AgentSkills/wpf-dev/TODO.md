@@ -17,6 +17,131 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 00:50 — Shop address in the header; stop seeding "admin"  [DONE]
+- Ask: "当前的main application view 的店名下面要标出地址，这样用户就知道操作的是哪个店了。然后当login
+  重启时不要透露"admin"作为起始的登录名称"
+- Done:
+  - [x] `ShopContext.CurrentAddress` + `HasAddress`, mirroring `CurrentName` but with NO fallback
+        string — an unset address shows nothing rather than a placeholder.
+  - [x] The three notify sites each listed the properties themselves, so a fourth property meant a
+        fourth chance to forget one. Factored into `NotifyDisplayChanged()`; the harness asserts all
+        three sites raise the whole set, because the failure mode is a header still showing the
+        PREVIOUS shop after a switch — which is how an order gets entered against the wrong branch.
+  - [x] MainWindow header: address under the name with a map-pin glyph, in the subtle header
+        foreground, hidden outright when the shop has none. The header Grid went from ONE cell with
+        two overlapping children to two columns — that worked while the left side was a single short
+        name, but an address is long enough to run under the right-hand subtitle.
+  - [x] Login no longer seeds "admin". The `seedDefaultUserName` parameter is gone entirely rather
+        than defaulted to false: with no seeding both paths behave identically (empty box, caret in
+        it), so the parameter was dead weight.
+- Notes: build 0/0. Sonar: **zero findings in the three changed C# files** (the two `MainWindow.xaml.cs`
+  S2325 hits are pre-existing and in a file only its XAML was touched this round).
+  - `scratchpad/headercheck` — **29/29, 0 binding errors**. Opens the REAL MainWindow while signing
+    NOBODY in: with no current user every capability gates closed and `RefreshSignedInUser` handles
+    the null, so the window constructs anyway and the header does not depend on role. Asserts the
+    address renders under the title in both languages, is smaller than it, hides for a shop with no
+    address, and comes BACK on switching shops. **credentials.json was SHA256-hashed before and
+    after and is byte-identical** — the singleton reads it, and the user's app was running.
+  - `scratchpad/logincheck` — extended to **26/26**: user name box empty, the string "admin" absent
+    from every TextBlock and TextBox on the screen, caret in the name box.
+- Flagged to the user: a fresh installation now gives no on-screen hint of the initial account name,
+  so whoever sets one up has to be told `admin` out of band. That is the point of the change, but it
+  is a real change to first-run.
+
+### 2026-07-28 00:20 — Login screen: stack the language label over its box  [DONE]
+- Ask: "优化一下login的页面， 把语言选择和label上下摆放"
+- Done:
+  - [x] The language row was `Orientation="Horizontal"` with a 12px muted label beside a fixed
+        150px box, which read as a footnote hanging off the password field. Now stacked
+        label-over-box like the two fields above it, sharing `FieldLabelStyle` and running the full
+        362px column width — a third field that looks like one.
+  - [x] New `FieldComboStyle` (`BasedOn` ThemedComboBox), matching the 15px size-up treatment.
+  - [x] Window 560 → 600 to keep room for the error message, which appears in the same column and
+        pushes the language field down. Verified with a doubled (3-line, 48px) error still clearing
+        the Sign in button.
+- Notes: build 0/0, XAML only (no C#, so nothing for Sonar). `scratchpad/logincheck` —
+  **20/20, 0 binding errors**, both languages, asserting the stack by geometry: panel Orientation
+  is Vertical, label bottom (372) ≤ box top (377) so they are not side by side, box shares the
+  username box's left edge and width (x 32 = 32, w 362 = 362), and the label matches the other
+  field labels (13/SemiBold).
+  - **A TextBox and a ComboBox do NOT measure to the same height from the same font and padding**,
+    and I got the direction backwards twice before dumping the tree. Details in context.md. Fixed
+    by pinning a shared `FieldHeight` so the three are equal by construction.
+  - Reaching for the visual-tree dump earlier would have saved two wrong guesses — the arithmetic
+    from the XAML looks obvious and is not what the layout system actually does.
+
+### 2026-07-27 23:40 — Shop contact details (address / phone / email)  [DONE]
+- Ask: ">给每个店的信息增加一个地址选项，email 和联系方式 等等 / 编辑菜单在店名底下添加小字Address作为标识。"
+- Done:
+  - [x] `Shop.AddressesJson` per language (mirrors `NamesJson`) + `Addresses` / `SetAddresses` /
+        `ResolveAddress`; `PhoneNumber`, `Email`, `Website` as plain nullable strings. The JSON
+        decode and the language fallback were factored into `DecodeLocalized` / `Resolve` rather
+        than copied, so name and address cannot drift.
+  - [x] Schema: 4 columns added to BOTH the `CREATE TABLE` in `EnsureShopSchemaAsync` AND
+        `ShopColumnMigrations` — the file's own comment warns that doing one and not the other
+        works on exactly one kind of installation. Both branches are covered by the harness.
+  - [x] ShopSetupWindow: address block directly under the shop name in the same per-language shape;
+        phone / email / website in a three-column row below. The per-language row template was
+        extracted to a shared `LocalizedFieldRow` DataTemplate and `ShopNameEntry` renamed
+        `LocalizedTextEntry`, since both editors are the same row with a different label.
+  - [x] `Languages.xml`: 7 new keys × 2 blocks; `Shop.Setup.Subtitle` updated, since it enumerates
+        what the page configures. Verified 491 keys per block, every key present exactly twice.
+- Notes: build 0/0. Sonar run with the analyzer package: **zero findings in the three changed C#
+  files**. (31 pre-existing findings elsewhere in the codebase under SonarAnalyzer 9.x — mostly
+  S6602/S6603/S6605 "use the collection-specific method", which are newer rules than earlier
+  sessions ran. Not touched: out of scope.)
+  - `scratchpad/migcheck` — **25/25 against a COPY of the live orders.db**, calling the real private
+    `App.EnsureShopSchemaAsync` by reflection rather than re-typing the DDL (a copy of the SQL would
+    pass while the shipping code was wrong). Covers: upgrade path preserves all 3 shops and every
+    `NamesJson` byte-for-byte, new columns read NULL, a SECOND run is a no-op (startup repeats it on
+    every launch, so a duplicate-column crash would brick the app after one restart), fresh-install
+    CREATE TABLE carries the columns, and a full round trip.
+  - `scratchpad/shopcheck` — **31/31, 0 binding errors**, opening the real ShopSetupWindow in both
+    languages and both modes against the migrated copy. Layout asserted by GEOMETRY, not screenshot:
+    address block below the name block (191→335), same left edge and width as the name boxes
+    (x 145 = 145, w 679 = 679), same 38px height as the contact boxes. The save path is driven
+    through the real handler and read back from the database — trimming and whitespace→NULL included.
+- Decisions:
+  - Address is PER LANGUAGE, phone/email/website are not. Follows the reasoning already in the
+    codebase: shop names are per language because they are printed and shown on screen, while
+    `ReceiptBrandingSettings.TaxRegistrationNumber` is deliberately single-valued because "a
+    registration number is the same string whoever is reading it". An address reads differently in
+    中文 and English; a phone number does not.
+  - NOT auto-injected into the printed receipt. The receipt header/footer is already free rich text
+    per language, so a shop that wants its address printed has typed it there — injecting would
+    double-print. Left as a follow-up for the user to direct.
+  - `Website` is the "等等" slot, flagged to the user rather than added quietly.
+
+### 2026-07-27 23:10 — Nav bar order + right-click menu theming  [DONE]
+- Ask: "Switch the language toggle section with Local configuration. on the nav bar" /
+  "根据当前的主题，再去优化一下主界面右键唤出的tooltip ui"
+- Done:
+  - [x] System bar columns swapped: 本地配置 3→1, language label 1→2, language box 2→3. Order is now
+        greeting · 本地配置 · 语言 · 店铺成员 · 退出. Right margin 14→18 on the menu, because its
+        neighbour changed from a padded button to a bare text label and 14 read as cramped.
+  - [x] **The right-click menu was running on stock Windows chrome — same missing-`BasedOn` fault as
+        the login inputs, third occurrence.** `OrderContextMenuStyle` and `OrderMenuItemStyle` in
+        MainWindow.xaml had no `BasedOn`, so they REPLACED the implicit theme styles: the six items
+        fell back to the stock MenuItem template while the menu bar overhead used `ThemedMenuItem`,
+        and the ContextMenu style dropped `Grid.IsSharedSizeScope`. Both styles deleted outright so
+        the implicit styles apply.
+  - [x] New `ThemedContextMenu` in AppTheme: real ControlTemplate, 8px radius + `DropShadowEffect`
+        matching the menu-bar submenu popups exactly. Templated, not merely recoloured — the stock
+        ContextMenu's square Border and legacy offset-rectangle shadow cannot be set away.
+  - [x] New keyed `{x:Static MenuItem.SeparatorStyleKey}` style. A Separator inside a menu never
+        reaches the implicit `Style TargetType="Separator"`.
+  - [x] New `DangerMenuItem` — delete now reads red at rest AND while highlighted.
+- Notes: build 0/0; 2 files changed, both XAML, no C# — nothing for Sonar (a C# analyzer) to inspect.
+  - Verified by `scratchpad/menucheck`, a THEME-ONLY harness: **35/35 assertions, 0 binding errors,
+    3 consecutive runs.** It deliberately touches no database and no credentials file, because the
+    user's application was running against both; the full `uicheck` sweep was not run for that reason.
+  - Measured, not eyeballed: label gutter spread **0px across all 6 items** (the shared-size scope
+    doing its job), separator hairline 1px `#FFE5E7EB`, delete `#FFB91C1C` at rest and highlighted,
+    plain item `#FF3730A3` highlighted, corner alpha 1/255 (opaque would be 255).
+  - The harness was flaky on first write — a ContextMenu closes when its window loses foreground, and
+    one run lost it, taking 3 assertions down. Fixed with an activate-and-retry loop rather than
+    accepting the flake.
+
 ### 2026-07-27 22:20 — Login inputs, date picker sizing and calendar theme  [DONE]
 - Ask: "》优化登录主界面的input, 没有加载theme的input 》优化date time picker, date time picker 应该保持跟主色调
   一致的字体和颜色，现在字体太小。并且要跟date picker input的长度一致，如果做不到一致，那就整个选择面板右对齐。

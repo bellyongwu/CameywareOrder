@@ -223,10 +223,10 @@ public partial class App : Application
 
         var localization = LocalizationService.Instance;
 
-        // The user name is deliberately NOT pre-filled here. Signing out is overwhelmingly "let
-        // somebody else take over", and a pre-filled name invites typing the next person's
-        // password against the previous person's account.
-        var loginWindow = new LoginWindow(localization, seedDefaultUserName: false);
+        // The user name is never pre-filled — see LoginWindow's constructor. Signing out is
+        // overwhelmingly "let somebody else take over", and a pre-filled name invites typing the
+        // next person's password against the previous person's account.
+        var loginWindow = new LoginWindow(localization);
         if (loginWindow.ShowDialog() is not true)
         {
             Shutdown();
@@ -456,6 +456,12 @@ public partial class App : Application
         ("OrderNumberPadding", "ALTER TABLE Shops ADD COLUMN OrderNumberPadding INTEGER NOT NULL DEFAULT 4; "),
         ("OrderNumberNextSequence", "ALTER TABLE Shops ADD COLUMN OrderNumberNextSequence INTEGER NOT NULL DEFAULT 1; "),
         ("OrderNumberSequenceKey", "ALTER TABLE Shops ADD COLUMN OrderNumberSequenceKey TEXT NULL; "),
+        // Contact details. All nullable: they are optional, and a NOT NULL column would need a
+        // DEFAULT here that the composite-format-string problem above makes awkward to write.
+        ("AddressesJson", "ALTER TABLE Shops ADD COLUMN AddressesJson TEXT NULL; "),
+        ("PhoneNumber", "ALTER TABLE Shops ADD COLUMN PhoneNumber TEXT NULL; "),
+        ("Email", "ALTER TABLE Shops ADD COLUMN Email TEXT NULL; "),
+        ("Website", "ALTER TABLE Shops ADD COLUMN Website TEXT NULL; "),
     };
 
     /// <summary>
@@ -675,7 +681,11 @@ public partial class App : Application
                 OrderNumberPrefix TEXT NULL,
                 OrderNumberPadding INTEGER NOT NULL DEFAULT 4,
                 OrderNumberNextSequence INTEGER NOT NULL DEFAULT 1,
-                OrderNumberSequenceKey TEXT NULL
+                OrderNumberSequenceKey TEXT NULL,
+                AddressesJson TEXT NULL,
+                PhoneNumber TEXT NULL,
+                Email TEXT NULL,
+                Website TEXT NULL
             );");
 
         // A database created by an earlier build already HAS the table, so CREATE TABLE IF NOT

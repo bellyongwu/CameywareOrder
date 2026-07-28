@@ -73,6 +73,24 @@
             <Setter Property="FontSize" Value="13"/>
         </Style>
 
+        <!-- One language's row of a per-language text field. Shared by the shop-name and address
+             editors rather than written twice, so the two cannot drift apart; both bind the same
+             LocalizedTextEntry. -->
+        <DataTemplate x:Key="LocalizedFieldRow">
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="100"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="{Binding LanguageName}" VerticalAlignment="Center"
+                           FontSize="12" Foreground="#4B5563"/>
+                <!-- PropertyChanged, not the default LostFocus: Save must see what is on
+                     screen even when the box still has focus. -->
+                <TextBox Grid.Column="1" Style="{StaticResource InputStyle}"
+                         Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
+            </Grid>
+        </DataTemplate>
+
         <Style x:Key="ModeRadioStyle" TargetType="RadioButton">
             <Setter Property="Margin" Value="0,0,0,10"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -161,25 +179,49 @@
                         <!-- Name, one box per installed language -->
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Name], Mode=OneWay}"
                                    Style="{StaticResource SectionLabelStyle}"/>
-                        <ItemsControl x:Name="NameItems">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Grid Margin="0,0,0,6">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="100"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0" Text="{Binding LanguageName}" VerticalAlignment="Center"
-                                                   FontSize="12" Foreground="#4B5563"/>
-                                        <!-- PropertyChanged, not the default LostFocus: Save must see what is on
-                                             screen even when the box still has focus. -->
-                                        <TextBox Grid.Column="1" Padding="7,5" FontSize="13" BorderBrush="#E5E7EB"
-                                                 Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </Grid>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                        <ItemsControl x:Name="NameItems" ItemTemplate="{StaticResource LocalizedFieldRow}"/>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.NameHint], Mode=OneWay}"
+                                   Style="{StaticResource HintStyle}" Margin="0,2,0,16"/>
+
+                        <!-- Address sits directly beneath the name and repeats its shape exactly: it
+                             is per language for the same reason the name is — an address is prose,
+                             and a receipt printed in one language should not carry the other's
+                             wording. Phone / email / website below are NOT per language; they are
+                             identifiers, identical whoever reads them. -->
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Address], Mode=OneWay}"
+                                   Style="{StaticResource SectionLabelStyle}"/>
+                        <ItemsControl x:Name="AddressItems" ItemTemplate="{StaticResource LocalizedFieldRow}"/>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.AddressHint], Mode=OneWay}"
+                                   Style="{StaticResource HintStyle}" Margin="0,2,0,16"/>
+
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="16"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Phone], Mode=OneWay}"
+                                           Style="{StaticResource SectionLabelStyle}"/>
+                                <TextBox x:Name="PhoneBox" Style="{StaticResource InputStyle}" MaxLength="40"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Email], Mode=OneWay}"
+                                           Style="{StaticResource SectionLabelStyle}"/>
+                                <TextBox x:Name="EmailBox" Style="{StaticResource InputStyle}" MaxLength="120"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="4">
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Website], Mode=OneWay}"
+                                           Style="{StaticResource SectionLabelStyle}"/>
+                                <TextBox x:Name="WebsiteBox" Style="{StaticResource InputStyle}" MaxLength="200"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.ContactHint], Mode=OneWay}"
                                    Style="{StaticResource HintStyle}" Margin="0,2,0,16"/>
 
                         <Grid>

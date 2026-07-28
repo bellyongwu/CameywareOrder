@@ -25,9 +25,9 @@ public sealed class ShopContext : INotifyPropertyChanged
 
     private ShopContext()
     {
-        // The display name is language-dependent, so a language switch has to re-raise it for any
-        // binding showing the shop name.
-        LocalizationService.Instance.LanguageChanged += (_, _) => Notify(nameof(CurrentName));
+        // Name and address are both language-dependent, so a language switch has to re-raise them
+        // for any binding showing either.
+        LocalizationService.Instance.LanguageChanged += (_, _) => NotifyDisplayChanged();
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -69,6 +69,18 @@ public sealed class ShopContext : INotifyPropertyChanged
     }
 
     /// <summary>
+    /// Street address of the active shop in the current UI language, or an empty string when none
+    /// is configured. Unlike <see cref="CurrentName"/> there is NO fallback string: a shop that has
+    /// not given an address should show nothing rather than a placeholder, and callers gate on
+    /// <see cref="HasAddress"/>.
+    /// </summary>
+    public string CurrentAddress
+        => _current?.ResolveAddress(LocalizationService.Instance.CurrentLanguageCode) ?? string.Empty;
+
+    /// <summary>Whether <see cref="CurrentAddress"/> has anything worth showing.</summary>
+    public bool HasAddress => !string.IsNullOrWhiteSpace(CurrentAddress);
+
+    /// <summary>
     /// Supplies the scope factory used to persist edits to the active shop. Called once during
     /// startup, after the host is built.
     /// </summary>
@@ -83,7 +95,7 @@ public sealed class ShopContext : INotifyPropertyChanged
 
         Notify(nameof(Current));
         Notify(nameof(HasShop));
-        Notify(nameof(CurrentName));
+        NotifyDisplayChanged();
         ShopChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -107,7 +119,20 @@ public sealed class ShopContext : INotifyPropertyChanged
         }
 
         Notify(nameof(Current));
+        NotifyDisplayChanged();
+    }
+
+    /// <summary>
+    /// Re-raises every property that describes the shop ON SCREEN. One method rather than three
+    /// call sites each listing the properties themselves: every one of them has to raise the whole
+    /// set, and the failure mode of forgetting one is a header that silently keeps showing the
+    /// previous shop's details after a switch.
+    /// </summary>
+    private void NotifyDisplayChanged()
+    {
         Notify(nameof(CurrentName));
+        Notify(nameof(CurrentAddress));
+        Notify(nameof(HasAddress));
     }
 
     private void Notify(string propertyName)

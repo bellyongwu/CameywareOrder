@@ -824,20 +824,95 @@
         <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
     </Style>
 
-    <Style TargetType="ContextMenu">
+    <!-- Destructive entries. The stock highlight washes the one item you most want to hesitate over
+         into the same colour as its harmless neighbours, so the red is stated at rest AND kept on
+         hover. The hover setter has to live in Style.Triggers rather than the template: style
+         triggers outrank template triggers, which is the only way to beat ThemedMenuItem's own
+         IsHighlighted setter without copying its whole template to change one brush. -->
+    <Style x:Key="DangerMenuItem" TargetType="MenuItem" BasedOn="{StaticResource ThemedMenuItem}">
+        <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+        <Style.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+                <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- ══ Context menus ════════════════════════════════════════════════════════════════════
+         Given the same skin as the submenu popups above — same surface, same 8px radius, same
+         shadow — because a right-click menu and a menu-bar submenu are the same object to the
+         person using them, and until now they visibly were not.
+
+         Templated rather than merely recoloured: the stock ContextMenu wraps its items in a
+         square-cornered Border behind a legacy offset-rectangle "shadow", and no combination of
+         property setters rounds that off.
+
+         Grid.IsSharedSizeScope is load-bearing, not decoration. ThemedMenuItem puts its icon in a
+         column with SharedSizeGroup="MenuIcon"; with no scope to share inside, every row measures
+         its own gutter and the labels step in and out down the menu.
+
+         The margin is deliberately asymmetric. A context menu opens AT the cursor, so padding the
+         top and left would shove it away from the pointer; right and bottom get the room the 16px
+         blur needs, top and left get just enough not to clip it. -->
+    <Style x:Key="ThemedContextMenu" TargetType="ContextMenu">
         <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
         <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
+        <!-- Stated, not inherited: a ContextMenu lives in its own popup, so leaving these to flow
+             down from the Window style is not something to rely on. -->
+        <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
         <Setter Property="Padding" Value="0,5"/>
-        <Setter Property="FontSize" Value="13"/>
-        <Setter Property="HasDropShadow" Value="True"/>
         <Setter Property="Grid.IsSharedSizeScope" Value="True"/>
+        <!-- The template below draws its own shadow; this switches off the stock one so the two
+             do not stack into a double edge. -->
+        <Setter Property="HasDropShadow" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
+                            CornerRadius="8" MinWidth="190" Margin="3,3,12,12"
+                            SnapsToDevicePixels="True">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.18" Color="#FF111827"/>
+                        </Border.Effect>
+                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle"
+                                        SnapsToDevicePixels="True"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
-    <!-- Used both between menu items and in the toolbar, so it stays a plain hairline. -->
+    <Style TargetType="ContextMenu" BasedOn="{StaticResource ThemedContextMenu}"/>
+
+    <!-- Used in toolbars and panels, where it stays a plain hairline. Separators inside a MENU do
+         not arrive here — see the keyed style below. -->
     <Style TargetType="Separator">
         <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
         <Setter Property="Margin" Value="8,4"/>
+    </Style>
+
+    <!-- A Separator inside a menu never picks up the implicit style above, and does so silently:
+         MenuItem's container preparation calls SetResourceReference(StyleProperty,
+         MenuItem.SeparatorStyleKey) on it, and a resource reference is a LOCAL value — which
+         outranks every implicit style. Answering to that key is the only way to reach it.
+         Inset past the icon gutter so the rule reads as dividing the labels, not the whole slab. -->
+    <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
+        <Setter Property="Margin" Value="11,5"/>
+        <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Separator">
+                    <Border Height="1" Background="{TemplateBinding Background}"
+                            SnapsToDevicePixels="True"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- ══ Cards and typography ═════════════════════════════════════════════════════════════ -->

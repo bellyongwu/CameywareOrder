@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:CameywareOrder.Localization"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Title], Mode=OneWay}"
-        Height="560" Width="440"
+        Height="600" Width="440"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
@@ -50,18 +50,37 @@
             <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
 
-        <!-- The sign-in boxes are a size up from the rest of the app — this is the one screen with
-             two fields on it and nothing else to read. Based on the THEMED styles rather than
-             declared fresh: an explicit Style with no BasedOn replaces the implicit one outright,
-             which is how these two boxes ended up as the only unthemed inputs in the application. -->
+        <!-- The three fields are a size up from the rest of the app — this is the one screen with
+             nothing else on it to read. Based on the THEMED styles rather than declared fresh: an
+             explicit Style with no BasedOn replaces the implicit one outright, which is how these
+             boxes once ended up as the only unthemed inputs in the application.
+
+             Height is STATED rather than left to measurement, and that is the point of the shared
+             value: a TextBox and a ComboBox do not measure to the same height from the same font
+             and padding. The TextBox's border is on the element that wraps its content, so it adds
+             2px; the ComboBox's border lives on a ToggleButton sitting BESIDE the content in a
+             Grid, overlaying it, so it adds nothing. Left to themselves they came out 40 and 38 —
+             invisible on a form where they sit in different rows, a visible step here where all
+             three are stacked in one column. Pinning the height makes them equal by construction
+             instead of by a coincidence of font metrics. -->
+        <sys:Double x:Key="FieldHeight" xmlns:sys="clr-namespace:System;assembly=mscorlib">40</sys:Double>
+
         <Style x:Key="FieldTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource ThemedTextBox}">
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="Padding" Value="11,9"/>
+            <Setter Property="Height" Value="{StaticResource FieldHeight}"/>
         </Style>
 
         <Style x:Key="FieldPasswordStyle" TargetType="PasswordBox" BasedOn="{StaticResource ThemedPasswordBox}">
             <Setter Property="FontSize" Value="15"/>
             <Setter Property="Padding" Value="11,9"/>
+            <Setter Property="Height" Value="{StaticResource FieldHeight}"/>
+        </Style>
+
+        <Style x:Key="FieldComboStyle" TargetType="ComboBox" BasedOn="{StaticResource ThemedComboBox}">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="Padding" Value="11,9"/>
+            <Setter Property="Height" Value="{StaticResource FieldHeight}"/>
         </Style>
     </Window.Resources>
 
@@ -107,11 +126,15 @@
 
             <!-- Language lives here because this is now the first screen. Without it a fresh
                  install on a new machine would be stuck in the default language with no way to
-                 change it before signing in. -->
-            <StackPanel Orientation="Horizontal" Margin="0,20,0,0" VerticalAlignment="Center">
+                 change it before signing in.
+
+                 Stacked label-over-input like the two fields above it, not set side by side. It is
+                 a third field on this form and now looks like one: as a horizontal pair with a
+                 smaller, greyer label it read as a footnote hanging off the password box. -->
+            <StackPanel Margin="0,20,0,0">
                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Language], Mode=OneWay}"
-                           VerticalAlignment="Center" Foreground="#6B7280" FontSize="12" Margin="0,0,8,0"/>
-                <ComboBox x:Name="LanguageBox" Width="150" FontSize="12" Padding="6,3"
+                           Style="{StaticResource FieldLabelStyle}"/>
+                <ComboBox x:Name="LanguageBox" Style="{StaticResource FieldComboStyle}"
                           SelectionChanged="OnLanguageChanged"/>
             </StackPanel>
         </StackPanel>

@@ -26,7 +26,8 @@ public partial class ShopSetupWindow : Window
     private readonly LocalizationService _localization;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly Shop? _existing;
-    private readonly ObservableCollection<ShopNameEntry> _names = new();
+    private readonly ObservableCollection<LocalizedTextEntry> _names = new();
+    private readonly ObservableCollection<LocalizedTextEntry> _addresses = new();
     private readonly ObservableCollection<PaymentTaxRow> _paymentTaxRows = new();
 
     /// <param name="existing">The shop to edit, or null to create a new one.</param>
@@ -51,6 +52,8 @@ public partial class ShopSetupWindow : Window
         TermsSection.Visibility = isEdit ? Visibility.Collapsed : Visibility.Visible;
 
         PopulateNames();
+        PopulateAddresses();
+        PopulateContact();
         PopulateLanguages();
         PopulateCurrencies();
         PopulatePaymentTaxRules();
@@ -70,20 +73,48 @@ public partial class ShopSetupWindow : Window
 
     private void PopulateNames()
     {
-        // Names decodes NamesJson on every read, so it is resolved once here rather than per language.
-        var existingNames = _existing?.Names ?? new Dictionary<string, string>();
-
         // One box per installed language rather than a single string: the shop name is printed on
         // receipts and shown in the header, so a zh-CN user should not be reading the English name.
+        Fill(_names, _existing?.Names);
+        NameItems.ItemsSource = _names;
+    }
+
+    /// <summary>
+    /// The address editor, which is the name editor's twin — per language for the same reason, and
+    /// deliberately optional, so a shop that never fills it in stays valid.
+    /// </summary>
+    private void PopulateAddresses()
+    {
+        Fill(_addresses, _existing?.Addresses);
+        AddressItems.ItemsSource = _addresses;
+    }
+
+    /// <summary>
+    /// Phone, email and website. One value each, NOT per language: they are identifiers rather than
+    /// prose, so translating them would only invite two versions of one phone number.
+    /// </summary>
+    private void PopulateContact()
+    {
+        PhoneBox.Text = _existing?.PhoneNumber ?? string.Empty;
+        EmailBox.Text = _existing?.Email ?? string.Empty;
+        WebsiteBox.Text = _existing?.Website ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Builds one row per installed language, pre-filled from an existing shop where there is one.
+    /// The decoded dictionary is passed in already resolved: <see cref="Shop.Names"/> and
+    /// <see cref="Shop.Addresses"/> re-parse their JSON on every read, so reading them once beats
+    /// reading them per language.
+    /// </summary>
+    private void Fill(ObservableCollection<LocalizedTextEntry> target, Dictionary<string, string>? existing)
+    {
         foreach (var language in _localization.AvailableLanguages)
         {
-            _names.Add(new ShopNameEntry(language.Code, language.Name)
+            target.Add(new LocalizedTextEntry(language.Code, language.Name)
             {
-                Value = existingNames.GetValueOrDefault(language.Code, string.Empty)
+                Value = existing?.GetValueOrDefault(language.Code, string.Empty) ?? string.Empty
             });
         }
-
-        NameItems.ItemsSource = _names;
     }
 
     private void PopulateLanguages()
@@ -264,9 +295,7 @@ public partial class ShopSetupWindow : Window
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {
-        var names = _names
-            .Where(entry => !string.IsNullOrWhiteSpace(entry.Value))
-            .ToDictionary(entry => entry.LanguageCode, entry => entry.Value.Trim());
+        var names = CollectFilled(_names);
 
         // At least one language, not every language: Shop.ResolveName already falls back to any
         // language that has a name, so requiring all of them would be busywork.
@@ -275,6 +304,10 @@ public partial class ShopSetupWindow : Window
             ShowError("Shop.Setup.NameRequired");
             return;
         }
+
+        // No such check for the address: it is optional, so an empty dictionary is a valid answer
+        // and means "this shop has not given one".
+        var addresses = CollectFilled(_addresses);
 
         if (IsNameTaken(names))
         {
@@ -292,10 +325,38 @@ public partial class ShopSetupWindow : Window
         var currencyType = CurrencyBox.SelectedValue as CurrencyType? ?? CurrencyType.CAD;
 
         Shop = _existing is null
-            ? CreateShop(names, languageCode, currencyType, taxRules)
-            : UpdateShop(names, languageCode, currencyType, taxRules);
+            ? CreateShop(names, addresses, languageCode, currencyType, taxRules)
+            : UpdateShop(names, addresses, languageCode, currencyType, taxRules);
 
         DialogResult = true;
+    }
+
+    /// <summary>
+    /// Keeps only the languages that were actually filled in, trimmed. A blank box means "no value
+    /// for this language", not "an empty value" — storing the empty string would defeat
+    /// <see cref="Shop.ResolveName"/>'s fallback, which skips whitespace entries anyway.
+    /// </summary>
+    private static Dictionary<string, string> CollectFilled(IEnumerable<LocalizedTextEntry> entries)
+        => entries
+            .Where(entry => !string.IsNullOrWhiteSpace(entry.Value))
+            .ToDictionary(entry => entry.LanguageCode, entry => entry.Value.Trim());
+
+    /// <summary>
+    /// Copies the contact boxes onto the shop, blank meaning null rather than "". Same shape as
+    /// <see cref="ApplyReceiptFormat"/>: it reads the controls directly instead of adding three
+    /// more parameters to the two save methods.
+    /// </summary>
+    private void ApplyContactDetails(Shop shop)
+    {
+        shop.PhoneNumber = Blank(PhoneBox.Text);
+        shop.Email = Blank(EmailBox.Text);
+        shop.Website = Blank(WebsiteBox.Text);
+
+        static string? Blank(string value)
+        {
+            var trimmed = value.Trim();
+            return trimmed.Length == 0 ? null : trimmed;
+        }
     }
 
     /// <summary>
@@ -339,7 +400,8 @@ public partial class ShopSetupWindow : Window
     }
 
     private Shop CreateShop(
-        Dictionary<string, string> names, string? languageCode, CurrencyType currencyType, PaymentTaxRules taxRules)
+        Dictionary<string, string> names, Dictionary<string, string> addresses,
+        string? languageCode, CurrencyType currencyType, PaymentTaxRules taxRules)
     {
         var shop = new Shop
         {
@@ -349,7 +411,9 @@ public partial class ShopSetupWindow : Window
             CreatedAtUtc = DateTime.UtcNow
         };
         shop.SetNames(names);
+        shop.SetAddresses(addresses);
         shop.SetPaymentTaxRules(taxRules);
+        ApplyContactDetails(shop);
         ApplyReceiptFormat(shop);
 
         using (var scope = _scopeFactory.CreateScope())
@@ -371,7 +435,8 @@ public partial class ShopSetupWindow : Window
     }
 
     private Shop UpdateShop(
-        Dictionary<string, string> names, string? languageCode, CurrencyType currencyType, PaymentTaxRules taxRules)
+        Dictionary<string, string> names, Dictionary<string, string> addresses,
+        string? languageCode, CurrencyType currencyType, PaymentTaxRules taxRules)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -381,9 +446,11 @@ public partial class ShopSetupWindow : Window
         // Every other shop read in the app follows the same AsNoTracking shape.
         var shop = db.Shops.AsNoTracking().First(candidate => candidate.Id == _existing!.Id);
         shop.SetNames(names);
+        shop.SetAddresses(addresses);
         shop.PreferredLanguageCode = languageCode;
         shop.CurrencyType = currencyType;
         shop.SetPaymentTaxRules(taxRules);
+        ApplyContactDetails(shop);
         ApplyReceiptFormat(shop);
 
         db.Shops.Update(shop);
@@ -416,12 +483,15 @@ public partial class ShopSetupWindow : Window
 
     private void OnCancelClick(object sender, RoutedEventArgs e) => DialogResult = false;
 
-    /// <summary>One language's shop name, as the name editor binds to it.</summary>
-    private sealed class ShopNameEntry : INotifyPropertyChanged
+    /// <summary>
+    /// One language's value of a per-language text field, as the name and address editors bind to
+    /// it. Shared by both rather than duplicated — they are the same row with a different label.
+    /// </summary>
+    private sealed class LocalizedTextEntry : INotifyPropertyChanged
     {
         private string _value = string.Empty;
 
-        public ShopNameEntry(string languageCode, string languageName)
+        public LocalizedTextEntry(string languageCode, string languageName)
         {
             LanguageCode = languageCode;
             LanguageName = languageName;

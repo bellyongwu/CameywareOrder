@@ -30,20 +30,14 @@
         <conv:ReturnReasonSummaryConverter x:Key="ReturnReasonSummaryConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
 
-        <!-- Right-click context menu styling -->
-        <Style x:Key="OrderContextMenuStyle" TargetType="ContextMenu">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderBrush" Value="#E5E7EB"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="4"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="HasDropShadow" Value="True"/>
-        </Style>
-        <Style x:Key="OrderMenuItemStyle" TargetType="MenuItem">
-            <Setter Property="Padding" Value="12,7"/>
-            <Setter Property="Margin" Value="2,1"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
+        <!-- The right-click menu deliberately declares NO local styles. It used to carry a
+             ContextMenu style and a MenuItem style, neither with BasedOn — and an explicit style
+             without BasedOn REPLACES the implicit one rather than adding to it, so both quietly
+             opted the menu out of the theme: the items fell back to the stock Windows template
+             while the menu bar overhead used the themed one, and the ContextMenu style dropped
+             Grid.IsSharedSizeScope, which is what lines the icon gutter up. Leaving the styles off
+             entirely lets AppTheme's implicit ContextMenu/MenuItem styles apply, which is the
+             behaviour that was wanted in the first place. -->
 
         <!-- Card container used to lift the detail sections off the flat background -->
         <Style x:Key="DetailSectionCard" TargetType="Border">
@@ -146,14 +140,39 @@
 
         <!-- ── Header ──────────────────────────────────────────────────── -->
         <Border DockPanel.Dock="Top" Background="{StaticResource HeaderGradientBrush}" Padding="20,13">
+            <!-- Two columns rather than one cell with both children overlapping. That worked while
+                 the left side was a single short name; the address underneath it is long enough to
+                 run under the subtitle on the right, so the two now have their own space and the
+                 address ellipsizes instead of colliding. -->
             <Grid>
-                <!-- The open shop's own name, in the current UI language. Falls back to the
-                     Main.HeaderTitle string when no shop is open, so it never renders blank. -->
-                <TextBlock Text="{Binding Source={x:Static svc:ShopContext.Instance}, Path=CurrentName, Mode=OneWay}" Foreground="White"
-                           FontSize="22" FontWeight="Bold" VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Main.HeaderSubtitle], Mode=OneWay}"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0">
+                    <!-- The open shop's own name, in the current UI language. Falls back to the
+                         Main.HeaderTitle string when no shop is open, so it never renders blank. -->
+                    <TextBlock Text="{Binding Source={x:Static svc:ShopContext.Instance}, Path=CurrentName, Mode=OneWay}"
+                               Foreground="White" FontSize="22" FontWeight="Bold" TextTrimming="CharacterEllipsis"/>
+                    <!-- The address answers "which branch am I actually working in", which the name
+                         alone does not when two branches read similarly. Hidden outright when the
+                         shop has none: an empty line under the title would just look like a
+                         rendering fault, and the address is an optional field. -->
+                    <StackPanel Orientation="Horizontal" Margin="0,3,0,0"
+                                Visibility="{Binding Source={x:Static svc:ShopContext.Instance}, Path=HasAddress, Converter={StaticResource BoolToVisibility}, Mode=OneWay}">
+                        <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE707;" FontSize="12"
+                                   Foreground="{StaticResource TextOnHeaderSubtleBrush}" Margin="0,0,5,0"/>
+                        <TextBlock Text="{Binding Source={x:Static svc:ShopContext.Instance}, Path=CurrentAddress, Mode=OneWay}"
+                                   Foreground="{StaticResource TextOnHeaderSubtleBrush}"
+                                   FontSize="12" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Grid.Column="1"
+                           Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Main.HeaderSubtitle], Mode=OneWay}"
                            Foreground="{StaticResource TextOnHeaderSubtleBrush}"
-                           FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                           FontSize="12" VerticalAlignment="Center"/>
             </Grid>
         </Border>
 
@@ -426,35 +445,35 @@
                           ScrollViewer.VerticalScrollBarVisibility="Auto"
                           BorderBrush="#DDD" BorderThickness="1">
                     <ListView.ContextMenu>
-                        <ContextMenu Style="{StaticResource OrderContextMenuStyle}">
-                            <MenuItem x:Name="EditContextMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnContextEditClick" Style="{StaticResource OrderMenuItemStyle}">
+                        <ContextMenu>
+                            <MenuItem x:Name="EditContextMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnContextEditClick">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE70F;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyOrder], Mode=OneWay}" Click="OnContextCopyClick" Style="{StaticResource OrderMenuItemStyle}">
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyOrder], Mode=OneWay}" Click="OnContextCopyClick">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8C8;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Click="OnContextDeleteClick" Style="{StaticResource OrderMenuItemStyle}">
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Click="OnContextDeleteClick" Style="{StaticResource DangerMenuItem}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE74D;" Foreground="{StaticResource DangerBrush}"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <Separator/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnContextPrintClick" Style="{StaticResource OrderMenuItemStyle}">
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnContextPrintClick">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE749;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnContextPrintMeasurementsClick" Style="{StaticResource OrderMenuItemStyle}"
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnContextPrintMeasurementsClick"
                                       Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE1D3;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnContextPrintReceiptAndMeasurementsClick" Style="{StaticResource OrderMenuItemStyle}"
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnContextPrintReceiptAndMeasurementsClick"
                                       Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE749;"/>

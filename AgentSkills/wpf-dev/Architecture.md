@@ -340,16 +340,28 @@ components are added/renamed or the way pieces fit together changes.
     name-hashed avatar brush/initial, shared by the picker, the user manager, the roster and the main
     toolbar so the role-name switch is not copied a fourth time.
   - `ShopSetupWindow` — creates a shop and edits one (本地配置 → 店铺设置). A scrolling card
-    layout: shop identity (per-language names, preferred language, currency), the **payment /
+    layout: shop identity (per-language names, **per-language address**, **phone / email / website**,
+    preferred language, currency), the **payment /
     tax matrix** (one row per `PaymentTaxRules.ConfigurableMethods` entry — tax free vs. charge at
     its own rate, generated from a `PaymentTaxRow` view-model so a method added later needs no
     XAML change), the **receipt-number format** (prefix / padding / next number / mode with a live
     preview built through `OrderNumberFormatter`, so the preview cannot drift from what is
     actually issued), and measurement-terms seeding (creation only). **Creating** a shop is
     administrator-only; **editing** the open one is `CanConfigureShop`, so its manager may too.
+    The name and address editors share one `LocalizedFieldRow` DataTemplate bound to
+    `LocalizedTextEntry`, so the two per-language blocks cannot drift apart. The address is shown
+    under the shop name in the `MainWindow` header (`ShopContext.CurrentAddress` / `HasAddress`), so
+    the open branch is identifiable at a glance. Phone / email / website are stored but NOT yet
+    printed: the receipt header/footer is already free rich text per language, so injecting them
+    would double-print for any shop that typed its details there by hand.
 - **Migrations/** — `InitialCreate`, `AddOrderPaymentFields`, and the model
   snapshot. Columns added after those two migrations arrive through the runtime
   guards in `App.xaml.cs` instead (see Startup above).
+- **Controls/**
+  - `CalendarSizing` — attached `MatchOwnerWidth`, which makes a `DatePicker`'s drop-down calendar
+    exactly as wide as its box. A behavior rather than a binding because the Calendar lives in a
+    `Popup`, a separate visual tree that `RelativeSource` cannot cross — and fails silently when it
+    tries. The home for any future "the theme cannot express this" hook; see context.md.
 - **Animations/**
   - `PanelTransition` — the global open/close transition for panels: attached `Mode`
     (None / Fade / FadeSlide), 0.5s, cubic ease-in-out, 10px slide, with the duration and curve
@@ -364,7 +376,11 @@ components are added/renamed or the way pieces fit together changes.
     ComboBoxItem / DatePicker / CheckBox / RadioButton, the ToolBar button key, and the keyed
     `CardBorder` / `CardHeading` / `FieldLabel` / `SectionHeading` / `RosterCardContainer` /
     `TimePickerComboBox`, plus themed `Menu` / `MenuItem` / `ContextMenu` / `Separator` (one
-    MenuItem template covering all four roles, switched by `Role` triggers). Colours that encode
+    MenuItem template covering all four roles, switched by `Role` triggers; `ThemedContextMenu`
+    gives the right-click menu the same surface, radius and shadow as the menu-bar popups;
+    `DangerMenuItem` for destructive entries; and a keyed
+    `{x:Static MenuItem.SeparatorStyleKey}` style, which is the ONLY way to reach a separator
+    inside a menu). Colours that encode
     MEANING (balance status, the refund strike) stay at their use sites deliberately. CheckBox and
     RadioButton are recoloured but NOT re-templated — the order editor drives dozens of them from
     code and swaps templates on some. The ComboBox template handles `IsEditable` and resolves

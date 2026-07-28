@@ -70,6 +70,29 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   That is how the login screen's two boxes ended up as the only unthemed inputs in the app
   (`FieldInputStyle`, TargetType=Control), and `ShopSetupWindow` had the same fault twice. When
   adding any keyed input/button style, base it on the themed one.
+  - **This is the most common defect in this codebase — three separate occurrences so far.** The
+    third was the orders right-click menu (`OrderContextMenuStyle`, `OrderMenuItemStyle`), and it
+    cost more than colour: replacing the implicit `MenuItem` style threw away `ThemedMenuItem`'s
+    whole ControlTemplate, and replacing the implicit `ContextMenu` style dropped
+    `Grid.IsSharedSizeScope`, which is what lines up the icon gutter. **When a control looks
+    off-theme, grep for a keyed style targeting its type before suspecting anything else.**
+  - Often the right fix is to DELETE the local style, not to add `BasedOn` to it — if every setter
+    it carries is already in the theme, keeping it only leaves the trap armed for the next edit.
+- **Menus, popups and the theme (2026-07-27).**
+  - A `Separator` inside a menu never receives the implicit `Style TargetType="Separator"`.
+    `MenuItem`'s container preparation calls `SetResourceReference(StyleProperty,
+    MenuItem.SeparatorStyleKey)` on it, and a **resource reference is a LOCAL value**, which
+    outranks every implicit style. Style it with `x:Key="{x:Static MenuItem.SeparatorStyleKey}"`.
+  - `ContextMenu` cannot be themed by setters alone: the stock template is a square-cornered Border
+    behind a legacy offset-rectangle shadow. Write a `Template`. Its popup sets
+    `AllowsTransparency = true` unconditionally in `ContextMenu.HookupParentPopup()`, so rounded
+    corners and a real `DropShadowEffect` do composite — `HasDropShadow="False"` does not cost you
+    that, it only switches off the stock shadow so the two do not stack.
+  - A context menu opens AT the cursor, so shadow room in the template's `Margin` must be
+    asymmetric — pad right/bottom, leave top/left near zero, or the menu drifts off the pointer.
+  - **Style triggers outrank template triggers.** That is how `DangerMenuItem` keeps its red
+    `Foreground` through `ThemedMenuItem`'s own `IsHighlighted` setter without copying the template.
+    A style trigger still cannot reach a `TargetName` part, so part-level colours stay in the template.
 - **The DatePicker's calendar needs THREE separate hook-ups, and every miss is silent (2026-07-27).**
   1. `DatePicker` BINDS its Calendar's `Style` to `DatePicker.CalendarStyle`, and a bound null Style
      **suppresses implicit-style lookup** — so an implicit `Style TargetType="Calendar"` never
@@ -81,6 +104,69 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
      `Controls/CalendarSizing.cs` sets it on Loaded/SizeChanged, before the first open.
   - None of these produce a binding error, so screenshots alone will mislead you. Assert the state
     (`calendar.CalendarDayButtonStyle is null`, `day.Template.FindName("Bd", day)`) in the harness.
+- **Adding a column to Shops touches TWO lists (2026-07-27).** `EnsureShopSchemaAsync`'s
+  `CREATE TABLE IF NOT EXISTS` serves fresh installs only — an existing database already has the
+  table, so the guard does nothing there and every later column needs its own entry in
+  `ShopColumnMigrations`. Do one and not the other and it works on exactly one kind of install,
+  which is the kind you happen to be testing on. Same split applies to `OrderColumnMigrations`.
+  - The new column should be **nullable** unless there is a real reason not to. SQLite's
+    `ALTER TABLE ADD COLUMN` demands a DEFAULT for a NOT NULL column, and this codebase cannot write
+    a `'{}'` default at all: `ExecuteSqlRawAsync` treats the SQL as a composite format string, so the
+    braces throw `FormatException` before a statement runs. `PaymentTaxRulesJson` is the precedent.
+  - Verify against a **copy of the real database**, and call the real private method by reflection
+    rather than re-typing the DDL — a copied SQL string passes while the shipping code is wrong.
+    Assert the second run is a no-op: startup repeats the migration on every launch, so a
+    duplicate-column error would brick the app after one restart. `scratchpad/migcheck` is the
+    worked example.
+- **Per-language vs single-valued shop fields (2026-07-27).** The rule this codebase already
+  follows: **prose is per language, identifiers are not.** Shop name and address are prose — they
+  are printed on receipts and a zh-CN reader should not get the English wording — so both are
+  language-keyed JSON (`NamesJson`, `AddressesJson`). Phone, email, website and
+  `ReceiptBrandingSettings.TaxRegistrationNumber` are identifiers, identical whoever reads them;
+  only their labels translate. Ask which kind a new field is before adding it.
+- **The login screen must not name accounts (2026-07-28).** `OnSignInClick` deliberately gives ONE
+  message for an unknown user name and a wrong password, so the dialog cannot be used to discover
+  account names. Pre-filling the box with `admin` handed that away before the first keystroke — and
+  `admin` is the account that can never be deleted, demoted or locked out. Nothing on this screen
+  may name an account. Consequence to keep in mind: a fresh install now gives no on-screen hint of
+  the initial account, so it has to be communicated out of band.
+- **MainWindow can be opened by a harness with NOBODY signed in (2026-07-28).** With no current user
+  `IsAdministrator` is false, every capability gates closed and `RefreshSignedInUser` handles the
+  null, so the window constructs — the chrome is just fully hidden. That is how to test anything
+  role-INDEPENDENT (the header, the records panel) without going near credentials.json. The
+  `AuthenticationService` singleton still READS the file when first touched, so hash it before and
+  after and fail the run if it moved. `scratchpad/headercheck` is the worked example.
+- **A property on a notifying singleton needs every notify SITE updated (2026-07-28).** `ShopContext`
+  raised `CurrentName` from three places, each listing the property itself; adding `CurrentAddress`
+  meant three more chances to forget one, and the failure is silent — the header keeps showing the
+  previous shop after a switch. Factor the set into one `NotifyDisplayChanged()` and assert in a test
+  that every trigger raises all of it.
+- **A theme-only harness when the user's app is running (2026-07-27).** `uicheck` opens real windows,
+  which means the real SQLite file and `credentials.json`. When the user has the application open,
+  do NOT run it — build a harness that merges only
+  `pack://application:,,,/CameywareOrder;component/Themes/AppTheme.xaml` and rebuilds the control
+  under test from a XAML string via `XamlReader.Parse`. It exercises the shipping resource
+  dictionary (not a copy of it) and touches no user data. `scratchpad/menucheck` is the worked
+  example. Reference the DLL from a scratch `-p:OutputPath`, since `bin\Debug` is locked and stale
+  while the app runs.
+  - Gotcha: a `ContextMenu` **closes itself when its window loses foreground**, and whether a fresh
+    process wins foreground is not yours to decide. Open it in an activate-and-retry loop or the
+    run is flaky.
+  - Render the `ContextMenu` itself, not the host window — like any popup it is absent from the
+    window's `RenderTargetBitmap`.
+- **A TextBox and a ComboBox measure to DIFFERENT heights from the same font and padding
+  (2026-07-28).** Measured in `ThemedTextBox` / `ThemedComboBox` at 15px with padding 11,9: TextBox
+  **39.95**, ComboBox **38**. The cause is structural, not arithmetic — the TextBox's border is on
+  the Border that WRAPS `PART_ContentHost`, so it adds 2px to the measure, while the ComboBox's
+  border is on the `PART_ToggleButton` sitting BESIDE the content in a Grid, overlaying it, so it
+  adds nothing. `MinHeight` 38 hides this at 13px (both land under it and get pinned) and exposes it
+  at 15px, where only the TextBox clears it.
+  - Where the two sit in one column, **pin an explicit shared `Height`** so they are equal by
+    construction. Adjusting padding to compensate does not work and I wasted a round proving it —
+    both were already under `MinHeight`, so the padding never governed.
+  - Diagnose by DUMPING the visual tree with `ActualHeight` / `DesiredSize` / `Margin` per element.
+    Reading the XAML and doing the arithmetic gave the wrong answer twice, including the wrong
+    direction of the mismatch. `scratchpad/logincheck` has the dump helper.
 - **A TextBox applies its `Padding` itself (2026-07-27).** `PART_ContentHost` already honours it, so
   a custom template that ALSO sets `Margin="{TemplateBinding Padding}"` applies it twice — text boxes
   measured 47px next to a 33px DatePicker on the same row. Every input now carries `MinHeight` 38 so
