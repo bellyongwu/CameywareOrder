@@ -50,6 +50,22 @@ Nothing in flight. The last multi-phase effort (systematic config refactor, phas
 
 ## Recent work (2026-07-27 → 07-28)
 
+### Bug: printing measurements in inches produced an empty sheet — FIXED
+`CustomMadeMeasurementReader` read `value.In` directly and skipped any row where it
+was blank. A value carries both units only if the editor's cm/inch toggle happened
+to be flipped while it was on screen — measured on the live database, **768 of 768
+stored values had a cm figure and only 39 had an inch one**, so 95% of rows were
+dropped and any order never toggled printed nothing at all.
+
+Now `Models/MeasurementUnits` converts from whichever unit WAS filled in. It owns
+the conversion for the editor, the printed sheet and the QuestPDF export alike —
+they had separate copies, which is how the print path came to disagree. The
+trailing `+`/`-` a tailor writes is carried through untouched; free text is
+returned unchanged rather than reinterpreted.
+
+Verified against every real order: 111 sections / 768 rows in **both** units, 0
+orders empty in inches.
+
 ### Product catalogue + receipt letterhead — DONE
 Ready-made categories were a `static readonly string[]`, so every shop sold the
 same five things. Now `ProductCatalogService`, per shop, modelled on

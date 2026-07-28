@@ -201,6 +201,19 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     "localize everything".
   - Also not translated, and correctly so: the `B` / `I` / `U` formatting-button faces, alignment
     glyphs, `×`, `—`. Typographic convention, not prose.
+- **A field that is only populated "sometimes" is not a field you can read directly (2026-07-28).**
+  `MeasurementValue` holds `Cm` and `In`, but `In` is written only when the editor's unit toggle is
+  flipped while that value is on screen. The print path read `In` and skipped a blank — measured on
+  the live database, 768 of 768 values had cm and 39 had inch, so printing in inches dropped 95% of
+  rows and produced an entirely blank sheet for any order never toggled. Read such a pair through
+  `MeasurementUnits.Resolve`, which converts from whichever unit was filled in.
+  - Generally: before reading one of two parallel fields, ask what actually writes it. "Both are
+    kept in sync" was true of the editor's in-memory cache and false of everything persisted.
+  - The conversion lives in ONE place (`Models/MeasurementUnits`) because the editor, the printed
+    sheet and the PDF must produce the same figure. They had separate copies, which is exactly how
+    the print path came to disagree with the screen.
+  - A measurement may carry a trailing `+`/`-` — a tailor's "runs over/under" note. Convert the
+    digits and carry the mark through; dropping it silently changes what the measurement means.
 - **A stored id is a compatibility surface — never rename one (2026-07-28).** The ready-made product
   ids (`Jackets`, `TiesBowtie`, …) are written into `OrderItem.ProductName` on every order ever
   saved AND are the suffix of the `ClothingItem.<id>` string-table keys. Renaming one silently

@@ -17,6 +17,34 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 11:10 — Bug: printing measurements in inches printed nothing  [DONE]
+- Ask: "打印量身尺寸转换成inch功能似乎有问题，没有打印的内容。"
+- Root cause, measured rather than guessed: `CustomMadeMeasurementReader` did
+  `var display = isInch ? value.In : value.Cm;` and `continue`d when it was blank. A
+  `MeasurementValue` only carries BOTH units if the editor's cm/inch toggle happened to be
+  flipped while that value was on screen; anything typed in cm and saved has no `In` at all.
+  A probe over the live database: **768 measurement values, 768 with a cm figure, 39 with an
+  inch one** — so 729 of 768 rows were skipped, and an order that was never toggled produced
+  `rows.Count == 0` → a null section → a sheet with nothing on it.
+- Done:
+  - [x] `Models/MeasurementUnits` — `Convert` (cm↔inch, preserving a trailing +/-) and `Resolve`
+        (the requested unit, converted from the other one when it is missing).
+  - [x] `CustomMadeMeasurementReader` and the QuestPDF export both resolve instead of reading the
+        field directly. `CustomMadeServiceWindow.ConvertMeasurement` now delegates to the same
+        helper, and its private `MeasurementNumberPattern` / `CentimetersPerInch` are gone.
+  - [x] The conversion lives in ONE place on purpose: the editor, the printed sheet and the PDF
+        have to produce the same figure — a printed sheet disagreeing with the screen about a
+        customer's chest measurement is worse than one that shows nothing.
+- Notes: build 0/0, Sonar zero, **355 assertions across 10 harnesses**.
+  - `scratchpad/inchprobe` runs the REAL reader over every real order in both units:
+    111 sections / 768 rows in cm, **111 / 768 in inches**, 0 orders empty. Before the fix,
+    inches yielded 39 rows.
+  - Conversion rules asserted too, including that "20+" converts to "7.87+" — dropping the mark
+    would silently change what the measurement means — and that free text is returned unchanged.
+  - One assertion of mine was wrong, not the code: I expected the 10cm round trip to give 9.99;
+    it gives 10.01, because each hop rounds to 2dp. Replaced the literal with the real property
+    (drift ≤ 0.1cm).
+
 ### 2026-07-28 05:55 — Receipt letterhead: one labelled line per contact detail  [DONE]
 - Ask: reformat the sub-header from an unlabelled address plus a bullet-joined
   `phone · email · website` into `Address: …` / `Phone: …` / `Email: …` / `Website: …`,

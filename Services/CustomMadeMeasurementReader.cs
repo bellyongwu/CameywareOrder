@@ -76,11 +76,15 @@ public static class CustomMadeMeasurementReader
             if (!valueByTerm.TryGetValue(term.Id, out var value))
                 continue;
 
-            var display = isInch ? value.In : value.Cm;
+            // Converts when the requested unit was never filled in, rather than treating a missing
+            // inch figure as a missing measurement. A value only carries both units if the editor's
+            // toggle happened to be flipped while it was on screen, so reading In directly dropped
+            // almost every row and printed an empty sheet.
+            var display = MeasurementUnits.Resolve(value.Cm, value.In, isInch);
             if (string.IsNullOrWhiteSpace(display))
                 continue;
 
-            rows.Add((MeasurementTermsService.ResolveTermName(term, languageCode), display.Trim()));
+            rows.Add((MeasurementTermsService.ResolveTermName(term, languageCode), display));
         }
 
         if (rows.Count == 0)

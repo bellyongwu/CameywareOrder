@@ -33,11 +33,8 @@ public partial class CustomMadeServiceWindow : Window
         new(@"^\d*(\.\d{0,2})?$", RegexOptions.None, RegexTimeout);
     private static readonly Regex MeasurementInputPattern =
         new(@"^(\d+(\.\d*)?[+-]?)?$", RegexOptions.None, RegexTimeout);
-    // Splits a measurement into its numeric part and an optional trailing +/- so a
-    // unit conversion only touches the digits (e.g. "20+" -> convert 20, keep "+").
-    private static readonly Regex MeasurementNumberPattern =
-        new(@"^(\d+(?:\.\d*)?)([+-]?)$", RegexOptions.None, RegexTimeout);
-    private const decimal CentimetersPerInch = 2.54m;
+    // The number pattern and the cm-per-inch constant moved to MeasurementUnits, which now owns
+    // conversion for the editor, the printed sheet and the PDF alike.
 
     private readonly LocalizationService _localization;
     private readonly string? _defaultOrderNumber;
@@ -195,20 +192,12 @@ public partial class CustomMadeServiceWindow : Window
         ApplyEditorsForUnit();
     }
 
+    // Delegated to MeasurementUnits so the figure the editor shows, the figure the printed sheet
+    // carries and the figure the PDF exports are produced by one piece of code. They used to be
+    // separate, which is how the print path came to treat a missing inch figure as no measurement
+    // at all instead of converting the centimetres it did have.
     private static string ConvertMeasurement(string? text, bool toInch)
-    {
-        if (string.IsNullOrWhiteSpace(text))
-            return text ?? string.Empty;
-
-        var trimmed = text.Trim();
-        var match = MeasurementNumberPattern.Match(trimmed);
-        if (!match.Success || !decimal.TryParse(match.Groups[1].Value, out var value))
-            return trimmed;
-
-        var converted = toInch ? value / CentimetersPerInch : value * CentimetersPerInch;
-        var rounded = Math.Round(converted, 2, MidpointRounding.AwayFromZero);
-        return rounded.ToString("0.##") + match.Groups[2].Value;
-    }
+        => MeasurementUnits.Convert(text, toInch);
 
     private void OnMeasurementValueChanged(object sender, TextChangedEventArgs e)
     {
@@ -702,7 +691,9 @@ public partial class CustomMadeServiceWindow : Window
             {
                 if (!cells.TryGetValue(term.Id, out var cell))
                     continue;
-                var display = _isInch ? cell.In : cell.Cm;
+                // Same resolution as the printed sheet: convert from the unit that WAS filled in
+                // rather than exporting a blank because this one was not.
+                var display = MeasurementUnits.Resolve(cell.Cm, cell.In, _isInch);
                 rows.Add((MeasurementTermsService.ResolveTermName(term, languageCode), MeasurementForPdf(display)));
             }
 
