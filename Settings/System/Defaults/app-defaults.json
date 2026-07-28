@@ -19,6 +19,6 @@
     "Only ever applied after a NEW backup is written, so nothing is deleted unless it has just been",
     "superseded. Set it to 0 to keep every backup indefinitely."
   ],
-  "defaultLanguage": "zh-CN",
+  "defaultLanguage": "en-US",
   "backupRetentionCount": 10
 }
