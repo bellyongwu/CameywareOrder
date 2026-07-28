@@ -52,6 +52,25 @@ Nothing in flight. The last multi-phase effort (systematic config refactor, phas
 
 ## Recent work (2026-07-27 → 07-28)
 
+### Keyboard paging on the order list
+Left/Right page the list from anywhere in the main window. Paging was previously
+reachable only by clicking two small buttons under it.
+
+**A window-wide arrow shortcut must be a `PreviewKeyDown` handler, never a
+`KeyBinding`.** An InputBinding fires whatever has focus, so the list would page
+every time somebody moved the caret in the search box — the shortcut would have made
+the app *less* usable. The handler stands down for controls that own the horizontal
+arrows (`TextBoxBase`, `PasswordBox`, `ComboBox`, `DatePicker`, `Slider`, `MenuBase`),
+walking UP from the focused element because focus lands on a part *inside* those
+controls. It also stands down for any modifier: Alt+Left is "back" and Ctrl+Left is
+word-wise caret movement.
+
+The rest is what makes it an accessibility change rather than a shortcut: the page
+summary is a polite live region with `LiveRegionChanged` raised explicitly (rebinding
+the text does not raise it), and focus moves to the first row of the new page — without
+that a keyboard user lands on a page whose rows they cannot reach until they Tab back
+in, and a screen reader has nothing to read.
+
 ### Contact details on every account
 `PhoneNumber` / `Email` on `CredentialRecord` — **account-level, not per
 membership**: one person working at two branches has one phone and one mailbox.

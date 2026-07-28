@@ -267,6 +267,8 @@
   <Text key="Paging.PageSize">每页</Text>
   <Text key="Paging.Previous">上一页</Text>
   <Text key="Paging.Next">下一页</Text>
+  <Text key="Paging.PreviousHint">上一页（左方向键）</Text>
+  <Text key="Paging.NextHint">下一页（右方向键）</Text>
   <Text key="Paging.Summary">第 {0} / {1} 页，共 {2} 条</Text>
 
   <Text key="Delete.ConfirmTitle">确认删除</Text>

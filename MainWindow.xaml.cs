@@ -4,9 +4,12 @@ using System.Diagnostics;
 using System.Globalization;
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using CameywareOrder.Converters;
 using CameywareOrder.Data;
 using CameywareOrder.Localization;
@@ -308,6 +311,101 @@ public partial class MainWindow : Window
             return;
 
         OnEditOrderClick(sender, new RoutedEventArgs());
+    }
+
+    /// <summary>
+    /// Left and Right arrow page the order list, from anywhere in the window.
+    /// </summary>
+    /// <remarks>
+    /// Accessibility: paging was reachable only by clicking two small buttons at the bottom of the
+    /// list. Arrow keys give the whole list keyboard-only navigation without a modifier chord to
+    /// memorise, and the page summary is a polite live region so a screen reader says where you
+    /// landed.
+    ///
+    /// PreviewKeyDown on the window rather than a <c>KeyBinding</c>: an InputBinding fires no matter
+    /// what has focus, which would page the list every time someone moved the caret in the search
+    /// box. Handling it here lets <see cref="ConsumesHorizontalArrows"/> stand down for controls
+    /// that own the key.
+    ///
+    /// Any modifier stands down too — Alt+Left is "back" almost everywhere, and Ctrl+Left is
+    /// word-wise caret movement. Neither should be quietly redefined as "previous page".
+    /// </remarks>
+    private void OnMainWindowPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Left or Key.Right))
+            return;
+
+        if (Keyboard.Modifiers != ModifierKeys.None)
+            return;
+
+        if (ConsumesHorizontalArrows(Keyboard.FocusedElement as DependencyObject))
+            return;
+
+        var command = e.Key == Key.Right ? _viewModel.NextPageCommand : _viewModel.PreviousPageCommand;
+        if (!command.CanExecute(null))
+            return;
+
+        e.Handled = true;
+        command.Execute(null);
+
+        AnnouncePageChange();
+        FocusFirstOrder();
+    }
+
+    /// <summary>
+    /// Whether the focused element, or anything it sits inside, needs the horizontal arrows itself.
+    /// </summary>
+    /// <remarks>
+    /// Walks up the tree because focus usually lands on a part inside the control — the editable
+    /// TextBox of a ComboBox, or a DatePicker's inner text box — and testing only the focused
+    /// element would miss it and steal the key anyway.
+    /// </remarks>
+    private static bool ConsumesHorizontalArrows(DependencyObject? focused)
+    {
+        for (var node = focused; node is not null; node = VisualTreeHelper.GetParent(node))
+        {
+            if (node is TextBoxBase or PasswordBox or ComboBox or DatePicker or Slider or MenuBase)
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Nudges the live region so a screen reader re-reads it. Rebinding the text alone does not
+    /// raise the event, so the announcement has to be asked for explicitly.
+    /// </summary>
+    private void AnnouncePageChange()
+    {
+        var peer = UIElementAutomationPeer.FromElement(PageSummaryText)
+            ?? UIElementAutomationPeer.CreatePeerForElement(PageSummaryText);
+
+        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+    }
+
+    /// <summary>
+    /// Puts selection and focus on the first row of the freshly loaded page.
+    /// </summary>
+    /// <remarks>
+    /// Without this the keyboard user is left on a page whose rows they cannot reach with Up/Down
+    /// until they Tab back into the list, and a screen reader has nothing to read. The container is
+    /// generated asynchronously, so this waits for the item containers rather than assuming them.
+    /// </remarks>
+    private void FocusFirstOrder()
+    {
+        if (OrdersListView.Items.Count == 0)
+            return;
+
+        OrdersListView.SelectedIndex = 0;
+        OrdersListView.ScrollIntoView(OrdersListView.Items[0]);
+
+        Dispatcher.BeginInvoke(
+            new Action(() =>
+            {
+                if (OrdersListView.ItemContainerGenerator.ContainerFromIndex(0) is ListViewItem row)
+                    row.Focus();
+            }),
+            System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
     // Requirement 4a: pressing Enter on a selected order opens the same edit

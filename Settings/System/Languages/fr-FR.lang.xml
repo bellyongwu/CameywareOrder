@@ -261,6 +261,8 @@
   <Text key="Paging.PageSize">Par page</Text>
   <Text key="Paging.Previous">Précédent</Text>
   <Text key="Paging.Next">Suivant</Text>
+  <Text key="Paging.PreviousHint">Page précédente (flèche gauche)</Text>
+  <Text key="Paging.NextHint">Page suivante (flèche droite)</Text>
   <Text key="Paging.Summary">Page {0} / {1}, {2} au total</Text>
 
   <Text key="Delete.ConfirmTitle">Confirmation de suppression</Text>

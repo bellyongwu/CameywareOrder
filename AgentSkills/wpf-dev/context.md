@@ -1234,6 +1234,40 @@ Two rules learned the hard way here:
   Byte-identical comparison is still the right tool for the same band on
   different pages, where nothing has moved.
 
+## Simulating keyboard input in a harness
+
+**`InputManager.ProcessInput` with a fabricated `KeyEventArgs` does not work here.**
+It needs the keyboard device bound to a real foreground window, which a harness
+cannot guarantee, so events are discarded silently. Symptoms seen: the first
+assertion failing while every later one passed, and on a re-run every key vanishing.
+
+The dangerous part is not the flakiness. Assertions of the form "this key must NOT
+do anything" **pass when the input is discarded** — a green light for the absence of
+behaviour. If a negative assertion cannot fail, delete it rather than keep it.
+
+Use `target.RaiseEvent(new KeyEventArgs(...) { RoutedEvent = UIElement.PreviewKeyDownEvent })`
+instead. It is deterministic and still exercises the real tunnelling route, which is
+what a window-level shortcut depends on. What it cannot do is fake
+`Keyboard.Modifiers` — that reflects the physical device, so modifier guards are not
+testable in-process and should be reviewed by eye instead of pretend-tested.
+
+## Window-wide keyboard shortcuts
+
+Use a `PreviewKeyDown` handler on the Window, **not** an `InputBinding`/`KeyBinding`,
+for any shortcut on a key that ordinary controls use. An InputBinding fires no matter
+what has focus, so an arrow shortcut would fire while the user moves the caret in a
+text box. Walk UP the tree from `Keyboard.FocusedElement` when deciding to stand down
+(`TextBoxBase`, `PasswordBox`, `ComboBox`, `DatePicker`, `Slider`, `MenuBase`) —
+focus lands on a part inside those controls, so testing the focused element alone
+misses it. Stand down whenever any modifier is held; Alt+Left and Ctrl+Left already
+mean something.
+
+When a shortcut changes what is displayed, move focus to the new content and mark the
+status text as a live region (`AutomationProperties.LiveSetting`, plus an explicit
+`RaiseAutomationEvent(AutomationEvents.LiveRegionChanged)` — rebinding the text does
+not raise it). Otherwise the shortcut is unusable by exactly the people it was added
+for.
+
 ## Which assembly the harnesses actually compile against
 
 The scratchpad harnesses do NOT all reference the same DLL. Most point at

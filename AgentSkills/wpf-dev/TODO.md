@@ -17,6 +17,41 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 15:05 — Accessibility: arrow keys page the order list  [DONE]
+- Ask: "Improve accessibility: while in the main application, press right and left
+  arrow, you can jump into the next page of records."
+- Paging existed but was reachable only by clicking two small buttons under the
+  list. Left/Right now page from anywhere in the window.
+- **`PreviewKeyDown` on the Window, NOT a `KeyBinding`.** An InputBinding fires
+  whatever has focus, which would page the list every time somebody moved the caret
+  in the search box — the shortcut would have made the app less usable, not more.
+  Handling the tunnelling event lets `ConsumesHorizontalArrows` stand down for
+  `TextBoxBase` / `PasswordBox` / `ComboBox` / `DatePicker` / `Slider` / `MenuBase`.
+  It walks UP the tree because focus lands on a part inside the control (a
+  ComboBox's editable TextBox, a DatePicker's inner box), so testing the focused
+  element alone would miss it and steal the key anyway.
+- Any modifier stands down: Alt+Left is "back" almost everywhere and Ctrl+Left is
+  word-wise caret movement; neither should be quietly redefined.
+- Accessibility beyond the shortcut: the page summary is an
+  `AutomationProperties.LiveSetting="Polite"` live region with an explicit
+  `LiveRegionChanged` raised on each change (rebinding text alone does not raise
+  it), so a screen reader announces where you landed. After paging, selection and
+  focus move to the first row of the new page — otherwise a keyboard user is left
+  on a page whose rows they cannot reach until they Tab back in, and a screen reader
+  has nothing to read. Both pager buttons gained a tooltip and
+  `AutomationProperties.HelpText` naming the shortcut, so it is discoverable.
+- Notes: new `scratchpad/pagingcheck` (14). Build 0/0, suite 474/0.
+- **Harness lesson, learned the expensive way:** `InputManager.ProcessInput` with a
+  fabricated `KeyEventArgs` is NOT usable for this. It needs the keyboard device
+  bound to a real foreground window, so events are silently discarded — the first
+  assertion failed while later ones passed, and on another run every key vanished.
+  Worse, the Alt/Ctrl/Shift assertions PASSED because their input was being thrown
+  away: a green light for the absence of behaviour. Replaced with
+  `target.RaiseEvent(PreviewKeyDownEvent)`, which is deterministic (14/14 on three
+  consecutive runs) and still exercises the real tunnelling route. The modifier
+  assertions were **deleted rather than kept**, because `Keyboard.Modifiers`
+  reflects the physical device and cannot be faked in-process.
+
 ### 2026-07-28 14:10 — Contact number and email on every login account  [DONE]
 - Ask: "给所有login user添加contact number 和email"
 - `PhoneNumber` / `Email` added to `CredentialRecord`, and through it to `MemberProfile`,
