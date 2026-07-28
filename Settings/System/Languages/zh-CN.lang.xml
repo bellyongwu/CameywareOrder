@@ -404,8 +404,6 @@
   <Text key="Measure.Unit.Cm">厘米</Text>
   <Text key="Measure.Unit.Inch">英寸</Text>
   <Text key="Download.Language.Label">下载语言</Text>
-  <Text key="Download.Language.Chinese">简体中文</Text>
-  <Text key="Download.Language.English">英文</Text>
   <Text key="OrderEdit.DownloadSubmit">下载</Text>
   <Text key="OrderEdit.PaymentTitle">{0}付款</Text>
   <Text key="OrderEdit.DownpaymentMethod">定金支付方式</Text>

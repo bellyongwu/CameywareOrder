@@ -326,8 +326,15 @@
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.DownloadMeasurement], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Download.Language.Label], Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                            <RadioButton x:Name="DownloadChineseRadio" GroupName="DownloadLanguage" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Download.Language.Chinese], Mode=OneWay}" IsChecked="True" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                            <RadioButton x:Name="DownloadEnglishRadio" GroupName="DownloadLanguage" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Download.Language.English], Mode=OneWay}" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                            <!-- Filled at run time from LocalizationService.AvailableLanguages. Two
+                                 fixed radios lived here and a third language was simply undownloadable. -->
+                            <ItemsControl x:Name="DownloadLanguagePanel" VerticalAlignment="Center">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
                             <Button x:Name="DownloadSubmitButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownloadSubmit], Mode=OneWay}" Width="110" Height="30" Padding="12,5" Click="OnDownloadSubmitClick" Background="#4F46E5" Foreground="White"/>
                         </StackPanel>
                     </StackPanel>

@@ -20,16 +20,17 @@ public sealed record MeasurementSheetSection(string Title, IReadOnlyList<Measure
 /// </remarks>
 public sealed class MeasurementSheetContent
 {
-    /// <summary>Fallback title, used only when the branding header does not supply one.</summary>
-    public string? Title { get; init; }
+    /// <summary>
+    /// The generated letterhead — shop name, document title, contact lines, GST/HST — printed only
+    /// when the header/footer editor has not supplied a header of its own, exactly as on the
+    /// receipt. A custom header IS the letterhead and replaces this wholesale.
+    /// </summary>
+    public ShopLetterhead? Letterhead { get; init; }
 
     /// <summary>Order number, customer, unit — who and what the sheet is for.</summary>
     public IReadOnlyList<MeasurementSheetRow> InfoRows { get; init; } = [];
 
     public IReadOnlyList<MeasurementSheetSection> Sections { get; init; } = [];
-
-    /// <summary>The finished GST/HST line, or null when no number is configured.</summary>
-    public string? TaxLine { get; init; }
 
     public string? HeaderXaml { get; init; }
     public string? FooterXaml { get; init; }
@@ -80,7 +81,6 @@ public static class MeasurementSheetDocument
         ArgumentNullException.ThrowIfNull(content);
 
         QuestPDF.Settings.License = LicenseType.Community;
-        var hasBrandedHeader = !BrandingRenderer.IsEmpty(content.HeaderXaml);
 
         return Document.Create(container =>
         {
@@ -101,8 +101,16 @@ public static class MeasurementSheetDocument
                 {
                     column.Spacing(14);
 
-                    if (!hasBrandedHeader && !string.IsNullOrWhiteSpace(content.Title))
-                        column.Item().Text(content.Title).Bold().FontSize(17).FontColor(AccentColor);
+                    // A custom header replaces the generated letterhead, and with it the subtitle
+                    // naming the document — so the title moves into the body rather than being
+                    // dropped. The printed sheet does exactly the same, which is the point: the two
+                    // must not differ in structure depending on whether branding is configured.
+                    if (!BrandingRenderer.IsEmpty(content.HeaderXaml)
+                        && !string.IsNullOrWhiteSpace(content.Letterhead?.Subtitle))
+                    {
+                        column.Item().Text(content.Letterhead!.Subtitle)
+                            .Bold().FontSize(13.5f).FontColor(AccentColor);
+                    }
 
                     AddInfoCard(column, content.InfoRows);
 
@@ -113,9 +121,11 @@ public static class MeasurementSheetDocument
         });
     }
 
-    /// <summary>Logo, branded header, tax registration line, and a rule closing the letterhead.</summary>
+    /// <summary>Logo, then either the branded header or the generated letterhead, then a rule.</summary>
     private static void ComposeHeader(IContainer container, MeasurementSheetContent content)
     {
+        var hasBrandedHeader = !BrandingRenderer.IsEmpty(content.HeaderXaml);
+
         container.Column(column =>
         {
             column.Spacing(4);
@@ -126,13 +136,45 @@ public static class MeasurementSheetDocument
                     .MaxHeight(58).Image(content.LogoBytes);
             }
 
-            BrandingRenderer.RenderToPdf(column, content.HeaderXaml);
-
-            if (!string.IsNullOrWhiteSpace(content.TaxLine))
-                column.Item().Text(content.TaxLine).FontSize(9f).FontColor(LabelColor);
+            // A custom header REPLACES the generated letterhead rather than adding to it — a shop
+            // that typed its own address into the editor must not have the shop record's address
+            // printed underneath it as well. Same rule as the receipt.
+            if (hasBrandedHeader)
+                BrandingRenderer.RenderToPdf(column, content.HeaderXaml);
+            else
+                AddGeneratedLetterhead(column, content.Letterhead);
 
             column.Item().PaddingTop(6).LineHorizontal(0.8f).LineColor(RuleColor);
         });
+    }
+
+    /// <summary>
+    /// Shop name, what the document is, how to reach the shop, then the GST/HST number — in that
+    /// order, matching the printed receipt block for block.
+    /// </summary>
+    /// <remarks>
+    /// The tax line goes LAST. It used to be injected at the very top of the page, which put a bare
+    /// "GST/HST 税号：…" above the document's own title and left the sheet never naming the shop.
+    /// </remarks>
+    private static void AddGeneratedLetterhead(ColumnDescriptor column, ShopLetterhead? letterhead)
+    {
+        if (letterhead is null)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(letterhead.Name))
+            column.Item().Text(letterhead.Name).Bold().FontSize(16).FontColor(BodyColor);
+
+        if (!string.IsNullOrWhiteSpace(letterhead.Subtitle))
+            column.Item().Text(letterhead.Subtitle).FontSize(11).FontColor(LabelColor);
+
+        foreach (var line in letterhead.ContactLines)
+        {
+            column.Item().PaddingTop(1)
+                .Text($"{line.Label}: {line.Value}").FontSize(9.5f).FontColor(LabelColor);
+        }
+
+        if (!string.IsNullOrWhiteSpace(letterhead.TaxLine))
+            column.Item().PaddingTop(3).Text(letterhead.TaxLine).FontSize(9f).FontColor(LabelColor);
     }
 
     /// <summary>The branded footer, then the page number on its own line.</summary>

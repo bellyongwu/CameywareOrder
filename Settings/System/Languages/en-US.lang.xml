@@ -399,8 +399,6 @@
   <Text key="Measure.Unit.Cm">cm</Text>
   <Text key="Measure.Unit.Inch">inch</Text>
   <Text key="Download.Language.Label">Download Language</Text>
-  <Text key="Download.Language.Chinese">Chinese (Simplified)</Text>
-  <Text key="Download.Language.English">English</Text>
   <Text key="OrderEdit.DownloadSubmit">Download</Text>
   <Text key="OrderEdit.PaymentTitle">{0} Payment</Text>
   <Text key="OrderEdit.DownpaymentMethod">Downpayment Method</Text>

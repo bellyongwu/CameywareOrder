@@ -87,8 +87,7 @@ public partial class CustomMadeServiceWindow : Window
         InitializeMode(existing?.ServiceMode ?? CustomMadeServiceMode.CustomFromScratch);
         InitializeAgeType(existing?.AgeType ?? CustomMadeAgeType.AdultMale);
 
-        if (_localization.CurrentLanguageCode.StartsWith("en", StringComparison.OrdinalIgnoreCase))
-            DownloadEnglishRadio.IsChecked = true;
+        BuildDownloadLanguageOptions();
 
         _isInitializing = false;
 
@@ -205,11 +204,51 @@ public partial class CustomMadeServiceWindow : Window
             PersistEditor(editor, updateOppositeUnit: true);
     }
 
+    /// <summary>
+    /// One radio per installed language, discovered rather than listed — dropping a new
+    /// <c>*.lang.xml</c> into Settings/System/Languages must make it downloadable with no code
+    /// change, which is the whole point of the per-language split. Two fixed radios lived here, so
+    /// French shipped as a system language that measurements could not be exported in.
+    /// </summary>
+    private void BuildDownloadLanguageOptions()
+    {
+        var current = _localization.CurrentLanguageCode;
+
+        foreach (var language in _localization.AvailableLanguages)
+        {
+            DownloadLanguagePanel.Items.Add(new RadioButton
+            {
+                Content = language.Name,
+                Tag = language.Code,
+                GroupName = "DownloadLanguage",
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 16, 0),
+                IsChecked = string.Equals(language.Code, current, StringComparison.OrdinalIgnoreCase),
+            });
+        }
+
+        // A selection is guaranteed even when the UI language matches no installed file, so the
+        // download button can never act on an empty choice.
+        if (!DownloadLanguageRadios().Any(radio => radio.IsChecked.GetValueOrDefault())
+            && DownloadLanguageRadios().FirstOrDefault() is { } first)
+        {
+            first.IsChecked = true;
+        }
+    }
+
+    private IEnumerable<RadioButton> DownloadLanguageRadios()
+        => DownloadLanguagePanel.Items.OfType<RadioButton>();
+
+    /// <summary>The language picked for the export, falling back to the UI language.</summary>
+    private string SelectedDownloadLanguageCode()
+        => DownloadLanguageRadios().FirstOrDefault(radio => radio.IsChecked.GetValueOrDefault())?.Tag as string
+           ?? _localization.CurrentLanguageCode;
+
     private void OnDownloadSubmitClick(object sender, RoutedEventArgs e)
     {
         try
         {
-            var languageCode = DownloadEnglishRadio.IsChecked.GetValueOrDefault() ? "en-US" : "zh-CN";
+            var languageCode = SelectedDownloadLanguageCode();
             var saveDialog = new SaveFileDialog
             {
                 Filter = "PDF files (*.pdf)|*.pdf",
@@ -606,22 +645,14 @@ public partial class CustomMadeServiceWindow : Window
         var brandingSettings = ReceiptBrandingStore.Load();
         var branding = brandingSettings.ForLanguage(languageCode);
 
-        // Every string is resolved HERE, where L() knows the language chosen in the print dialog —
-        // which is not necessarily the UI language. The document composer localizes nothing.
-        var taxNumber = ReceiptBrandingStore.ResolveTaxRegistrationNumber(brandingSettings);
-
         MeasurementSheetDocument.Save(
             new MeasurementSheetContent
             {
-                Title = L("Customer.Measurements.PrintTitle"),
+                // Every string is resolved for the language chosen in the print dialog, which is not
+                // necessarily the UI language. The document composer localizes nothing.
+                Letterhead = ShopLetterhead.Build(_localization, languageCode, "Customer.Measurements.PrintTitle"),
                 InfoRows = infoRows.Select(row => new MeasurementSheetRow(row.Label, row.Value)).ToList(),
                 Sections = BuildPdfGarmentSections(languageCode),
-                TaxLine = string.IsNullOrWhiteSpace(taxNumber)
-                    ? null
-                    : string.Format(
-                        System.Globalization.CultureInfo.CurrentCulture,
-                        L("Receipt.TaxNumberLine"),
-                        taxNumber.Trim()),
                 HeaderXaml = branding.HeaderXaml,
                 FooterXaml = branding.FooterXaml,
                 LogoBytes = ReceiptBrandingStore.GetLogoBytes(brandingSettings),

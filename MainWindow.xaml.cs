@@ -520,24 +520,75 @@ public partial class MainWindow : Window
 
         var brandingSettings = ReceiptBrandingStore.Load();
         var branding = brandingSettings.ForLanguage(_localization.CurrentLanguageCode);
+        var hasHeader = !BrandingRenderer.IsEmpty(branding.HeaderXaml);
 
-        AddMeasurementSections(document, order, languageCode, isInch, pageBreakBefore: false);
+        // The same generated letterhead the receipt prints, and for the same reason: without it the
+        // sheet opened with a bare "GST/HST 税号：…" above its own title and never named the shop.
+        // The document title lives IN the letterhead as its subtitle, so the sections must not add
+        // one of their own — hence includeTitle: hasHeader is false here.
+        AddMeasurementLetterhead(document, languageCode, hasHeader);
+        AddMeasurementSections(document, order, languageCode, isInch, pageBreakBefore: false, includeTitle: hasHeader);
 
-        // The measurements sheet has no generated letterhead of its own, so the top is still the
-        // right place for the registration line here.
-        InjectReceiptBranding(document, brandingSettings, branding, insertTaxNumber: true);
+        // insertTaxNumber: false — the letterhead above has already placed it, last, where it reads
+        // as part of the letterhead instead of standing in for one.
+        InjectReceiptBranding(document, brandingSettings, branding, insertTaxNumber: false);
 
         return document;
     }
 
+    /// <summary>
+    /// The generated letterhead on a standalone measurements sheet: shop name, document title,
+    /// contact lines, GST/HST. Skipped when a custom header replaces it, exactly as on the receipt.
+    /// </summary>
+    private void AddMeasurementLetterhead(FlowDocument document, string languageCode, bool hasHeader)
+    {
+        if (hasHeader)
+            return;
+
+        var letterhead = ShopLetterhead.Build(_localization, languageCode, "Customer.Measurements.PrintTitle");
+
+        document.Blocks.Add(new Paragraph(new Bold(new Run(letterhead.Name)))
+        {
+            FontSize = 18,
+            TextAlignment = TextAlignment.Left,
+            Margin = new Thickness(0, 0, 0, 2)
+        });
+        document.Blocks.Add(new Paragraph(new Run(letterhead.Subtitle ?? string.Empty))
+        {
+            TextAlignment = TextAlignment.Left,
+            Foreground = System.Windows.Media.Brushes.Gray,
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+
+        AddLetterheadContactLines(document, letterhead);
+
+        if (letterhead.TaxLine is not null)
+        {
+            document.Blocks.Add(new Paragraph(new Run(letterhead.TaxLine))
+            {
+                FontSize = 11,
+                TextAlignment = TextAlignment.Left,
+                Foreground = System.Windows.Media.Brushes.DimGray,
+                Margin = new Thickness(0, 0, 0, 10)
+            });
+        }
+    }
+
     // Renders the measurement content into an existing document. When pageBreakBefore is
     // true (receipt + measurements) the first block starts on a fresh page.
-    private void AddMeasurementSections(FlowDocument document, Order order, string languageCode, bool isInch, bool pageBreakBefore)
+    private void AddMeasurementSections(
+        FlowDocument document, Order order, string languageCode, bool isInch, bool pageBreakBefore, bool includeTitle = true)
     {
-        var title = ReceiptSectionTitle(_localization.GetText("Customer.Measurements.PrintTitle", languageCode));
-        if (pageBreakBefore)
-            title.BreakPageBefore = true;
-        document.Blocks.Add(title);
+        // Suppressed on a standalone sheet whose generated letterhead already carries the title as
+        // its subtitle; kept for the receipt+measurements document, where this heading opens a new
+        // page far below the letterhead and is the only thing naming what follows.
+        if (includeTitle)
+        {
+            var title = ReceiptSectionTitle(_localization.GetText("Customer.Measurements.PrintTitle", languageCode));
+            if (pageBreakBefore)
+                title.BreakPageBefore = true;
+            document.Blocks.Add(title);
+        }
 
         document.Blocks.Add(ReceiptInfoLine(
             _localization.GetText("Order.Fields.OrderNumber", languageCode), order.OrderNumber));
@@ -1123,27 +1174,21 @@ public partial class MainWindow : Window
     /// legible on a printed slip.
     /// </remarks>
     private void AddShopContactLines(FlowDocument document)
+        => AddLetterheadContactLines(
+            document,
+            ShopLetterhead.Build(_localization, _localization.CurrentLanguageCode, "Receipt.Title"));
+
+    /// <summary>
+    /// The shop's address, phone, email and website as printed lines. Shared by the receipt and the
+    /// measurements sheet so the two letterheads cannot drift apart again.
+    /// </summary>
+    private static void AddLetterheadContactLines(FlowDocument document, ShopLetterhead letterhead)
     {
-        var shop = ShopContext.Instance.Current;
-        if (shop is null)
-            return;
-
-        var lines = new (string LabelKey, string? Value)[]
-        {
-            ("Shop.Setup.Address", shop.ResolveAddress(_localization.CurrentLanguageCode)),
-            ("Shop.Setup.Phone", shop.PhoneNumber),
-            ("Shop.Setup.Email", shop.Email),
-            ("Shop.Setup.Website", shop.Website),
-        };
-
         var written = false;
 
-        foreach (var (labelKey, value) in lines)
+        foreach (var line in letterhead.ContactLines)
         {
-            if (string.IsNullOrWhiteSpace(value))
-                continue;
-
-            var paragraph = ReceiptInfoLine(_localization[labelKey], value.Trim());
+            var paragraph = ReceiptInfoLine(line.Label, line.Value);
 
             // Tighter than the order panel's 3px leading: this is a four-line address block, and at
             // the panel's spacing it would occupy as much height as the order details themselves.

@@ -398,8 +398,6 @@
   <Text key="Measure.Unit.Cm">cm</Text>
   <Text key="Measure.Unit.Inch">pouce</Text>
   <Text key="Download.Language.Label">Langue du téléchargement</Text>
-  <Text key="Download.Language.Chinese">Chinois (simplifié)</Text>
-  <Text key="Download.Language.English">Anglais</Text>
   <Text key="OrderEdit.DownloadSubmit">Télécharger</Text>
   <Text key="OrderEdit.PaymentTitle">Paiement — {0}</Text>
   <Text key="OrderEdit.DownpaymentMethod">Mode de paiement de l’acompte</Text>
