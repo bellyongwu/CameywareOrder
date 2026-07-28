@@ -17,6 +17,31 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 15:45 — Cancelling the shop picker signs out instead of exiting  [DONE]
+- Ask: "After login and in Select store panel, the Cancel button should
+  automatically logout. do not close the application."
+- Cancelling the picker called `Shutdown()` — on BOTH paths, startup and sign-out.
+  That is a trapdoor: sign-in and shop selection read as one flow, so Cancel on the
+  second step is taken to mean "go back", and instead the application vanished with
+  no way to hand the machine to a colleague short of launching it again.
+- New `App.OpenShopOrSignInAgainAsync` loops: open a shop; if the picker is
+  cancelled, sign out and show sign-in again. Both call sites use it, so the two
+  paths cannot drift. `Shutdown()` is now reached only when the LOGIN window is
+  dismissed — the one gesture that still unambiguously means "I am done".
+- Signing out is the point rather than a side effect: the session is authenticated
+  by the time the picker appears, so returning to sign-in while still signed in
+  would leave the previous user's session live behind the login window.
+- Falls out of the same change: an account assigned to no shop used to be told so
+  and then have the application close under it. It now returns to sign-in, so
+  somebody else can take the machine.
+- Notes: new `scratchpad/logoutcheck` (9). It drives App's real private loop by
+  reflection and answers each dialog from a `Window.Loaded` class handler, so the
+  assertions are about what the loop DOES with a cancelled picker rather than about
+  a re-implementation of it. Verified: picker → login (not shutdown), signed out by
+  the time sign-in appears, dismissing sign-in still reports cancelled, and
+  picker → login → picker opens a shop and rebinds the session.
+  Build 0/0, suite 483/0.
+
 ### 2026-07-28 15:05 — Accessibility: arrow keys page the order list  [DONE]
 - Ask: "Improve accessibility: while in the main application, press right and left
   arrow, you can jump into the next page of records."

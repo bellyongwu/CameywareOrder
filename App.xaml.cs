@@ -198,12 +198,12 @@ public partial class App : Application
         // Open a shop before anything shop-scoped can run.
         ShopContext.Instance.Initialize(_host.Services.GetRequiredService<IServiceScopeFactory>());
 
-        var shopSelection = await OpenInitialShopAsync();
+        var shopSelection = await OpenShopOrSignInAgainAsync();
         if (!shopSelection.Opened)
         {
-            // No shop was opened — the user cancelled the picker, or there is nothing they may
-            // open. Same reasoning as the login window: ShutdownMode is still OnExplicitShutdown,
-            // so returning would leave a windowless process holding the database.
+            // Only reached when the user dismissed the LOGIN window. ShutdownMode is still
+            // OnExplicitShutdown, so returning would leave a windowless process holding the
+            // database. Exit deliberately.
             Shutdown();
             return;
         }
@@ -247,9 +247,9 @@ public partial class App : Application
 
         // The previous session's shop stays bound until the next one is chosen. Clearing it here
         // would open a window in which the GraphQL server — still running — hits RequireCurrent and
-        // throws. It is never observable: the only way past this point without choosing a shop is
-        // the shutdown below.
-        var shopSelection = await OpenInitialShopAsync();
+        // throws. It is never observable: nothing shop-scoped is on screen between here and the
+        // next main window.
+        var shopSelection = await OpenShopOrSignInAgainAsync();
         if (!shopSelection.Opened)
         {
             Shutdown();
@@ -257,6 +257,41 @@ public partial class App : Application
         }
 
         ShowMainWindow(shopSelection.ConfigureTerms);
+    }
+
+    /// <summary>
+    /// Opens a shop, sending the user back to sign-in as often as they cancel the picker.
+    /// </summary>
+    /// <remarks>
+    /// Cancelling the shop picker used to end the application. That reads as a trapdoor: the two
+    /// steps look like one flow, so "Cancel" on the second is taken to mean "go back", and instead
+    /// the whole thing vanished — with no way to hand the machine to a colleague short of starting
+    /// it again. It now signs the user out and shows sign-in, which is what Cancel means when there
+    /// is a previous step to return to.
+    ///
+    /// Signing out is the point rather than a side effect: the session is already authenticated by
+    /// the time the picker appears, so returning to sign-in while still signed in would leave the
+    /// previous user's session live behind the login window.
+    ///
+    /// Returns Cancelled only when the LOGIN window is dismissed — the one gesture that still
+    /// unambiguously means "I am done with this application".
+    /// </remarks>
+    private async Task<ShopSelection> OpenShopOrSignInAgainAsync()
+    {
+        while (true)
+        {
+            var selection = await OpenInitialShopAsync();
+            if (selection.Opened)
+                return selection;
+
+            AuthenticationService.Instance.SignOut();
+
+            // Never pre-filled, for the same reason as the sign-out path: whoever is standing at
+            // the machine now is probably not the person who just backed out.
+            var loginWindow = new LoginWindow(LocalizationService.Instance);
+            if (loginWindow.ShowDialog() is not true)
+                return ShopSelection.Cancelled;
+        }
     }
 
     /// <summary>

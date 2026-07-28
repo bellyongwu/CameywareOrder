@@ -1234,6 +1234,22 @@ Two rules learned the hard way here:
   Byte-identical comparison is still the right tool for the same band on
   different pages, where nothing has moved.
 
+## Driving App's own startup/sign-in flow in a harness
+
+`App`'s private flow methods can be exercised without running `OnStartup`: create the
+instance with `RuntimeHelpers.GetUninitializedObject(typeof(App))`, set the `_host`
+field by reflection to a host that registers `AppDbContext`, and invoke the method.
+
+Modal dialogs are answered by registering a class handler for `Window.LoadedEvent`
+(`EventManager.RegisterClassHandler`) and setting `DialogResult` there — every
+`ShowDialog()` then returns without a human. Recording the window types as they load
+gives the flow's actual sequence to assert on ("picker → login → picker"), which is
+what makes a navigation change testable at all rather than only reviewable.
+
+Any harness that opens a window needs `<Resource Include="Assets\ICONS\app-icon.ico" />`
+and a copy of the file: the windows set `Icon` with a RELATIVE pack URI, resolved
+against the entry assembly, which is the harness rather than CameywareOrder.
+
 ## Simulating keyboard input in a harness
 
 **`InputManager.ProcessInput` with a fabricated `KeyEventArgs` does not work here.**

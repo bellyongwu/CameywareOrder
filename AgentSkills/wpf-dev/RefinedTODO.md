@@ -52,6 +52,23 @@ Nothing in flight. The last multi-phase effort (systematic config refactor, phas
 
 ## Recent work (2026-07-27 → 07-28)
 
+### Cancel in the shop picker means "go back", not "quit"
+It called `Shutdown()`, on both the startup and the sign-out path. Sign-in and shop
+selection read as one flow, so Cancel on the second step is taken to mean "back to
+the first" — and instead the application disappeared, with no way to hand the machine
+to a colleague short of relaunching it.
+
+`App.OpenShopOrSignInAgainAsync` now loops: open a shop, or sign out and show sign-in
+again. Both call sites share it. `Shutdown()` is reached only when the LOGIN window is
+dismissed, which is the one gesture that unambiguously means "I am done".
+
+Signing out is the point, not a side effect: the session is already authenticated when
+the picker appears, so returning to sign-in without it would leave the previous user's
+session live behind the login window.
+
+> General shape: a Cancel that has a previous step to return to should return to it.
+> Only the first step's Cancel may end the application.
+
 ### Keyboard paging on the order list
 Left/Right page the list from anywhere in the main window. Paging was previously
 reachable only by clicking two small buttons under it.

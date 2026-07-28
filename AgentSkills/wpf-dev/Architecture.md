@@ -26,6 +26,14 @@ components are added/renamed or the way pieces fit together changes.
   guards (`EnsureDatabaseCompatibilityAsync` — data-driven `OrderColumnMigrations`
   table + `ReadOrdersSchemaAsync` / `TableExistsAsync` / `ReadColumnNamesAsync`
   helpers); loads the saved language via `LanguagePreferenceStore`.
+  Session flow: sign in → `OpenShopOrSignInAgainAsync` → main window.
+  That method LOOPS — cancelling the shop picker signs the user out and shows
+  sign-in again rather than ending the application, because the two steps read as
+  one flow and Cancel on the second means "go back". `Shutdown()` is reached only
+  when the LOGIN window is dismissed. `SignOutAsync` reuses the same loop, so the
+  startup and sign-out paths cannot drift; it deliberately keeps the previous
+  session's shop bound until the next is chosen, since the running GraphQL server
+  calls `ShopContext.RequireCurrent`.
 
 ## Layers / folders
 
