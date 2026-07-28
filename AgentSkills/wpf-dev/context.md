@@ -201,6 +201,22 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     "localize everything".
   - Also not translated, and correctly so: the `B` / `I` / `U` formatting-button faces, alignment
     glyphs, `×`, `—`. Typographic convention, not prose.
+- **A stored id is a compatibility surface — never rename one (2026-07-28).** The ready-made product
+  ids (`Jackets`, `TiesBowtie`, …) are written into `OrderItem.ProductName` on every order ever
+  saved AND are the suffix of the `ClothingItem.<id>` string-table keys. Renaming one silently
+  orphans historical orders, which then print the raw id. Same for measurement term / garment ids.
+  Add freely; never rename. `ProductCatalogDefaults` says so at the declaration, and `catalogcheck`
+  asserts the five have not changed.
+  - Corollary: a per-shop catalogue must keep resolving an id it no longer contains — a shop may
+    delete a category it stopped selling, and its old orders still have to print. `ResolveName` goes
+    id → the shop's own names → the string table → the raw id.
+  - Predefined entries take their name from the STRING TABLE, not from stored text, so they are
+    automatically translated into a language added later. Only user-added ones carry their own names.
+- **A test must not pin a setting the user owns (2026-07-28).** Three formatcheck assertions
+  hardcoded `defaultLanguage == "zh-CN"`; the user changed it to `en-US` and the suite reported their
+  configuration change as three failures. `Settings/` is untracked, so git showed no diff to explain
+  it either. Assert that a setting is HONOURED (the loader used what the file says, and the file
+  names a language that ships), never that it holds a particular value.
 - **Shipped configuration vs per-installation state (2026-07-28).** Two different things that both
   sound like "settings", and conflating them is how a user's data gets overwritten by an upgrade:
   - `Settings/System/**` next to the executable — language tables, `app-defaults.json`. Read-only,

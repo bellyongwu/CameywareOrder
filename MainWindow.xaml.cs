@@ -96,6 +96,7 @@ public partial class MainWindow : Window
         var configure = Show(auth.CanConfigureShop);
         ShopSettingsMenuItem.Visibility = configure;
         MeasurementTermsMenuItem.Visibility = configure;
+        ProductCatalogMenuItem.Visibility = configure;
         HeaderFooterMenuItem.Visibility = configure;
 
         // Whole-installation tools, and the database path they act on.
@@ -522,7 +523,9 @@ public partial class MainWindow : Window
 
         AddMeasurementSections(document, order, languageCode, isInch, pageBreakBefore: false);
 
-        InjectReceiptBranding(document, brandingSettings, branding);
+        // The measurements sheet has no generated letterhead of its own, so the top is still the
+        // right place for the registration line here.
+        InjectReceiptBranding(document, brandingSettings, branding, insertTaxNumber: true);
 
         return document;
     }
@@ -581,6 +584,20 @@ public partial class MainWindow : Window
 
         var window = new MeasurementTermsWindow { Owner = this };
         window.ShowDialog();
+    }
+
+    private void OnProductCatalogClick(object sender, RoutedEventArgs e)
+    {
+        if (!AuthenticationService.Instance.CanConfigureShop)
+            return;
+
+        var window = new ProductCatalogWindow(_localization) { Owner = this };
+        window.ShowDialog();
+
+        // The open order editors build their category drop-downs when a row is created, so a
+        // catalogue edited underneath them would leave stale lists on screen. Refreshing the list
+        // is enough here — the editors are modal to their own windows and rebuild on next open.
+        _ = _viewModel.LoadOrdersAsync();
     }
 
     // --- Shops (本地配置 → 切换店铺 / 店铺设置) ----------------------------------
@@ -1037,12 +1054,20 @@ public partial class MainWindow : Window
 
         AddReceiptTotals(document, order, symbol);
 
-        InjectReceiptBranding(document, brandingSettings, branding);
+        InjectReceiptBranding(document, brandingSettings, branding, insertTaxNumber: hasHeader);
 
         return document;
     }
 
-    // The default shop title only appears when the header editor has no content.
+    /// <summary>
+    /// The default letterhead — shop name, subtitle, and the shop's contact details — shown when the
+    /// header editor has no content of its own.
+    /// </summary>
+    /// <remarks>
+    /// LEFT aligned, like everything else the receipt generates. Centred text reads as a decorative
+    /// title; a business letterhead is a block of facts and belongs on the same left margin as the
+    /// order details beneath it, so the eye follows one edge down the page.
+    /// </remarks>
     private void AddReceiptTitle(FlowDocument document, bool hasHeader)
     {
         if (hasHeader)
@@ -1053,15 +1078,88 @@ public partial class MainWindow : Window
         document.Blocks.Add(new Paragraph(new Bold(new Run(ShopContext.Instance.CurrentName)))
         {
             FontSize = 18,
-            TextAlignment = TextAlignment.Center,
+            TextAlignment = TextAlignment.Left,
             Margin = new Thickness(0, 0, 0, 2)
         });
         document.Blocks.Add(new Paragraph(new Run(_localization["Receipt.Title"]))
         {
-            TextAlignment = TextAlignment.Center,
+            TextAlignment = TextAlignment.Left,
             Foreground = System.Windows.Media.Brushes.Gray,
-            Margin = new Thickness(0, 0, 0, 12)
+            Margin = new Thickness(0, 0, 0, 6)
         });
+
+        AddShopContactLines(document);
+
+        // Last line of the letterhead, under the contact details. Placed here rather than by
+        // InjectReceiptBranding, which inserts at the very TOP — correct when a custom header
+        // replaces this block, but above the shop's own name when it does not.
+        var taxNumber = CreateTaxNumberBlock(ResolveTaxRegistrationNumber(ReceiptBrandingStore.Load()));
+        if (taxNumber is not null)
+            document.Blocks.Add(taxNumber);
+    }
+
+    /// <summary>
+    /// The shop's address, phone, email and website, each printed only when it has been filled in.
+    /// </summary>
+    /// <remarks>
+    /// Part of the letterhead rather than of the order panel below: these describe the SHOP, and a
+    /// customer looking for "where do I call about this" should find them next to the shop's name.
+    ///
+    /// One LABELLED line each, through the same <see cref="ReceiptInfoLine"/> the order panel uses,
+    /// so "Address: …" on the letterhead reads the same way as "Customer name: …" below it. They
+    /// were previously an unlabelled address line with the other three run together by a bullet,
+    /// which left the reader to work out which was the phone and which the website.
+    ///
+    /// The labels are the SHOP's own field names (<c>Shop.Setup.*</c>), not the order's
+    /// (<c>Order.Fields.*</c>): these are the shop's address and telephone, and the two sets exist
+    /// separately for precisely that reason.
+    ///
+    /// Address comes from <see cref="Shop.ResolveAddress"/>, so a receipt printed in French carries
+    /// the French wording of the address where one was entered. The other three are single-valued —
+    /// a phone number is the same string in any language.
+    ///
+    /// At 10.5pt against the 12pt body: smaller than the order details, because this is reference
+    /// information rather than something to read line by line, but not so small it stops being
+    /// legible on a printed slip.
+    /// </remarks>
+    private void AddShopContactLines(FlowDocument document)
+    {
+        var shop = ShopContext.Instance.Current;
+        if (shop is null)
+            return;
+
+        var lines = new (string LabelKey, string? Value)[]
+        {
+            ("Shop.Setup.Address", shop.ResolveAddress(_localization.CurrentLanguageCode)),
+            ("Shop.Setup.Phone", shop.PhoneNumber),
+            ("Shop.Setup.Email", shop.Email),
+            ("Shop.Setup.Website", shop.Website),
+        };
+
+        var written = false;
+
+        foreach (var (labelKey, value) in lines)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                continue;
+
+            var paragraph = ReceiptInfoLine(_localization[labelKey], value.Trim());
+
+            // Tighter than the order panel's 3px leading: this is a four-line address block, and at
+            // the panel's spacing it would occupy as much height as the order details themselves.
+            paragraph.FontSize = 10.5;
+            paragraph.TextAlignment = TextAlignment.Left;
+            paragraph.Margin = new Thickness(0, 0, 0, 1);
+            paragraph.Foreground = System.Windows.Media.Brushes.DimGray;
+
+            document.Blocks.Add(paragraph);
+            written = true;
+        }
+
+        // The gap belongs after the LAST line that was actually written — a fixed trailing margin on
+        // the block would leave a hole under a shop that has filled nothing in.
+        if (written && document.Blocks.LastBlock is Paragraph last)
+            last.Margin = new Thickness(0, 0, 0, 10);
     }
 
     // Who and when, grouped into one panel so the money below reads as a separate thing.
@@ -1113,7 +1211,7 @@ public partial class MainWindow : Window
         foreach (var item in order.Items)
         {
             var line = new Paragraph { Margin = new Thickness(0, 0, 0, 2) };
-            var name = LocalizeWithFallback("ClothingItem", item.ProductName);
+            var name = ProductCatalogService.Instance.ResolveName(item.ProductName);
             line.Inlines.Add(new Run($"{name}  {Money(symbol, item.EffectiveUnitPrice)} x{item.Quantity}"));
             line.Inlines.Add(new Run($"    {Money(symbol, item.TotalPrice)}") { FontWeight = FontWeights.SemiBold });
             document.Blocks.Add(line);
@@ -1216,14 +1314,27 @@ public partial class MainWindow : Window
     // Prepends the preset logo + rich header and appends the rich footer for the
     // current language, so printed receipts share the same branding as the
     // measurements export.
-    private static void InjectReceiptBranding(FlowDocument document, ReceiptBrandingSettings settings, LocalizedBranding branding)
+    /// <param name="insertTaxNumber">
+    /// Whether this document still needs the tax registration line put in at the top. False when the
+    /// caller has already placed it — the receipt does so inside its own generated letterhead, under
+    /// the shop's contact details.
+    /// </param>
+    private static void InjectReceiptBranding(
+        FlowDocument document, ReceiptBrandingSettings settings, LocalizedBranding branding, bool insertTaxNumber)
     {
-        // Inserted BEFORE the header is prepended, so the header ends up above it: the shop's tax
-        // registration number reads as part of the letterhead, directly under the header — which
-        // is what makes the receipt usable as a tax slip.
-        var taxNumberBlock = CreateTaxNumberBlock(settings.TaxRegistrationNumber);
-        if (taxNumberBlock is not null)
-            InsertAtTop(document, taxNumberBlock);
+        // Inserted BEFORE the header is prepended, so the header ends up above it: the registration
+        // number reads as part of the letterhead, directly under the header.
+        //
+        // Skipped when the caller has already placed it. The receipt's generated letterhead — shop
+        // name, subtitle, contact details — is itself at the top of the document, so inserting here
+        // put the tax number ABOVE the shop's own name, reading as though the number were the
+        // letterhead.
+        if (insertTaxNumber)
+        {
+            var taxNumberBlock = CreateTaxNumberBlock(ResolveTaxRegistrationNumber(settings));
+            if (taxNumberBlock is not null)
+                InsertAtTop(document, taxNumberBlock);
+        }
 
         BrandingRenderer.AppendToFlowDocument(document, branding.HeaderXaml, atTop: true);
 
@@ -1244,10 +1355,33 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// The GST/HST line, or null when the shop has not entered a number (本地配置 →
-    /// 添加或更改页眉页脚). The whole line shape comes from the string table so the separator is
-    /// translated too — zh uses a fullwidth colon where en uses ": ".
+    /// Which tax registration number the receipt prints: the one from the header/footer editor if
+    /// it has one, otherwise the shop's own.
     /// </summary>
+    /// <remarks>
+    /// The header/footer editor WINS. Both are "the shop's number", but the shop setting is the
+    /// business-wide fact while the branding entry is a deliberate, per-installation override typed
+    /// into the receipt designer itself — so a value there is the more specific instruction and
+    /// should not be silently ignored in favour of the general one.
+    /// </remarks>
+    private static string? ResolveTaxRegistrationNumber(ReceiptBrandingSettings settings)
+    {
+        if (!string.IsNullOrWhiteSpace(settings.TaxRegistrationNumber))
+            return settings.TaxRegistrationNumber;
+
+        return ShopContext.Instance.Current?.TaxRegistrationNumber;
+    }
+
+    /// <summary>
+    /// The GST/HST line, or null when neither the shop nor the header/footer editor has a number.
+    /// The whole line shape comes from the string table so the separator is translated too — zh uses
+    /// a fullwidth colon where en uses ": ".
+    /// </summary>
+    /// <remarks>
+    /// Left aligned with the rest of the letterhead. At 11pt it sits just under the body text: it is
+    /// a legal detail rather than something to read first, but a tax slip whose registration number
+    /// cannot be read is not a tax slip.
+    /// </remarks>
     private static Paragraph? CreateTaxNumberBlock(string? taxRegistrationNumber)
     {
         if (string.IsNullOrWhiteSpace(taxRegistrationNumber))
@@ -1258,7 +1392,7 @@ public partial class MainWindow : Window
         return new Paragraph(new Run(text))
         {
             FontSize = 11,
-            TextAlignment = TextAlignment.Center,
+            TextAlignment = TextAlignment.Left,
             Foreground = System.Windows.Media.Brushes.DimGray,
             Margin = new Thickness(0, 0, 0, 10)
         };

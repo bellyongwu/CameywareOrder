@@ -247,6 +247,9 @@
                              belongs — it is a property OF a shop, and two places to set one value is
                              one place too many. -->
                         <MenuItem x:Name="MeasurementTermsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.MeasurementTerms], Mode=OneWay}" Click="OnMeasurementTermsClick"/>
+                        <!-- The shop's ready-made categories. Beside the measurement terms because
+                             both answer "what does this branch sell and how is it described". -->
+                        <MenuItem x:Name="ProductCatalogMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ProductCatalog], Mode=OneWay}" Click="OnProductCatalogClick"/>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick"
                                       IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility}, ConverterParameter=NotNull}"/>

@@ -59,10 +59,32 @@ files:
 - **Skill-only tracker:** `SkillUpdates.md` — a changelog of edits to the skill
   itself (this `SKILL.md`, its conventions, and the companion templates). It has
   **no relationship to any project**; it only records how the skill evolves.
-- **Project companions:** `TODO.md` (open/checkpointed work), `context.md`
-  (current project state, recent decisions, gotchas), and `Architecture.md`
-  (component map). These preserve project state across sessions so work is never
-  lost if a conversation is interrupted or compacted.
+- **Project companions:** `RefinedTODO.md` (the condensed working history — **the
+  one you read**), `TODO.md` (the full development record — **written, not
+  read**), `context.md` (current project state, recent decisions, gotchas), and
+  `Architecture.md` (component map). These preserve project state across sessions
+  so work is never lost if a conversation is interrupted or compacted.
+
+#### `RefinedTODO.md` vs `TODO.md`
+
+`TODO.md` grows without bound — it reached 83 entries and 220 KB, and reading it
+in full every session costs more context than the work itself. `RefinedTODO.md`
+is the same history, condensed, and it is the file to read.
+
+**Both are maintained. They have different jobs:**
+
+| | `TODO.md` | `RefinedTODO.md` |
+|---|---|---|
+| Role | Full development record | Condensed working memory |
+| Written | Every task, in full, as always | Every task, condensed |
+| Read | **No** — do not read it to plan work | **Yes** — this is the one you read |
+| Grows | Append-only, forever | Stays small; old entries merge and shrink |
+
+Keeping the unabridged `TODO.md` is what makes condensing safe: nothing is ever
+destroyed, so an over-aggressive summary can always be checked against the
+original. Read `TODO.md` only when `RefinedTODO.md` is demonstrably missing
+something you need — then fix `RefinedTODO.md` so the next session does not have
+to.
 
 **On every use of this skill, first classify the request:**
 
@@ -81,19 +103,99 @@ conventions, rename the skill, or change the companion-file templates/format.
 
 ### Step B — Project task flow
 
-1. **Read the project companions first** — `TODO.md`, `context.md`, and
-   `Architecture.md` — before planning or editing code.
+1. **Read the project companions first** — `RefinedTODO.md`, `context.md`, and
+   `Architecture.md` — before planning or editing code. **Not `TODO.md`**: see the
+   table above. If `RefinedTODO.md` does not exist yet, create it now by the
+   first-use procedure in Step D.
 2. **Checkpoint the request:** compare the incoming ask to the last entry in
-   `TODO.md`. If it is **not the same** as the last TODO (a genuinely new ask),
-   append it as a new checkpoint entry (timestamp + verbatim ask + short task
-   breakdown, status `PENDING`) **before** starting work. If it merely continues
-   the last entry, update that entry instead of duplicating it.
-3. **Keep them current as you work:** flip TODO items to `IN PROGRESS` / `DONE`;
+   `RefinedTODO.md`. If it is **not the same** (a genuinely new ask), append a new
+   checkpoint entry to **both** `TODO.md` and `RefinedTODO.md` (timestamp +
+   verbatim ask + short task breakdown, status `PENDING`) **before** starting
+   work. If it merely continues the last entry, update that entry instead of
+   duplicating it.
+3. **Keep them current as you work:** flip items to `IN PROGRESS` / `DONE`;
    record notable decisions, new conventions, or gotchas in `context.md`; and
    update `Architecture.md` whenever you add/rename components or change how the
    pieces fit together.
-4. If any tracking file is missing, create it (keep the same headings/format as
+4. **When the task is finished, run the wrap-up pass in Step D.** This is not
+   optional and not only about the TODOs — `context.md` and `Architecture.md` are
+   part of it.
+5. If any tracking file is missing, create it (keep the same headings/format as
    the existing templates) rather than skipping the step.
+
+### Step D — Wrap-up: summarise and condense (after every finished task)
+
+The point is speed **without distortion**: a future session should reach the same
+conclusions from `RefinedTODO.md` alone that it would have reached from the whole
+of `TODO.md`, in a fraction of the reading.
+
+**First use — bootstrapping `RefinedTODO.md`:**
+
+1. Copy `TODO.md` to `RefinedTODO.md`.
+2. Run one condensing pass (rules below) over the copy.
+3. From then on, `RefinedTODO.md` is the file that is read.
+
+**Every task, once the work is done and verified:**
+
+1. Append the full entry to `TODO.md`, exactly as before. It stays the complete
+   development record and is never trimmed.
+2. Add the same task to `RefinedTODO.md` — condensed — and then **re-condense its
+   neighbours**: merge it with earlier entries it supersedes or continues, so the
+   file gets *reorganised*, not merely appended to. A `RefinedTODO.md` that only
+   grows is not doing its job.
+3. Update `context.md` and `Architecture.md` **if the task warrants it** — not as
+   a ritual. The test:
+   - `context.md` — did this task produce a lesson that would change how the
+     *next* change is made? A silent failure mode, a framework behaviour that
+     surprised you, a convention now in force. If it would only ever be read as
+     history, it belongs in `TODO.md` instead.
+   - `Architecture.md` — did a component appear, disappear, get renamed, or change
+     its relationship to others? Behaviour changes inside an existing component
+     usually do not belong here.
+   - Neither needs an entry for a task that fixed something without teaching
+     anything.
+
+#### Condensing rules
+
+**Keep — this is the expensive knowledge:**
+
+- **Why**, never just what. "Left-aligned the letterhead" is worthless;
+  "left-aligned because a centred title over a left-aligned address reads as two
+  designs" survives.
+- Non-obvious causes, silent failure modes, and framework behaviour that
+  surprised you.
+- Decisions **and their reasons**, especially where the obvious choice was
+  rejected — those are the ones that get re-litigated.
+- Compatibility surfaces and anything documented as "never change this".
+- Measured facts that were hard to obtain (a real width, a real timing).
+
+**Drop — process telemetry that has served its purpose:**
+
+- Assertion counts, build results, "0 warnings", timings, harness pass tallies.
+  They mattered as evidence at the time; they are noise afterwards.
+- Blow-by-blow narration of how something was done.
+- Restatements of a rule already recorded once.
+- Intermediate states that the final state already implies.
+
+**Delete outright — the contradictions:**
+
+When a later task reversed an earlier one, the earlier instruction must not
+remain readable as if still true. Replace it with the current truth. Keep a trace
+of the reversal **only** when re-attempting the abandoned approach is a live risk
+— then one line saying it was tried and why it failed, which is cheaper than
+someone rediscovering it.
+
+#### Two rules that keep condensing honest
+
+- **Move, don't delete.** A durable engineering lesson buried in a task entry does
+  not get summarised away — it gets **moved into `context.md`**, where it is
+  indexed by topic instead of by date. This is what lets `RefinedTODO.md` shrink
+  while the project's knowledge keeps growing. Most of what makes an entry long
+  is a lesson that belongs in `context.md` anyway.
+- **Never invent to fill a gap.** If an old entry cannot be condensed faithfully
+  from what is actually known, keep it as a one-line pointer to `TODO.md` rather
+  than writing a plausible summary. A confident wrong summary is far worse than
+  an admitted gap — it is exactly the distortion this file exists to avoid.
 
 ### Step C — Resuming near/after a context-size limit (compaction)
 
@@ -107,12 +209,16 @@ transcript alone:
 2. **Then read `context.md`** — specifically the newest entries under
    "Recent decisions / state" — to recover the *last stored context* (the most
    recent decisions, gotchas, and in-flight design).
-3. **Then read `TODO.md`** to find the last checkpoint and its status, and resume
-   there.
+3. **Then read `RefinedTODO.md`** to find the last checkpoint and its status, and
+   resume there. Reading the full `TODO.md` at this point is the wrong move — it
+   is the largest file in the folder and you are recovering from running out of
+   room.
 4. **Before context runs out**, proactively flush anything not yet written:
    append/refresh the `context.md` "Recent decisions / state" note and the
-   `TODO.md` checkpoint status so the next (post-compaction) turn can recover
-   cleanly. Treat these files — not the chat history — as the durable memory.
+   checkpoint status in `TODO.md` and `RefinedTODO.md`, so the next
+   (post-compaction) turn can recover cleanly. Treat these files — not the chat
+   history — as the durable memory. If there is only room for one, write
+   `RefinedTODO.md`: it is the one the next turn will read.
 
 TODO checkpoint entry format:
 

@@ -354,6 +354,14 @@ components are added/renamed or the way pieces fit together changes.
     the open branch is identifiable at a glance. Phone / email / website are stored but NOT yet
     printed: the receipt header/footer is already free rich text per language, so injecting them
     would double-print for any shop that typed its details there by hand.
+- **Product catalogue** — `Models/ProductCatalog` + `Services/ProductCatalogService`, the ready-made
+  categories an order's clothing rows offer. Per shop, one JSON file keyed on `PublicId`, seeded from
+  `ProductCatalogDefaults` and edited in `Views/ProductCatalogWindow` (本地配置 → 商品类别).
+  Modelled on `MeasurementTermsService`, down to the copy-between-shops path.
+  - The five shipped ids are a COMPATIBILITY SURFACE — see context.md before touching them.
+    Predefined names come from the string table (`ClothingItem.<id>`); user-added ones carry their
+    own per-language names. `ResolveName` always resolves, including for a deleted category, so a
+    historical order never prints a blank.
 - **Migrations/** — `InitialCreate`, `AddOrderPaymentFields`, and the model
   snapshot. Columns added after those two migrations arrive through the runtime
   guards in `App.xaml.cs` instead (see Startup above).

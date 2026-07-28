@@ -172,6 +172,8 @@
   <Text key="Shop.Setup.Email">Courriel</Text>
   <Text key="Shop.Setup.Website">Site web</Text>
   <Text key="Shop.Setup.ContactHint">Facultatif. Le téléphone, le courriel et le site web ne dépendent pas de la langue — toutes les langues affichent la même valeur.</Text>
+  <Text key="Shop.Setup.TaxNumber">Numéro de taxe (TPS/TVH)</Text>
+  <Text key="Shop.Setup.TaxNumberHint">Facultatif. Imprimé sur les reçus de cette boutique afin qu’ils servent aussi de justificatif fiscal. Un numéro saisi dans l’éditeur d’en-tête et de pied de page remplace celui-ci.</Text>
   <Text key="Shop.Setup.PreferredLanguage">Langue par défaut</Text>
   <Text key="Shop.Setup.PreferredLanguageHint">Les non-administrateurs utilisent toujours cette boutique dans cette langue.</Text>
   <Text key="Shop.Setup.Currency">Devise</Text>
@@ -453,6 +455,20 @@
 
   <!-- Measurement Terms mapping window -->
   <Text key="Toolbar.MeasurementTerms">Mesures</Text>
+  <Text key="Toolbar.ProductCatalog">Catégories de produits</Text>
+  <Text key="ProductCatalog.Title">Catégories de produits</Text>
+  <Text key="ProductCatalog.Subtitle">Les catégories de prêt-à-porter proposées par cette boutique lors de l’ajout de vêtements ou d’accessoires à une commande. Chaque boutique gère sa propre liste.</Text>
+  <Text key="ProductCatalog.Add">Ajouter une catégorie</Text>
+  <Text key="ProductCatalog.Rename">Renommer</Text>
+  <Text key="ProductCatalog.Remove">Retirer</Text>
+  <Text key="ProductCatalog.MoveUp">Monter</Text>
+  <Text key="ProductCatalog.MoveDown">Descendre</Text>
+  <Text key="ProductCatalog.RestoreDefault">Rétablir les valeurs par défaut</Text>
+  <Text key="ProductCatalog.RestoreConfirm">Rétablir les catégories prédéfinies ? Toute catégorie que vous avez ajoutée sera supprimée. Les commandes existantes conservent la catégorie enregistrée avec elles.</Text>
+  <Text key="ProductCatalog.RemoveConfirm">Retirer «&#160;{0}&#160;» des catégories de cette boutique ? Les commandes existantes conservent la catégorie enregistrée avec elles.</Text>
+  <Text key="ProductCatalog.NewCategory">Nouvelle catégorie de produit</Text>
+  <Text key="ProductCatalog.Duplicate">Cette catégorie existe déjà.</Text>
+  <Text key="ProductCatalog.Empty">Cette boutique ne propose aucune catégorie. Ajoutez-en une ou rétablissez l’ensemble prédéfini.</Text>
   <Text key="MeasureTerms.Title">Mesures</Text>
   <Text key="MeasureTerms.Subtitle">Configurez les mesures prises pour chaque vêtement. Ajoutez des mesures personnalisées et nommez-les dans d’autres langues.</Text>
   <Text key="MeasureTerms.Garments">Vêtements</Text>

@@ -172,6 +172,8 @@
   <Text key="Shop.Setup.Email">Email</Text>
   <Text key="Shop.Setup.Website">Website</Text>
   <Text key="Shop.Setup.ContactHint">Optional. Phone, email and website are not per language — every language shows the same value.</Text>
+  <Text key="Shop.Setup.TaxNumber">Tax number (GST/HST)</Text>
+  <Text key="Shop.Setup.TaxNumberHint">Optional. Printed on this shop's receipts so they double as a tax slip. A number entered in the header &amp; footer editor overrides this one.</Text>
   <Text key="Shop.Setup.PreferredLanguage">Preferred language</Text>
   <Text key="Shop.Setup.PreferredLanguageHint">Non-administrators always use this shop in this language.</Text>
   <Text key="Shop.Setup.Currency">Currency</Text>
@@ -454,6 +456,20 @@
 
   <!-- Measurement Terms mapping window -->
   <Text key="Toolbar.MeasurementTerms">Measurement Terms</Text>
+  <Text key="Toolbar.ProductCatalog">Product Categories</Text>
+  <Text key="ProductCatalog.Title">Product Categories</Text>
+  <Text key="ProductCatalog.Subtitle">The ready-made categories this shop offers when adding clothing or accessory lines to an order. Each shop keeps its own list.</Text>
+  <Text key="ProductCatalog.Add">Add Category</Text>
+  <Text key="ProductCatalog.Rename">Rename</Text>
+  <Text key="ProductCatalog.Remove">Remove</Text>
+  <Text key="ProductCatalog.MoveUp">Move Up</Text>
+  <Text key="ProductCatalog.MoveDown">Move Down</Text>
+  <Text key="ProductCatalog.RestoreDefault">Restore Default</Text>
+  <Text key="ProductCatalog.RestoreConfirm">Restore the predefined categories? Any category you added will be discarded. Existing orders keep the category they were saved with.</Text>
+  <Text key="ProductCatalog.RemoveConfirm">Remove “{0}” from this shop&apos;s categories? Existing orders keep the category they were saved with.</Text>
+  <Text key="ProductCatalog.NewCategory">New product category</Text>
+  <Text key="ProductCatalog.Duplicate">That category already exists.</Text>
+  <Text key="ProductCatalog.Empty">This shop offers no categories. Add one, or restore the predefined set.</Text>
   <Text key="MeasureTerms.Title">Measurement Terms</Text>
   <Text key="MeasureTerms.Subtitle">Configure the measurements taken for each garment. Add custom measurements and give them names in other languages.</Text>
   <Text key="MeasureTerms.Garments">Garments</Text>

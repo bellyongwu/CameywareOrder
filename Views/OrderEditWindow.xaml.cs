@@ -50,14 +50,10 @@ public partial class OrderEditWindow : Window
         CreateFrozenBrush(0xC1, 0x7A, 0x0B);
     private static readonly Regex EmailPattern =
         new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.None, RegexTimeout);
-    private static readonly string[] ClothingItemKeys =
-    {
-        "Jackets",
-        "TiesBowtie",
-        "Qipao",
-        "LeatherShoes",
-        "Other"
-    };
+    // The ready-made categories used to be a fixed list here, so every shop in every installation
+    // sold the same five things and adding a sixth meant a rebuild. They now come from the SHOP's
+    // own catalogue (ProductCatalogService); the ids live on in ProductCatalogDefaults, which is
+    // what keeps orders saved under the old list resolving to the same names.
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly LocalizationService _localization;
@@ -2015,7 +2011,7 @@ public partial class OrderEditWindow : Window
             if (string.IsNullOrWhiteSpace(key))
                 continue;
 
-            var name = LocalizeWithFallback("ClothingItem", key);
+            var name = ProductCatalogService.Instance.ResolveName(key);
             if (!names.Contains(name))
                 names.Add(name);
         }
@@ -2649,6 +2645,22 @@ public partial class OrderEditWindow : Window
         c.FinalCash.IsChecked = resolved == PaymentMethod.Cash;
     }
 
+    /// <summary>
+    /// Re-adds a category an order refers to but the shop's catalogue no longer offers, so editing
+    /// an old order does not silently change what it says it sold.
+    /// </summary>
+    private static ComboBoxItem AddOrphanedCategory(ComboBox categoryBox, string productName)
+    {
+        var item = new ComboBoxItem
+        {
+            Content = ProductCatalogService.Instance.ResolveName(productName),
+            Tag = productName
+        };
+
+        categoryBox.Items.Add(item);
+        return item;
+    }
+
     private void AddClothingItemRow(OrderItem? existingItem = null)
     {
         var rowGrid = new Grid { Margin = new Thickness(0, 0, 0, 10) };
@@ -2659,14 +2671,18 @@ public partial class OrderEditWindow : Window
         rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
         var categoryBox = new ComboBox { Margin = new Thickness(0, 0, 10, 0), Padding = new Thickness(6, 4, 6, 4) };
-        foreach (var itemKey in ClothingItemKeys)
-        {
-            categoryBox.Items.Add(new ComboBoxItem
+
+        // From the SHOP's catalogue, not a fixed list: 本地配置 → 商品类别 edits it per branch.
+        var categories = ProductCatalogService.Instance.Items
+            .Select(item => new ComboBoxItem
             {
-                Content = _localization[$"ClothingItem.{itemKey}"],
-                Tag = itemKey
+                Content = ProductCatalogService.Instance.ResolveName(item.Id),
+                Tag = item.Id
             });
-        }
+
+        foreach (var category in categories)
+            categoryBox.Items.Add(category);
+
         categoryBox.SelectedIndex = 0;
         if (!string.IsNullOrWhiteSpace(existingItem?.ProductName))
         {
@@ -2676,6 +2692,11 @@ public partial class OrderEditWindow : Window
                 .OfType<ComboBoxItem>()
                 .FirstOrDefault(item => string.Equals(
                     item.Tag?.ToString(), existingItem.ProductName, StringComparison.OrdinalIgnoreCase));
+
+            // An order can name a category this shop has since removed from its catalogue. Rather
+            // than silently re-filing it under whatever sits at index 0, the original is added back
+            // as a one-off entry so opening an old order does not quietly rewrite it.
+            match ??= AddOrphanedCategory(categoryBox, existingItem.ProductName);
 
             if (match is not null)
                 categoryBox.SelectedItem = match;
@@ -2783,7 +2804,9 @@ public partial class OrderEditWindow : Window
         {
             var unitPrice = ParseDecimalOrZero(row.UnitPriceBox.Text);
             var promotionalPrice = ParseNullableDecimal(row.PromotionalPriceBox.Text);
-            var selectedCategory = (row.CategoryBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? ClothingItemKeys[0];
+            var selectedCategory = (row.CategoryBox.SelectedItem as ComboBoxItem)?.Tag?.ToString()
+                ?? ProductCatalogService.Instance.Items.FirstOrDefault()?.Id
+                ?? string.Empty;
 
             if (unitPrice <= 0m && (!promotionalPrice.HasValue || promotionalPrice.Value <= 0m))
                 continue;

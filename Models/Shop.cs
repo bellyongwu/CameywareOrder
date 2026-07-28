@@ -65,6 +65,22 @@ public class Shop
     /// <summary>Shop website. One string for every language; see <see cref="AddressesJson"/>.</summary>
     public string? Website { get; set; }
 
+    /// <summary>
+    /// The shop's tax registration number (GST/HST in Canada), printed on its receipts so they
+    /// double as tax slips.
+    /// </summary>
+    /// <remarks>
+    /// Lives on the SHOP because it identifies the business, not the document design — a branch has
+    /// one registration number whatever its receipts look like. <c>ReceiptBrandingSettings</c> also
+    /// carries one, and that one WINS where both are set: the header/footer editor is the more
+    /// specific, per-language surface, so a number typed there is a deliberate override of the
+    /// shop's. See <c>MainWindow.ResolveTaxRegistrationNumber</c>.
+    ///
+    /// Not per language, for the same reason as <see cref="PhoneNumber"/>: a registration number is
+    /// the same string whoever reads it.
+    /// </remarks>
+    public string? TaxRegistrationNumber { get; set; }
+
     /// <summary>Language applied when this shop is opened. Null falls back to the global preference.</summary>
     public string? PreferredLanguageCode { get; set; }
 

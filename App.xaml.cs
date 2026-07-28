@@ -461,6 +461,7 @@ public partial class App : Application
         ("PhoneNumber", "ALTER TABLE Shops ADD COLUMN PhoneNumber TEXT NULL; "),
         ("Email", "ALTER TABLE Shops ADD COLUMN Email TEXT NULL; "),
         ("Website", "ALTER TABLE Shops ADD COLUMN Website TEXT NULL; "),
+        ("TaxRegistrationNumber", "ALTER TABLE Shops ADD COLUMN TaxRegistrationNumber TEXT NULL; "),
     };
 
     /// <summary>
@@ -640,6 +641,7 @@ public partial class App : Application
 
         CurrencySettingService.Instance.BindTo(shop);
         MeasurementTermsService.Instance.BindTo(shop);
+        ProductCatalogService.Instance.BindTo(shop);
 
         // The shop's tax rules become the ones every money calculation reads. Bound here rather
         // than looked up per call because Order.CalculateSectionPayment is static and runs on both
@@ -684,7 +686,8 @@ public partial class App : Application
                 AddressesJson TEXT NULL,
                 PhoneNumber TEXT NULL,
                 Email TEXT NULL,
-                Website TEXT NULL
+                Website TEXT NULL,
+                TaxRegistrationNumber TEXT NULL
             );");
 
         // A database created by an earlier build already HAS the table, so CREATE TABLE IF NOT

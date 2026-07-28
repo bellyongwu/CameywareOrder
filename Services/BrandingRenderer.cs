@@ -61,7 +61,7 @@ public static class BrandingRenderer
     }
 
     /// <summary>A logo block for a printed FlowDocument aligned per <paramref name="placement"/>, or null when unavailable.</summary>
-    public static Block? CreateLogoBlock(string? logoPath, double maxHeight, LogoPlacement placement = LogoPlacement.Center)
+    public static Block? CreateLogoBlock(string? logoPath, double maxHeight, LogoPlacement placement = LogoPlacement.Left)
     {
         if (string.IsNullOrWhiteSpace(logoPath))
             return null;

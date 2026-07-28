@@ -178,6 +178,8 @@
   <Text key="Shop.Setup.Email">电子邮箱</Text>
   <Text key="Shop.Setup.Website">网址</Text>
   <Text key="Shop.Setup.ContactHint">选填。电话、邮箱和网址不区分语言，各语言显示同一内容。</Text>
+  <Text key="Shop.Setup.TaxNumber">税号（GST/HST）</Text>
+  <Text key="Shop.Setup.TaxNumberHint">选填。将打印在本店铺的小票上，使其可作为税务凭证。页眉页脚设置中填写的税号会覆盖此处。</Text>
   <Text key="Shop.Setup.PreferredLanguage">默认语言</Text>
   <Text key="Shop.Setup.PreferredLanguageHint">非管理员用户将始终以该语言使用本店铺。</Text>
   <Text key="Shop.Setup.Currency">货币</Text>
@@ -459,6 +461,20 @@
 
   <!-- Measurement Terms mapping window -->
   <Text key="Toolbar.MeasurementTerms">量身项目设置</Text>
+  <Text key="Toolbar.ProductCatalog">商品类别</Text>
+  <Text key="ProductCatalog.Title">商品类别</Text>
+  <Text key="ProductCatalog.Subtitle">本店铺在订单中添加服装或配饰时可选的成衣类别。每个店铺各自维护一份列表。</Text>
+  <Text key="ProductCatalog.Add">新增类别</Text>
+  <Text key="ProductCatalog.Rename">重命名</Text>
+  <Text key="ProductCatalog.Remove">移除</Text>
+  <Text key="ProductCatalog.MoveUp">上移</Text>
+  <Text key="ProductCatalog.MoveDown">下移</Text>
+  <Text key="ProductCatalog.RestoreDefault">恢复默认</Text>
+  <Text key="ProductCatalog.RestoreConfirm">确定恢复系统预设类别吗？您添加的类别将被丢弃。已有订单仍保留其保存时的类别。</Text>
+  <Text key="ProductCatalog.RemoveConfirm">确定从本店铺类别中移除“{0}”吗？已有订单仍保留其保存时的类别。</Text>
+  <Text key="ProductCatalog.NewCategory">新的商品类别</Text>
+  <Text key="ProductCatalog.Duplicate">该类别已存在。</Text>
+  <Text key="ProductCatalog.Empty">本店铺尚无任何类别。请新增一个，或恢复系统预设。</Text>
   <Text key="MeasureTerms.Title">量身项目设置</Text>
   <Text key="MeasureTerms.Subtitle">为每种服装类别配置量身项目，可添加自定义项目并设置多语言名称。</Text>
   <Text key="MeasureTerms.Garments">服装类别</Text>

@@ -222,6 +222,15 @@
                             </StackPanel>
                         </Grid>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.ContactHint], Mode=OneWay}"
+                                   Style="{StaticResource HintStyle}" Margin="0,2,0,14"/>
+
+                        <!-- The registration number identifies the BUSINESS, so it belongs to the
+                             shop rather than to the receipt design. The header/footer editor carries
+                             one too and overrides this where both are set — see Shop.TaxRegistrationNumber. -->
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.TaxNumber], Mode=OneWay}"
+                                   Style="{StaticResource SectionLabelStyle}"/>
+                        <TextBox x:Name="TaxNumberBox" Style="{StaticResource InputStyle}" MaxLength="40"/>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.TaxNumberHint], Mode=OneWay}"
                                    Style="{StaticResource HintStyle}" Margin="0,2,0,16"/>
 
                         <Grid>

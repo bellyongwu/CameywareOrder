@@ -13,6 +13,41 @@ Entry format:
 - Why: <reason / triggering request>
 ```
 
+### 2026-07-28 — RefinedTODO.md: read a condensed history, keep the full one
+- Changed: `SKILL.md` §0 (new `RefinedTODO.md` vs `TODO.md` table in the companion
+  list; Step B now reads `RefinedTODO.md` and checkpoints into both; **new Step D**
+  — the wrap-up/condensing procedure, with first-use bootstrap, keep/drop/delete
+  rules, and the two rules that keep condensing honest; Step C recovery now reads
+  `RefinedTODO.md`). New companion `RefinedTODO.md`, bootstrapped from the existing
+  83-entry `TODO.md`.
+- Why: user request — "每次做完一次任务，做一次总结…把之前有悖的逻辑删掉…目的是为了加快
+  开发进程，且保证不失真", plus two clarifications during the same turn: `TODO.md` is
+  still written every time as the development record ("todo.md作为开发文档需要每次都要
+  更新"), and the other companions are updated "如果有需要的话" rather than
+  unconditionally.
+- Notes on the design, because the risk here is not obvious:
+  - `TODO.md` had reached 83 entries / ~220 KB. Reading it to plan a task cost more
+    context than the task. But **deleting history to save context is how a project
+    forgets why it made its decisions** — so the two files split by JOB rather than
+    one replacing the other: `TODO.md` keeps everything and is written but not read;
+    `RefinedTODO.md` is condensed and is the one read. Retaining the unabridged
+    original is what makes aggressive condensing safe — an over-zealous summary can
+    always be checked against it.
+  - The condensing rules are written around **why** surviving and process telemetry
+    (assertion counts, build results, timings) being dropped: the evidence mattered
+    when it was produced, the reasoning matters forever.
+  - Contradictions are **deleted, not annotated** — a reversed instruction left
+    readable as if current is exactly the distortion this is meant to prevent. The
+    one exception is when re-attempting an abandoned approach is a live risk, where
+    a single line is cheaper than someone rediscovering the failure. The bootstrap
+    applies this to the reverted right-anchored menu.
+  - Two safeguards make it honest: durable lessons are **moved to `context.md`**
+    rather than summarised away (which is what lets the file shrink while project
+    knowledge grows), and an entry that cannot be condensed faithfully becomes a
+    **pointer to `TODO.md`, never an invented summary**. The bootstrap follows its
+    own rule: entries from this session are condensed from actual knowledge, the
+    other ~60 are indexed by title only.
+
 ### 2026-07-27 — False positives and IDE editor problems must be RESOLVED, not just diagnosed
 - Changed: `SKILL.md` §9 (replaced the "only acceptable non-fix is a false positive"
   escape hatch with the opposite rule — a false positive is not an exemption, just a

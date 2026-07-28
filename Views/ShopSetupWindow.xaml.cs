@@ -98,6 +98,7 @@ public partial class ShopSetupWindow : Window
         PhoneBox.Text = _existing?.PhoneNumber ?? string.Empty;
         EmailBox.Text = _existing?.Email ?? string.Empty;
         WebsiteBox.Text = _existing?.Website ?? string.Empty;
+        TaxNumberBox.Text = _existing?.TaxRegistrationNumber ?? string.Empty;
     }
 
     /// <summary>
@@ -356,6 +357,7 @@ public partial class ShopSetupWindow : Window
         shop.PhoneNumber = Blank(PhoneBox.Text);
         shop.Email = Blank(EmailBox.Text);
         shop.Website = Blank(WebsiteBox.Text);
+        shop.TaxRegistrationNumber = Blank(TaxNumberBox.Text);
 
         static string? Blank(string value)
         {
@@ -432,7 +434,10 @@ public partial class ShopSetupWindow : Window
         // above, but copying before the row exists would leave an orphaned file behind if the
         // insert failed.
         if (CopyFromRadio.IsChecked is true && CopySourceBox.SelectedValue is Shop source)
+        {
             MeasurementTermsService.CopyConfigBetweenShops(source, shop);
+            ProductCatalogService.CopyConfigBetweenShops(source, shop);
+        }
 
         ConfigureTermsRequested = ConfigureNowCheck.IsChecked is true;
 

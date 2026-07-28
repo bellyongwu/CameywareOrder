@@ -33,7 +33,13 @@ public sealed class ReceiptBrandingSettings
 {
     public string? LogoFileName { get; set; }
 
-    public LogoPlacement LogoPlacement { get; set; } = LogoPlacement.Center;
+    /// <summary>
+    /// Where the logo sits. Defaults to Left so a receipt that has never been configured matches the
+    /// rest of its letterhead, which is left aligned throughout — a centred logo above a left-aligned
+    /// name and address reads as two designs on one page. A shop that has chosen a placement keeps
+    /// it; this only decides what an unconfigured installation starts with.
+    /// </summary>
+    public LogoPlacement LogoPlacement { get; set; } = LogoPlacement.Left;
 
     /// <summary>
     /// The shop's tax registration number (GST/HST in Canada), printed directly under the receipt

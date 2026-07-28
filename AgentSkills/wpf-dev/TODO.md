@@ -17,6 +17,70 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 05:55 — Receipt letterhead: one labelled line per contact detail  [DONE]
+- Ask: reformat the sub-header from an unlabelled address plus a bullet-joined
+  `phone · email · website` into `Address: …` / `Phone: …` / `Email: …` / `Website: …`,
+  "using existing text keys if available".
+- Done, and both halves of the ask were already in the codebase:
+  - [x] Labels come from `Shop.Setup.Address` / `.Phone` / `.Email` / `.Website` — the SHOP's own
+        field names. Deliberately not `Order.Fields.*`, which are the CUSTOMER's address and phone;
+        the two sets exist separately for exactly this reason. No new keys, and the letterhead is
+        translated for free (the French shop renders "Adresse:", "Téléphone:", "Courriel:",
+        "Site web:").
+  - [x] Rendered through the existing `ReceiptInfoLine`, so "Address: …" on the letterhead reads the
+        same as "Customer name: …" in the panel below it — same muted-label treatment, one renderer.
+        Overridden only for size (10.5pt) and leading (1px rather than the panel's 3px: this is a
+        four-line block and at panel spacing it would rival the order details for height).
+  - [x] The trailing gap is applied to the LAST line actually written, not as a fixed block margin —
+        otherwise a shop that has filled nothing in leaves a hole under its name.
+- Notes: build 0/0, **341 assertions across 9 harnesses**. `receiptshot` now asserts each detail is
+  on its own labelled line AND that the bullet-joined form is gone, so the old format cannot return.
+
+### 2026-07-28 05:40 — Per-shop product catalogue + receipt letterhead  [DONE]
+- Ask: "Make already-made products dynamically carried with store settings" (add/modify management,
+  loadable defaults) and "Improve printing" (left-align title/subhead/GST-HST/footer, shop contact
+  details on the receipt, GST/HST field in shop settings, header&footer overrides global, careful
+  on font size).
+- **Product catalogue.** The ready-made categories were a `static readonly string[]` in
+  `OrderEditWindow`, so every shop in every installation sold the same five things and a sixth meant
+  a rebuild. Now `Models/ProductCatalog` + `Services/ProductCatalogService`, modelled on
+  `MeasurementTermsService` — one JSON file per shop keyed on `PublicId`, seeded from the shipped
+  defaults, with add / rename / remove / reorder / restore-defaults, copied by the new-shop wizard's
+  "copy from an existing shop", and edited through a new `ProductCatalogWindow` (本地配置 → 商品类别,
+  gated on `CanConfigureShop`).
+  - **The shipped ids are a COMPATIBILITY SURFACE, and that drove the design.** Every order ever
+    saved holds one in `OrderItem.ProductName` and every language file has a matching
+    `ClothingItem.<id>` entry, so the predefined entries keep their original ids and take their names
+    from the string table — which also means they stay translated into languages added later. Only
+    user-added categories carry their own per-language names. `ResolveName` falls back id → string
+    table → the raw id, so an order naming a category the shop has since deleted still prints.
+  - Opening an order whose category was removed re-adds it as a one-off entry rather than silently
+    re-filing it under whatever sits at index 0.
+  - Per-language naming reuses `MeasurementTermLanguageWindow` in its garment mode (no gender
+    picker) rather than reimplementing it — so a language added later appears in both editors.
+- **Receipt.** Title, subtitle, GST/HST and the logo default are all LEFT aligned now; the shop's
+  address / phone / email / website print in the letterhead when set (address per language, the rest
+  single-valued); `Shop.TaxRegistrationNumber` added (model + BOTH schema lists) with a field in
+  shop settings; the header/footer editor's number OVERRIDES the shop's, being the more specific
+  surface. Font sizes: 18 name / 12 body / 11 tax / 10.5 contact, asserted to stay ≥10 and ≤18.
+  - **Bug found by rendering it: the tax number printed ABOVE the shop's own name.** It was inserted
+    at the very top, which is right when a custom header replaces the letterhead and wrong when the
+    generated one is already there. Now placed by the letterhead itself, with the top-insert kept
+    for the custom-header and measurement-sheet cases.
+- Notes: build 0/0, Sonar zero, **336 assertions across 9 harnesses**. 513 keys per language, parity
+  exact. Backups taken before both live writes (`Backups/orders.db.bak-preTaxColumn`).
+  - `scratchpad/catalogcheck` — 45 assertions: defaults, per-language resolution in all three
+    languages, the legacy/unknown-id fallback, add/rename/remove/move/restore, persistence across a
+    re-bind, per-shop isolation, and a guard that the five shipped ids never change. It uses
+    throwaway `PublicId`s and compares the data folder before and after, so it leaves nothing behind.
+  - `scratchpad/receiptshot` — renders the real receipt and asserts NO top-level paragraph is centred,
+    every contact field is present, and the font sizes stay in range.
+  - **Three formatcheck failures were the USER's change, not a regression**: `app-defaults.json` now
+    says `en-US` (their commit "Change the default to en"), and my assertions hardcoded `zh-CN`. The
+    file is untracked so git showed no diff. Fixed by asserting the file is HONOURED rather than
+    that it holds a particular value — a test that pins a user-owned setting reports their
+    configuration change as a defect.
+
 ### 2026-07-28 04:50 — Gender picker: alignment and symbols  [DONE]
 - Ask: "性别分类UI做好看一些，标签跟语言选择一样，下拉菜单可以跟语言选择的input一样宽。同时在下拉菜单用
   男女svg符号加在前面。通用的话也用个通用的svg符号。" then, mid-turn: "你不用自己新建svg，其他地方有".
