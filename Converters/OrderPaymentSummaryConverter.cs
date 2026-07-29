@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Windows.Data;
 using CameywareOrder.Localization;
@@ -32,14 +32,16 @@ public class OrderPaymentSummaryConverter : IValueConverter
             }];
         }
 
-        var symbol = Services.CurrencySettingService.Instance.Symbol;
+        // The order's own currency, not the shop's current one: this breakdown is a statement about
+        // money that was already taken, and the shop may since have started accepting another.
+        var currency = order.CurrencyType;
         var builder = new StringBuilder();
 
-        AppendSection(builder, loc, symbol, new PaymentSection("ServiceType.Alterations",
+        AppendSection(builder, loc, currency, new PaymentSection("ServiceType.Alterations",
             order.AlterationMoney, order.AlterationDownpaymentMethod, order.AlterationFinalBalanceMethod, order.AlterationSectionCleared));
-        AppendSection(builder, loc, symbol, new PaymentSection("ServiceType.CustomMade",
+        AppendSection(builder, loc, currency, new PaymentSection("ServiceType.CustomMade",
             order.CustomMadeMoney, order.CustomMadeDownpaymentMethod, order.CustomMadeFinalBalanceMethod, order.CustomMadeSectionCleared));
-        AppendSection(builder, loc, symbol, new PaymentSection("ServiceType.ReadyMade",
+        AppendSection(builder, loc, currency, new PaymentSection("ServiceType.ReadyMade",
             order.ClothingMoney, order.ClothingDownpaymentMethod, order.ClothingFinalBalanceMethod, order.ClothingSectionCleared));
 
         return builder.Length == 0 ? "-" : builder.ToString().TrimEnd();
@@ -52,7 +54,7 @@ public class OrderPaymentSummaryConverter : IValueConverter
         PaymentMethod? FinalMethod,
         bool Cleared);
 
-    private static void AppendSection(StringBuilder builder, LocalizationService loc, string symbol, PaymentSection section)
+    private static void AppendSection(StringBuilder builder, LocalizationService loc, CurrencyType currency, PaymentSection section)
     {
         var money = section.Money;
         if (money.Total <= 0m && section.DownMethod is null && section.FinalMethod is null)
@@ -65,13 +67,13 @@ public class OrderPaymentSummaryConverter : IValueConverter
         builder.Append(loc[section.ServiceKey]).Append(": ");
         // Deposit portion: method, base amount and the tax charged on it.
         builder.Append(loc["Order.Fields.Downpayment"]).Append(' ');
-        builder.Append(MethodText(loc, section.DownMethod)).Append(' ').Append(symbol).Append(money.Deposit.ToString("N2"));
-        builder.Append(" (").Append(taxLabel).Append(' ').Append(symbol).Append(depositTax.ToString("N2")).Append(')');
+        builder.Append(MethodText(loc, section.DownMethod)).Append(' ').Append(Services.CurrencySettingService.Format(money.Deposit, currency));
+        builder.Append(" (").Append(taxLabel).Append(' ').Append(Services.CurrencySettingService.Format(depositTax, currency)).Append(')');
         builder.Append("  |  ");
         // Final balance portion: method, base amount and the tax charged on it.
         builder.Append(loc["Order.Fields.FinalBalanceShort"]).Append(' ');
-        builder.Append(MethodText(loc, section.FinalMethod)).Append(' ').Append(symbol).Append(money.FinalBase.ToString("N2"));
-        builder.Append(" (").Append(taxLabel).Append(' ').Append(symbol).Append(finalTax.ToString("N2")).Append(')');
+        builder.Append(MethodText(loc, section.FinalMethod)).Append(' ').Append(Services.CurrencySettingService.Format(money.FinalBase, currency));
+        builder.Append(" (").Append(taxLabel).Append(' ').Append(Services.CurrencySettingService.Format(finalTax, currency)).Append(')');
         builder.Append("  [")
             .Append(section.Cleared ? loc["Payment.Status.Cleared"] : loc["Payment.Status.Outstanding"])
             .Append(']');

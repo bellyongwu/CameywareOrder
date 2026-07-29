@@ -10,6 +10,10 @@
   <Text key="Format.ListSeparator">,&#32;</Text>
   <Text key="Format.BulletSeparator">&#32;&#32;·&#32;&#32;</Text>
 
+  <!-- The currencies of this language's market. Data rather than a rule in code, so a new
+       language brings its own currency with it. -->
+  <Text key="Currency.Codes">EUR</Text>
+
   <Text key="Toolbar.NewOrder">Nouvelle commande</Text>
   <Text key="Toolbar.EditOrder">Modifier la commande</Text>
   <Text key="Toolbar.ViewOrder">Consulter la commande</Text>
@@ -190,11 +194,21 @@
   <Text key="Shop.Setup.ContactHint">Facultatif. Le téléphone, le courriel et le site web ne dépendent pas de la langue — toutes les langues affichent la même valeur.</Text>
   <Text key="Shop.Setup.TaxNumber">Numéro de taxe (TPS/TVH)</Text>
   <Text key="Shop.Setup.TaxNumberHint">Facultatif. Imprimé sur les reçus de cette boutique afin qu’ils servent aussi de justificatif fiscal. Un numéro saisi dans l’éditeur d’en-tête et de pied de page remplace celui-ci.</Text>
-  <Text key="Shop.Setup.InstalledLanguages">Langues installées</Text>
-  <Text key="Shop.Setup.InstalledLanguagesHint">Les langues dans lesquelles cette boutique fonctionne. Ses responsables et son personnel peuvent passer de l’une à l’autre ; avec une seule langue installée, aucun sélecteur de langue n’est affiché. Les administrateurs voient toujours toutes les langues.</Text>
   <Text key="Shop.Setup.InstalledLanguagesRequired">Installez au moins une langue pour cette boutique.</Text>
+  <Text key="Shop.Setup.SupportedCurrenciesRequired">Acceptez au moins une devise pour cette boutique.</Text>
+  <Text key="Shop.Localization.Link">Langues et devises</Text>
+  <Text key="Shop.Localization.LinkHint">Choisissez les langues dans lesquelles cette boutique fonctionne et les devises qu'elle accepte.</Text>
+  <Text key="Shop.Localization.Title">Langues et devises</Text>
+  <Text key="Shop.Localization.Subtitle">Cochez les langues dans lesquelles cette boutique fonctionne. Chacune apporte les devises de son marché, parmi lesquelles vous choisissez celles que la boutique accepte réellement.</Text>
+  <Text key="Shop.Localization.LanguagesHeading">Langues de cette boutique</Text>
+  <Text key="Shop.Localization.CurrenciesHeading">Devises, par langue</Text>
+  <Text key="Shop.Localization.CurrenciesEmpty">Cochez une langue à gauche pour voir les devises qu'elle apporte.</Text>
+  <Text key="Shop.Localization.Done">Terminé</Text>
+  <Text key="Shop.Localization.Summary">{0}  ·  {1}</Text>
+  <Text key="Shop.Localization.NoCurrencyForLanguage">Cette langue n'apporte aucune devise propre.</Text>
+  <Text key="Currency.Supported.One">Devise acceptée : {0}</Text>
+  <Text key="Currency.Supported.Many">Devises acceptées : {0}</Text>
   <Text key="Shop.Setup.PreferredLanguage">Langue par défaut</Text>
-  <Text key="Shop.Setup.PreferredLanguageHint">La langue dans laquelle cette boutique s’ouvre, choisie parmi les langues installées ci-dessus.</Text>
   <Text key="Shop.Setup.Currency">Devise</Text>
   <Text key="Shop.Setup.MeasurementTerms">Mesures</Text>
   <Text key="Shop.Setup.SeedDefaults">Partir de l’ensemble prédéfini</Text>
@@ -537,6 +551,8 @@
   <Text key="CurrencyType.CAD">CAD</Text>
   <Text key="CurrencyType.USD">USD</Text>
   <Text key="CurrencyType.CNY">CNY</Text>
+  <Text key="CurrencyType.EUR">EUR</Text>
+  <Text key="CurrencyType.JPY">JPY</Text>
 
   <Text key="ServiceType.Alterations">Retouches</Text>
   <Text key="ServiceType.CustomMade">Service sur mesure</Text>

@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using CameywareOrder.Models;
@@ -64,8 +65,42 @@ public sealed class CurrencySettingService : INotifyPropertyChanged
         {
             [CurrencyType.CAD] = "$",
             [CurrencyType.USD] = "$",
-            [CurrencyType.CNY] = "￥"
+            [CurrencyType.CNY] = "￥",
+            [CurrencyType.EUR] = "€",
+            [CurrencyType.JPY] = "¥"
         };
+
+    /// <summary>
+    /// How many decimal places a currency is written to. Two for almost everything, and ZERO for
+    /// yen, which has no minor unit at all.
+    /// </summary>
+    /// <remarks>
+    /// A table rather than a constant 2, because "¥1,695.00" is not a formatting preference — there
+    /// is no such thing as a hundredth of a yen, and printing one on a receipt is the same class of
+    /// error as printing the wrong symbol. Anything absent here takes <see cref="DefaultDigits"/>,
+    /// so adding an ordinary currency needs no entry.
+    /// </remarks>
+    private static readonly IReadOnlyDictionary<CurrencyType, int> MinorUnitDigits =
+        new Dictionary<CurrencyType, int>
+        {
+            [CurrencyType.JPY] = 0
+        };
+
+    private const int DefaultDigits = 2;
+
+    /// <summary>Decimal places for a currency — 0 for yen, 2 for the rest.</summary>
+    public static int GetDigits(CurrencyType currencyType)
+        => MinorUnitDigits.TryGetValue(currencyType, out var digits) ? digits : DefaultDigits;
+
+    /// <summary>
+    /// An amount written in a currency: its symbol, and its own number of decimal places.
+    /// </summary>
+    /// <param name="grouped">
+    /// Thousands separators. On for lists and receipts, off where the surrounding layout is already
+    /// dense — the existing call sites differed on this and the difference is deliberate.
+    /// </param>
+    public static string Format(decimal amount, CurrencyType currencyType, bool grouped = true)
+        => $"{GetSymbol(currencyType)}{amount.ToString((grouped ? "N" : "F") + GetDigits(currencyType), CultureInfo.CurrentCulture)}";
 
     /// <summary>
     /// Shown for a value that is not a defined <see cref="CurrencyType"/> — reachable only from a

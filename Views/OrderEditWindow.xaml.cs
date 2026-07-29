@@ -427,8 +427,64 @@ public partial class OrderEditWindow : Window
         InitializePaymentSectionControls();
         RegisterDecimalTextBoxes();
         InitializeCustomMadeRecordsList();
+        InitializeCurrencyChoices();
         SelectServiceType(OrderServiceType.Alterations);
         RefreshLocalizedLabels();
+    }
+
+    /// <summary>
+    /// Fills the currency picker from the currencies the open shop accepts, and hides it outright
+    /// when that is only one.
+    /// </summary>
+    /// <remarks>
+    /// An order being EDITED keeps its own currency in the list even if the shop has since stopped
+    /// accepting it. Dropping it would leave the picker showing some other currency beside unchanged
+    /// amounts, and saving would then silently re-denominate a finished order — turning ￥1,695 into
+    /// $1,695 because a setting changed months later. What a shop takes today does not reach back
+    /// and restate what it charged.
+    /// </remarks>
+    private void InitializeCurrencyChoices()
+    {
+        var shop = ShopContext.Instance.Current;
+        var currencies = ShopCurrencies.Supported(shop).ToList();
+
+        if (_existing is not null && !currencies.Contains(_existing.CurrencyType))
+            currencies.Insert(0, _existing.CurrencyType);
+
+        CurrencyBox.SelectedValuePath = nameof(ComboBoxItem.Tag);
+        CurrencyBox.Items.Clear();
+        foreach (var currency in currencies)
+        {
+            CurrencyBox.Items.Add(new ComboBoxItem
+            {
+                Content = ShopCurrencies.Name(currency, _localization),
+                Tag = currency,
+            });
+        }
+
+        CurrencyBox.SelectedValue = _existing?.CurrencyType ?? ShopCurrencies.Preferred(shop);
+        if (CurrencyBox.SelectedIndex < 0)
+            CurrencyBox.SelectedIndex = 0;
+
+        // Hidden rather than disabled, per the convention every other gated control here follows.
+        var visibility = currencies.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        CurrencyBox.Visibility = visibility;
+        CurrencyLabelPanel.Visibility = visibility;
+    }
+
+    /// <summary>The currency the form is pricing in — what a save will stamp onto the order.</summary>
+    private CurrencyType SelectedCurrency
+        => CurrencyBox.SelectedValue as CurrencyType?
+           ?? _existing?.CurrencyType
+           ?? ShopCurrencies.Preferred(ShopContext.Instance.Current);
+
+    private void OnCurrencyChanged(object sender, SelectionChangedEventArgs e)
+    {
+        // Every amount on the form is rendered through FormatCurrency, so the symbols only follow
+        // the picker if the totals are rebuilt. Guarded because this fires while the window is still
+        // being constructed, before the payment controls exist.
+        if (_alterationControls is not null)
+            RefreshComputedTotals(runAutoComplete: false);
     }
 
     private void InitializePaymentSectionControls()
@@ -841,6 +897,10 @@ public partial class OrderEditWindow : Window
         order.CustomMadeRecordsJson = data.CustomMadeJson;
         order.Status = data.Status;
         order.TotalAmount = _totalAmount;
+        // The order records the money it was priced in. This line is the reason the column exists;
+        // until now nothing wrote it, so every saved order carried the enum default regardless of
+        // what its shop actually traded in.
+        order.CurrencyType = SelectedCurrency;
         order.Notes = NullIfWhiteSpace(NotesBox.Text);
         order.LastModifiedDate = DateTime.UtcNow;
         ApplyPaymentFields(order);
@@ -2823,11 +2883,13 @@ public partial class OrderEditWindow : Window
     private static decimal ParseDecimalOrZero(string? value)
         => decimal.TryParse(value, out var result) ? result : 0m;
 
-    private static string FormatCurrency(decimal amount)
-    {
-        var symbol = Services.CurrencySettingService.Instance.Symbol;
-        return $"{symbol}{amount:0.00}";
-    }
+    /// <summary>
+    /// Formats an amount in the currency THIS FORM is pricing in — the picker's value, not the shop's
+    /// setting. An instance method for that reason: the currency is a property of the order being
+    /// edited, so a static helper could only ever have answered for the shop.
+    /// </summary>
+    private string FormatCurrency(decimal amount)
+        => Services.CurrencySettingService.Format(amount, SelectedCurrency, grouped: false);
 
     private static decimal? ParseNullableDecimal(string? value)
     {

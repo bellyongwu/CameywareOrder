@@ -550,6 +550,11 @@ public partial class App : Application
         // the shop has never been told, which Shop.InstalledLanguageCodes reads back as just its
         // preferred language — the behaviour every existing branch already had.
         ("InstalledLanguagesJson", "ALTER TABLE Shops ADD COLUMN InstalledLanguagesJson TEXT NULL; "),
+        // The currencies a shop accepts, as a JSON array of CurrencyType NAMES. Nullable, and null
+        // is meaningful for the same reason InstalledLanguagesJson's is: it means the shop has never
+        // been asked, which Shop.SupportedCurrencies reads back as just its own CurrencyType — the
+        // behaviour every existing branch already had.
+        ("SupportedCurrenciesJson", "ALTER TABLE Shops ADD COLUMN SupportedCurrenciesJson TEXT NULL; "),
     };
 
     /// <summary>
@@ -802,18 +807,24 @@ public partial class App : Application
                 Email TEXT NULL,
                 Website TEXT NULL,
                 TaxRegistrationNumber TEXT NULL,
-                InstalledLanguagesJson TEXT NULL
+                InstalledLanguagesJson TEXT NULL,
+                SupportedCurrenciesJson TEXT NULL
             );");
 
         // A database created by an earlier build already HAS the table, so CREATE TABLE IF NOT
         // EXISTS above does nothing for it — every column added to Shops after the table shipped
         // needs its own guard here, exactly like OrderColumnMigrations does for Orders.
         var shopColumns = await ReadShopColumnsAsync(db);
+        var addingSupportedCurrencies = !shopColumns.Contains("SupportedCurrenciesJson");
+
         foreach (var (column, ddl) in ShopColumnMigrations)
         {
             if (!shopColumns.Contains(column))
                 await db.Database.ExecuteSqlRawAsync(ddl);
         }
+
+        if (addingSupportedCurrencies)
+            await BackfillOrderCurrenciesAsync(db);
 
         await db.Database.ExecuteSqlRawAsync(
             "CREATE UNIQUE INDEX IF NOT EXISTS IX_Shops_PublicId ON Shops (PublicId);");
@@ -822,6 +833,36 @@ public partial class App : Application
         // is not a column. It must also run after the ShopId column guard above has applied.
         await db.Database.ExecuteSqlRawAsync(
             "CREATE INDEX IF NOT EXISTS IX_Orders_ShopId ON Orders (ShopId);");
+    }
+
+    /// <summary>
+    /// Stamps every existing order with its shop's currency, once, when a shop first gains a
+    /// supported-currency set.
+    /// </summary>
+    /// <remarks>
+    /// Orders.CurrencyType has existed as a column for a long time and the order editor NEVER wrote
+    /// it, so every row carries the enum default — CAD — no matter what its shop actually trades in.
+    /// That was harmless while every amount on screen was rendered from the SHOP's currency. The
+    /// moment display starts reading the order's own currency, which is the whole point of letting a
+    /// shop accept several, those rows would begin printing a Chinese shop's ￥1,695 order as
+    /// "$1,695.00" — a wrong amount on a document a customer keeps, not a display glitch.
+    ///
+    /// Safe to apply to every row precisely BECAUSE the column was never written: there is no
+    /// deliberate value to overwrite, so CAD cannot mean anything except "never set". That stops
+    /// being true the moment the editor starts saving it, which is why this is pinned to the one-shot
+    /// arrival of SupportedCurrenciesJson rather than run on every startup.
+    /// </remarks>
+    private static async Task BackfillOrderCurrenciesAsync(AppDbContext db)
+    {
+        var schema = await ReadOrdersSchemaAsync(db);
+        if (!schema.HasOrdersTable)
+            return;
+
+        // Raw SQL rather than the DbSet: the shop-scoped query filter would hide most of the rows,
+        // and this is a whole-installation repair that runs before any shop is open.
+        await db.Database.ExecuteSqlRawAsync(
+            "UPDATE Orders SET CurrencyType = (SELECT s.CurrencyType FROM Shops s WHERE s.Id = Orders.ShopId) " +
+            "WHERE EXISTS (SELECT 1 FROM Shops s WHERE s.Id = Orders.ShopId);");
     }
 
     /// <summary>

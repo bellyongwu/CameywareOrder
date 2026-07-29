@@ -10,6 +10,11 @@
   <Text key="Format.ListSeparator">、</Text>
   <Text key="Format.BulletSeparator">&#32;&#32;·&#32;&#32;</Text>
 
+  <!-- The currencies of this language's market. Data rather than a rule in code, so a new
+       language brings its own currency with it. JPY has NO minor unit — amounts print as whole
+       yen, which CurrencySettingService.Format handles. -->
+  <Text key="Currency.Codes">JPY</Text>
+
   <Text key="Toolbar.NewOrder">新規注文</Text>
   <Text key="Toolbar.EditOrder">注文を編集</Text>
   <Text key="Toolbar.ViewOrder">注文を表示</Text>
@@ -192,11 +197,21 @@
   <Text key="Shop.Setup.ContactHint">任意。電話番号、メールアドレス、ウェブサイトは言語ごとの設定ではなく、すべての言語で同じ値が表示されます。</Text>
   <Text key="Shop.Setup.TaxNumber">税番号（GST/HST）</Text>
   <Text key="Shop.Setup.TaxNumberHint">任意。この店舗の領収書に印刷され、税額票としても使えるようになります。ヘッダー・フッター編集で入力した番号があれば、そちらが優先されます。</Text>
-  <Text key="Shop.Setup.InstalledLanguages">インストール済みの言語</Text>
-  <Text key="Shop.Setup.InstalledLanguagesHint">この店舗で使う言語です。マネージャーとスタッフはこれらの言語を切り替えられます。1 つだけの場合、言語切り替えは表示されません。管理者は常にすべての言語を表示できます。</Text>
   <Text key="Shop.Setup.InstalledLanguagesRequired">この店舗に言語を 1 つ以上インストールしてください。</Text>
+  <Text key="Shop.Setup.SupportedCurrenciesRequired">この店舗に通貨を 1 つ以上選択してください。</Text>
+  <Text key="Shop.Localization.Link">言語と通貨</Text>
+  <Text key="Shop.Localization.LinkHint">この店舗で使う言語と、取り扱う通貨を選びます。</Text>
+  <Text key="Shop.Localization.Title">言語と通貨</Text>
+  <Text key="Shop.Localization.Subtitle">この店舗で使う言語にチェックを入れてください。それぞれの言語がその市場の通貨をもたらし、その中から実際に取り扱う通貨を選べます。</Text>
+  <Text key="Shop.Localization.LanguagesHeading">この店舗で使う言語</Text>
+  <Text key="Shop.Localization.CurrenciesHeading">言語ごとの通貨</Text>
+  <Text key="Shop.Localization.CurrenciesEmpty">左で言語にチェックを入れると、その言語の通貨が表示されます。</Text>
+  <Text key="Shop.Localization.Done">完了</Text>
+  <Text key="Shop.Localization.Summary">{0}  ·  {1}</Text>
+  <Text key="Shop.Localization.NoCurrencyForLanguage">この言語に対応する通貨はありません。</Text>
+  <Text key="Currency.Supported.One">取り扱う通貨：{0}</Text>
+  <Text key="Currency.Supported.Many">取り扱う通貨：{0}</Text>
   <Text key="Shop.Setup.PreferredLanguage">既定の言語</Text>
-  <Text key="Shop.Setup.PreferredLanguageHint">この店舗を開いたときに使う言語です。上でインストールした言語から選択します。</Text>
   <Text key="Shop.Setup.Currency">通貨</Text>
   <Text key="Shop.Setup.MeasurementTerms">採寸項目</Text>
   <Text key="Shop.Setup.SeedDefaults">既定のセットから始める</Text>
@@ -540,6 +555,8 @@
   <Text key="CurrencyType.CAD">CAD</Text>
   <Text key="CurrencyType.USD">USD</Text>
   <Text key="CurrencyType.CNY">CNY</Text>
+  <Text key="CurrencyType.EUR">EUR</Text>
+  <Text key="CurrencyType.JPY">JPY</Text>
 
   <Text key="ServiceType.Alterations">お直し</Text>
   <Text key="ServiceType.CustomMade">オーダーメイドサービス</Text>

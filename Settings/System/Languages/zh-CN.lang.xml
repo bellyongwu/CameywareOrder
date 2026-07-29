@@ -14,6 +14,10 @@
   <Text key="Format.ListSeparator">、</Text>
   <Text key="Format.BulletSeparator">&#32;&#32;·&#32;&#32;</Text>
 
+  <!-- The currencies of this language's market. Data rather than a rule in code, so a new
+       language brings its own currency with it. -->
+  <Text key="Currency.Codes">CNY</Text>
+
   <Text key="Toolbar.NewOrder">新增订单</Text>
   <Text key="Toolbar.EditOrder">编辑订单</Text>
   <Text key="Toolbar.ViewOrder">查看订单</Text>
@@ -197,11 +201,21 @@
   <Text key="Shop.Setup.ContactHint">选填。电话、邮箱和网址不区分语言，各语言显示同一内容。</Text>
   <Text key="Shop.Setup.TaxNumber">税号（GST/HST）</Text>
   <Text key="Shop.Setup.TaxNumberHint">选填。将打印在本店铺的小票上，使其可作为税务凭证。页眉页脚设置中填写的税号会覆盖此处。</Text>
-  <Text key="Shop.Setup.InstalledLanguages">已安装语言</Text>
-  <Text key="Shop.Setup.InstalledLanguagesHint">本店铺可使用的语言。店长与店员可在其中切换；仅安装一种语言时，不显示语言切换。管理员始终可使用全部语言。</Text>
   <Text key="Shop.Setup.InstalledLanguagesRequired">请至少为本店铺安装一种语言。</Text>
+  <Text key="Shop.Setup.SupportedCurrenciesRequired">请至少为本店铺选择一种货币。</Text>
+  <Text key="Shop.Localization.Link">语言与货币</Text>
+  <Text key="Shop.Localization.LinkHint">选择本店铺使用的语言，以及收取的货币。</Text>
+  <Text key="Shop.Localization.Title">语言与货币</Text>
+  <Text key="Shop.Localization.Subtitle">勾选本店铺使用的语言。每种语言都会带来其市场的货币，您可以从中选择本店铺实际收取的货币。</Text>
+  <Text key="Shop.Localization.LanguagesHeading">本店铺使用的语言</Text>
+  <Text key="Shop.Localization.CurrenciesHeading">各语言对应的货币</Text>
+  <Text key="Shop.Localization.CurrenciesEmpty">请先在左侧勾选语言，以查看其带来的货币。</Text>
+  <Text key="Shop.Localization.Done">完成</Text>
+  <Text key="Shop.Localization.Summary">{0}  ·  {1}</Text>
+  <Text key="Shop.Localization.NoCurrencyForLanguage">该语言没有对应的货币。</Text>
+  <Text key="Currency.Supported.One">支持的货币：{0}</Text>
+  <Text key="Currency.Supported.Many">支持的货币：{0}</Text>
   <Text key="Shop.Setup.PreferredLanguage">默认语言</Text>
-  <Text key="Shop.Setup.PreferredLanguageHint">打开本店铺时使用的语言，只能从上方已安装的语言中选择。</Text>
   <Text key="Shop.Setup.Currency">货币</Text>
   <Text key="Shop.Setup.MeasurementTerms">量身项目</Text>
   <Text key="Shop.Setup.SeedDefaults">使用系统预设项目</Text>
@@ -544,6 +558,8 @@
   <Text key="CurrencyType.CAD">加元</Text>
   <Text key="CurrencyType.USD">美元</Text>
   <Text key="CurrencyType.CNY">人民币</Text>
+  <Text key="CurrencyType.EUR">EUR</Text>
+  <Text key="CurrencyType.JPY">JPY</Text>
 
   <Text key="ServiceType.Alterations">修改衣服</Text>
   <Text key="ServiceType.CustomMade">定制服务</Text>

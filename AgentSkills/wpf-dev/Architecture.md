@@ -185,6 +185,20 @@ components are added/renamed or the way pieces fit together changes.
     Lives outside both `AuthenticationService` and `ShopContext` because the answer is a
     product of both. Consumed by `MainWindow`'s toggle, `ShopSetupWindow`,
     `MeasurementPrintOptionsWindow` and `CustomMadeServiceWindow`'s download panel.
+  - `ShopCurrencies` — the one answer to "which currencies may an order in this shop be priced
+    in". `Offered(localization)` derives the whole set from the INSTALLED languages: each
+    `*.lang.xml` declares its market's currencies under `Currency.Codes`, English's lead (CAD before
+    USD), and a declared code the `CurrencyType` enum cannot name is dropped. `ForLanguage(code)` is
+    what the localization panel lists beside each language. Then `Supported(shop)` (never empty — a
+    shop that has recorded none falls back to its own `CurrencyType`, the pre-feature behaviour;
+    a currency it accepts but the offer no longer contains is kept, at the end), `Preferred`,
+    `CanChoose`, `Offers`, `SymbolOf(order)`, `SupportedSummary`. Shaped like `ShopLanguages` on purpose, and differs from it twice:
+    **no per-user capability** (an administrator sees every language because language is only how a
+    screen reads; currency is a fact about the order, so pricing outside the shop's set would be a
+    wrong number on a real receipt), and the set is bounded by the `CurrencyType` **enum** rather
+    than a discovered folder. `Shop.SupportedCurrenciesJson` stores enum NAMES, never the integers.
+    **`SymbolOf` reads the ORDER** — `CurrencySettingService` describes the shop today, which is a
+    different question from what an order was priced in.
   - `ShopLetterhead` — the letterhead the application GENERATES when the
     header/footer editor has supplied none: `Name`, `Subtitle`, `ContactLines`
     (`ShopLetterheadLine` label+value), `TaxLine`. `Build(localization, languageCode,
@@ -464,11 +478,19 @@ components are added/renamed or the way pieces fit together changes.
   - `UserPresentation` (static, `Views/`) — localized role name (including "no role") and the stable
     name-hashed avatar brush/initial, shared by the picker, the user manager, the roster and the main
     toolbar so the role-name switch is not copied a fourth time.
-  - `ShopSetupWindow` — creates a shop and edits one (本地配置 → 店铺设置). A scrolling card
-    layout: shop identity (per-language names, **per-language address**, **phone / email / website**,
-    **installed languages** — a tick box per shipped language, at least one required, with the
-    preferred-language picker listing ONLY what is ticked so "a shop opens in a language it runs in"
-    is enforced by what the control contains rather than validated afterwards — currency), the **payment /
+  - `ShopLocalizationWindow` — the languages a shop runs in and the currencies it takes, in one
+    panel because they are one decision: a language brings the currencies of its market. Languages
+    left, a card per ticked language on the right listing what it brings. Opened from a link card in
+    `ShopSetupWindow`; edits nothing itself, returning `InstalledLanguages` / `PreferredLanguage` /
+    `SupportedCurrencies` / `PreferredCurrency` so cancelling costs nothing. **A currency reachable
+    from two languages (EUR, under Français and Español) is ONE shared row object**, so the two cards
+    are two views of one fact and cannot disagree. Both pickers list only what is ticked, so "opens in
+    a language it runs in" and "prices in money it takes" are enforced by what the controls CONTAIN.
+  - `ShopSetupWindow` — creates a shop and edits one (Local Configuration → Shop Settings). A
+    scrolling card layout: shop identity (per-language names, **per-language address**, **phone /
+    email / website**, and a **link card into `ShopLocalizationWindow`** carrying a one-line summary
+    of the chosen languages and currencies — they used to be two tick lists and two pickers inline,
+    in an already long form), the **payment /
     tax matrix** (one row per `PaymentTaxRules.ConfigurableMethods` entry — tax free vs. charge at
     its own rate, generated from a `PaymentTaxRow` view-model so a method added later needs no
     XAML change), the **receipt-number format** (prefix / padding / next number / mode with a live
@@ -497,7 +519,9 @@ components are added/renamed or the way pieces fit together changes.
     exactly as wide as its box. A behavior rather than a binding because the Calendar lives in a
     `Popup`, a separate visual tree that `RelativeSource` cannot cross — and fails silently when it
     tries. The home for any future "the theme cannot express this" hook; see context.md.
-  - `WindowFitting` — fits EVERY window to the screen it opens on, scaling the whole layout down
+  - `WindowFitting` — `Fit(Window)` resolves the monitor; `Fit(Window, Rect)` takes the work area as
+    an argument, which is what makes the rule testable on a machine that is not small. Fits EVERY
+    window to the screen it opens on, scaling the whole layout down
     proportionally (`LayoutTransform`, so the window MEASURES smaller and its minimum can come down)
     when the screen is smaller than the window was drawn for. Registered once from
     `App.StartApplicationAsync` as a `Window.Loaded` **class handler**, so a window added later is

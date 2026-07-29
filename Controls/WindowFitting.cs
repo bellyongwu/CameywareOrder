@@ -73,17 +73,35 @@ public static class WindowFitting
     }
 
     /// <summary>
-    /// Scales <paramref name="window"/> down to its screen if it needs it, and pulls it fully into
-    /// the work area. Returns the scale applied — 1 when the window already fits.
+    /// Scales <paramref name="window"/> down to the screen it is on if it needs it, and pulls it
+    /// fully into the work area. Returns the scale applied — 1 when the window already fits.
     /// </summary>
     public static double Fit(Window window)
+    {
+        ArgumentNullException.ThrowIfNull(window);
+        return Fit(window, WorkAreaFor(window));
+    }
+
+    /// <summary>
+    /// As <see cref="Fit(Window)"/>, but into a work area the caller supplies rather than the one
+    /// the window happens to be on.
+    /// </summary>
+    /// <remarks>
+    /// Public because "fit this window into this rectangle" is a coherent operation in its own
+    /// right, and because the alternative makes the rule untestable: reading the monitor internally
+    /// means the result depends on whatever display the machine has today. A harness written on a
+    /// 1280x752 laptop passed, then broke on a 2057x1323 desktop — not because the fitting was
+    /// wrong, but because nothing was small enough to fit. The screen is an input; this overload is
+    /// where it is supplied.
+    /// </remarks>
+    public static double Fit(Window window, Rect workArea)
     {
         ArgumentNullException.ThrowIfNull(window);
 
         if (window.Content is not FrameworkElement root || root.ActualHeight <= 0)
             return 1d;
 
-        var work = WorkAreaFor(window);
+        var work = workArea;
         if (work.Width <= 0 || work.Height <= 0)
             return 1d;
 

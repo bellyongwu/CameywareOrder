@@ -102,7 +102,29 @@ public class Shop
     /// </remarks>
     public string? InstalledLanguagesJson { get; set; }
 
+    /// <summary>
+    /// The currency this shop prices new orders in by default. Still a single value after the shop
+    /// gained a SET of currencies, because "which one does a new order start in" and "which ones may
+    /// it be changed to" are different questions — the same split as
+    /// <see cref="PreferredLanguageCode"/> against <see cref="InstalledLanguagesJson"/>.
+    /// </summary>
     public CurrencyType CurrencyType { get; set; } = CurrencyType.CAD;
+
+    /// <summary>
+    /// The currencies this shop accepts, as a JSON array of <see cref="CurrencyType"/> names — the
+    /// set an order may be priced in. A shop on a border, or one taking tourist trade, accepts more
+    /// than one; most accept exactly one and their staff never see a currency picker.
+    /// </summary>
+    /// <remarks>
+    /// Null means "never configured", which reads back through <see cref="SupportedCurrencies"/> as
+    /// just <see cref="CurrencyType"/> — precisely how the app behaved before a shop could accept
+    /// more than one, so no existing branch changes until somebody adds a second.
+    ///
+    /// Stored as NAMES, not the underlying integers. The numbers are an implementation detail of the
+    /// enum and a reordering would silently re-denominate every shop; a name that no longer resolves
+    /// is dropped when the set is read, which is the same rule the language codes follow.
+    /// </remarks>
+    public string? SupportedCurrenciesJson { get; set; }
 
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
@@ -185,6 +207,28 @@ public class Shop
         InstalledLanguagesJson = codes.Count == 0 ? null : JsonSerializer.Serialize(codes);
     }
 
+    /// <summary>
+    /// Currencies stored on this shop, exactly as saved and in stored order. May be empty, meaning
+    /// the shop has never been told which it accepts — <c>ShopCurrencies</c> owns what to do about
+    /// that, for the same reason <c>ShopLanguages</c> owns the language equivalent: the answer needs
+    /// to know what the build actually offers, which the model does not.
+    /// </summary>
+    [NotMapped]
+    public IReadOnlyList<CurrencyType> SupportedCurrencies => DecodeCurrencies(SupportedCurrenciesJson);
+
+    /// <summary>
+    /// Records the currencies this shop accepts. Duplicates are dropped so the stored array says
+    /// what it means; the caller is responsible for there being at least one, since "what money does
+    /// this branch take" is a question only a person can answer.
+    /// </summary>
+    public void SetSupportedCurrencies(IEnumerable<CurrencyType> currencies)
+    {
+        ArgumentNullException.ThrowIfNull(currencies);
+
+        var names = currencies.Distinct().Select(currency => currency.ToString()).ToList();
+        SupportedCurrenciesJson = names.Count == 0 ? null : JsonSerializer.Serialize(names);
+    }
+
     public void SetAddresses(IReadOnlyDictionary<string, string> addresses)
         => AddressesJson = JsonSerializer.Serialize(addresses);
 
@@ -241,6 +285,48 @@ public class Shop
             return Array.Empty<string>();
         }
     }
+
+    /// <summary>
+    /// Reads the supported-currency array, dropping any name that is no longer a defined
+    /// <see cref="CurrencyType"/>. Bad JSON reads back as "nothing set" for the same reason
+    /// <see cref="DecodeLocalized"/> does.
+    /// </summary>
+    /// <remarks>
+    /// An unrecognised name is skipped rather than defaulting to anything: guessing here would let a
+    /// shop quietly start accepting a currency it never chose, and every guess about money is a
+    /// wrong amount on somebody's receipt.
+    /// </remarks>
+    private static IReadOnlyList<CurrencyType> DecodeCurrencies(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return Array.Empty<CurrencyType>();
+
+        List<string>? names;
+        try
+        {
+            names = JsonSerializer.Deserialize<List<string>>(json);
+        }
+        catch (JsonException)
+        {
+            return Array.Empty<CurrencyType>();
+        }
+
+        if (names is null)
+            return Array.Empty<CurrencyType>();
+
+        return names
+            .Select(ParseCurrency)
+            .Where(currency => currency.HasValue)
+            .Select(currency => currency!.Value)
+            .Distinct()
+            .ToList();
+    }
+
+    /// <summary>A stored currency name, or null when it no longer names one.</summary>
+    private static CurrencyType? ParseCurrency(string name)
+        => Enum.TryParse<CurrencyType>(name, ignoreCase: true, out var currency) && Enum.IsDefined(currency)
+            ? currency
+            : null;
 
     private static string Resolve(Dictionary<string, string> values, string languageCode)
     {

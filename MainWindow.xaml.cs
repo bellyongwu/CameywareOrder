@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Win32;
 using System.Diagnostics;
 using System.Globalization;
@@ -1261,7 +1261,9 @@ public partial class MainWindow : Window
 
     private FlowDocument BuildReceiptDocument(Order order, double pageWidth)
     {
-        var symbol = CurrencySettingService.Instance.Symbol;
+        // The ORDER's currency, never the shop's. A receipt is a record of what was charged, and a
+        // shop that has since started taking a second currency must not reprint an old one in it.
+        var currency = order.CurrencyType;
 
         var document = new FlowDocument
         {
@@ -1283,11 +1285,11 @@ public partial class MainWindow : Window
 
         document.Blocks.Add(ReceiptDivider());
 
-        AddAlterationReceiptSection(document, order, symbol);
-        AddClothingReceiptSection(document, order, symbol);
-        AddCustomMadeReceiptSection(document, order, symbol);
+        AddAlterationReceiptSection(document, order, currency);
+        AddClothingReceiptSection(document, order, currency);
+        AddCustomMadeReceiptSection(document, order, currency);
 
-        AddReceiptTotals(document, order, symbol);
+        AddReceiptTotals(document, order, currency);
 
         InjectReceiptBranding(document, brandingSettings, branding, insertTaxNumber: hasHeader);
 
@@ -1404,7 +1406,9 @@ public partial class MainWindow : Window
         AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.Address"], order.Address);
         blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderDate"], order.OrderDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
         blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Status"], _localization[$"Status.{order.Status}"]));
-        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.CurrencyType"], _localization[$"CurrencyType.{CurrencySettingService.Instance.Current}"]));
+        blocks.Add(ReceiptInfoLine(
+            _localization["Order.Fields.CurrencyType"],
+            ShopCurrencies.Name(order.CurrencyType, _localization)));
         var servicesSummary = new OrderServicesSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
         AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.ServiceType"], servicesSummary);
 
@@ -1413,7 +1417,7 @@ public partial class MainWindow : Window
 
     // Alterations service detail. Only shown when the section carries a charge and a
     // deposit method has been selected; otherwise the service is considered not added.
-    private void AddAlterationReceiptSection(FlowDocument document, Order order, string symbol)
+    private void AddAlterationReceiptSection(FlowDocument document, Order order, CurrencyType currency)
     {
         if (!order.AlterationAddedToReceipt)
             return;
@@ -1422,16 +1426,16 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(order.ServiceDetails))
             document.Blocks.Add(new Paragraph(new Run(LocalizeWithFallback("Alteration.Category", order.ServiceDetails))) { Margin = new Thickness(0, 0, 0, 4) });
 
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Subtotal"], Money(symbol, order.AlterationSubtotal ?? 0m)));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Subtotal"], Money(currency, order.AlterationSubtotal ?? 0m)));
         if (order.AlterationTax > 0m)
-            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TaxAmount"], Money(symbol, order.AlterationTax)));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(symbol, order.AlterationTotal), bold: true));
+            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TaxAmount"], Money(currency, order.AlterationTax)));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(currency, order.AlterationTotal), bold: true));
         document.Blocks.Add(ReceiptServiceDivider());
     }
 
     // Ready-made clothing / accessories. Only shown when the section carries a charge and a
     // deposit method has been selected; otherwise the service is considered not added.
-    private void AddClothingReceiptSection(FlowDocument document, Order order, string symbol)
+    private void AddClothingReceiptSection(FlowDocument document, Order order, CurrencyType currency)
     {
         if (order.Items.Count == 0 || !order.ClothingAddedToReceipt)
             return;
@@ -1441,20 +1445,20 @@ public partial class MainWindow : Window
         {
             var line = new Paragraph { Margin = new Thickness(0, 0, 0, 2) };
             var name = ProductCatalogService.Instance.ResolveName(item.ProductName);
-            line.Inlines.Add(new Run($"{name}  {Money(symbol, item.EffectiveUnitPrice)} x{item.Quantity}"));
-            line.Inlines.Add(new Run($"    {Money(symbol, item.TotalPrice)}") { FontWeight = FontWeights.SemiBold });
+            line.Inlines.Add(new Run($"{name}  {Money(currency, item.EffectiveUnitPrice)} x{item.Quantity}"));
+            line.Inlines.Add(new Run($"    {Money(currency, item.TotalPrice)}") { FontWeight = FontWeights.SemiBold });
             document.Blocks.Add(line);
         }
-        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Subtotal"], Money(symbol, order.ClothingSubtotal ?? 0m)));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Subtotal"], Money(currency, order.ClothingSubtotal ?? 0m)));
         if (order.ClothingTax > 0m)
-            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TaxAmount"], Money(symbol, order.ClothingTax)));
-        document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(symbol, order.ClothingTotal), bold: true));
+            document.Blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TaxAmount"], Money(currency, order.ClothingTax)));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(currency, order.ClothingTotal), bold: true));
         document.Blocks.Add(ReceiptServiceDivider());
     }
 
     // Custom-made records. Only shown when the section carries a charge and a deposit
     // method has been selected; otherwise the service is considered not added.
-    private void AddCustomMadeReceiptSection(FlowDocument document, Order order, string symbol)
+    private void AddCustomMadeReceiptSection(FlowDocument document, Order order, CurrencyType currency)
     {
         var customMadeRecords = order.CustomMadeRecords;
         if (customMadeRecords.Count == 0 || !order.CustomMadeAddedToReceipt)
@@ -1467,10 +1471,10 @@ public partial class MainWindow : Window
             var summary = summaryConverter.Convert(record, typeof(string), null, CultureInfo.CurrentCulture) as string ?? string.Empty;
             var line = new Paragraph { Margin = new Thickness(0, 0, 0, 2) };
             line.Inlines.Add(new Run(summary));
-            line.Inlines.Add(new Run($"    {Money(symbol, record.SumTotal)}") { FontWeight = FontWeights.SemiBold });
+            line.Inlines.Add(new Run($"    {Money(currency, record.SumTotal)}") { FontWeight = FontWeights.SemiBold });
             document.Blocks.Add(line);
         }
-        document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(symbol, order.CustomMadeTotal), bold: true));
+        document.Blocks.Add(ReceiptInfoLine(_localization["Receipt.SectionTotal"], Money(currency, order.CustomMadeTotal), bold: true));
         document.Blocks.Add(ReceiptServiceDivider());
     }
 
@@ -1479,23 +1483,23 @@ public partial class MainWindow : Window
     /// rule — on a printed page this is the block people look at first, and it should not have to
     /// be found among the service lines above it.
     /// </summary>
-    private void AddReceiptTotals(FlowDocument document, Order order, string symbol)
+    private void AddReceiptTotals(FlowDocument document, Order order, CurrencyType currency)
     {
         var card = ReceiptCard(ReceiptTotalsBrush, topBorder: 2);
         var blocks = card.Blocks;
 
-        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TotalAmount"], Money(symbol, order.TotalAmount), bold: true));
-        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Downpayment"], Money(symbol, order.TotalDownpayment)));
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.TotalAmount"], Money(currency, order.TotalAmount), bold: true));
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Downpayment"], Money(currency, order.TotalDownpayment)));
         // Show the actually-received deposit only when a card surcharge made it differ
         // from the nominal deposit, so cash/e-transfer receipts stay uncluttered.
         if (order.ReceivedDownpayment != order.TotalDownpayment)
-            blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedDownpayment"], Money(symbol, order.ReceivedDownpayment)));
-        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedFinalBalance"], Money(symbol, order.ReceivedFinalBalance)));
+            blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedDownpayment"], Money(currency, order.ReceivedDownpayment)));
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedFinalBalance"], Money(currency, order.ReceivedFinalBalance)));
         if (order.TotalTax > 0m)
-            blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PaidTax"], Money(symbol, order.TotalTax)));
+            blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PaidTax"], Money(currency, order.TotalTax)));
         // AddReceiptTotals runs for every order regardless of refund status (full parity
         // with the on-screen detail panel), so Order.Fields.FinalBalance is always shown here too.
-        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(symbol, order.FinalBalance)));
+        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(currency, order.FinalBalance)));
         var balanceStatusText = new OrderPaymentSummaryConverter().Convert(order, typeof(string), "Status", CultureInfo.CurrentCulture) as string;
         blocks.Add(ReceiptStatusLine(_localization["Order.Fields.BalanceStatus"],
             balanceStatusText, BalanceStatusBrush(order.PaymentStatusKind)));
@@ -1538,7 +1542,8 @@ public partial class MainWindow : Window
         document.Blocks.Add(ReceiptMultilineParagraph(paymentBreakdown));
     }
 
-    private static string Money(string symbol, decimal value) => $"{symbol}{value:N2}";
+    private static string Money(CurrencyType currency, decimal value)
+        => CurrencySettingService.Format(value, currency);
 
     // Prepends the preset logo + rich header and appends the rich footer for the
     // current language, so printed receipts share the same branding as the

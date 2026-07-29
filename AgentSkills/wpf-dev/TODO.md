@@ -17,6 +17,128 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-29 16:10 — Currencies derived from installed languages + a localization panel  [DONE]
+- Ask: "As our application grows, each store may support global clients. So accepted
+  lanuages should be very dynamic, at the same time, currencies may be vary. so, as we
+  already set CAD, USD, and CNY. >this nees to change, if en-US or en-CA lanuage avaialbe
+  (any of them is ok), always keep CAD and USD on top. the other lanuages, even though we
+  have simplified Chinese, we will use Chinese currency. For countries that have their own
+  currencies, just show their own currencies. >Aslo, to make the Shop setting of UI
+  cleaner, create a separate panel for adjust languages and currencies. Action: click the
+  link with icon to adjust store lanuage and currencies, show another panel >Left hand show
+  selected lanauge, right showing all supported currencies for each language. >Supported
+  currencies should be dynamically decided by all system installed lanauges from setting.
+  such as en-US.xml zh-CN.xml...etc. if installed as zh-CN, show CNY by default. en-US is
+  exception, you can display CAD and USD at the same time. show CAD above USD. >Require to
+  use the main themed Morden UI and design the whole structure."
+- Plan:
+  - [ ] Each language file DECLARES its own currencies, in order — `Currency.Codes`. That
+        keeps "adding a language is dropping a file in" true for currencies too, and turns
+        the en-US CAD+USD exception into data rather than a branch in code
+  - [ ] `CurrencyType` grows EUR + JPY so the shipped languages can name what they imply
+  - [ ] `ShopCurrencies.Offered(localization)` — the set derived from INSTALLED languages,
+        English's leading
+  - [ ] New `ShopLocalizationWindow`: languages left, the currencies each contributes right
+  - [ ] `ShopSetupWindow` loses the two inline blocks, gains a link + icon
+  - [x] Keys in all five languages; harness
+- **The mapping is DATA, in the language file.** Each `*.lang.xml` declares `Currency.Codes`
+  — en-US `CAD,USD`, zh-CN `CNY`, fr-FR/es-ES `EUR`, ja-JP `JPY`. So "adding a language is
+  dropping a file in" now covers its currency too, and the en-US CAD+USD exception the ask
+  called out is a value in a file rather than a branch in code. A build shipping en-CA
+  instead needs no change here. Order is load-bearing and asserted: English's currencies
+  lead, CAD before USD.
+- `CurrencyType` grew EUR and JPY. The enum still BOUNDS what can be stored — the integers
+  are a compatibility surface on two tables — so a declared code the enum cannot name is
+  dropped rather than guessed at. That is the honest limit of "fully dynamic".
+- **JPY forced a real fix, not a cosmetic one.** Yen has no minor unit, so `¥1,695.00` is
+  wrong in the same way the wrong symbol was. `CurrencySettingService.Format` now owns
+  symbol AND decimal places, and the four sites that were hand-building `{symbol}{x:N2}`
+  go through it.
+- New `ShopLocalizationWindow`: languages left, the currencies each brings right, opened
+  from a link card in Shop Settings. **A currency appearing under two languages (EUR, under
+  Français and Español) is ONE row object shared between the cards** — two independent tick
+  boxes for one currency would let the panel contradict itself, with no answer to "does
+  this shop take euros".
+- Six string keys were orphaned by the move and removed from all five files. The harness
+  found them; the skill's "prune orphaned keys" rule is the reason it looks.
+- Notes: build 0 warnings / 0 errors. Suite **886 passed / 0 failed across 19 harnesses**
+  (currencycheck 80, up 29; formatcheck 108; langcheck 88 — its shop-editor section now
+  drives the panel).
+- **Three defects the harness and a screenshot caught, in that order:**
+  - Adding EUR/JPY to the enum without adding their string-table entries put
+    **"CurrencyType.EUR" on screen** — an unresolved key renders as the key, which reads as a
+    broken control rather than a missing translation. Found by LOOKING at the render. There
+    is now an assertion that every storable currency has a name, so looking is not the
+    mechanism next time.
+  - `Shop.Localization.Summary` is `{0}  ·  {1}` — pure punctuation, identical in every
+    language, so the fallback sweep flagged it. Same category as the separators; allow-listed.
+  - Hand-built `ComboBoxItem`s added to `Items` before the ComboBox is in a visual tree log
+    four binding errors each (the stock template's `RelativeSource FindAncestor` alignment
+    bindings have no ItemsControl to find). `langcheck` counts binding errors as failures,
+    which is what surfaced it. Fixed by using `ItemsSource` + `DisplayMemberPath`, which also
+    makes the picker a view over the same rows the right pane ticks.
+
+### 2026-07-29 14:40 — A shop supports 1..N currencies; an order records its own  [DONE]
+- Ask: "Add another feature, based on the store supported lanauge, we can choose supported
+  currencies as well."
+- Modelled on the store-languages feature, but currency is NOT display — a number in CNY is
+  not the same number in USD — so the money model has to change with it. User chose
+  **per-order currency** (recommended) over a shop-level display toggle, and no new enum
+  members.
+- **Two defects found while surveying, both latent today and both fatal the moment a shop
+  has a second currency:**
+  - Every money display reads `CurrencySettingService.Instance.Symbol` — the SHOP's current
+    currency — never the order's. Switching a shop's currency would silently re-denominate
+    every historical order: a ￥1,695 order printing as "$1,695.00". The Symbols table's own
+    comment already calls that out as "not a cosmetic bug, it is the wrong number".
+  - `Order.CurrencyType` exists as a column and `OrderEditWindow` **never writes it**, so
+    every order ever saved carries the default `CAD` — including all 44 in the CNY shop. The
+    column is both unread and wrong.
+- Plan:
+  - [ ] `Shop.SupportedCurrenciesJson` + accessor + setter, mirroring the languages pair
+  - [ ] `Services/ShopCurrencies` — the one answer to "which currencies may this shop use",
+        with the same never-empty fallback that made the language change invisible
+  - [ ] Column guard in `ShopColumnMigrations`, and CREATE TABLE kept in step
+  - [ ] **Backfill `Orders.CurrencyType` from each order's shop** on the same one-shot hook —
+        without it, this change makes every existing CNY order render as dollars
+  - [ ] Shop editor: tick list + preferred picker containing only what is ticked
+  - [ ] Order editor: currency picker over the shop's set, hidden at one, writes the order
+  - [ ] Every display site reads the ORDER's currency: list converter, receipt, editor totals
+  - [ ] Shop picker card and user management show the supported set
+  - [x] String keys in all five languages; seed data; harness
+- **The plumbing was already there and disconnected.** Every `CurrencyAmountConverter`
+  MultiBinding in `MainWindow.xaml` ALREADY passed `CurrencyType` as `values[1]` — the
+  converter read `CurrencySettingService.Instance.Symbol` and threw the second value away.
+  So the list and the whole detail panel were a one-line fix. Someone built this for
+  per-order currency and then wired it to the global setting.
+- `Services/ShopCurrencies` mirrors `ShopLanguages` deliberately, and differs twice, both
+  recorded at the top of the file: **no per-user capability** (an administrator sees every
+  LANGUAGE because language is only how a screen reads; currency is a fact about the order,
+  so pricing outside the shop's set would put a wrong number on a real receipt), and the
+  answer is bounded by an **enum** rather than a discovered folder.
+- **Order.CurrencyType is stored as a NAME in the shop's set, not the enum's integer.** The
+  numbers are an implementation detail; reordering the enum would otherwise silently
+  re-denominate every shop.
+- The editor keeps an order's own currency in the picker even when the shop has stopped
+  accepting it. Dropping it would show a different currency beside unchanged amounts and
+  saving would re-denominate a finished order — what a shop takes today does not reach back
+  and restate what it charged.
+- Notes: build 0 warnings / 0 errors. Suite **855 passed / 0 failed across 19 harnesses**;
+  new `scratchpad/currencycheck` is 51 of them. The decisive check changes the SHOP's
+  currency under an existing order and asserts the order does not move.
+  Backfill verified on a rewound copy of the live database: **44 orders in the CNY shop
+  started wrongly marked CAD, and 191/191 matched their shop afterwards.**
+- **fitcheck broke and the break was worth more than the feature.** It read
+  `SystemParameters.WorkArea`, passed on the 1280×752 laptop it was written on, and failed
+  the moment the machine moved to a 2057×1323 display — every window fitted, nothing scaled,
+  nothing left to prove. `WindowFitting.Fit` gained a `(Window, Rect)` overload so the screen
+  is an INPUT rather than ambient state, and the harness now simulates a 1366×768 laptop on
+  any machine. Two further faults surfaced while fixing it: the first `Fit` was a silent
+  no-op because layout had not run (`root.ActualHeight` was 0, so five geometry assertions
+  failed while printing nothing — `UpdateLayout()`, not a dispatcher pump), and the
+  proportions check NRE'd instead of failing, reporting a crash where the honest answer was
+  a failed assertion.
+
 ### 2026-07-29 13:30 — Fit every window to the screen it opens on  [DONE]
 - Ask: "UI improvements: The application open in smaller screen, sections of UI (e.g.
   eidt order panel-> cancel and save record button section) is cut. >TODO, to make sure

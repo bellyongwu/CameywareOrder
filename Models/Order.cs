@@ -330,11 +330,26 @@ public class Order
     }
 }
 
+/// <summary>
+/// The currencies this build can name. WHICH of them a shop may offer is decided by the languages
+/// installed on the system (see <c>ShopCurrencies</c>), not by this list — this is only the set of
+/// values an order can be stored as.
+/// </summary>
+/// <remarks>
+/// Persisted as INTEGERS on both Order and Shop, so the numbers are a compatibility surface: never
+/// reorder or reuse one. Appending is safe; anything else re-denominates saved money.
+///
+/// A language file naming a currency that is not here has that entry dropped rather than guessed at,
+/// so shipping a new language whose currency is missing costs one line — added here and to the
+/// symbol table in <c>CurrencySettingService</c>, which the harness asserts is total over this enum.
+/// </remarks>
 public enum CurrencyType
 {
     CAD = 1,
     USD = 2,
-    CNY = 3
+    CNY = 3,
+    EUR = 4,
+    JPY = 5
 }
 
 // Immutable money split for one service section. See Order.CalculateSectionPayment.

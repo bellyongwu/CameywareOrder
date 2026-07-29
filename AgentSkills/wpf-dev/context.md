@@ -1539,6 +1539,65 @@ once, both of which read like authorization regressions and were neither:
 The general rule: a harness reading live data must **establish** the state it
 asserts on, not assume the state it found the day it was written.
 
+## Currencies derived from languages (2026-07-29)
+
+- **Put the language→currency mapping IN the language file, not in code.** Each
+  `*.lang.xml` declares `Currency.Codes` (`CAD,USD` for en-US, `CNY` for zh-CN, …), so
+  "adding a language is dropping a file in" covers its currency too, and a special case
+  like "English shows both CAD and USD" is a value rather than a branch. A build that
+  ships en-CA instead needs no code change.
+- **A derived set still needs a bound.** `CurrencyType` is persisted as INTEGERS on two
+  tables, so the enum decides what can be STORED even though the languages decide what is
+  OFFERED. A declared code the enum cannot name is dropped, never guessed at — inventing a
+  currency would put an amount on a receipt in money the system cannot record.
+- **Not every currency has two decimal places.** JPY has no minor unit; `¥1,695.00` is
+  wrong in the same way the wrong symbol is. Formatting owns symbol AND digits together
+  (`CurrencySettingService.Format`), because the two are one fact about a currency and
+  splitting them is how `{symbol}{x:N2}` ends up hand-written at four call sites.
+- **An unresolved string key renders AS the key.** Adding enum members without their
+  string-table entries put "CurrencyType.EUR" on screen — it reads as a broken control, not
+  a missing translation, so nobody files it as a localization bug. Assert that every enum
+  member resolves to something other than its own key.
+- **One fact, one row object.** When the same currency is reachable from two places in a UI
+  (EUR under both Français and Español), share the row rather than duplicating it. Two
+  independent tick boxes for one currency can disagree, and then there is no answer to
+  "does this shop take euros".
+- **`ComboBoxItem`s added to `Items` in a constructor log binding errors.** Built before the
+  ComboBox is in a visual tree, the stock template's `RelativeSource FindAncestor`
+  alignment bindings have no `ItemsControl` to resolve against — four errors per picker,
+  invisible unless something counts them. Use `ItemsSource` + `DisplayMemberPath` and let
+  the ComboBox generate its own containers.
+
+## Per-order currency (2026-07-29)
+
+- **A shop's setting describes TODAY; an order's column describes when it was priced.**
+  Money on screen must come from `order.CurrencyType`, never from
+  `CurrencySettingService.Instance`. Reading the shop reprints a ￥1,695 order as
+  "$1,695.00" the moment the branch starts taking dollars — not a display bug, a wrong
+  amount on a document a customer keeps. `ShopCurrencies.SymbolOf(order)` is the one way
+  to ask.
+- **A column that is never written is not a spare column, it is a landmine.**
+  `Order.CurrencyType` existed for months, was read by nothing and written by nothing, so
+  every row held the enum default (CAD) regardless of its shop — including all 44 orders
+  in the CNY shop. It looked harmless right up until display started trusting it. Any
+  feature that starts honouring a dormant column needs a backfill in the same change.
+- **Pin a one-shot data repair to the arrival of the column that motivated it**, not to
+  startup. The backfill is safe only because the column was never written — "CAD" could
+  not mean anything but "unset". That stops being true the instant the editor starts
+  saving it, so re-running it later would destroy real choices.
+- **Store an enum in JSON by NAME, never by its integer.** The numbers are an
+  implementation detail; reordering the enum would silently re-denominate every shop.
+  Names that no longer resolve are dropped rather than guessed — every guess about money
+  is a wrong amount on somebody's receipt.
+- **A "supported set" feature is not automatically the language feature again.** Language
+  is how a screen reads and an administrator may see all of them; currency is a fact about
+  the order, so there is no per-user override — pricing outside the shop's set would be a
+  real, wrong number. Copy the SHAPE (`Supported`/`Preferred`/`CanChoose`, never-empty
+  fallback, tick list + picker containing only what is ticked), not the semantics.
+- **Check whether the plumbing already exists before building it.** Every
+  `CurrencyAmountConverter` binding already passed the order's currency as `values[1]`; the
+  converter discarded it. The whole list and detail panel were one line.
+
 ## Fitting windows to the screen (2026-07-29)
 
 - **A window's `MinHeight` is a FLOOR that WPF honours against the desktop, not a
@@ -1572,6 +1631,21 @@ asserts on, not assume the state it found the day it was written.
 - **`Math.Clamp` throws when max < min.** Pulling a window into the work area hits this
   the moment the window is wider than the screen; the sane answer there is to align to
   the near edge (which carries the title bar) rather than to throw.
+- **The SCREEN is an input, not ambient state (2026-07-29).** A fitting harness that read
+  `SystemParameters.WorkArea` passed on the 1280×752 laptop it was written on and failed
+  on a 2057×1323 desktop the same week — not because fitting broke, but because nothing
+  needed fitting and every assertion had gone vacuous. `WindowFitting.Fit` therefore takes
+  a `(Window, Rect)` overload and the monitor-reading one is the convenience wrapper. Any
+  rule whose input is "the machine you happen to be on" needs that seam or it can only be
+  tested on one machine.
+- **Force `UpdateLayout()` before measuring a freshly shown window.** A dispatcher pump is
+  not enough: `Fit` derives chrome from `window.ActualHeight - root.ActualHeight`, and an
+  unarranged root reads 0, so the call returns 1.0 and does nothing — silently failing
+  every geometry assertion after it. The app never hits this because its class handler
+  runs on `Loaded`, which is after the first arrange.
+- **A harness assertion that dereferences the thing it is testing crashes instead of
+  failing.** `transform!.ScaleX` after "assert transform is not null" reports a CRASH where
+  the honest answer is one failed check and a clean run of the rest. Guard and return.
 
 ## Gotchas
 

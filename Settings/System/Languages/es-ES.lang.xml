@@ -10,6 +10,10 @@
   <Text key="Format.ListSeparator">,&#32;</Text>
   <Text key="Format.BulletSeparator">&#32;&#32;·&#32;&#32;</Text>
 
+  <!-- The currencies of this language's market. Data rather than a rule in code, so a new
+       language brings its own currency with it. -->
+  <Text key="Currency.Codes">EUR</Text>
+
   <Text key="Toolbar.NewOrder">Nuevo pedido</Text>
   <Text key="Toolbar.EditOrder">Editar pedido</Text>
   <Text key="Toolbar.ViewOrder">Ver pedido</Text>
@@ -191,11 +195,21 @@
   <Text key="Shop.Setup.ContactHint">Opcional. El teléfono, el correo electrónico y el sitio web no son por idioma: todos los idiomas muestran el mismo valor.</Text>
   <Text key="Shop.Setup.TaxNumber">Número fiscal (GST/HST)</Text>
   <Text key="Shop.Setup.TaxNumberHint">Opcional. Se imprime en los recibos de esta tienda para que sirvan también de comprobante fiscal. Un número introducido en el editor de encabezado y pie tiene prioridad sobre este.</Text>
-  <Text key="Shop.Setup.InstalledLanguages">Idiomas instalados</Text>
-  <Text key="Shop.Setup.InstalledLanguagesHint">Los idiomas en los que funciona esta tienda. Sus gerentes y su personal pueden cambiar entre ellos; con uno solo instalado no se muestra ningún selector de idioma. Los administradores siempre ven todos los idiomas.</Text>
   <Text key="Shop.Setup.InstalledLanguagesRequired">Instala al menos un idioma para esta tienda.</Text>
+  <Text key="Shop.Setup.SupportedCurrenciesRequired">Acepta al menos una moneda para esta tienda.</Text>
+  <Text key="Shop.Localization.Link">Idiomas y monedas</Text>
+  <Text key="Shop.Localization.LinkHint">Elige los idiomas en los que funciona esta tienda y las monedas que acepta.</Text>
+  <Text key="Shop.Localization.Title">Idiomas y monedas</Text>
+  <Text key="Shop.Localization.Subtitle">Marca los idiomas en los que funciona esta tienda. Cada uno aporta las monedas de su mercado, y tú eliges cuáles acepta realmente la tienda.</Text>
+  <Text key="Shop.Localization.LanguagesHeading">Idiomas de esta tienda</Text>
+  <Text key="Shop.Localization.CurrenciesHeading">Monedas, por idioma</Text>
+  <Text key="Shop.Localization.CurrenciesEmpty">Marca un idioma a la izquierda para ver las monedas que aporta.</Text>
+  <Text key="Shop.Localization.Done">Hecho</Text>
+  <Text key="Shop.Localization.Summary">{0}  ·  {1}</Text>
+  <Text key="Shop.Localization.NoCurrencyForLanguage">Este idioma no aporta ninguna moneda propia.</Text>
+  <Text key="Currency.Supported.One">Moneda aceptada: {0}</Text>
+  <Text key="Currency.Supported.Many">Monedas aceptadas: {0}</Text>
   <Text key="Shop.Setup.PreferredLanguage">Idioma preferido</Text>
-  <Text key="Shop.Setup.PreferredLanguageHint">El idioma con el que se abre esta tienda. Se elige entre los idiomas instalados arriba.</Text>
   <Text key="Shop.Setup.Currency">Moneda</Text>
   <Text key="Shop.Setup.MeasurementTerms">Términos de medida</Text>
   <Text key="Shop.Setup.SeedDefaults">Empezar por el conjunto predefinido</Text>
@@ -539,6 +553,8 @@
   <Text key="CurrencyType.CAD">CAD</Text>
   <Text key="CurrencyType.USD">USD</Text>
   <Text key="CurrencyType.CNY">CNY</Text>
+  <Text key="CurrencyType.EUR">EUR</Text>
+  <Text key="CurrencyType.JPY">JPY</Text>
 
   <Text key="ServiceType.Alterations">Arreglos</Text>
   <Text key="ServiceType.CustomMade">Servicio a medida</Text>

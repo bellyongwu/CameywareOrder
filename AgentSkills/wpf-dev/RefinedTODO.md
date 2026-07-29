@@ -129,6 +129,67 @@ message. The footer's Save now applies the whole pane, profile first because it 
 rename. Taken names are reported as they are typed, under the field they belong to, and
 availability is settled *before* the rename confirmation.
 
+### Currencies come from the installed languages, chosen in a panel of their own
+The currency set is no longer a fixed list. Each `*.lang.xml` declares its market's currencies
+under `Currency.Codes` — en-US `CAD,USD`, zh-CN `CNY`, fr-FR/es-ES `EUR`, ja-JP `JPY` — so
+"adding a language is dropping a file in" now covers its money too.
+
+> **Put the mapping in the language FILE, not in code.** The "English shows CAD and USD, CAD
+> first" exception the request called out is then a value rather than a branch, and a build
+> shipping en-CA instead needs no code change. Order is load-bearing: English's currencies
+> lead the offer.
+
+`CurrencyType` still BOUNDS what can be stored — the integers are a compatibility surface on
+two tables — so a declared code the enum cannot name is dropped rather than guessed at. That
+is the honest limit of "fully dynamic", and it cost EUR + JPY being added.
+
+> **Not every currency has two decimal places.** JPY has no minor unit, so `¥1,695.00` is wrong
+> in the same way the wrong symbol was. Symbol and digits are one fact about a currency and are
+> formatted together; splitting them is how `{symbol}{x:N2}` ended up hand-written at four sites.
+
+`ShopLocalizationWindow` replaced two tick lists and two pickers inline in Shop Settings, which
+now shows a link card summarising the choice. Languages left, a card per ticked language right.
+
+> **One fact, one row object.** EUR is reachable under both Français and Español; the two cards
+> share ONE row. Two independent tick boxes for one currency can disagree, and then there is no
+> answer to "does this shop take euros".
+
+*Two traps worth keeping:* an unresolved string key renders AS the key, so adding enum members
+without their table entries put "CurrencyType.EUR" on screen — it reads as a broken control, not
+a missing translation. And `ComboBoxItem`s added to `Items` in a constructor log four binding
+errors each, having no `ItemsControl` ancestor to resolve the stock template's alignment
+bindings against; use `ItemsSource` and let the ComboBox generate its containers.
+
+### A shop accepts 1..N currencies; an order records the one it was priced in
+Asked for as "the same as store languages, for currencies". It is not the same, and the
+difference decided the design: language is how a screen READS, currency is a fact about the
+order. So there is no per-user override (an administrator sees every language; nobody prices
+outside the shop's set) and the money model had to change with it.
+
+> **A shop's setting describes TODAY; an order's column describes when it was priced.** Every
+> amount on screen read `CurrencySettingService.Instance.Symbol`, so the first shop to accept
+> a second currency would have reprinted its whole history in it — ￥1,695 as "$1,695.00".
+
+Two latent defects were found in the survey and both were fatal the moment a shop had a
+second currency: display never read the order, and `OrderEditWindow` never WROTE
+`Order.CurrencyType`, so every order ever saved carried the enum default regardless of its
+shop — all 44 in the CNY shop included.
+
+> **A column that is never written is not a spare column, it is a landmine.** Anything that
+> starts honouring a dormant column needs a backfill in the same change. Pin that repair to
+> the arrival of the column that motivated it, never to startup: it is safe only because
+> "CAD" could not mean anything but "unset", which stops being true the instant the editor
+> starts saving it.
+
+`Services/ShopCurrencies` owns the rule, shaped like `ShopLanguages` with the same never-empty
+fallback. Stored as enum NAMES, not integers — reordering the enum would otherwise silently
+re-denominate every shop. The editor keeps an order's own currency in its picker even after
+the shop drops it: what a shop takes today does not reach back and restate what it charged.
+
+*Worth knowing:* every `CurrencyAmountConverter` binding in the XAML **already** passed the
+order's currency as `values[1]` and the converter discarded it. The list and the whole detail
+panel were one line. Check for existing plumbing before building it.
+
 ### Every window fits the screen it opens on
 `OrderEditWindow` declared `MinHeight="900"` against a 752-tall work area, so the pinned
 Cancel/Save footer sat 148px below the desktop and **could not be dragged into view** —
@@ -161,6 +222,13 @@ Save button bottom at y=725 against a work area ending at 752.
 *Measured rather than assumed:* a `Popup` DOES inherit an ancestor `LayoutTransform` for
 rendering (drop-down items at 0.821 under a 0.820 window). The separate-visual-tree rule
 that defeats *bindings* across a popup boundary does not carry over to rendering.
+
+> **The screen is an INPUT, not ambient state.** The harness read
+> `SystemParameters.WorkArea`, passed on the 1280×752 laptop it was written on, and failed on
+> a 2057×1323 desktop days later — not because fitting broke, but because nothing needed
+> fitting and every assertion had gone vacuous. `Fit` now takes a `(Window, Rect)` overload
+> and the monitor-reading one is the wrapper. Any rule whose input is "the machine you happen
+> to be on" needs that seam or it can only be tested on one machine.
 
 ### Every comment in the application is English
 62 comments across 25 files named a menu or a field by its Chinese label. The rule was

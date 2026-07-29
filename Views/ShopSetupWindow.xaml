@@ -233,54 +233,47 @@
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.TaxNumberHint], Mode=OneWay}"
                                    Style="{StaticResource HintStyle}" Margin="0,2,0,16"/>
 
-                        <!-- Which languages this branch runs in. A checkbox per shipped language
-                             rather than a multi-select list: the whole set is three or four items
-                             and every one of them has to be readable at a glance, since this is
-                             what decides whether the branch's staff get a language toggle at all.
-                             Generated from the shipped languages, so dropping a new *.lang.xml in
-                             needs no change here. -->
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.InstalledLanguages], Mode=OneWay}"
+                        <!-- Languages and currencies used to be two tick lists and two pickers,
+                             inline, in an already long form. They are ONE decision — a language
+                             brings the currencies of its market — so they moved to a panel of their
+                             own and this is the way in. A link rather than a button: it opens a
+                             view, it does not perform an action. -->
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Localization.Link], Mode=OneWay}"
                                    Style="{StaticResource SectionLabelStyle}"/>
-                        <ItemsControl x:Name="InstalledLanguageItems" Margin="0,2,0,0">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsInstalled}"
-                                              Margin="0,0,20,6" VerticalAlignment="Center"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.InstalledLanguagesHint], Mode=OneWay}"
-                                   Style="{StaticResource HintStyle}" Margin="0,2,0,16"/>
+                        <Border BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="8" Padding="14,12"
+                                Background="#FAFAFB">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="18"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                                <!-- Drawn as Path geometry, which IS SVG path syntax: WPF renders it
+                                     natively at every DPI, where an .svg file would need a
+                                     rasterizer this machine does not have. A globe, for "this is
+                                     about which part of the world the shop serves". -->
+                                <Border Grid.Column="0" Width="34" Height="34" CornerRadius="8"
+                                        Background="#EEF2FF" Margin="0,0,12,0" VerticalAlignment="Center">
+                                    <Path Fill="#4F46E5" Stretch="Uniform" Width="17" Height="17"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          Data="M12,2 C6.48,2 2,6.48 2,12 C2,17.52 6.48,22 12,22 C17.52,22 22,17.52 22,12 C22,6.48 17.52,2 12,2 Z M11,19.93 C7.05,19.44 4,16.08 4,12 C4,11.38 4.08,10.79 4.21,10.21 L9,15 L9,16 C9,17.1 9.9,18 11,18 L11,19.93 Z M17.9,17.39 C17.64,16.58 16.9,16 16,16 L15,16 L15,13 C15,12.45 14.55,12 14,12 L8,12 L8,10 L10,10 C10.55,10 11,9.55 11,9 L11,7 L13,7 C14.1,7 15,6.1 15,5 L15,4.59 C17.93,5.78 20,8.65 20,12 C20,14.08 19.2,15.97 17.9,17.39 Z"/>
+                                </Border>
 
-                            <!-- Offers only the languages ticked above: the language a shop opens in
-                                 has to be one it actually runs in, and enforcing that by what the
-                                 picker CONTAINS beats validating it afterwards. -->
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.PreferredLanguage], Mode=OneWay}"
-                                           Style="{StaticResource SectionLabelStyle}"/>
-                                <ComboBox x:Name="LanguageBox" Style="{StaticResource PickerStyle}"/>
-                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.PreferredLanguageHint], Mode=OneWay}"
-                                           Style="{StaticResource HintStyle}"/>
-                            </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock x:Name="LocalizationSummaryText" FontSize="13" Foreground="#111827"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Localization.LinkHint], Mode=OneWay}"
+                                               Style="{StaticResource HintStyle}" Margin="0,2,0,0"/>
+                                </StackPanel>
 
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Currency], Mode=OneWay}"
-                                           Style="{StaticResource SectionLabelStyle}"/>
-                                <ComboBox x:Name="CurrencyBox" Style="{StaticResource PickerStyle}"/>
-                            </StackPanel>
-                        </Grid>
+                                <Button Grid.Column="2" x:Name="LocalizationButton"
+                                        Style="{StaticResource ThemedButton}"
+                                        Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[MeasureTerms.Edit], Mode=OneWay}"
+                                        MinWidth="88" Padding="14,6" VerticalAlignment="Center"
+                                        Click="OnLocalizationClick"/>
+                            </Grid>
+                        </Border>
                     </StackPanel>
                 </Border>
 

@@ -11,6 +11,51 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v2.0.0 — 2026-07-29
+
+Money became a property of the **order** rather than of the shop, and the languages a shop runs in
+now decide the currencies it can take. A major version because both changes reach the database: a
+new column, and a one-time repair of every existing order.
+
+- **Five languages — 简体中文, English, Français, Español, 日本語.** Español and 日本語 were added by
+  dropping one file each into `Settings/System/Languages`, which is what that folder promised.
+  Japanese is the second CJK language and the first to prove that **punctuation is data**: it joins
+  a list with `、` and no trailing space, brackets fullwidth with `（）` and quotes with `「」` —
+  three shapes no other shipped language uses, none of which any code decides.
+- **A shop accepts one or more currencies, and every order records the one it was priced in.**
+  Previously each amount was rendered in whatever the shop was set to *today*, so the first branch
+  to take a second currency would have reprinted its whole history in it — a ￥1,695 order as
+  "$1,695.00". An order now keeps its own currency for good, including after the shop stops
+  accepting it.
+- **The currencies on offer come from the installed languages.** Each language file declares its
+  market's own — `CNY` for 简体中文, `EUR` for Français and Español, `JPY` for 日本語, and `CAD,USD`
+  for English, which is the home market and lists both with CAD first. Adding a language brings its
+  currency with it.
+- **Yen prints as whole yen.** JPY has no minor unit, so `¥1,695.00` is wrong in the same way a
+  wrong symbol is. Symbol and decimal places are one fact about a currency and are formatted
+  together.
+- **Languages and currencies moved into a panel of their own**, reached from a link in Shop
+  Settings: the languages a shop runs in on the left, the currencies each of them brings on the
+  right. They are one decision, and the shop form was long enough already.
+- **Every window fits the screen it opens on.** The order editor declared a minimum height of 900px
+  against a laptop work area of 752, which put its Cancel/Save footer below the desktop edge with no
+  way to drag it into view — saving an order was impossible on that machine. Windows now scale down
+  proportionally to the screen they open on, and never scale up.
+
+**Upgrading from v1.0.0 is automatic.** The first launch adds the new column and stamps every
+existing order with its shop's currency. Nothing is asked of the user, and nothing is lost.
+
+Quality gates for this release: build with **0 warnings / 0 errors**, every issue the SonarLint
+analyzer raised on a changed file cleared, and a scratchpad harness suite of **886 assertions across
+19 harnesses**, all passing.
+
+> Still not versioned in the build — the assembly carries no `<Version>` and the repository has no
+> git tag. Both are one-line additions if you want the release marked outside this file too.
+
+---
+
+## Earlier releases
+
 ### v1.0.0 — 2026-07-28
 
 The first marked release. What it covers:
@@ -27,8 +72,6 @@ The first marked release. What it covers:
 - **Three languages — 简体中文, English, Français — and each shop chooses which it runs in.**
   Managers and staff switch between the languages their branch installs; an administrator sees them
   all. Adding a fourth language is dropping one file into `Settings/System/Languages`.
-  *(**Español** and **日本語** were both added on 2026-07-29, after this release, by doing exactly
-  that — see below.)*
 - **Per-portion money.** Deposit and final balance each have their own payment method *and* tax
   rate, and whether a method is taxed at all is a shop rule. One order can mix all three service
   lines, each settled on its own schedule.
@@ -40,24 +83,6 @@ The first marked release. What it covers:
 
 Quality gates for this release: build with **0 warnings / 0 errors**, **0 SonarQube findings**, and
 a scratchpad harness suite of **731 assertions across 17 harnesses**, all passing.
-
-> Not versioned in the build yet — the assembly carries no `<Version>` and the repository has no
-> git tag. Both are one-line additions if you want the release marked outside this file too.
-
-### Since v1.0.0
-
-- **2026-07-29 — Español (es-ES) added.** The claim above, tested: one file into
-  `Settings/System/Languages` and nothing else in the application changed. No `.cs`, no `.xaml`, no
-  `.csproj` entry. What it needed beyond the file was **data**, not code — existing shops had to say
-  they install Spanish, and existing shops had no *name* in it (a shop's name is per language, so a
-  new language leaves every shop falling back to whichever language it does have).
-- **2026-07-29 — 日本語 (ja-JP) added**, and this one cost nothing but the file and its data. The
-  first four languages were all Latin-script or Chinese; Japanese is the second CJK language, so it
-  is the first to prove that **punctuation really is data**: it joins a list with `、` and no
-  trailing space, brackets fullwidth with `（）`, and quotes with `「」` — three shapes no other
-  shipped language uses, none of which any code decides.
-
-  The app now ships **five languages: 简体中文, English, Français, Español, 日本語.**
 
 ---
 
@@ -238,7 +263,7 @@ All per-section money is derived from one function, `Order.CalculateSectionPayme
 an immutable `SectionPayment`. Both the model and the live order editor call it, so the amounts on
 screen and the amounts recomputed from a saved order can never disagree.
 
-Three rules are worth knowing:
+Four rules are worth knowing:
 
 - **Tax applies per payment portion, not per section.** The deposit and the final balance each have
   their own payment method *and* their own tax rate. A card deposit at 5% and a card balance at 7%
@@ -246,6 +271,10 @@ Three rules are worth knowing:
 - **Whether a method is taxed at all is a SHOP rule; the rate is stored on the ORDER.** So changing
   a shop's tax rules never silently re-prices an order that was already saved.
 - **Deposits and balances are pre-tax amounts.** Tax is added on top of whichever portion incurs it.
+- **The currency is a property of the ORDER, not of the shop.** Which currencies a shop accepts is a
+  statement about today; what an order was priced in is a fact about when it was taken. Every amount
+  on screen and on a receipt is rendered from `Order.CurrencyType`, so a branch that starts taking a
+  second currency never re-denominates its own history.
 
 ### Derived state
 
@@ -267,6 +296,19 @@ exists for external callers — so a failure to bind degrades the API and never 
 `Settings\System\Languages\` holds **one document per language**, each with an identical set of
 keys. Languages are *discovered*, not registered: adding one is dropping a file in. The `code`
 attribute inside the file is its identity — the file name is only a convention.
+
+A language file also declares **the currencies of its market**, which is how a shop's currency
+options are decided:
+
+```xml
+<Text key="Currency.Codes">CAD,USD</Text>   <!-- en-US: the home market, CAD listed first -->
+<Text key="Currency.Codes">CNY</Text>       <!-- zh-CN -->
+```
+
+So a new language brings its currency with it. The one constraint is that `CurrencyType` still
+bounds what can be *stored* — its values are persisted as integers on orders and shops — so a code
+that enum cannot name is ignored rather than guessed at. Adding a genuinely new currency is one line
+there and one in the symbol table.
 
 Bind in XAML:
 

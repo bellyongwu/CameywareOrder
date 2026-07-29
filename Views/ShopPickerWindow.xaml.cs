@@ -183,7 +183,11 @@ public partial class ShopPickerWindow : Window
     /// </remarks>
     private string BuildDetails(Shop shop, int orderCount)
     {
-        var currency = _localization[$"CurrencyType.{shop.CurrencyType}"];
+        // The currencies the branch ACCEPTS, not just the one it prices in by default — the same
+        // change the language slot got, and for the same reason: the set is strictly more
+        // informative, and for a single-currency shop the two read identically anyway.
+        var currency = _localization.JoinList(
+            ShopCurrencies.Supported(shop).Select(item => ShopCurrencies.Name(item, _localization)));
 
         var languages = _localization.JoinList(
             ShopLanguages.Installed(shop, _localization).Select(option => option.Name));

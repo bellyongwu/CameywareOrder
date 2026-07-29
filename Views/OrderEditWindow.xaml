@@ -266,6 +266,19 @@
                                 <TextBlock x:Name="EmailErrorText" Foreground="#DC2626" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0" Visibility="Collapsed"/>
                             </StackPanel>
 
+                            <!-- Which money this order is priced in. Filled in code from the SHOP's
+                                 accepted set, and collapsed outright when the shop takes only one —
+                                 the same rule the language toggle follows, since a picker holding a
+                                 single option is chrome that cannot do anything. The amount fields
+                                 carry no symbol of their own, so this is the only place on the form
+                                 that says which currency the numbers are in. -->
+                            <StackPanel Grid.Row="2" Grid.Column="2" x:Name="CurrencyLabelPanel" Orientation="Horizontal" Margin="0,8">
+                                <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE1D7;"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CurrencyType], Mode=OneWay}"/>
+                            </StackPanel>
+                            <ComboBox Grid.Row="2" Grid.Column="3" x:Name="CurrencyBox" Margin="0,8" Padding="6,4"
+                                      SelectionChanged="OnCurrencyChanged"/>
+
                             <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" Margin="0,10,0,8" VerticalAlignment="Top">
                                 <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE707;" Margin="0,2,6,0"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Address], Mode=OneWay}"/>

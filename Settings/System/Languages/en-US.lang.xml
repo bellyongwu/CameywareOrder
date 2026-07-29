@@ -10,6 +10,12 @@
   <Text key="Format.ListSeparator">,&#32;</Text>
   <Text key="Format.BulletSeparator">&#32;&#32;·&#32;&#32;</Text>
 
+  <!-- The currencies of this language's market, in the order a till here would list them.
+       Data, not a rule in code: a build shipping en-CA instead, or adding de-DE, changes only its
+       own file. English declares TWO because the application's home market is Canadian and a shop
+       here quotes in both — CAD first. -->
+  <Text key="Currency.Codes">CAD,USD</Text>
+
   <Text key="Toolbar.NewOrder">New Order</Text>
   <Text key="Toolbar.EditOrder">Edit Order</Text>
   <Text key="Toolbar.ViewOrder">View Order</Text>
@@ -191,11 +197,21 @@
   <Text key="Shop.Setup.ContactHint">Optional. Phone, email and website are not per language — every language shows the same value.</Text>
   <Text key="Shop.Setup.TaxNumber">Tax number (GST/HST)</Text>
   <Text key="Shop.Setup.TaxNumberHint">Optional. Printed on this shop's receipts so they double as a tax slip. A number entered in the header &amp; footer editor overrides this one.</Text>
-  <Text key="Shop.Setup.InstalledLanguages">Installed languages</Text>
-  <Text key="Shop.Setup.InstalledLanguagesHint">The languages this shop runs in. Its managers and staff can switch between them; with only one installed, no language toggle is shown at all. Administrators always see every language.</Text>
   <Text key="Shop.Setup.InstalledLanguagesRequired">Install at least one language for this shop.</Text>
+  <Text key="Shop.Setup.SupportedCurrenciesRequired">Accept at least one currency for this shop.</Text>
+  <Text key="Shop.Localization.Link">Languages and currencies</Text>
+  <Text key="Shop.Localization.LinkHint">Choose which languages this shop runs in and which currencies it takes.</Text>
+  <Text key="Shop.Localization.Title">Languages and currencies</Text>
+  <Text key="Shop.Localization.Subtitle">Tick the languages this shop runs in. Each one brings the currencies of its market, and you choose which of those the shop actually takes.</Text>
+  <Text key="Shop.Localization.LanguagesHeading">Languages this shop runs in</Text>
+  <Text key="Shop.Localization.CurrenciesHeading">Currencies, by language</Text>
+  <Text key="Shop.Localization.CurrenciesEmpty">Tick a language on the left to see the currencies it brings.</Text>
+  <Text key="Shop.Localization.Done">Done</Text>
+  <Text key="Shop.Localization.Summary">{0}  ·  {1}</Text>
+  <Text key="Shop.Localization.NoCurrencyForLanguage">This language brings no currency of its own.</Text>
+  <Text key="Currency.Supported.One">Accepted currency: {0}</Text>
+  <Text key="Currency.Supported.Many">Accepted currencies: {0}</Text>
   <Text key="Shop.Setup.PreferredLanguage">Preferred language</Text>
-  <Text key="Shop.Setup.PreferredLanguageHint">The language this shop opens in. Chosen from the languages installed above.</Text>
   <Text key="Shop.Setup.Currency">Currency</Text>
   <Text key="Shop.Setup.MeasurementTerms">Measurement terms</Text>
   <Text key="Shop.Setup.SeedDefaults">Start from the predefined set</Text>
@@ -539,6 +555,8 @@
   <Text key="CurrencyType.CAD">CAD</Text>
   <Text key="CurrencyType.USD">USD</Text>
   <Text key="CurrencyType.CNY">CNY</Text>
+  <Text key="CurrencyType.EUR">EUR</Text>
+  <Text key="CurrencyType.JPY">JPY</Text>
 
   <Text key="ServiceType.Alterations">Alterations</Text>
   <Text key="ServiceType.CustomMade">Custom Made Service</Text>

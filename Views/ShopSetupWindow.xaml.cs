@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Windows;
@@ -29,7 +29,13 @@ public partial class ShopSetupWindow : Window
     private readonly ObservableCollection<LocalizedTextEntry> _names = new();
     private readonly ObservableCollection<LocalizedTextEntry> _addresses = new();
     private readonly ObservableCollection<PaymentTaxRow> _paymentTaxRows = new();
-    private readonly ObservableCollection<LanguageInstallEntry> _installedLanguages = new();
+    // The languages-and-currencies selection, held as plain values rather than as live controls
+    // because it is now edited in ShopLocalizationWindow. Cancelling that panel leaves these
+    // untouched, and Save reads them whichever way they were set.
+    private List<string> _installedLanguages = new();
+    private string _preferredLanguage = string.Empty;
+    private List<CurrencyType> _supportedCurrencies = new();
+    private CurrencyType _preferredCurrency;
 
     /// <param name="existing">The shop to edit, or null to create a new one.</param>
     public ShopSetupWindow(
@@ -55,10 +61,9 @@ public partial class ShopSetupWindow : Window
         PopulateNames();
         PopulateAddresses();
         PopulateContact();
-        // Before the preferred-language picker, which lists only what this one has ticked.
-        PopulateInstalledLanguages();
-        PopulateLanguages();
-        PopulateCurrencies();
+        // Languages and currencies are one selection now, edited in ShopLocalizationWindow. This
+        // seeds it and writes the summary line the link card shows.
+        PopulateLocalization();
         PopulatePaymentTaxRules();
         PopulateReceiptFormat();
 
@@ -122,87 +127,83 @@ public partial class ShopSetupWindow : Window
     }
 
     /// <summary>
-    /// One tick box per shipped language, pre-set to what the shop already runs in.
+    /// Opens the languages-and-currencies panel and takes its answer. The form holds the selection
+    /// as plain values rather than as live controls, so cancelling the panel changes nothing and
+    /// Save reads one set of fields whichever way they were chosen.
     /// </summary>
-    /// <remarks>
-    /// An existing shop's set comes from <see cref="ShopLanguages.Installed"/> rather than straight
-    /// off the row, so a shop configured before installed sets existed shows its preferred language
-    /// ticked — which is exactly what it has been running in — instead of an empty row that reads as
-    /// "no languages" and would have to be filled in before anything could be saved.
-    ///
-    /// A NEW shop starts with the language the administrator is working in, and nothing else. One is
-    /// the minimum and adding a second is a decision about the branch, not a default to be handed
-    /// out: installing a language its staff cannot read is not a neutral act.
-    /// </remarks>
-    private void PopulateInstalledLanguages()
+    private void OnLocalizationClick(object sender, RoutedEventArgs e)
     {
-        var installed = _existing is null
-            ? new[] { _localization.CurrentLanguageCode }
-            : ShopLanguages.Installed(_existing, _localization).Select(option => option.Code).ToArray();
-
-        var wanted = installed.ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var language in _localization.AvailableLanguages)
+        var panel = new ShopLocalizationWindow(
+            _localization, _installedLanguages, _preferredLanguage, _supportedCurrencies, _preferredCurrency)
         {
-            var entry = new LanguageInstallEntry(language.Code, language.Name)
-            {
-                IsInstalled = wanted.Contains(language.Code)
-            };
+            Owner = this
+        };
 
-            // The preferred picker is a view over this collection, so it has to be rebuilt as ticks
-            // change. Bound one-way-to-source would have been enough for saving; it is not enough
-            // for keeping the second control honest.
-            entry.PropertyChanged += OnInstalledLanguageToggled;
-            _installedLanguages.Add(entry);
-        }
+        if (panel.ShowDialog() is not true)
+            return;
 
-        InstalledLanguageItems.ItemsSource = _installedLanguages;
+        _installedLanguages = panel.InstalledLanguages;
+        _preferredLanguage = panel.PreferredLanguage;
+        _supportedCurrencies = panel.SupportedCurrencies;
+        _preferredCurrency = panel.PreferredCurrency;
+        RefreshLocalizationSummary();
     }
-
-    private void OnInstalledLanguageToggled(object? sender, PropertyChangedEventArgs e)
-        => PopulateLanguages();
 
     /// <summary>
-    /// The language the shop opens in, chosen from the ones it installs. Re-run whenever a tick box
-    /// changes, keeping the current choice when it survives and falling to the first remaining
-    /// language when it does not.
+    /// The one line the form shows for a decision made elsewhere: the languages, then the currencies.
+    /// Named rather than counted ("Chinese, English  ·  CAD, USD") because a count answers "how many"
+    /// when the question a manager actually has is "which".
     /// </summary>
-    private void PopulateLanguages()
+    private void RefreshLocalizationSummary()
     {
-        var previous = LanguageBox.SelectedValue as string ?? _existing?.PreferredLanguageCode;
+        var languages = _localization.JoinList(_installedLanguages.Select(code =>
+            _localization.AvailableLanguages
+                .FirstOrDefault(option => string.Equals(option.Code, code, StringComparison.OrdinalIgnoreCase))
+                ?.Name ?? code));
 
-        LanguageBox.ItemsSource = _localization.AvailableLanguages
-            .Where(language => _installedLanguages
-                .Any(entry => entry.IsInstalled
-                              && string.Equals(entry.Code, language.Code, StringComparison.OrdinalIgnoreCase)))
-            .ToList();
-        LanguageBox.DisplayMemberPath = nameof(LanguageOption.Name);
-        LanguageBox.SelectedValuePath = nameof(LanguageOption.Code);
+        var currencies = _localization.JoinList(
+            _supportedCurrencies.Select(currency => ShopCurrencies.Name(currency, _localization)));
 
-        // A new shop defaults to the language the administrator is currently working in, which is
-        // nearly always the one they want.
-        LanguageBox.SelectedValue = previous ?? _localization.CurrentLanguageCode;
-
-        if (LanguageBox.SelectedValue is null && LanguageBox.Items.Count > 0)
-            LanguageBox.SelectedIndex = 0;
+        LocalizationSummaryText.Text = _localization.Format("Shop.Localization.Summary", languages, currencies);
     }
 
-    private void PopulateCurrencies()
+    /// <summary>
+    /// The starting selection, before the panel is ever opened.
+    /// </summary>
+    /// <remarks>
+    /// An EXISTING shop is read through ShopLanguages/ShopCurrencies rather than straight off the
+    /// row, so a shop configured before these sets existed shows what it has actually been running
+    /// in instead of an empty selection that would have to be filled in before anything could save.
+    ///
+    /// A NEW shop starts with the language the administrator is working in and the currency that
+    /// language brings — one of each. Adding a second is a decision about the branch, not a default
+    /// to hand out: installing a language its staff cannot read, or advertising money it does not
+    /// take, is not a neutral act.
+    /// </remarks>
+    private void PopulateLocalization()
     {
-        CurrencyBox.SelectedValuePath = nameof(ComboBoxItem.Tag);
-        CurrencyBox.Items.Add(CreateCurrencyItem(CurrencyType.CAD));
-        CurrencyBox.Items.Add(CreateCurrencyItem(CurrencyType.USD));
-        CurrencyBox.Items.Add(CreateCurrencyItem(CurrencyType.CNY));
-
-        CurrencyBox.SelectedValue = _existing?.CurrencyType ?? CurrencyType.CAD;
-    }
-
-    private ComboBoxItem CreateCurrencyItem(CurrencyType currencyType)
-        => new()
+        if (_existing is null)
         {
-            Content = _localization[$"CurrencyType.{currencyType}"],
-            Tag = currencyType
-        };
+            _installedLanguages = new List<string> { _localization.CurrentLanguageCode };
+            _preferredLanguage = _localization.CurrentLanguageCode;
+
+            var brought = ShopCurrencies.ForLanguage(_localization.CurrentLanguageCode, _localization);
+            _supportedCurrencies = brought.Count > 0
+                ? new List<CurrencyType> { brought[0] }
+                : new List<CurrencyType> { CurrencySettingService.Instance.Current };
+            _preferredCurrency = _supportedCurrencies[0];
+        }
+        else
+        {
+            _installedLanguages = ShopLanguages.Installed(_existing, _localization)
+                .Select(option => option.Code).ToList();
+            _preferredLanguage = ShopLanguages.PreferredCode(_existing, _localization);
+            _supportedCurrencies = ShopCurrencies.Supported(_existing, _localization).ToList();
+            _preferredCurrency = ShopCurrencies.Preferred(_existing);
+        }
+
+        RefreshLocalizationSummary();
+    }
 
     private void PopulateCopySources()
     {
@@ -377,30 +378,39 @@ public partial class ShopSetupWindow : Window
             return;
         }
 
-        // A shop with no language is a shop nobody can read. One is the minimum; there is no upper
-        // bound beyond what the installation ships.
-        var installedLanguages = SelectedInstalledLanguages();
-        if (installedLanguages.Count == 0)
+        // A shop with no language is a shop nobody can read; a shop with no currency cannot price an
+        // order at all. The localization panel refuses to return either, and a NEW shop is seeded
+        // with one of each, so these are belt-and-braces — but they are the last gate before a write,
+        // and the panel is not the only thing that could ever set these fields.
+        if (_installedLanguages.Count == 0)
         {
             ShowError("Shop.Setup.InstalledLanguagesRequired");
             return;
         }
 
-        // The picker only offers installed languages, so this is already one of them — except on the
-        // theoretical path where nothing is selected at all, which falls back to the first installed
-        // rather than saving a shop that opens in a language it does not run in.
-        var languageCode = LanguageBox.SelectedValue as string ?? installedLanguages[0];
-        var currencyType = CurrencyBox.SelectedValue as CurrencyType? ?? CurrencyType.CAD;
-        var settings = new ShopFormValues(names, addresses, languageCode, installedLanguages, currencyType, taxRules);
+        if (_supportedCurrencies.Count == 0)
+        {
+            ShowError("Shop.Setup.SupportedCurrenciesRequired");
+            return;
+        }
+
+        // The panel only ever returns a preference drawn from what was selected, so these already
+        // agree. The fallbacks cover a shop seeded before either set existed rather than saving one
+        // that opens in a language it does not run in, or prices in money it does not take.
+        var languageCode = _installedLanguages.Contains(_preferredLanguage, StringComparer.OrdinalIgnoreCase)
+            ? _preferredLanguage
+            : _installedLanguages[0];
+        var currencyType = _supportedCurrencies.Contains(_preferredCurrency)
+            ? _preferredCurrency
+            : _supportedCurrencies[0];
+
+        var settings = new ShopFormValues(
+            names, addresses, languageCode, _installedLanguages, currencyType, _supportedCurrencies, taxRules);
 
         Shop = _existing is null ? CreateShop(settings) : UpdateShop(settings);
 
         DialogResult = true;
     }
-
-    /// <summary>The languages ticked, in the shipped order rather than in the order they were clicked.</summary>
-    private List<string> SelectedInstalledLanguages()
-        => _installedLanguages.Where(entry => entry.IsInstalled).Select(entry => entry.Code).ToList();
 
     /// <summary>
     /// Keeps only the languages that were actually filled in, trimmed. A blank box means "no value
@@ -486,6 +496,7 @@ public partial class ShopSetupWindow : Window
         string LanguageCode,
         List<string> InstalledLanguages,
         CurrencyType CurrencyType,
+        List<CurrencyType> SupportedCurrencies,
         PaymentTaxRules TaxRules);
 
     private Shop CreateShop(ShopFormValues values)
@@ -500,6 +511,7 @@ public partial class ShopSetupWindow : Window
         shop.SetNames(values.Names);
         shop.SetAddresses(values.Addresses);
         shop.SetInstalledLanguages(values.InstalledLanguages);
+        shop.SetSupportedCurrencies(values.SupportedCurrencies);
         shop.SetPaymentTaxRules(values.TaxRules);
         ApplyContactDetails(shop);
         ApplyReceiptFormat(shop);
@@ -539,6 +551,7 @@ public partial class ShopSetupWindow : Window
         shop.PreferredLanguageCode = values.LanguageCode;
         shop.SetInstalledLanguages(values.InstalledLanguages);
         shop.CurrencyType = values.CurrencyType;
+        shop.SetSupportedCurrencies(values.SupportedCurrencies);
         shop.SetPaymentTaxRules(values.TaxRules);
         ApplyContactDetails(shop);
         ApplyReceiptFormat(shop);
@@ -598,49 +611,6 @@ public partial class ShopSetupWindow : Window
             {
                 _value = value;
                 PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Value)));
-            }
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-    }
-
-    /// <summary>
-    /// One shipped language, and whether this shop installs it.
-    /// </summary>
-    /// <remarks>
-    /// Deliberately not reusing <see cref="LocalizedTextEntry"/>: they look alike but answer
-    /// different questions — one is "what is this shop called in French", the other is "does this
-    /// shop run in French at all" — and a type that served both would need a value nobody reads.
-    /// </remarks>
-    private sealed class LanguageInstallEntry : INotifyPropertyChanged
-    {
-        private bool _isInstalled;
-
-        public LanguageInstallEntry(string code, string name)
-        {
-            Code = code;
-            Name = name;
-        }
-
-        public string Code { get; }
-
-        /// <summary>The language's own name, from its own file — so a new language names itself.</summary>
-        [SuppressMessage("Major Code Smell", "S1144:Unused private types or members should be removed",
-            Justification = "Bound as Content=\"{Binding Name}\" in the InstalledLanguageItems template " +
-                            "in ShopSetupWindow.xaml; XAML bindings are invisible to Roslyn. Deleting it " +
-                            "would leave every tick box blank.")]
-        public string Name { get; }
-
-        public bool IsInstalled
-        {
-            get => _isInstalled;
-            set
-            {
-                if (_isInstalled == value)
-                    return;
-
-                _isInstalled = value;
-                PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsInstalled)));
             }
         }
 

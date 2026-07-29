@@ -332,7 +332,8 @@ public partial class UserManagementWindow : Window
 
     private string BuildShopDetails(Shop shop)
     {
-        var currency = _localization[$"CurrencyType.{shop.CurrencyType}"];
+        var currency = _localization.JoinList(
+            ShopCurrencies.Supported(shop).Select(item => ShopCurrencies.Name(item, _localization)));
 
         // An archived shop still appears, so it has to say so — otherwise an assignment to a shop
         // nobody can open reads as a bug.

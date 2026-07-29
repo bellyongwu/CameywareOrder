@@ -131,11 +131,13 @@ public class AppDbContext : DbContext
             entity.Property(e => e.PreferredLanguageCode).HasMaxLength(20);
             entity.Property(e => e.PaymentTaxRulesJson).HasColumnType("TEXT");
             entity.Property(e => e.InstalledLanguagesJson).HasColumnType("TEXT");
+            entity.Property(e => e.SupportedCurrenciesJson).HasColumnType("TEXT");
             entity.Property(e => e.OrderNumberPrefix).HasMaxLength(20);
             entity.Property(e => e.OrderNumberSequenceKey).HasMaxLength(20);
             entity.Ignore(e => e.Names);                    // computed from NamesJson
             entity.Ignore(e => e.PaymentTaxRules);          // computed from PaymentTaxRulesJson
             entity.Ignore(e => e.InstalledLanguageCodes);   // computed from InstalledLanguagesJson
+            entity.Ignore(e => e.SupportedCurrencies);      // computed from SupportedCurrenciesJson
         });
 
         modelBuilder.Entity<OrderItem>(entity =>
