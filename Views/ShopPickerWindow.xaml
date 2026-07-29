@@ -11,7 +11,7 @@
         Icon="/Assets/ICONS/app-icon.ico"
         Background="#F4F5F9">
     <!-- Shown twice in the app's life: once at startup between sign-in and the main window, and
-         again for 本地配置 → 切换店铺. It therefore cannot rely on DI (the host is not started yet
+         again for Local Configuration → Switch Shop. It therefore cannot rely on DI (the host is not
          at the first call site) and is constructed by hand, like LoginWindow.
          CenterScreen rather than CenterOwner because there is no owner on the startup path. -->
     <!-- Everything else comes from Themes/AppTheme.xaml, merged application-wide in App.xaml. -->

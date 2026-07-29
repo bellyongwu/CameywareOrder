@@ -3,7 +3,7 @@ using CameywareOrder.Models;
 namespace CameywareOrder.Services;
 
 // Reads custom-made measurement data straight off an order's saved records (rather than
-// the live editor) so the main window can render the "定制服务" list flag and print all
+// the live editor) so the main window can render the Order.Fields.CustomMadeFlag list flag and print
 // garment measurements. Names are resolved through the Measurement Terms system in the
 // requested language; values are taken in the requested unit (cm or inch).
 public static class CustomMadeMeasurementReader

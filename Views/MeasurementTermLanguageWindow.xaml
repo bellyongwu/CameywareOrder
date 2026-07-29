@@ -29,7 +29,7 @@
             <!-- Gender classification: shown only when editing a measurement term (not a garment).
 
                  A drop-down rather than three radios in a row. Radios put every option on screen at
-                 once, which only works while every option is SHORT — true of 通用 / 仅男装 / 仅女装
+                 once, which only works while every option is SHORT — true of the Chinese labels
                  and of nothing else. "Common (both genders)" and "Mixte (les deux genres)" do not
                  fit three-abreast in a 420px dialog, and any alphabetic language will be the same.
                  A drop-down costs one click and is indifferent to label length.

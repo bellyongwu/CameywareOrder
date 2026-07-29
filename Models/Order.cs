@@ -39,7 +39,7 @@ public class Order
     public string? CustomMadeRecordsJson { get; set; }
     public OrderStatus Status { get; set; } = OrderStatus.Processing;
     // Free-text reason entered by the shop when the order is cancelled or returned
-    // (取消理由 / 退货理由, same underlying field with a status-driven placeholder/label).
+    // (Order.Fields.CancelReason / .ReturnReason — the same field, with a status-driven label).
     public string? StatusReason { get; set; }
     // Stable key for the selected preset reason category (CustomerDoesNotWant /
     // ServiceUnsatisfactory / ProductIssue / PriceTooHigh / Other). Only meaningful when
@@ -175,7 +175,7 @@ public class Order
     public bool CustomMadeAddedToReceipt => CustomMadeTotal > 0m && CustomMadeDownpaymentMethod is not null;
 
     // True when the order carries at least one custom-made record that has captured
-    // garment measurements. Drives the "定制服务" list flag and gates the measurement
+    // garment measurements. Drives the Order.Fields.CustomMadeFlag list flag and gates the measurement
     // print actions (measurement printing only makes sense when there are measurements).
     [NotMapped]
     public bool HasCustomMadeService
@@ -239,7 +239,7 @@ public class Order
     public bool IsPickedUp => Status is OrderStatus.Shipped or OrderStatus.Completed;
 
     // A cancelled or returned order is treated as refunded (fully or partially): the
-    // remaining balance is no longer collectable, so it drives the 已退款或部分退款
+    // remaining balance is no longer collectable, so it drives the Payment.Status.Refunded
     // balance status and the refund locking in the editor.
     [NotMapped]
     public bool IsRefunded => Status is OrderStatus.Cancelled or OrderStatus.Returned;
@@ -359,8 +359,8 @@ public enum PaymentMethod
     Etransfer = 1,
     // Legacy single "card" value, from before debit and credit were charged separately. Kept so
     // orders already saved with it still resolve a name in every converter and on the receipt; the
-    // editor shows one as Debit, which is what its old label (银行卡 (Visa/借记卡) / "Card
-    // (Visa/Debit)") actually named. See PaymentTaxRules.Normalize.
+    // editor shows one as Debit, which is what its old label ("Card (Visa/Debit)") actually named.
+    // See PaymentTaxRules.Normalize.
     Card = 2,
     Cash = 3,
     None = 4,
@@ -381,8 +381,8 @@ public enum OrderStatus
 // this to its own localized label and colour (green / light green / orange / red).
 public enum BalanceStatusKind
 {
-    Outstanding,        // 未结清
-    ClearedPickedUp,    // 已结清（已取货）
-    ClearedNotPickedUp, // 已结清（未取货）
-    Refunded            // 已退款或部分退款
+    Outstanding,        // Payment.Status.Outstanding
+    ClearedPickedUp,    // Payment.Status.ClearedPickedUp
+    ClearedNotPickedUp, // Payment.Status.ClearedNotPickedUp
+    Refunded            // Payment.Status.Refunded
 }

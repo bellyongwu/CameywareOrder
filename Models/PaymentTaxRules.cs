@@ -84,8 +84,8 @@ public sealed class PaymentTaxRules
 
     /// <summary>
     /// Maps the legacy single card value onto debit. Orders saved before debit and credit were
-    /// separated recorded <see cref="PaymentMethod.Card"/>, whose label read 银行卡 (Visa/借记卡) /
-    /// "Card (Visa/Debit)" — so debit is what the shop was actually recording.
+    /// separated recorded <see cref="PaymentMethod.Card"/>, whose label read "Card (Visa/Debit)" —
+    /// so debit is what the shop was actually recording.
     /// </summary>
     public static PaymentMethod Normalize(PaymentMethod method)
         => method == PaymentMethod.Card ? PaymentMethod.DebitCard : method;

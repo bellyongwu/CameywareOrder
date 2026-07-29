@@ -8,7 +8,7 @@
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
         Background="{StaticResource PageBackgroundBrush}">
-    <!-- Creates a shop, and edits one (本地配置 → 店铺设置). Both modes write the same fields, so
+    <!-- Creates a shop, and edits one (Local Configuration → Shop Settings). Both modes write the same
          they share one window rather than drifting apart as two. Everything here is per shop: two
          branches can charge different tax on the same payment method and number their receipts
          differently. -->
@@ -153,7 +153,7 @@
         </Grid.RowDefinitions>
 
         <!-- ── Title band ──────────────────────────────────────────────────────
-             The same gradient every other top-level screen wears, so 店铺设置 reads as part of the
+             The same gradient every other top-level screen wears, so Shop Settings reads as part of the
              application rather than as a dialog that escaped it. -->
         <Border Grid.Row="0" Background="{StaticResource HeaderGradientBrush}" Padding="26,20">
             <StackPanel>

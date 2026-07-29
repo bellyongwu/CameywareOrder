@@ -270,13 +270,13 @@ public sealed class LocalizationService : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Joins items into a prose list the way the CURRENT language punctuates one — "西装、衬衣" in
-    /// Chinese, "Jacket, Shirt" in English.
+    /// Joins items into a prose list the way the CURRENT language punctuates one — "Jacket, Shirt"
+    /// in English, and the same pair joined with an ideographic comma in Chinese and Japanese.
     /// </summary>
     /// <remarks>
     /// Exposed as a join rather than as a raw separator property deliberately. Every call site used
-    /// to hold its own copy of `code.StartsWith("zh") ? "、" : ", "` — four of them, one of which
-    /// carried a comment explaining that it had to be kept in step with another. Handing out the
+    /// to hold its own copy of a `code.StartsWith("zh")` ternary choosing the separator — four of
+    /// them, one of which carried a comment explaining that it had to be kept in step with another.
     /// separator invites that back; handing out the join does not.
     /// </remarks>
     public string JoinList(IEnumerable<string> values)

@@ -166,7 +166,7 @@ public partial class OrderEditWindow : Window
         _existing = null;
         _isReadOnly = false;
 
-        // Built from the shop's configured receipt format (本地配置 → 店铺设置). Only a preview:
+        // Built from the shop's configured receipt format (Local Configuration → Shop Settings). Only a preview:
         // the running number is not reserved until the order is actually saved, so closing this
         // window without saving cannot leave a gap in the shop's receipt run.
         OrderNumberBox.Text = OrderNumberFormatter.Preview(ShopContext.Instance.RequireCurrent(), DateTime.Now);
@@ -365,7 +365,7 @@ public partial class OrderEditWindow : Window
     }
 
     // Applies / removes the red strikethrough "not applicable" styling on every service
-    // and quick-operation checkbox (including 已取货 and 当前服务尾款已结清). Each checkbox's
+    // and quick-operation checkbox (including OrderEdit.PickedUp and OrderEdit.BalanceCleared). Each checkbox's
     // strike line is a sibling Border (bound to that checkbox's own ActualWidth — see
     // NotApplicableCheckBoxStrike in XAML) toggled alongside the Style swap, so the line
     // always matches the checkbox + label width instead of the whole row.
@@ -391,7 +391,7 @@ public partial class OrderEditWindow : Window
     }
 
     // Applies or reverts the dynamic refund lock when the status dropdown is switched
-    // to / from 已取消 / 已退货 on an order that is still editable.
+    // to / from Cancelled / Returned on an order that is still editable.
     private void ApplyRefundLockState()
     {
         if (_isReadOnly)
@@ -1580,7 +1580,7 @@ public partial class OrderEditWindow : Window
     ///
     /// The rate is a STORE rule, not a per-order figure: it comes from
     /// <see cref="PaymentTaxRules.Active"/> keyed on the method settling that portion, which is
-    /// what makes a change in 店铺设置 take effect across the shop. The one exception is a
+    /// what makes a change in Shop Settings take effect across the shop. The one exception is a
     /// read-only order — completed, shipped, cancelled or returned. That one keeps the rates it
     /// was actually charged, because its receipt has already been printed and the screen must not
     /// disagree with the paper.
@@ -1620,7 +1620,7 @@ public partial class OrderEditWindow : Window
 
     private static string FormatTaxRate(decimal ratePercent) => $"{ratePercent:0.##}%";
 
-    // Small print under 此服务总计税: how the section's tax splits across the two portions
+    // Small print under Order.Fields.ServiceTotalTax: how the section's tax splits across the two portions
     // and which method settled each, so a $0 line reads as "that portion wasn't card"
     // rather than as a missing charge.
     private void UpdateTaxBreakdownLines(PaymentSectionControls c, SectionPayment money)
@@ -1864,7 +1864,7 @@ public partial class OrderEditWindow : Window
         label.Text = text;
     }
 
-    // Refunded orders show 已退款或部分退款 in red; otherwise the settled/outstanding
+    // Refunded orders show Payment.Status.Refunded in red; otherwise the settled/outstanding
     // label + green/orange colour.
     private void UpdateBalanceStatusDisplay(bool cleared)
     {
@@ -1883,8 +1883,8 @@ public partial class OrderEditWindow : Window
             : System.Windows.Media.Brushes.OrangeRed;
     }
 
-    // Small print under 全部服务总金额: one line per service that is part of this order,
-    // showing what it covers and what it costs, e.g. "修改衣服（服装修改）：$123". A service
+    // Small print under Order.Fields.AllServicesTotalAmount: one line per service that is part of this
+    // order, showing what it covers and what it costs, e.g. "Alterations (Garment Adjustments): $123". A service
     // qualifies by carrying order items — the same rule the "clear all balances" pass uses —
     // so a section priced at zero is still listed (flagged) rather than silently dropped.
     private void RefreshServicesTotalBreakdown()
@@ -1919,7 +1919,7 @@ public partial class OrderEditWindow : Window
     }
 
     // One breakdown line laid out as label + amount. Its first column joins the summary
-    // grid's "SummaryLabel" shared-size group, so the label sits under 全部服务总金额 and the
+    // grid's "SummaryLabel" shared-size group, so the label sits under Order.Fields.AllServicesTotalAmount and the
     // amount under that row's figure.
     private static Grid BuildBreakdownRow(string label, string amount, bool highlight)
     {
@@ -1977,7 +1977,7 @@ public partial class OrderEditWindow : Window
     }
 
     // The custom-made section's parenthetical: the garments measured across its records,
-    // resolved through the same reader the main list's 定制服务 column uses.
+    // resolved through the same reader the main list's Order.Fields.CustomMadeFlag column uses.
     private string CustomMadeDetailText()
     {
         var languageCode = _localization.CurrentLanguageCode;
@@ -2659,7 +2659,7 @@ public partial class OrderEditWindow : Window
 
         var categoryBox = new ComboBox { Margin = new Thickness(0, 0, 10, 0), Padding = new Thickness(6, 4, 6, 4) };
 
-        // From the SHOP's catalogue, not a fixed list: 本地配置 → 商品类别 edits it per branch.
+        // From the SHOP's catalogue, not a fixed list: Local Configuration → Product Categories edits it per branch.
         var categories = ProductCatalogService.Instance.Items
             .Select(item => new ComboBoxItem
             {

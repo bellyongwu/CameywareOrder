@@ -11,7 +11,7 @@
         Background="#F4F5F9">
     <!-- The OPEN shop's roster: who works here, in what role, on what shift, and whether they are
          still active. Manager or administrator only. Members come from credentials.json, so unlike
-         用户管理 this window needs no database access at all — only the shop it was opened for. -->
+         User Management this window needs no database access at all — only the shop it was opened for. -->
     <!-- Styles come from Themes/AppTheme.xaml, merged application-wide in App.xaml. -->
     <Grid>
         <Grid.RowDefinitions>

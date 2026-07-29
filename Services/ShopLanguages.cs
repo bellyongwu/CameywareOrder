@@ -116,7 +116,7 @@ public static class ShopLanguages
     }
 
     /// <summary>
-    /// Plain-language statement of what a shop runs in — "Installed languages: 简体中文, English" —
+    /// Plain-language statement of what a shop runs in — "Installed languages: Chinese, English" —
     /// shown under the greeting so anybody can see which languages their branch offers without
     /// opening the toggle to count them.
     /// </summary>

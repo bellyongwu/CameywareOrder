@@ -13,6 +13,72 @@ Entry format:
 - Why: <reason / triggering request>
 ```
 
+### 2026-07-29 — "Who this skill is": the user's language never sets the code's language
+- Changed: `SKILL.md` — "Who this skill is" rewritten and given teeth.
+- Why: user instruction — "now remove all chinese words comments from all places",
+  narrowed to "Just keep English comments across the application", then: "you need to
+  add this into SKILL as well, even though I communicate with you by Chinese, you still
+  need to use English to develop everything".
+- The rule was already there and was still broken **62 times across 25 files**. So the
+  edit is about why it eroded, not about restating it:
+  - Separated the two audiences explicitly. Answering the user in Chinese is a courtesy
+    to *one* reader; the repository serves every future reader, including ones who do
+    not read that language. Conflating the two is how each individual lapse felt
+    reasonable at the time.
+  - Named the specific trap: **a task that is *about* Chinese text is not licence to
+    comment in Chinese.** Almost every violation was of this kind — a comment naming a
+    menu or a field by its Chinese label while describing perfectly ordinary logic.
+  - Recorded the failure mode honestly: this rule "erodes quietly", because each comment
+    looks fine in isolation and only the accumulation is visible. Included the actual
+    count, since a number is harder to wave away than "be careful".
+  - Added a **grep to run before finishing**. A rule with no check is a preference; this
+    one now has a one-command verification, which is the only reason to expect the
+    section to still be true in a month.
+  - Widened exemption 3 to cover quoting a language's *punctuation* to describe it
+    (`（）` against `( )`) — that came up immediately in the sweep and is data, not prose.
+
+### 2026-07-29 — §1a: report per-language values in EVERY language, not just the new one
+- Changed: `SKILL.md` §1a — one bullet added to the "a new language is a DATA task" list.
+- Why: adding ja-JP straight after es-ES. The seeder was changed to print each record's
+  name in every shipped language rather than only the one just added, and that
+  immediately exposed a record that had been showing its **Chinese** name to French
+  readers ever since fr-FR shipped. Nobody had noticed, because the fallback renders
+  something — which is exactly the failure mode the bullet now names.
+- Also records the limit: **report, do not assert.** A user-created record may legitimately
+  carry only one language, so a "every record has every name" test would go red on correct
+  data. The value is in looking, not in failing.
+
+### 2026-07-29 — Language add/removal has a fixed, narrow test scope
+- Changed: `SKILL.md` §1 — new subsection **1a. Adding or removing a language — what to
+  test, and what NOT to**.
+- Why: user instruction after adding es-ES — "For lanuage add/removal, just need to test
+  if keys are added identical, plus the translation is percise. no need to rerun and
+  retest the whole application. but needs to test if all lanauges are deleted."
+- What it now says, and why each part is worth writing down:
+  - **The scope is three checks, not a regression sweep.** Adding a language is a data
+    change to a discovered folder; re-running an entire suite for it costs a lot and
+    proves nothing the three checks do not. Naming the scope is the point — without it
+    the default is "run everything", which is what the instruction was correcting.
+  - **Key parity** and **translation precision** were already practised on this project;
+    they are now stated as the *required* pair rather than as things that happened to be
+    done. The precision check needs the cognate rule beside it or it produces false
+    alarms the first time a language legitimately spells a word the English way.
+  - **A cognate exemption is keyed on (key, language)**, never on the
+    shared-in-every-language list. That distinction is the part most likely to be got
+    wrong, because the all-languages list is right there and "works". It would silently
+    exempt the same key in every *other* language too.
+  - **All languages deleted** is the case the user specifically asked for, and it had no
+    coverage at all. Writing the requirement as "fail loudly and name the cause" rather
+    than "handle it" matters: there is no graceful degradation available — an app with no
+    string table cannot even say what went wrong in the user's language.
+  - Two traps recorded because they are only visible on these paths: whether a load guard
+    sits **before** or **inside** the parse decides if a failed reload leaves the old
+    table intact or blanks it; and every *stored* language code is a reference that can
+    outlive its file.
+  - **Never hard-code a language count in a test.** Generalised from a real cost: a
+    `Count == 3` assertion made the fourth language fail a test that had nothing to say
+    about it — the exact coupling that discovery exists to remove.
+
 ### 2026-07-28 — RefinedTODO.md: read a condensed history, keep the full one
 - Changed: `SKILL.md` §0 (new `RefinedTODO.md` vs `TODO.md` table in the companion
   list; Step B now reads `RefinedTODO.md` and checkpoints into both; **new Step D**

@@ -27,6 +27,8 @@ The first marked release. What it covers:
 - **Three languages — 简体中文, English, Français — and each shop chooses which it runs in.**
   Managers and staff switch between the languages their branch installs; an administrator sees them
   all. Adding a fourth language is dropping one file into `Settings/System/Languages`.
+  *(**Español** and **日本語** were both added on 2026-07-29, after this release, by doing exactly
+  that — see below.)*
 - **Per-portion money.** Deposit and final balance each have their own payment method *and* tax
   rate, and whether a method is taxed at all is a shop rule. One order can mix all three service
   lines, each settled on its own schedule.
@@ -41,6 +43,21 @@ a scratchpad harness suite of **731 assertions across 17 harnesses**, all passin
 
 > Not versioned in the build yet — the assembly carries no `<Version>` and the repository has no
 > git tag. Both are one-line additions if you want the release marked outside this file too.
+
+### Since v1.0.0
+
+- **2026-07-29 — Español (es-ES) added.** The claim above, tested: one file into
+  `Settings/System/Languages` and nothing else in the application changed. No `.cs`, no `.xaml`, no
+  `.csproj` entry. What it needed beyond the file was **data**, not code — existing shops had to say
+  they install Spanish, and existing shops had no *name* in it (a shop's name is per language, so a
+  new language leaves every shop falling back to whichever language it does have).
+- **2026-07-29 — 日本語 (ja-JP) added**, and this one cost nothing but the file and its data. The
+  first four languages were all Latin-script or Chinese; Japanese is the second CJK language, so it
+  is the first to prove that **punctuation really is data**: it joins a list with `、` and no
+  trailing space, brackets fullwidth with `（）`, and quotes with `「」` — three shapes no other
+  shipped language uses, none of which any code decides.
+
+  The app now ships **five languages: 简体中文, English, Français, Español, 日本語.**
 
 ---
 
@@ -148,9 +165,9 @@ shipped configuration must be replaced by one.
 
 ### Backups and moving to another PC
 
-**Local Configuration → Import/Export → Global Settings → Export**
-(本地配置 → 导入/导出 → 全局设置 → 导出) writes a single zip containing the database, every attached
-image, the measurement terms, the branding (logo included), the currency and the language.
+**Local Configuration → Import/Export → Global Settings → Export** writes a single zip containing
+the database, every attached image, the measurement terms, the branding (logo included), the
+currency and the language.
 Importing that file on another machine restores the lot.
 
 Every export is self-contained by design, so a restore never leaves a dangling image reference.

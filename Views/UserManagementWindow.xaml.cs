@@ -13,11 +13,11 @@ namespace CameywareOrder.Views;
 
 /// <summary>
 /// Administrator-only screen for accounts and what each of them may open. Reached from the shop
-/// picker and from 本地配置 → 用户管理.
+/// picker and from Local Configuration → User Management.
 ///
 /// Accounts come from <see cref="AuthenticationService"/> (a file outside the database) while the
 /// shops they are assigned to come from the database, so this window needs both. It edits ONE
-/// account at a time and writes on 保存修改: an assignment matrix that saved on every tick would
+/// account at a time and writes on Save Changes: an assignment matrix that saved on every tick would
 /// revoke access halfway through a re-assignment.
 /// </summary>
 public partial class UserManagementWindow : Window
@@ -558,7 +558,7 @@ public partial class UserManagementWindow : Window
         CreatePanel.Visibility = Visibility.Visible;
 
         // The footer still points at whoever was selected before this form opened, so leaving those
-        // buttons live would let 保存修改 or 删除用户 act on them. Re-enabled by ShowSelectedUser.
+        // buttons live would let Save Changes or Delete User act on them. Re-enabled by ShowSelectedUser.
         SaveButton.IsEnabled = false;
         DeleteUserButton.IsEnabled = false;
 
@@ -668,9 +668,9 @@ internal sealed class UserListRow
 
     /// <summary>
     /// "Tina (Manager, Staff)" — who they are, and what they are. The whole shape lives in the
-    /// string table rather than being concatenated here: Chinese brackets fullwidth text with
-    /// （） where English uses ( ), and building it in code produces one of them in both languages.
-    /// An account holding no role at all is just its name — empty brackets read as a rendering fault.
+    /// string table rather than being concatenated here: Chinese and Japanese bracket fullwidth where
+    /// English uses ( ), and building it in code produces one of them in every language. An account
+    /// holding no role at all is just its name — empty brackets read as a rendering fault.
     /// </summary>
     private static string BuildLabel(UserAccount account, LocalizationService localization)
     {

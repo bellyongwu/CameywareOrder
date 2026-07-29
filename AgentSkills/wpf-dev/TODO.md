@@ -17,6 +17,168 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-29 12:40 — English-only comments across the application  [DONE]
+- Ask: "now remove all chinese words comments from all places" → narrowed to
+  "Just keep English comments across the application" → "you need to add this into SKILL
+  as well, even though I communicate with you by Chinese, you still need to use English
+  to develop everything"
+- **62 comments across 25 files.** The rule was already in `SKILL.md` and had been broken
+  steadily anyway, which is the interesting part: not one of these was careless. Each was
+  a comment naming a menu or a field by the Chinese label the developer had just been
+  looking at — perfectly clear while writing, unreadable to half the people who will
+  maintain the file. It only becomes visible in aggregate, which is why it needed a sweep
+  rather than review.
+- Rewritten, not deleted. A comment saying "drives the 定制服务 list flag" carries real
+  information; the fix is to name the thing by its **key** (`Order.Fields.CustomMadeFlag`),
+  which is what the skill asked for all along and is strictly better than either label —
+  keys are greppable and survive a re-wording. Navigation paths took the English labels
+  instead (`Local Configuration → Switch Shop`), which read better than a pair of keys.
+- Three comments needed real rewriting rather than substitution, because the Chinese WAS
+  the explanation: the name-splitting rule (why a Chinese name goes whole into the first
+  name), the per-language address example, and the `LanguageOption.ToString()` sample.
+  Each now makes the same point in English without the literal.
+- **Method.** A reviewed table of (file, line-range, replacement) rather than find/replace
+  — the comments are English prose with labels embedded, so blind substitution would have
+  produced sentences nobody proofread. The applier refuses any range that does not
+  actually contain CJK, so a stale line number overwrites nothing: 62 applied, 0 skipped.
+  The replacement text lives in a **UTF-8 JSON** file read with an explicit encoding,
+  because Windows PowerShell 5.1 decodes a BOM-less `.ps1` as ANSI and would have mangled
+  every em dash in the new text.
+- **Left alone, deliberately:** the `zh-CN` and `ja-JP` string tables (that IS the data),
+  the language names in `README.md` (a language naming itself), and punctuation quoted to
+  describe it (`（）` against `( )`). One Chinese menu path in `README.md` was fixed — same
+  defect as the code comments. The skill-folder docs still hold Chinese, almost all of it
+  verbatim `- Ask:` quotes, which are a record of what was said rather than prose.
+- `SKILL.md` "Who this skill is" rewritten with the reason it erodes and a **grep to run
+  before finishing** — a rule with no check is a preference. See `SkillUpdates.md`.
+- Notes: comment-only diff, 25 files, 79 insertions / 78 deletions. Build 0 warnings /
+  0 errors; formatcheck 106/0 (its source guards grep the tree), langcheck 88/0,
+  uicheck 30/0.
+
+### 2026-07-29 11:20 — Japanese (ja-JP) as a fifth system language  [DONE]
+- Ask: "To now lest do another adding on the lanuage, lets say Japanese"
+- Run under the scope fixed in `SKILL.md` §1a the turn before: key parity, translation
+  precision, all-languages-deleted — **not** a full application re-test. Only `formatcheck`
+  and `langcheck` were run.
+- **Cost: the file, its data, and nothing else.** 529/529 parity first time; the discovery
+  count, the per-language fallback sweep and the placeholder sweep all picked ja-JP up with
+  **zero harness edits**, which is the return on generalising them during the Spanish round.
+  Six values are identical to English (three currency codes, `Measure.Unit.Cm`,
+  `Format.BulletSeparator`, `Order.Fields.ServiceTotalLineNoDetail`) and every one was
+  already exempt — **no new cognates**, unsurprising for a language sharing no script with
+  English.
+- **Why Japanese was worth doing rather than a second Latin language.** It is the second
+  CJK language, so it is the first real test that punctuation is DATA: `、` with no
+  trailing space, fullwidth `（）`, corner brackets `「」`. Three shapes no other shipped
+  language uses. The generic "differs from English" sweep would NOT have caught a wrong
+  one — `", "` and `"、"` differ either way — so `formatcheck.RunJapanese` asserts each
+  shape explicitly, including that one key (`Format.ListSeparator`) now punctuates three
+  different ways across zh / ja / en.
+- **Found while seeding, and NOT part of this work:** printing each shop's name in every
+  shipped language rather than only the new one showed **Vancouver had no French name**,
+  so a French reader had been seeing 温哥华工作室 since fr-FR shipped. Invisible because
+  the fallback renders something. Backfilled, and the habit is now in `SKILL.md` §1a.
+- `langseed`'s per-shop names went from a `SpanishName` field to a `(code, name)[]` list —
+  the second language would have added a second field, then a third. Same reason the
+  language files are discovered rather than listed.
+- Mock data: #1 LeeYonge **zh+en+ja** (Japanese in a partial set), #2 Tianbao **all five**
+  (still the "installs everything" fixture langcheck looks for — this entry has to grow
+  with every addition or it silently stops being that), #3 Vancouver es+en opening in es,
+  #4 Montréal fr+en+es, #5 Toronto en only. Backup `orders.db.bak-preJapanese`.
+- `langcheck`'s Spanish window check was generalised to every language the app did not ship
+  with, deriving the word it looks for from the language's own table instead of a literal
+  per language. It now renders es / fr / ja and sweeps each for raw string-table keys.
+- Notes: build 0 warnings / 0 errors. formatcheck **106 passed / 0 failed** (↑9),
+  langcheck **88 / 0** (↑8). Screenshot `main-window-ja-JP.png` — the five-language picker
+  strip still fits: `简体中文、English、Español、Français、日本語`.
+
+### 2026-07-29 09:10 — Spanish (es-ES) as a fourth system language  [DONE]
+- Ask: "Now, lets add a new lanuage spanaish into it. lets see if the Lanuage setting
+  is running well"
+- Treated as a TEST of the claim that "adding a language is dropping a file in". The
+  deliverable is the language; the finding is whether anything outside
+  `Settings/System/Languages` had to change.
+- Plan:
+  - [x] `Settings/System/Languages/es-ES.lang.xml` — all 529 keys, key-parity clean
+  - [x] `Format.ListSeparator` / `Format.BulletSeparator` correct for Spanish
+  - [x] Verify every language list is discovered (toggle, shop editor, print, PDF)
+  - [x] Install it on a shop and exercise the toggle / print scope
+  - [x] Harness suite green; extend `langcheck` / `formatcheck` where they assume three
+- **The claim held for CODE and broke for DATA.** No `.cs`, no `.xaml`, no `.csproj`
+  edit — the csproj already globs `Settings\**\*`, `LocalizationService` discovers the
+  folder, every language list is built from `AvailableLanguages`, and
+  `ShortLanguageName` derives the export suffix from the BCP-47 primary subtag
+  (`es-ES` → `Measurements_es.pdf`) rather than listing known languages. What DID need
+  work was the data around it, and none of it is visible from the code:
+  - `Shop.InstalledLanguagesJson` stores an EXPLICIT list, so the shop that installed
+    "all three" silently became a shop installing three of four. "All" was never a
+    value, only a snapshot.
+  - Every existing shop was **nameless in Spanish**, and `Shop.ResolveName` falls back
+    to `values.Values.FirstOrDefault(…)` — dictionary insertion order, not English.
+    Vancouver's first stored name is Chinese, so a Spanish reader saw 温哥华工作室.
+    Documented behaviour ("any other language that has one"), invisible until a
+    language is added. Fixed with data, not by re-ordering the fallback, which would
+    change what every other language falls back to.
+- **Cognates.** `Branding.Color` → "Color" and `Order.Fields.Subtotal` → "Subtotal"
+  are the Spanish words. `formatcheck`'s "no key silently falls back to English" sweep
+  flags them, so a `(key, language)` exemption was added rather than the
+  shared-across-all-languages list — that list exempts a key in EVERY language and
+  would have stopped anyone noticing the same key left untranslated in French. Padding
+  the Spanish out ("Color del texto") to satisfy a test would have put worse Spanish on
+  screen, which is the wrong trade.
+- **Punctuation as data, exercised again.** es-ES quotes with «» where en-US uses curly
+  quotes, so `Delete.ConfirmMessage` reads `¿Eliminar el pedido «ORD-1»?`. Asserted,
+  because it is exactly the class of thing that gets concatenated in code by mistake.
+- Mock data (`scratchpad/langseed`, backs up to `orders.db.bak-preSpanish` — a NEW
+  name, since `.bak-preLanguages` is the only copy of the pre-installed-set state):
+  #1 LeeYonge zh+en · #2 Tianbao **all four** · #3 Vancouver **es+en, opening in es-ES**
+  · #4 Montréal fr+en+es · #5 Toronto en only, left alone. That covers 1/2/3/4 installed
+  languages, a shop that OPENS in a language added after the app shipped, and Spanish as
+  an ordinary member of a set rather than only as part of "everything". The seeder now
+  states each shop's preferred language rather than inferring "keep it if still
+  installed", which would have left every shop where it was and skipped that case.
+- **Harness coupling paid off and removed.** `formatcheck` asserted
+  `AvailableLanguages.Count == 3` and `== 4` in two places, so the fourth language
+  failed tests that had nothing to say about it. Counts now come from the folder, and
+  the two per-language sweeps (nothing falls back to English; placeholders agree)
+  iterate `AvailableLanguages` rather than `new[] { Fr, Zh }`. Language five costs no
+  edit here. `langcheck`'s "widest card" reasoning said three languages was the longest
+  the picker strip gets; it now finds the widest by counting shipped languages named.
+- Notes: build 0 warnings / 0 errors. No repository `.cs` changed, so there was nothing
+  for either quality gate to analyse beyond the build. Suite **745 passed / 0 failed
+  across 17 harnesses** (formatcheck 79 ↑54 — it absorbed the generalised sweeps;
+  langcheck 80 ↑5). New coverage: the whole MainWindow rendered in Spanish with the
+  visual tree swept for text that is still a raw string-table key — the shape a
+  half-wired language actually takes on screen, where nothing throws and one panel in
+  five reads `Toolbar.NewOrder`. Screenshots: `main-window-es-ES.png`,
+  `shop-picker-languages-es-ES.png`.
+- README: the v1.0.0 record left intact as history; a "Since v1.0.0" note records the
+  addition. No version bumped and no tag cut — not asked for.
+- **Follow-up, same turn — the removal side, which had NO coverage.** User set the scope:
+  "just need to test if keys are added identical, plus the translation is percise. no
+  need to rerun and retest the whole application. but needs to test if all lanauges are
+  deleted." Recorded as a convention in `SKILL.md` §1a (and `SkillUpdates.md`); the tests
+  went into `formatcheck` (79 → **95**, and only formatcheck was re-run, per the scope).
+  - **A real asymmetry, found by testing it rather than reasoning about it.** An empty
+    folder is refused by the file-count guard which runs BEFORE `Load`, so the loaded
+    table survives and the UI keeps rendering. Files that PARSE but declare no
+    `code`/`name` get into `Load`, which calls `_translations.Clear()` before it can know
+    the load will fail — so that path leaves the service empty and every key renders as
+    itself. Harmless today because startup aborts either way; it is precisely what an
+    in-app "reload languages" would have to work around, so both are now pinned.
+  - The empty/missing messages name the folder, which is what makes the failure findable
+    from a screenshot. Asserted, since a message that merely says "no languages" would
+    pass a naive check and help nobody.
+  - Startup's own guard asserted from source (`OnStartup` try/catch → unlocalized
+    MessageBox → `Shutdown(1)`), because driving real startup would migrate the schema
+    and start the host. The failure being prevented is the one App's own comment
+    describes: an exception past the first `await` in `async void` vanishes the process
+    with no window and no message.
+  - Removing ONE language: the picker drops it, `SetLanguage` refuses it and leaves the
+    current language alone, a shop installing it keeps the rest and opens in one that
+    still ships, and a shop whose ONLY language was removed still resolves to something
+    rather than opening unrenderable.
+
 ### 2026-07-28 23:15 — "Sign in as this user" for an administrator  [DONE]
 - Ask: "Add new feature. >If you are login as admin, when manage user panel, you can
   choose to login as the user. Place a button for that. add svg icon."

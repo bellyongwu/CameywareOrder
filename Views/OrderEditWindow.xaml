@@ -299,7 +299,7 @@
                 <Border Style="{StaticResource SummaryCard}">
                     <!-- IsSharedSizeScope + SummaryLabel lets the code-built breakdown lines
                          below size their label column to this grid's, so their labels and
-                         amounts line up with 全部服务总金额 and its figure. -->
+                          amounts line up with Order.Fields.AllServicesTotalAmount and its figure. -->
                     <Grid Grid.IsSharedSizeScope="True">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto" SharedSizeGroup="SummaryLabel"/>

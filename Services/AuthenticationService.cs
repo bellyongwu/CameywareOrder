@@ -16,7 +16,7 @@ namespace CameywareOrder.Services;
 ///
 /// Deliberately file-backed rather than a database table, for two reasons: a corrupt or locked
 /// database still lets you reach the login screen, and — more importantly — accounts are NOT wiped
-/// by 本地配置 → 导入 → 数据库, which replaces the whole database file wholesale.
+/// by Local Configuration → Import → Database, which replaces the whole database file wholesale.
 ///
 /// AUTHORIZATION IS PER SHOP. An account is either an administrator (everything, everywhere) or it
 /// holds a <see cref="ShopMembership"/> per shop it belongs to — the role(s) it has there, whether
@@ -124,7 +124,7 @@ public sealed class AuthenticationService
     public bool CanManageUsers => IsAdministrator;
 
     /// <summary>
-    /// The 本地数据库 and 导入/导出 menus, and the database path in the status bar. These read and
+    /// The Local Database and Import/Export menus, and the database path in the status bar. These read
     /// replace the whole installation's data, which is not a per-shop action.
     /// </summary>
     public bool CanUseDataTools => IsAdministrator;
@@ -957,9 +957,9 @@ public sealed class AuthenticationService
     /// The rule is deliberately conservative, because a wrong guess here renames a real person in a
     /// way nobody would think to check:
     ///
-    ///  * NO whitespace — "林艳", "Prince" — the whole thing becomes the FIRST name and the last is
-    ///    left empty. A Chinese name carries the family name first and has no separator, so a
-    ///    positional guess would greet 林艳 as "林", addressing her by her surname alone. Keeping it
+    ///  * NO whitespace — a Chinese name, "Prince" — the whole thing becomes the FIRST name and the
+    ///    last is left empty. A Chinese name carries the family name first and has no separator, so a
+    ///    positional guess would greet somebody by their surname alone. Keeping it
     ///    whole is right for that case and merely incomplete for a mononym, which is the better of
     ///    the two failure modes.
     ///  * Whitespace present — split at the LAST space. "Mary Jane Watson" gives "Mary Jane" +

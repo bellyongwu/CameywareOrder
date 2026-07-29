@@ -16,7 +16,7 @@ namespace CameywareOrder.Views;
 /// Creates a shop, and edits an existing one. Both modes write the same fields — name per language,
 /// preferred language and currency — so they share a window; only the measurement-terms seeding is
 /// creation-only, because a shop that already exists has terms of its own to edit through
-/// 本地配置 → 量身项目设置.
+/// Local Configuration → Measurement Terms.
 ///
 /// Administrators only. The caller enforces that (the entry points are hidden otherwise); this
 /// window trusts its caller for the same reason every other dialog here does.

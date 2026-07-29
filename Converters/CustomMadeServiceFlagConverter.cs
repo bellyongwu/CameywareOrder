@@ -7,10 +7,10 @@ using CameywareOrder.Services;
 
 namespace CameywareOrder.Converters;
 
-// Drives the "定制服务" list column. Bound to the whole Order row; the ConverterParameter
+// Drives the Order.Fields.CustomMadeFlag list column. Bound to the whole Order row; the ConverterParameter
 // selects what to emit:
-//   "Flag"           -> localized 有 / 无 (has custom-made measurements or not)
-//   "Names"          -> the bracketed garment-name line, e.g. (西装、衬衣), or empty
+//   "Flag"           -> localized CustomMade.Flag.Yes / .No (has custom-made measurements or not)
+//   "Names"          -> the bracketed garment-name line, e.g. (Jacket, Shirt), or empty
 //   "NamesVisibility"-> Visible when there are garment names, else Collapsed
 [ValueConversion(typeof(Order), typeof(string))]
 public class CustomMadeServiceFlagConverter : IValueConverter

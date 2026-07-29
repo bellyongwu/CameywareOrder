@@ -185,7 +185,7 @@
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}" Margin="4,0"/>
             </StatusBarItem>
-            <!-- Administrator only; hidden in code together with the 本地数据库 and 导入/导出 menus.
+            <!-- Administrator only; hidden in code together with the Local Database and Import/Export menus.
                  It is the same information those menus act on, printed rather than clicked. -->
             <Separator x:Name="DataPathSeparator"/>
             <StatusBarItem x:Name="DataPathLabelItem">
@@ -204,11 +204,11 @@
         <Border DockPanel.Dock="Top" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1"
                 Padding="16,9">
             <!-- Laid out in COLUMNS rather than as a left/right pair of stacks, so the visual order
-                 is set by Grid.Column and the 本地配置 block below can keep its place in the file
+                 is set by Grid.Column and the Local Configuration block below can keep its place in the
                  while sitting second on screen. An Auto column collapses to nothing when its child
                  is hidden, so the language pair leaves no gap for the users who never see it.
 
-                 本地配置 sits well BEFORE 店铺成员, not last: its drop-down opens down-and-left from
+                 Local Configuration sits well BEFORE Store Members, not last: its drop-down opens down-and-left from
                  the item, so the further right it sits the more it fights the window edge. Keeping
                  controls to its right leaves the menu room to open normally, which is why the
                  right-aligned menu variant this once needed could be dropped again. -->
@@ -244,7 +244,7 @@
                         <!-- Administrators only; accounts span every shop. -->
                         <MenuItem x:Name="UserManagementMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.UserManagement], Mode=OneWay}" Click="OnUserManagementClick"/>
                         <Separator x:Name="ConfigSeparator"/>
-                        <!-- 货币设置 used to sit here. The currency is now part of 店铺设置, where it
+                        <!-- Currency Setup used to sit here. The currency is now part of Shop Settings,
                              belongs — it is a property OF a shop, and two places to set one value is
                              one place too many. -->
                         <MenuItem x:Name="MeasurementTermsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.MeasurementTerms], Mode=OneWay}" Click="OnMeasurementTermsClick"/>
@@ -531,7 +531,7 @@
                             </GridViewColumn>
                             <!-- 165, not 130: these widths have to hold the LONGEST language's header,
                                  and French runs about a quarter longer than English — "Date de la
-                                 commande" against "Order Date" and 订单日期. Sized for French rather
+                                  commande" against the English "Order Date". Sized for French rather
                                  than for whichever language happened to be open when it was set. -->
                             <GridViewColumn local:OrderColumnSort.SortKey="OrderDate" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Width="165">
                                 <GridViewColumn.CellTemplate>

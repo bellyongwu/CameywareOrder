@@ -1495,6 +1495,32 @@ system language whose measurements could not be exported, while the print dialog
 right beside it was already dynamic. When asserting a "supports N languages" claim,
 first assert the install HAS more than two — otherwise the check passes vacuously.
 
+### Adding a language is a DATA task as much as a file task (2026-07-29, es-ES)
+
+Adding Spanish needed no `.cs`, no `.xaml` and no `.csproj` edit — the claim holds.
+What it did need was data, and none of it is obvious from the code:
+
+- **Every existing shop has to be told it installs the new language**, or the shop
+  that used to install "all of them" now installs three of four and the toggle in it
+  silently offers less than it did. `Shop.InstalledLanguagesJson` stores an explicit
+  list, so "all" was never a value — it was a snapshot.
+- **Every existing shop is nameless in the new language.** `Shop.ResolveName` falls
+  back to `values.Values.FirstOrDefault(…)` — *dictionary insertion order*, not
+  English — so a shop whose first stored name was Chinese showed a Chinese name to a
+  Spanish reader. Working as documented ("any other language that has one"), and
+  invisible until a language is added. Fill the gap in the seed data; do not
+  re-order the fallback, which would change what every other language falls back to.
+- **A hard-coded language COUNT in a harness is the coupling the split removed.**
+  `formatcheck` asserted `AvailableLanguages.Count == 3`, so the fourth language
+  failed a test that had nothing to say about it. Counts now come from the folder,
+  and the per-language sweeps (nothing falls back to English, placeholders agree)
+  iterate `AvailableLanguages` instead of a written list.
+- **A genuine cognate is not an untranslated string.** Spanish spells `Branding.Color`
+  "Color" and `Order.Fields.Subtotal` "Subtotal". The fallback sweep flags them, and
+  the fix is a `(key, language)` exemption — NOT the shared-across-all-languages list,
+  which would also stop anyone noticing the same key left untranslated in French, and
+  not padding the Spanish out ("Color del texto") to make a test pass.
+
 ## Harnesses that read live user data
 
 `authcheck` runs against the real `credentials.json` and had rotted in two ways at

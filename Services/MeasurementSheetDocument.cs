@@ -154,7 +154,7 @@ public static class MeasurementSheetDocument
     /// </summary>
     /// <remarks>
     /// The tax line goes LAST. It used to be injected at the very top of the page, which put a bare
-    /// "GST/HST 税号：…" above the document's own title and left the sheet never naming the shop.
+    /// bare Receipt.TaxNumberLine above the document's own title and left the sheet never naming the shop.
     /// </remarks>
     private static void AddGeneratedLetterhead(ColumnDescriptor column, ShopLetterhead? letterhead)
     {

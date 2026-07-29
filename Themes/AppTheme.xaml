@@ -349,7 +349,7 @@
              does NOT turn DisplayMemberPath into `SelectionBoxItemTemplate` — `ItemsControl`
              installs an internal template SELECTOR instead, so the face must bind
              `ContentTemplateSelector` to `ItemTemplateSelector` as well. Without it the face falls
-             back to ToString() and renders "LanguageOption { Code = …, Name = 简体中文 }". The stock
+             back to ToString() and renders "LanguageOption { Code = …, Name = English }". The stock
              template does exactly this; two earlier attempts here did not, and looked broken. -->
     <!-- Bindings use RelativeSource rather than TemplateBinding on purpose: a TemplateBinding
          re-resolves against the nearest templated parent, which is the wrong element for anything

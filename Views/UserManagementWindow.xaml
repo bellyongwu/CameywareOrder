@@ -9,7 +9,7 @@
         WindowStartupLocation="CenterOwner"
         Icon="/Assets/ICONS/app-icon.ico"
         Background="#F4F5F9">
-    <!-- Administrator-only. Reached from the shop picker (选择店铺) and from 本地配置 → 用户管理.
+    <!-- Administrator-only. Reached from the shop picker and from Local Configuration → User Management.
          Accounts live in credentials.json, outside the database, but the SHOPS they are assigned to
          are read from it — hence the scope factory. -->
     <!-- Styles come from Themes/AppTheme.xaml, merged application-wide in App.xaml. -->

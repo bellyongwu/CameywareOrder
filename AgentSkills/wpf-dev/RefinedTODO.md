@@ -23,8 +23,10 @@ GraphQL, FlowDocument/QuestPDF printing.
   numbering, measurement terms, branding and product catalogue.
 - **Auth** — per-shop memberships with roles, activation, shift; `admin` is
   permanent and never named on screen.
-- **Languages** — zh-CN, en-US, fr-FR. One file per language, discovered from
-  `Settings/System/Languages`; adding a language is dropping a file in.
+- **Languages** — zh-CN, en-US, fr-FR, es-ES, ja-JP. One file per language, discovered
+  from `Settings/System/Languages`; adding a language is dropping a file in — proven
+  three times, most recently by ja-JP at a cost of the file and its seed data alone.
+  Test scope for any add/removal is fixed in `SKILL.md` §1a and is deliberately narrow.
 - **Configuration** — shipped config in `Settings/System/**` (read-only, in git);
   per-installation state under `%LOCALAPPDATA%\CameywareOrder` via `UserDataPaths`.
 - **Quality gates** — build 0 warnings / 0 errors, Sonar zero findings, and the
@@ -127,10 +129,103 @@ message. The footer's Save now applies the whole pane, profile first because it 
 rename. Taken names are reported as they are typed, under the field they belong to, and
 availability is settled *before* the rename confirmation.
 
+### Every comment in the application is English
+62 comments across 25 files named a menu or a field by its Chinese label. The rule was
+already in `SKILL.md` and had been broken steadily anyway — which is the point worth
+keeping:
+
+> **This rule erodes quietly.** Not one of those comments was careless; each named the
+> label the developer had just been looking at, and read perfectly at the time. It is only
+> visible in aggregate, so review never catches it and a periodic grep does.
+
+Rewritten rather than deleted — a comment saying "drives the 定制服务 list flag" carries
+real information. Naming the thing by its **key** (`Order.Fields.CustomMadeFlag`) is
+strictly better than either label, since keys are greppable and survive a re-wording;
+navigation paths took English menu labels instead, which read better than a pair of keys.
+
+`SKILL.md` now separates the two audiences explicitly (answering the user in their
+language is a courtesy to one reader; the repo serves every future one), names the trap
+that a task *about* Chinese text is not licence to comment in Chinese, and carries a grep
+to run before finishing. A rule with no check is a preference.
+
+Untouched on purpose: the zh-CN/ja-JP tables, language names in prose, and punctuation
+quoted to describe it — that is data, not writing in it.
+
+### Japanese, added as a fifth language — the claim, now cheap
+Cost the file and its seed data, nothing else. Parity was exact first time, and the
+discovery count and both completeness sweeps picked ja-JP up with **zero harness edits** —
+the return on generalising them during the Spanish round, one language later.
+
+Worth doing rather than a second Latin language because it is the **second CJK** one, and
+so the first real test that punctuation is *data*: `、` with no trailing space, fullwidth
+`（）`, corner brackets `「」`. `Format.ListSeparator` now punctuates three ways across
+zh / ja / en.
+
+> **The generic "differs from English" sweep cannot check punctuation.** `", "` and `"、"`
+> differ whether the translation is right or wrong, so a language whose separator was
+> copied from English would pass. Punctuation shapes need asserting by value, per language.
+
+*Found while seeding, unrelated to Japanese:* printing each shop's name in **every**
+language rather than only the new one showed Vancouver had no French name, so a French
+reader had been seeing its Chinese name since fr-FR shipped. Invisible because the fallback
+renders something. Now a standing habit in `SKILL.md` §1a — report all languages, but do
+not assert, since a user-created record may legitimately carry only one.
+
+### Spanish, added as a fourth language — the "drop a file in" claim, re-tested
+The claim held for **code** and broke for **data**. No `.cs`, no `.xaml`, no `.csproj`
+edit: the csproj globs `Settings\**\*`, every language list is built from
+`AvailableLanguages`, and the PDF suffix derives from the BCP-47 primary subtag, so
+`es-ES` exported as `Measurements_es.pdf` without being told to.
+
+What did need work is invisible from the code, and is the thing to remember when a
+fifth language arrives:
+
+> **`Shop.InstalledLanguagesJson` stores an explicit list, so "installs all of them"
+> was never a value — only a snapshot.** The shop that installed all three silently
+> became a shop installing three of four.
+>
+> **Every existing shop is nameless in a newly added language**, and `ResolveName`
+> falls back to `values.Values.FirstOrDefault(…)` — *dictionary insertion order, not
+> English*. Vancouver's first stored name is Chinese, so a Spanish reader saw
+> 温哥华工作室. Fix it with data; re-ordering the fallback would change what every
+> other language falls back to.
+>
+> **A genuine cognate is not an untranslated string.** Spanish spells `Branding.Color`
+> "Color" and `Order.Fields.Subtotal` "Subtotal". The exemption is keyed on
+> *(key, language)*, not the shared-across-all-languages list — that one would also
+> stop anyone noticing the same key untranslated in French. Padding the Spanish out to
+> satisfy a test would put worse Spanish on screen.
+
+Also paid once and removed: `formatcheck` hard-coded `AvailableLanguages.Count == 3`,
+so a new language failed tests that had nothing to say about it. Counts now come from
+the folder and the per-language sweeps iterate the discovered set, so language five
+costs no harness edit.
+
+**The removal side, which had no coverage at all.** Test scope for any language
+add/removal is now fixed in `SKILL.md` §1a — key parity, translation precision, and the
+all-languages-deleted case, and *not* a full application re-test.
+
+> **Where a load guard sits decides whether a failed load is destructive.** An empty
+> folder is caught by the file-count check that runs BEFORE `Load`, so the loaded table
+> survives. Files that parse but declare no `code`/`name` get INTO `Load`, which clears
+> the table before it can know the load will fail — every key then renders as itself.
+> Harmless while startup aborts either way; it is exactly what an in-app "reload
+> languages" would have to work around.
+
+Removing one language: the picker drops it, `SetLanguage` refuses it and leaves the
+current language alone, and a shop whose only installed language was removed still
+resolves to something rather than opening unrenderable. With every language gone there
+is no graceful answer — an app with no string table cannot even apologise in the user's
+language — so the requirement is to **fail loudly and name the folder**, which is what
+`OnStartup`'s try/catch → unlocalized MessageBox → `Shutdown(1)` does.
+
 ### Test shops now cover every language shape
 Five shops on the developer machine, chosen so each branch of `ShopLanguages` has
-something real to exercise: #1 LeeYonge zh+en, #2 Tianbao all three, #3 Vancouver
-en only, #4 Montréal fr+en, **#5 Toronto Bespoke en only with 40 orders**
+something real to exercise — 1, 2, 3 and 4 installed languages all represented:
+#1 LeeYonge zh+en, #2 Tianbao **all four**, #3 Vancouver **es+en opening in es-ES**
+(a shop that opens in a language added after the app shipped), #4 Montréal fr+en+es
+(Spanish as an ordinary set member, not only as part of "everything"), **#5 Toronto
+Bespoke en only with 40 orders** — the remaining hidden-toggle case
 (`scratchpad/englishshop`, modelled on `frenchshop`). #5 also takes the fourth
 numbering mode, YearlySequential, so all four are in use.
 

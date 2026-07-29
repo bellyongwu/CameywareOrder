@@ -39,9 +39,9 @@ public class Shop
 
     /// <summary>
     /// Language code to street address, serialized — the same shape as <see cref="NamesJson"/> and
-    /// for the same reason. An address is prose: "广州市天河区体育西路 101 号" and "101 Tiyu West Rd,
-    /// Tianhe, Guangzhou" are the same place written for two different readers, and a receipt
-    /// printed in one language should not carry the other's wording.
+    /// for the same reason. An address is prose, not a code: the same building written for a local
+    /// reader and written as "101 Tiyu West Rd, Tianhe, Guangzhou" are two different strings, and a
+    /// receipt printed in one language should not carry the other's wording.
     ///
     /// Contrast <see cref="PhoneNumber"/> / <see cref="Email"/> / <see cref="Website"/> below,
     /// which are deliberately NOT per language: they are identifiers, identical whoever reads them,

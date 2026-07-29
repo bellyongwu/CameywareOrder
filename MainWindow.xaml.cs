@@ -81,7 +81,7 @@ public partial class MainWindow : Window
     /// <remarks>
     /// Re-run on every shop switch, not only at construction: the same person can be a manager in
     /// one branch and staff in the next, so a menu that was correct when the window opened is not
-    /// necessarily correct after 切换店铺. Everything here is hidden rather than disabled — a dead
+    /// necessarily correct after Switch Shop. Everything here is hidden rather than disabled — a dead
     /// control invites a support call, an absent one reads as "not offered".
     /// </remarks>
     private void ApplyRolePermissions()
@@ -199,7 +199,7 @@ public partial class MainWindow : Window
     /// <remarks>
     /// Re-run on every shop switch, like the rest of <see cref="ApplyRolePermissions"/>: the set is
     /// a property of the SHOP for everyone but an administrator, so a toggle that was right when
-    /// the window opened is not necessarily right after 切换店铺 — a manager may move from a
+    /// the window opened is not necessarily right after Switch Shop — a manager may move from a
     /// bilingual branch to one that runs in a single language.
     ///
     /// Hidden outright at one language rather than shown disabled. A picker holding a single option
@@ -290,7 +290,7 @@ public partial class MainWindow : Window
         }
     }
 
-    // Defence in depth on every handler below the 本地数据库 and 导入/导出 menus: those menus are
+    // Defence in depth on every handler below the Local Database and Import/Export menus: those menus are
     // hidden for non-administrators, but a hidden menu is a fact about the UI, not a permission.
     private void OnOpenDataFolderClick(object sender, RoutedEventArgs e)
     {
@@ -676,7 +676,7 @@ public partial class MainWindow : Window
         var hasHeader = !BrandingRenderer.IsEmpty(branding.HeaderXaml);
 
         // The same generated letterhead the receipt prints, and for the same reason: without it the
-        // sheet opened with a bare "GST/HST 税号：…" above its own title and never named the shop.
+        // sheet opened with a bare Receipt.TaxNumberLine above its own title and never named the shop.
         // The document title lives IN the letterhead as its subtitle, so the sections must not add
         // one of their own — hence includeTitle: hasHeader is false here.
         AddMeasurementLetterhead(document, languageCode, hasHeader);
@@ -804,7 +804,7 @@ public partial class MainWindow : Window
         _ = _viewModel.LoadOrdersAsync();
     }
 
-    // --- Shops (本地配置 → 切换店铺 / 店铺设置) ----------------------------------
+    // --- Shops (Local Configuration → Switch Shop / Shop Settings) ------------------------------
 
     private void OnSwitchShopClick(object sender, RoutedEventArgs e)
     {
@@ -940,7 +940,7 @@ public partial class MainWindow : Window
         return false;
     }
 
-    // --- Import / export (本地配置 → 导入/导出) ----------------------------------
+    // --- Import / export (Local Configuration → Import/Export) ----------------------------------
 
     // Appends today's date (yyyyMMdd) before the extension so exported files sort/archive
     // cleanly by date, e.g. "measurement-terms-20260726.json".
@@ -1494,7 +1494,7 @@ public partial class MainWindow : Window
         if (order.TotalTax > 0m)
             blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PaidTax"], Money(symbol, order.TotalTax)));
         // AddReceiptTotals runs for every order regardless of refund status (full parity
-        // with the on-screen detail panel), so 剩余尾款 is always shown here too.
+        // with the on-screen detail panel), so Order.Fields.FinalBalance is always shown here too.
         blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(symbol, order.FinalBalance)));
         var balanceStatusText = new OrderPaymentSummaryConverter().Convert(order, typeof(string), "Status", CultureInfo.CurrentCulture) as string;
         blocks.Add(ReceiptStatusLine(_localization["Order.Fields.BalanceStatus"],

@@ -618,7 +618,7 @@ public partial class App : Application
 
         picker.ShowDialog();
 
-        // The administrator reached 用户管理 from the picker and chose to sign in as somebody. The
+        // The administrator reached User Management from the picker and chose to sign in as somebody. The
         // session changes and the caller's loop runs this again — the new user's accessible shops
         // are not the administrator's, so the picker has to be rebuilt rather than reused.
         if (picker.SignInAsUserName is { } switchTo
@@ -690,7 +690,7 @@ public partial class App : Application
     }
 
     /// <summary>
-    /// Opens a shop from outside startup — the 切换店铺 command, and 店铺设置 after an edit.
+    /// Opens a shop from outside startup — the Switch Shop command, and Shop Settings after an edit.
     /// Deliberately routes through the same method startup uses, so a shop opened mid-session and
     /// one opened at launch can never end up in different states.
     /// </summary>

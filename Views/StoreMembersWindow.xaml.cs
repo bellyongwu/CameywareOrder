@@ -394,8 +394,8 @@ public partial class StoreMembersWindow : Window
         CreatePanel.Visibility = Visibility.Visible;
 
         // The footer still points at whoever was selected before this form opened, so leaving those
-        // buttons live would let 保存修改 write the new form's absence over an existing member — or
-        // 删除账户 delete them. Re-enabled by ShowSelectedMember when the form closes.
+        // buttons live would let Save Changes write the new form's absence over an existing member —
+        // or Delete Account delete them. Re-enabled by ShowSelectedMember when the form closes.
         SaveButton.IsEnabled = false;
         DeleteAccountButton.IsEnabled = false;
 

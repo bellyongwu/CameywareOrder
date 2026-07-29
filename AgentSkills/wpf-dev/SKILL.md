@@ -29,27 +29,55 @@ Apply the specific ones that match the task; skip the rest.
 
 ## Who this skill is
 
-`wpf-dev` is an **English-language full-stack WPF (.NET) developer**. It may
-*converse* with the user in Chinese (or any language the user writes in), but
-everything it **writes into the repository is English**:
+`wpf-dev` is an **English-language full-stack WPF (.NET) developer**.
+
+**The language the USER writes in has no bearing on the language the CODE is
+written in.** Converse in whatever language they use — Chinese, English, any
+other — and keep answering them in it. That is a courtesy to one reader. What
+goes into the repository serves every future reader, including reviewers,
+employers and contributors who do not read that language, so it is **English,
+always, with no exceptions negotiated in the moment**:
 
 - source code — identifiers, comments, XML-doc, log and exception messages;
 - **Markdown** — every companion file (`TODO.md`, `context.md`,
   `Architecture.md`, `SkillUpdates.md`), including prose, findings and notes;
 - commit messages and PR descriptions.
 
+A request written in Chinese is **not** an instruction to comment in Chinese,
+and neither is a task that is *about* Chinese text. Adding a Chinese label,
+fixing a Chinese translation, debugging fullwidth punctuation — the work is
+about the data; the commentary on it stays English.
+
 The **only** places non-English text is allowed:
 
-1. `<Text>` values inside `Languages.xml` (and other explicit end-user data);
+1. `<Text>` values inside the language files (and other explicit end-user data);
 2. a verbatim quote of the user's own request in a `TODO.md` `- Ask:` line —
    that is a record of what was said, not prose;
-3. naming the literal string-table **value** being changed, e.g.
-   `reworded 尾款（余额）→剩余尾款` — quoting the data, not writing in it.
+3. naming the literal string-table **value** being changed, or quoting a
+   language's punctuation to describe it (`（）` against `( )`) — quoting the
+   data, not writing in it.
 
 Everywhere else, refer to UI text by its **key** (`Order.Fields.FinalBalance`),
-never by its Chinese label. Keys are stable and greppable; labels are neither.
-Do not write a Chinese UI label as the subject of a sentence in a doc — write
-the key and, if genuinely helpful, the value once in parentheses.
+never by its label in any language. Keys are stable and greppable; labels are
+neither. **This is the rule that actually erodes**, and it erodes quietly: a
+comment reading "hidden together with the 本地数据库 menu" is perfectly clear
+while writing it and unreadable to half the people who will maintain the file.
+Sixty-two such comments had accumulated across 25 files before anyone swept
+them. Prefer the key; for a navigation path the English menu labels read better
+(`Local Configuration → Switch Shop`), so use those.
+
+**Check it, do not trust it.** The drift is invisible in review because each
+individual comment looks fine. Before finishing a task, grep the tree for CJK
+outside the language files — one command, and it is the only thing that keeps
+this section true:
+
+```powershell
+$re = [regex]'[㐀-鿿！-～、。「」]'
+Get-ChildItem -Recurse -File -Include *.cs,*.xaml |
+    Where-Object { $_.FullName -notmatch '\\(bin|obj|publish)\\' } |
+    ForEach-Object { $f=$_; [System.IO.File]::ReadAllLines($f.FullName,[Text.Encoding]::UTF8) |
+        Where-Object { $re.IsMatch($_) } | ForEach-Object { "$($f.Name): $_" } }
+```
 
 ## 0. Session continuity & checkpoints (do this first)
 
@@ -287,6 +315,72 @@ TODO checkpoint entry format:
   var localized = _localization[key];
   return string.Equals(localized, key, StringComparison.Ordinal) ? suffix : localized;
   ```
+
+### 1a. Adding or removing a language — what to test, and what NOT to
+
+Adding or removing a language touches **data, not code** — one `*.lang.xml` in or out of
+the discovery folder. So **do not re-run and re-test the whole application for it.**
+A full regression sweep costs a lot and proves nothing that the three checks below do
+not; the surface a language file can actually break is small and known.
+
+**Test exactly these three:**
+
+1. **Keys are identical across every language.** The union of keys must appear in all of
+   them — no missing, no extra. A missing key is invisible on screen because the lookup
+   quietly falls back to the default language, which is the whole reason parity is
+   computed rather than eyeballed.
+2. **The translation is precise.** Every key must differ from the source language's
+   text; a value identical to English is indistinguishable from a key that fell back.
+   Two narrow exemptions, and keep them apart:
+   - values that are the same in **every** language — currency codes, unit symbols,
+     `Format.*` punctuation, format-shape strings like `"{0} ({1})"`;
+   - a **cognate**: a word one language genuinely spells the way the source does
+     (es-ES "Color", "Subtotal"). Key this on **(key, language)**, never on the
+     all-languages list — that list would also stop anyone noticing the same key left
+     untranslated in a *different* language. And never pad a translation out
+     ("Color del texto") just to clear the check: that puts worse text on screen to
+     make a test pass.
+   Also confirm placeholders (`{0}`, `{1}`) match the source per key — a stray one is
+   a runtime `FormatException`, not a cosmetic slip.
+3. **Every language removed.** The far end of the same mechanism, and the case with no
+   graceful answer: an app with no string table has nothing to render and no language to
+   apologise in. The requirement is not "keep running" but **fail loudly and name the
+   cause** — assert the load is refused, that the message names the folder, and that
+   startup catches it and exits deliberately rather than letting an `async void`
+   exception vanish the process with no window and no message.
+
+**Two traps that only appear on the removal/empty paths:**
+
+- *Where* the guard sits decides whether a failed load is destructive. A file-count
+  check that runs **before** the parse leaves the previously loaded table intact; a
+  failure discovered **inside** the parse has usually already cleared it, so the UI
+  would render raw keys. Assert which one you have — it is the difference between a
+  future "reload languages" being safe and blanking the screen.
+- Every **stored** language code is a reference that can outlive the file it names:
+  per-entity installed sets and preferred language, the app default, and any saved user
+  preference. Each must drop the dead code and still resolve to something, and a
+  "switch to it" call must refuse rather than leave the UI pointing at nothing.
+
+**Beyond the file itself, a new language is a DATA task.** These are invisible from the
+code and are what actually breaks:
+
+- an entity storing an explicit *list* of installed languages does not gain the new one
+  — "installs all of them" was never a value, only a snapshot;
+- every existing per-language name/address is **blank** in the new language, so it falls
+  back. Check what the fallback picks: `values.FirstOrDefault(…)` is *insertion order*,
+  not the source language, so a record whose first stored name is Chinese shows Chinese
+  to the new language's reader. Fill the gap with data — re-ordering the fallback
+  changes what every other language falls back to.
+- when filling those gaps, **report the value in EVERY language, not just the one being
+  added**. A gap is invisible precisely because the fallback renders something, so it is
+  only ever found by looking; listing all of them costs one loop and found a record that
+  had been showing its Chinese name to French readers since French shipped. Report
+  rather than assert, though — a user-created record legitimately may not carry every
+  language, so a "every record has every name" test would go red on correct data.
+- **Never hard-code a language COUNT in a test.** `AvailableLanguages.Count == 3` makes
+  the next language fail a test that has nothing to say about it — the exact coupling
+  discovery was introduced to remove. Count from the folder, and iterate the discovered
+  set rather than a written list of codes.
 
 ## 2. Building/running a WPF app whose exe gets locked
 

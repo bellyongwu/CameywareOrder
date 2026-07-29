@@ -12,8 +12,9 @@ namespace CameywareOrder.Views;
 
 /// <summary>
 /// Chooses the shop to work in. Runs at startup straight after sign-in, and again whenever the user
-/// picks 本地配置 → 切换店铺. For an administrator it is also the way into 用户管理 — this is the one
-/// screen where "which shops exist" and "who may open them" are both on the table.
+/// picks Local Configuration → Switch Shop. For an administrator it is also the way into User
+/// Management — this is the one screen where "which shops exist" and "who may open them" are both
+/// on the table.
 ///
 /// Constructed by hand rather than through DI: on the startup path the generic host has been built
 /// but not started, and this window is shown before the main window exists. It reads through the
@@ -60,7 +61,7 @@ public partial class ShopPickerWindow : Window
     public Shop? SelectedShop { get; private set; }
 
     /// <summary>
-    /// Set when the administrator used 用户管理 to sign in as somebody else. Distinct from a
+    /// Set when the administrator used User Management to sign in as somebody else. Distinct from a
     /// CANCELLED picker, which means "sign out": here the session simply belongs to a different
     /// person and the picker has to run again for them.
     /// </summary>
@@ -126,7 +127,7 @@ public partial class ShopPickerWindow : Window
 
         // A user only ever sees the shops they hold a role in; an administrator sees every one.
         // Filtered here as well as in App.LoadSelectableShopsAsync because this window is also
-        // reached from 切换店铺, which does not go through that path.
+        // reached from Switch Shop, which does not go through that path.
         var existingShopCount = shops.Count;
         shops = AuthenticationService.Instance.FilterAccessibleShops(shops);
 
@@ -178,7 +179,7 @@ public partial class ShopPickerWindow : Window
     /// growing stack of badges would change the card's height for everyone.
     ///
     /// Two different joins on one line, and that is the intended distinction: JoinList punctuates
-    /// the languages as prose ("简体中文、English"), JoinFragments separates the strip's fields.
+    /// the languages as prose ("Chinese, English"), JoinFragments separates the strip's fields.
     /// </remarks>
     private string BuildDetails(Shop shop, int orderCount)
     {

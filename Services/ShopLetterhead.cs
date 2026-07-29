@@ -14,7 +14,7 @@ public sealed record ShopLetterheadLine(string Label, string Value);
 /// the printed FlowDocument and the QuestPDF export. It exists because they had drifted: the receipt
 /// grew a proper letterhead while both measurement paths kept injecting the tax registration number
 /// at the very top of the page, so a measurements sheet opened with a bare
-/// "GST/HST 税号：..." above its title and never named the shop at all.
+/// Receipt.TaxNumberLine above its title and never named the shop at all.
 ///
 /// Every string is resolved for an explicitly passed language. The measurement sheet is produced in
 /// the language chosen in the print dialog, which is not necessarily the UI language.
@@ -24,7 +24,7 @@ public sealed class ShopLetterhead
     /// <summary>The SHOP's own name — each branch prints under its own, not a fixed app title.</summary>
     public string Name { get; init; } = string.Empty;
 
-    /// <summary>What this document is: "收据" on a receipt, "量体打印单" on a measurements sheet.</summary>
+    /// <summary>What this document is: Receipt.Title on a receipt, Customer.Measurements.PrintTitle on a sheet.</summary>
     public string? Subtitle { get; init; }
 
     public IReadOnlyList<ShopLetterheadLine> ContactLines { get; init; } = [];

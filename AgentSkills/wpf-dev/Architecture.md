@@ -525,11 +525,11 @@ components are added/renamed or the way pieces fit together changes.
   csproj, so adding a file needs no project edit. Contrast `%LOCALAPPDATA%\CameywareOrder`, which
   holds everything the application WRITES and must survive an upgrade.
   - `System/Languages/<code>.lang.xml` — one document per language, root `<Language code name>`.
-    Ships **zh-CN, en-US, fr-FR**. **Discovered**, not registered: adding a language is dropping a
-    file in. The file name is a convention; the `code` attribute inside is the identity, and a
-    duplicate code is refused (naming both files, since which loads "second" is just alphabetical).
-    497 keys each, and every language must carry the same set — `LocalizationService.KeyGaps`
-    computes the difference and the harness fails on it.
+    Ships **zh-CN, en-US, fr-FR, es-ES, ja-JP**. **Discovered**, not registered: adding a language is
+    dropping a file in. The file name is a convention; the `code` attribute inside is the identity,
+    and a duplicate code is refused (naming both files, since which loads "second" is just
+    alphabetical). 529 keys each, and every language must carry the same set —
+    `LocalizationService.KeyGaps` computes the difference and the harness fails on it.
     - The harness additionally enforces that no key is DEAD (absent from source and not covered by a
       runtime-composed prefix), that no translation is word-identical to English outside a small
       shared allow-list, and that placeholder sets match — a stray `{1}` is a runtime
