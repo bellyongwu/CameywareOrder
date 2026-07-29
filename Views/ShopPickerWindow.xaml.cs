@@ -156,20 +156,36 @@ public partial class ShopPickerWindow : Window
         UpdateOpenButtonState();
     }
 
+    /// <summary>
+    /// The metadata strip under a shop's name: currency, the languages it runs in, order count.
+    /// </summary>
+    /// <remarks>
+    /// The languages are the shop's INSTALLED set, not just the one it opens in. This card is where
+    /// somebody decides which branch to work in, and for anyone but an administrator the installed
+    /// set is exactly the set they will be able to switch between once inside — so it answers a
+    /// question the preferred language alone could not. It also cannot mislead the way one name did:
+    /// a bilingual shop used to advertise a single language here.
+    ///
+    /// Plain text rather than a row of chips deliberately. Languages are DISCOVERED — an
+    /// installation can ship any number — and a line that ellipsizes degrades predictably where a
+    /// growing stack of badges would change the card's height for everyone.
+    ///
+    /// Two different joins on one line, and that is the intended distinction: JoinList punctuates
+    /// the languages as prose ("简体中文、English"), JoinFragments separates the strip's fields.
+    /// </remarks>
     private string BuildDetails(Shop shop, int orderCount)
     {
         var currency = _localization[$"CurrencyType.{shop.CurrencyType}"];
 
-        var language = _localization.AvailableLanguages
-            .FirstOrDefault(option => option.Code == shop.PreferredLanguageCode)?.Name
-            ?? shop.PreferredLanguageCode
-            ?? string.Empty;
+        var languages = _localization.JoinList(
+            ShopLanguages.Installed(shop, _localization).Select(option => option.Name));
 
         var orders = _localization.Format("Shop.Picker.OrderCount", orderCount);
 
-        // Blank segments are dropped rather than left as stray separators — a shop with no
-        // preferred language would otherwise render "CAD ·  · 3 orders".
-        var parts = new[] { currency, language, orders }
+        // Blank segments are dropped rather than left as stray separators, which would render
+        // "CAD ·  · 3 orders". ShopLanguages.Installed never comes back empty, so the languages
+        // cannot be the blank one — currency and the count are what this still guards.
+        var parts = new[] { currency, languages, orders }
             .Where(part => !string.IsNullOrWhiteSpace(part));
 
         return _localization.JoinFragments(parts);

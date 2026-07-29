@@ -62,6 +62,51 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   nobody-signed-in harness — the assertion then failed on focus, which reads as a paging regression.
   Give a control an `x:Name` when a test needs to address it; a themed ComboBox/DatePicker carries
   inner TextBoxes that will happily answer to a type-based search.
+- **A records list must not let one cell decide a row's height (2026-07-28).** The orders list is
+  read by scanning DOWN a column, so a row that is taller than its neighbours breaks the only thing
+  the layout is for. Rules now enforced by `Themes/AppTheme.xaml`'s `ListCellText` (`NoWrap` +
+  `CharacterEllipsis`, and deliberately no size or colour — the row takes those from the font-size
+  slider and the gray-out trigger):
+  - **`DisplayMemberBinding` generates a bare `TextBlock` that cannot be styled.** Its content is
+    clipped mid-glyph on overflow — no ellipsis, no tooltip, no way to read the rest. Use a
+    `CellTemplate` for any column whose value can be long.
+  - **A horizontal `StackPanel` defeats `TextTrimming` completely.** It measures children with
+    infinite width, so a child never learns it overflowed and the ellipsis never appears. Use a
+    `Grid` with an `Auto` + `*` pair; the star column is what constrains the text.
+  - An ellipsis hides data, so pair it with a `ToolTip` carrying the full value.
+  - With nothing wrapping, `HorizontalScrollBarVisibility` must be `Auto`, not `Disabled` — a
+    window too narrow for the columns otherwise leaves the rightmost ones unreachable.
+  - **Assert row height by MEASURING real containers, at both ends of the font-size slider.**
+    Wrapping bites hardest when the text is large, and the defect only shows on rows whose values
+    happen to be long — so the harness seeds a value long enough to overflow and asserts that at
+    least one cell really is truncated, or the ellipsis checks pass on a list where nothing ever
+    was. `scratchpad/rowcheck` is the worked example.
+- **Splitting a stored field needs the OLD property kept, or the migration eats the data
+  (2026-07-28).** `DisplayName` became `FirstName` + `LastName`. Deleting the property outright
+  would make `System.Text.Json` discard the value on exactly the load that was supposed to migrate
+  it — every person silently loses their name, and the file is rewritten without it before anybody
+  notices. Keep it as a `[JsonPropertyName("DisplayName")] LegacyDisplayName`, read it once, clear
+  it, and write it back only `WhenWritingNull`. Same shape as `LegacyRole` / `LegacyAssignments`.
+  - **A name split is a guess about a real person, so guess conservatively.** No whitespace →
+    the WHOLE value is the first name. A Chinese name is family-name-first with no separator, so a
+    positional split would greet 林艳 as "林" — her surname alone. With whitespace, split at the
+    LAST space ("Mary Jane Watson" → "Mary Jane" + "Watson"). Both are lossless: re-joining gives
+    the original back, which is the property to assert.
+  - Guard against re-splitting: a record already carrying either half is left alone, or a later
+    load could clobber an edited name from a stale single field.
+- **Renaming a login touches more than the record (2026-07-28).** Two things bite:
+  - `CredentialFile.ProvisionedAccounts` records SEEDED logins and is what stops a deleted seeded
+    account being re-created. Rename `staff` to `tina` without updating that list and the next load
+    sees `staff` as never provisioned and seeds a brand-new one — **with a known password** — beside
+    the renamed original. Rename the entry in the same operation.
+  - `RefreshCurrentUser` identifies the session BY USER NAME. After a rename the record no longer
+    matches itself, so the refresh silently no-ops and the session keeps a login that no longer
+    exists. Decide "is this the signed-in account" BEFORE the rename, and adopt the record after.
+  - The administrator's login can never change: `AdministratorUserName` is a const that
+    `ProvisionSeedAccounts` tops up every load, so a renamed administrator means TWO of them on the
+    next launch. Refuse in the service, and make the box read-only rather than hidden.
+  - Memberships need no attention — they key on `Shop.PublicId`, not on the login. That is the
+    payoff of the decision recorded above.
 - **A harness must establish the ACCOUNTS it reads, and "deleted" is a legitimate state
   (2026-07-28).** `authcheck` asserted that the seeded `test1` / `test2` accounts exist with no
   memberships. They had been deleted in the running application, and `ProvisionedAccounts` makes
@@ -72,6 +117,14 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   path, shop list, passwords, and now account existence. The rule generalises: a harness reading
   `credentials.json` or `orders.db` must create everything it asserts on, because every one of
   those things is something a person is entitled to change.
+- **A static singleton latches its file on FIRST TOUCH, which reflection can trigger early
+  (2026-07-28).** `AuthenticationService.Instance` reads `credentials.json` exactly once, in the
+  type initializer — and `Activator.CreateInstance(typeof(AuthenticationService), …)`, which
+  `namecheck`/`authcheck` use to build throwaway instances, runs that initializer. So a harness that
+  exercises the service first and opens a window second finds `Instance` holding the FIRST fixture,
+  and the window then rewrites the file from that stale in-memory copy the moment it saves. Order
+  the sections so the singleton is born holding the fixture the windows need, and say so at the call
+  site — it looks like arbitrary ordering otherwise.
 - **Watch a harness's assertion COUNT, not just its pass/fail (2026-07-28).** `menucheck` reported
   32 on some runs and 35 on others, always green: its `ContextMenu` closes when the window loses
   foreground, and the three highlight assertions were quietly not running. A skipped assertion

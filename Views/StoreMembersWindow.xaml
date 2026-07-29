@@ -192,9 +192,22 @@
                                     <TextBox x:Name="NewUserNameBox"/>
                                 </StackPanel>
                                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,14">
-                                    <TextBlock Style="{StaticResource FieldLabel}"
-                                               Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Name], Mode=OneWay}"/>
-                                    <TextBox x:Name="NewDisplayNameBox"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                            <TextBlock Style="{StaticResource FieldLabel}"
+                                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.FirstName], Mode=OneWay}"/>
+                                            <TextBox x:Name="NewFirstNameBox" MaxLength="60"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                            <TextBlock Style="{StaticResource FieldLabel}"
+                                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.LastName], Mode=OneWay}"/>
+                                            <TextBox x:Name="NewLastNameBox" MaxLength="60"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </StackPanel>
 
                                 <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,14">
@@ -309,10 +322,22 @@
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
                                             <TextBlock Style="{StaticResource FieldLabel}"
-                                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Name], Mode=OneWay}"/>
-                                            <TextBox x:Name="DisplayNameBox"/>
+                                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.FirstName], Mode=OneWay}"/>
+                                            <TextBox x:Name="FirstNameBox" MaxLength="60"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                            <TextBlock Style="{StaticResource FieldLabel}"
+                                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.LastName], Mode=OneWay}"/>
+                                            <TextBox x:Name="LastNameBox" MaxLength="60"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <Grid Margin="0,12,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Margin="0,0,10,0">
                                             <TextBlock Style="{StaticResource FieldLabel}"
                                                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Birthday], Mode=OneWay}"/>
                                             <DatePicker x:Name="BirthDatePicker"/>

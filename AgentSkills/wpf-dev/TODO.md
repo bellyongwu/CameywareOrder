@@ -17,6 +17,128 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 21:40 — Orders list: one line per cell, uniform row height  [DONE]
+- Ask: "UI improve: For all the main records section, Do not wrap the words for the
+  each column. if the screen cannot hold as much content(overflowed) you can have a
+  scroll bar to the right. each record keeps the same height. >if the text is over the
+  column width defined. use \"...\""
+- One wrapping `TextBlock` was doing all the damage: the 定制服务 column stacked the
+  garment names under the flag with `TextWrapping="Wrap"`, so a row listing several
+  garments was TALLER than its neighbours. That is the one thing a list read by
+  scanning down a column cannot afford, and it is invisible in source — the list looks
+  fine until somebody's order has enough garments.
+- Three columns (CustomerName, Status, BalanceStatus) used `DisplayMemberBinding`,
+  which generates a bare `TextBlock` that cannot be styled: an over-long value was
+  CLIPPED mid-glyph, with no ellipsis and no way to read the rest. Converted to
+  `CellTemplate`s.
+- New `ListCellText` in the theme — `VerticalAlignment=Center`, `TextWrapping=NoWrap`,
+  `TextTrimming=CharacterEllipsis` — and `NumericCellText` now derives from it, so
+  every cell in the list gets the behaviour from one place. NO size and no colour, for
+  the reason already recorded on `NumericCellText`: the row takes its size from the
+  font-size slider and its colour from the gray-out trigger.
+- The garment column is now a **Grid**, not a horizontal StackPanel: a StackPanel gives
+  its children infinite width, so the names would never know they had overflowed and
+  `TextTrimming` would never fire. The star column is what makes the ellipsis work.
+- Full values moved to `ToolTip` on the columns that can overflow — an ellipsis that
+  hides data with no way to see it is a worse trade than a clipped glyph.
+- `HorizontalScrollBarVisibility` Disabled → **Auto**. With nothing wrapping, a window
+  too narrow for the columns can only be answered by scrolling to them; Disabled left
+  the rightmost columns unreachable.
+- Notes: `MainWindow.xaml` + `Themes/AppTheme.xaml` only. No code-behind, no new keys.
+  Build 0/0, Sonar 0, suite **691 passed / 0 failed across 17 harnesses**.
+  New `scratchpad/rowcheck` (20) measures REAL `ListViewItem`s in a real window at both
+  ends of the font-size slider (12px and 40px, since wrapping bites hardest when the
+  text is large): every row exactly one height (54 / 66.2), no cell wrapping, every cell
+  trimming — plus a guard that at least one cell really IS too long for its column, or
+  the ellipsis checks would pass on a list where nothing was ever truncated. It seeds
+  that long value rather than hoping the user's data contains one.
+
+### 2026-07-28 20:55 — First/last name, account labels, editable login  [DONE]
+- Ask: "User experience improvement. >User management Panel should include person's
+  Full name. The display of Accounts should be like `Tina（Manager,Staff)`, In the main
+  section, it should display the user's login as well. Admin has the right to update
+  user's login too. >Split user's real name to be first and last name. >In the main
+  application, the welcome message should display Hi {Firstname}, you are log....."
+- Plan:
+  - [x] `CredentialRecord.DisplayName` → `FirstName` + `LastName`; credentials.json
+        schema 3 → 4 with a lossless split
+  - [x] `UserAccount` / `StoreMember` / `MemberProfile` carry both; `FullName` derived
+  - [x] User management: list label `Name (Roles)`, detail shows + EDITS the login
+  - [x] Rename guarded (never the administrator) and renames the `ProvisionedAccounts`
+        entry too, or the old login gets re-seeded
+  - [x] Store members: first/last boxes on the edit and add forms
+  - [x] Greeting uses the FIRST name
+  - [x] String keys in all three languages; `scratchpad/namecheck`
+- **The name split, and why the rule is conservative.** No whitespace — "林艳",
+  "Prince" — puts the WHOLE value in `FirstName` and leaves the last empty. A Chinese
+  name is family-name-first with no separator, so a positional guess would greet 林艳
+  as "林", addressing her by her surname alone; keeping it whole is right for that case
+  and merely incomplete for a mononym, which is the better failure. With whitespace,
+  split at the LAST space: "Mary Jane Watson" → "Mary Jane" + "Watson". Lossless either
+  way — re-joining gives the original back.
+- `PersonName` (Full / Label / Greeting) is the one composer. `Label` never returns
+  blank (falls back to the login); `Greeting` is the first name, which is the ask.
+  Recorded limitation: the join is given-name-first with a space, i.e. the western
+  order. Making it a language rule the way `Format.ListSeparator` is would be the fix
+  if it ever matters — it only affects somebody who fills in BOTH boxes.
+- **The dangerous half of renaming a login is `ProvisionedAccounts`.** That list is
+  what stops a seeded account being created again on the next load. Rename `staff` to
+  `tina` without updating it and the next launch sees `staff` as never provisioned and
+  seeds a brand-new one — with a known password — beside the renamed original. Also
+  fixed while there: `RefreshCurrentUser` identifies the session BY USER NAME, so after
+  a rename the record no longer matches itself and the session silently kept a login
+  that no longer existed. The caller now decides before renaming and adopts after.
+- The administrator's login is refused outright: it is a `const` this file tops up on
+  every load, so renaming it would leave the installation with TWO administrators. The
+  box is read-only rather than hidden, and says why.
+- Rename and the rest of the card are ONE call (`UpdateAccountProfile`), validated
+  before anything is written — a rename that landed while a bad phone number was
+  rejected would leave the pane describing an account that no longer answers to it. It
+  asks for confirmation first: the consequence lands on somebody else, at their next
+  sign-in, with nothing on their screen to explain it.
+- `Users.AccountLabel` is `{0}（{1}）` in zh and `{0} ({1})` in en/fr — the whole shape,
+  because Chinese brackets fullwidth. An account holding no role is just its name;
+  empty brackets read as a rendering fault.
+- Notes: build 0/0, Sonar 0 (one S2365 cleared by making `HeldRoles` a method — a
+  property that allocates invites being read in a loop). Suite **671 passed / 0 failed
+  across 16 harnesses**, `namecheck` 62 of them.
+  Three harnesses broke on the signature change and were repaired, not worked around:
+  `authcheck`'s `MemberProfile` helper, `uicheck`'s `DisplayNameBox` lookup, and
+  `formatcheck` — `Users.AccountLabel` is identical in en and fr, which is punctuation
+  rather than a missed translation, so it joins the shared-value allow-list beside
+  `Format.ListSeparator`.
+  Confirmed against the user's real file, which had already migrated by the time it was
+  inspected: manager → Jimmy Wong, staff → Yong Wu, staff2 → Tinna (first only), all
+  correct.
+
+### 2026-07-28 20:20 — Shop picker cards name the languages each branch runs in  [DONE]
+- Ask: "Improve the user experience, in Select Shop after login, The store item
+  should also show supported lanuages within `shops you can open` section."
+- The card's metadata strip already had a language slot — it showed the shop's
+  PREFERRED language, so a bilingual branch advertised exactly one. It now shows the
+  INSTALLED set, which is strictly more informative and is the set a manager or staff
+  member will actually be able to switch between once inside.
+- Replaced rather than added beside it. Two language facts on one card is noise, and
+  for a single-language shop they are the same string printed twice.
+- **Plain text, not a row of chips.** Languages are DISCOVERED, so an installation can
+  ship any number; a strip that ellipsizes in a star-width column degrades predictably,
+  where a growing stack of badges would change every card's height. The role badge on
+  the right also already owns the "chip" idiom on this card.
+- Two joins on one line, which is the distinction the two APIs exist for:
+  `JoinList` punctuates the languages as prose (`简体中文、English` in zh,
+  `简体中文, English` in en/fr), `JoinFragments` separates the strip's fields with ` · `.
+- Rendered in all three languages rather than reasoned about, because French runs ~25%
+  longer and a three-language shop is the widest this strip ever gets:
+  `人民币 · 简体中文、English、Français · 订单 44 笔` /
+  `CNY · 简体中文, English, Français · 44 commandes`. Both fit with room to spare.
+- Notes: `Views/ShopPickerWindow.xaml.cs` only — `BuildDetails`. No XAML change, no new
+  string keys, no schema change. Build 0/0, Sonar 0 findings, suite
+  **609 passed / 0 failed across 15 harnesses** (`langcheck` 75, up 7).
+  The new checks read the REAL rows the window builds rather than re-deriving the
+  string: the bug being fixed was a card that named one language for a two-language
+  shop, and only reading what the row actually says can tell those apart. One check
+  sweeps every shop in the live database for a card naming no language at all.
+
 ### 2026-07-28 19:40 — An English-only shop with 40 orders  [DONE]
 - Ask: "Update local DB, and add a new store with 40 orders, assign only english
   lanuage to it."

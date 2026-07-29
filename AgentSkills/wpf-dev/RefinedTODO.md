@@ -51,6 +51,50 @@ Nothing in flight.
 
 ## Recent work (2026-07-27 → 07-28)
 
+### The orders list is one line per cell, every row the same height
+A single wrapping `TextBlock` was doing all the damage: the 定制服务 column stacked the
+garment names under the flag, so a row listing several garments was taller than its
+neighbours — the one thing a list read by scanning down a column cannot afford, and
+invisible in source until somebody's order has enough garments.
+
+`ListCellText` in the theme (`NoWrap` + `CharacterEllipsis`, no size and no colour) is
+now the one place that behaviour lives; `NumericCellText` derives from it. Three columns
+came off `DisplayMemberBinding`, which generates a bare TextBlock that cannot be styled
+— an over-long value was clipped mid-glyph with no ellipsis. Full values moved to
+tooltips, and horizontal scrolling went from Disabled to Auto: with nothing wrapping, a
+narrow window can only be answered by scrolling to the columns.
+
+> **A horizontal StackPanel defeats `TextTrimming`.** It gives children infinite width,
+> so a child never learns it overflowed. Use a Grid with a star column.
+
+### A person has a first and a last name, and a login an administrator can change
+`CredentialRecord.DisplayName` became `FirstName` + `LastName` (credentials.json schema
+3 → 4). The greeting is now "Hi Tina"; the user-management list reads
+`Tina Zhang (Manager, Staff)`; the detail pane shows the login and lets an
+administrator change it.
+
+> **The split rule is deliberately conservative.** No whitespace — "林艳", "Prince" —
+> puts the whole value in `FirstName`. A Chinese name is family-name-first with no
+> separator, so a positional guess would greet 林艳 as "林", by her surname alone.
+> With whitespace, split at the LAST space. Lossless either way.
+
+`PersonName` (Full / Label / Greeting) is the single composer. `Label` never returns
+blank; `Greeting` is the first name. Known limitation, recorded rather than
+half-solved: the join is given-name-first, the western order.
+
+**Renaming a login has two traps, both now covered.** `ProvisionedAccounts` records
+seeded logins and must be renamed too — otherwise the next load sees the old name
+missing and seeds a fresh account with a known password beside the renamed one. And
+`RefreshCurrentUser` identifies the session BY user name, so after a rename the record
+no longer matches itself and the session kept a login that no longer existed. The
+administrator's login is refused outright: it is a `const` the seeding step tops up, so
+renaming it would produce two administrators on the next launch.
+
+The whole profile card saves in one call, after validating everything — a rename that
+landed while a bad phone number was rejected would leave the pane describing an account
+that no longer answers to it — and asks for confirmation first, because the consequence
+lands on somebody else at their next sign-in.
+
 ### Test shops now cover every language shape
 Five shops on the developer machine, chosen so each branch of `ShopLanguages` has
 something real to exercise: #1 LeeYonge zh+en, #2 Tianbao all three, #3 Vancouver
@@ -96,6 +140,14 @@ it lists only the ticked languages — rather than validating the pair afterward
 Opening a shop keeps the language already on screen whenever the shop installs it, so
 a staff member who picked English at login is no longer overridden by a shop that
 runs in English.
+
+**Where the installed set is surfaced:** under the greeting in the main window, and on
+each card in the shop picker (`CAD · 简体中文, English · 37 orders`). The picker card's
+language slot used to hold the shop's PREFERRED language, so a bilingual branch
+advertised exactly one — the installed set is strictly more informative and is what a
+manager or staff member will actually be able to switch between once inside. Plain
+text rather than chips, because languages are discovered and an ellipsizing strip
+degrades predictably where a growing stack of badges would resize every card.
 
 ### Cancel in the shop picker means "go back", not "quit"
 It called `Shutdown()`, on both the startup and the sign-out path. Sign-in and shop

@@ -37,11 +37,11 @@ public sealed class AuthenticationService
     /// <summary>
     /// Shape of <c>credentials.json</c>. 1 = a single global <c>Role</c> per account; 2 = an
     /// administrator flag plus flat (shop, role) assignments; 3 = one <see cref="ShopMembership"/>
-    /// per shop, carrying activation, join date and shift alongside the roles. A file below this
-    /// version is upgraded in two steps — see <see cref="ApplyLegacyShopMemberships"/> for why the
-    /// second one cannot run here.
+    /// per shop, carrying activation, join date and shift alongside the roles; 4 = a person's name
+    /// split into <c>FirstName</c> and <c>LastName</c>. A file below this version is upgraded in two
+    /// steps — see <see cref="ApplyLegacyShopMemberships"/> for why the second one cannot run here.
     /// </summary>
-    private const int CurrentSchemaVersion = 3;
+    private const int CurrentSchemaVersion = 4;
 
     /// <summary>
     /// The account that must always exist. Every other account can be deleted; deleting this one
@@ -279,7 +279,8 @@ public sealed class AuthenticationService
             .Where(entry => entry.Membership is not null)
             .Select(entry => new StoreMember(
                 entry.Record.UserName,
-                entry.Record.DisplayName,
+                entry.Record.FirstName,
+                entry.Record.LastName,
                 entry.Record.BirthDate,
                 entry.Record.PhoneNumber,
                 entry.Record.Email,
@@ -361,7 +362,8 @@ public sealed class AuthenticationService
     /// </summary>
     private static void ApplyProfile(CredentialRecord record, Guid shopPublicId, MemberProfile profile)
     {
-        record.DisplayName = string.IsNullOrWhiteSpace(profile.DisplayName) ? null : profile.DisplayName.Trim();
+        record.FirstName = Blank(profile.FirstName);
+        record.LastName = Blank(profile.LastName);
         record.BirthDate = profile.BirthDate;
         record.PhoneNumber = Blank(profile.PhoneNumber);
         record.Email = Blank(profile.Email);
@@ -444,12 +446,114 @@ public sealed class AuthenticationService
         if (record is null)
             return AccountOperationResult.NotFound;
 
-        record.PhoneNumber = Blank(phoneNumber);
-        record.Email = Blank(email);
+        return UpdateAccountProfile(userName, new AccountProfile(
+            record.UserName, record.FirstName, record.LastName, phoneNumber, email));
+    }
+
+    /// <summary>
+    /// Writes the account-level half of a person: their name, the login they sign in with, and how
+    /// to reach them. Touches no membership, so unlike a role change it is safe on the administrator
+    /// and on one's own account.
+    /// </summary>
+    /// <remarks>
+    /// The rename and the rest are ONE operation on purpose. Applying them separately would let a
+    /// rename land while a bad phone number was rejected, leaving the screen describing an account
+    /// that no longer answers to the name on it. Everything is validated before anything is written.
+    /// </remarks>
+    public AccountOperationResult UpdateAccountProfile(string userName, AccountProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+
+        var record = FindRecord(userName);
+        if (record is null)
+            return AccountOperationResult.NotFound;
+
+        var rename = CheckRename(record, profile.NewUserName, out var newUserName);
+        if (rename != AccountOperationResult.Success)
+            return rename;
+
+        // Decided BEFORE the rename: the session is identified by user name, and after a rename the
+        // record no longer matches the name the session was signed in under.
+        var isCurrent = IsCurrentUser(record.UserName);
+
+        if (newUserName is not null)
+            ApplyRename(record, newUserName);
+
+        record.FirstName = Blank(profile.FirstName);
+        record.LastName = Blank(profile.LastName);
+        record.PhoneNumber = Blank(profile.PhoneNumber);
+        record.Email = Blank(profile.Email);
 
         Save(_file);
-        RefreshCurrentUser(record);
+
+        if (isCurrent)
+            AdoptAsCurrentUser(record);
+
         return AccountOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="record"/> may take <paramref name="requested"/> as its login, and
+    /// whether that is even a change. <paramref name="newUserName"/> is null when the name is
+    /// unchanged, which is the normal case — most saves are not renames.
+    /// </summary>
+    /// <remarks>
+    /// The administrator is refused outright. Its login is a CONSTANT in this file
+    /// (<see cref="AdministratorUserName"/>): <see cref="ProvisionSeedAccounts"/> tops that account
+    /// up on every load, so renaming it would create a SECOND administrator on the next launch and
+    /// leave the installation with two.
+    /// </remarks>
+    private AccountOperationResult CheckRename(
+        CredentialRecord record, string? requested, out string? newUserName)
+    {
+        newUserName = null;
+
+        var wanted = (requested ?? string.Empty).Trim();
+
+        if (wanted.Length == 0)
+            return AccountOperationResult.UserNameRequired;
+
+        if (string.Equals(wanted, record.UserName, StringComparison.Ordinal))
+            return AccountOperationResult.Success;
+
+        if (record.IsAdministrator)
+            return AccountOperationResult.Protected;
+
+        // Compared case-INSENSITIVELY against every other account, matching how FindRecord and
+        // sign-in resolve a name: "Tina" and "tina" must not both exist, or one of them can never
+        // be signed into.
+        var clash = _file.Users.Find(candidate =>
+            !ReferenceEquals(candidate, record)
+            && string.Equals(candidate.UserName, wanted, StringComparison.OrdinalIgnoreCase));
+
+        if (clash is not null)
+            return AccountOperationResult.UserNameTaken;
+
+        newUserName = wanted;
+        return AccountOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Renames an account, including its entry in <see cref="CredentialFile.ProvisionedAccounts"/>.
+    /// </summary>
+    /// <remarks>
+    /// That second half is not bookkeeping. The provisioning record is what stops a SEEDED account
+    /// being created again on the next load; leave a renamed account's old name in it and nothing
+    /// happens, but leave the record naming an account that no longer exists and — worse — rename
+    /// "staff" to "tina" without updating it, and the next launch sees "staff" as never provisioned
+    /// and seeds a brand-new one with a known password.
+    ///
+    /// Memberships need no attention at all: they key on <c>Shop.PublicId</c>, not on the login.
+    /// </remarks>
+    private void ApplyRename(CredentialRecord record, string newUserName)
+    {
+        var index = _file.ProvisionedAccounts.FindIndex(name =>
+            string.Equals(name, record.UserName, StringComparison.OrdinalIgnoreCase));
+
+        if (index >= 0)
+            _file.ProvisionedAccounts[index] = newUserName;
+
+        record.UserName = newUserName;
     }
 
     /// <summary>
@@ -628,9 +732,21 @@ public sealed class AuthenticationService
 
     private void RefreshCurrentUser(CredentialRecord record)
     {
-        if (!IsCurrentUser(record.UserName))
-            return;
+        if (IsCurrentUser(record.UserName))
+            AdoptAsCurrentUser(record);
+    }
 
+    /// <summary>
+    /// Re-snapshots the session from a record already known to be the signed-in one.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="RefreshCurrentUser"/> because that one identifies the session BY
+    /// USER NAME, which a rename has just changed — the record would no longer match itself and the
+    /// session would keep a login that no longer exists. A renaming caller therefore decides before
+    /// the rename and calls this afterwards.
+    /// </remarks>
+    private void AdoptAsCurrentUser(CredentialRecord record)
+    {
         CurrentUser = ToAccount(record);
         CapabilitiesChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -642,7 +758,7 @@ public sealed class AuthenticationService
     // Copied rather than handed out: the session snapshot and the screens must not be able to edit
     // the file's in-memory state behind Save's back.
     private static UserAccount ToAccount(CredentialRecord record)
-        => new(record.UserName, record.DisplayName, record.PhoneNumber, record.Email,
+        => new(record.UserName, record.FirstName, record.LastName, record.PhoneNumber, record.Email,
             record.IsAdministrator, record.Memberships.Select(Clone).ToList());
 
     private static ShopMembership Clone(ShopMembership membership) => new()
@@ -758,6 +874,9 @@ public sealed class AuthenticationService
         foreach (var record in file.Users)
             record.LegacyAssignments = null;
 
+        foreach (var record in file.Users)
+            SplitLegacyName(record);
+
         // A version-1 file predates the provisioning record, so everything it already holds counts
         // as provisioned. Without this, seeding would re-add an account the file shows was deleted.
         foreach (var name in file.Users
@@ -772,6 +891,50 @@ public sealed class AuthenticationService
             file.SchemaVersion = CurrentSchemaVersion;
 
         return true;
+    }
+
+    /// <summary>
+    /// Splits a schema-3 single name into first and last.
+    /// </summary>
+    /// <remarks>
+    /// The rule is deliberately conservative, because a wrong guess here renames a real person in a
+    /// way nobody would think to check:
+    ///
+    ///  * NO whitespace — "林艳", "Prince" — the whole thing becomes the FIRST name and the last is
+    ///    left empty. A Chinese name carries the family name first and has no separator, so a
+    ///    positional guess would greet 林艳 as "林", addressing her by her surname alone. Keeping it
+    ///    whole is right for that case and merely incomplete for a mononym, which is the better of
+    ///    the two failure modes.
+    ///  * Whitespace present — split at the LAST space. "Mary Jane Watson" gives "Mary Jane" +
+    ///    "Watson", which is right far more often than splitting at the first space would be.
+    ///
+    /// Either way the value is preserved: nothing is dropped, and re-joining the two halves gives
+    /// the original back.
+    /// </remarks>
+    private static void SplitLegacyName(CredentialRecord record)
+    {
+        var legacy = record.LegacyDisplayName?.Trim();
+        record.LegacyDisplayName = null;
+
+        // A record already carrying either half has been through this, or was written by a build
+        // that knows about both — do not overwrite it from a stale single field.
+        if (string.IsNullOrEmpty(legacy)
+            || !string.IsNullOrWhiteSpace(record.FirstName)
+            || !string.IsNullOrWhiteSpace(record.LastName))
+        {
+            return;
+        }
+
+        var lastSpace = legacy.LastIndexOf(' ');
+
+        if (lastSpace <= 0)
+        {
+            record.FirstName = legacy;
+            return;
+        }
+
+        record.FirstName = legacy[..lastSpace].Trim();
+        record.LastName = legacy[(lastSpace + 1)..].Trim();
     }
 
     private static void FoldAssignmentsIntoMemberships(CredentialRecord record)
@@ -891,19 +1054,95 @@ public enum AccountOperationResult
     Protected
 }
 
+/// <summary>
+/// How a first and last name become the one string a screen shows.
+/// </summary>
+/// <remarks>
+/// One definition, because every screen that shows a person composes it — the roster, the account
+/// list, the account detail, the greeting — and a second copy is how "Tina Zhang" on one screen
+/// becomes "Zhang, Tina" on the next.
+///
+/// KNOWN LIMITATION, recorded rather than half-solved: the parts are joined given-name-first with a
+/// space, which is the English and French convention. A Chinese name is written family-name-first
+/// with no separator, so a person who fills in BOTH boxes reads back in the western order. The
+/// migration deliberately leaves an unsplit Chinese name whole in <c>FirstName</c>, so this only
+/// affects names typed into both boxes on purpose. Making the order a language rule (the way
+/// <c>Format.ListSeparator</c> is) is the fix if it ever matters.
+/// </remarks>
+public static class PersonName
+{
+    /// <summary>Both halves as one name, or an empty string when neither was filled in.</summary>
+    public static string Full(string? firstName, string? lastName)
+        => string.Join(' ', new[] { firstName, lastName }
+            .Where(part => !string.IsNullOrWhiteSpace(part))
+            .Select(part => part!.Trim()));
+
+    /// <summary>
+    /// What to call this person on screen: their name if they have one, otherwise the account they
+    /// sign in with. Never blank — a nameless row is worse than a technical one.
+    /// </summary>
+    public static string Label(string? firstName, string? lastName, string userName)
+    {
+        var full = Full(firstName, lastName);
+        return full.Length == 0 ? userName : full;
+    }
+
+    /// <summary>
+    /// What to GREET this person by. The first name where there is one, because "Hi Tina" is the
+    /// point of a greeting and "Hi Tina Zhang" is a form letter.
+    /// </summary>
+    public static string Greeting(string? firstName, string? lastName, string userName)
+        => string.IsNullOrWhiteSpace(firstName)
+            ? Label(firstName, lastName, userName)
+            : firstName.Trim();
+}
+
 /// <summary>The signed-in user, as the rest of the app sees them.</summary>
 public sealed record UserAccount(
     string UserName,
-    string? DisplayName,
+    string? FirstName,
+    string? LastName,
     string? PhoneNumber,
     string? Email,
     bool IsAdministrator,
-    IReadOnlyList<ShopMembership> Memberships);
+    IReadOnlyList<ShopMembership> Memberships)
+{
+    /// <summary>Both name halves as one string; empty when the account has no name at all.</summary>
+    public string FullName => PersonName.Full(FirstName, LastName);
+
+    /// <summary>What to call this account on screen — its name if it has one, else the login.</summary>
+    public string DisplayLabel => PersonName.Label(FirstName, LastName, UserName);
+
+    /// <summary>What to greet this person by: their first name.</summary>
+    public string GreetingName => PersonName.Greeting(FirstName, LastName, UserName);
+
+    /// <summary>
+    /// The distinct roles this account holds across the shops it is ACTIVE in, strongest first.
+    /// </summary>
+    /// <remarks>
+    /// Active memberships only. A role at a branch that has delisted this person is not a role they
+    /// hold, and listing it beside their name would promise access the shop picker will not offer.
+    /// An administrator holds every role everywhere and reports <see cref="UserRole.Admin"/> alone.
+    ///
+    /// A method rather than a property because it builds a new collection on every call: a property
+    /// that allocates invites being read in a loop as though it were a field.
+    /// </remarks>
+    public IReadOnlyList<UserRole> HeldRoles()
+        => IsAdministrator
+            ? new[] { UserRole.Admin }
+            : Memberships
+                .Where(membership => membership.IsActive)
+                .SelectMany(membership => membership.Roles)
+                .Distinct()
+                .OrderBy(role => role)
+                .ToArray();
+}
 
 /// <summary>One person's place in one shop, as the roster screen edits it.</summary>
 public sealed record StoreMember(
     string UserName,
-    string? DisplayName,
+    string? FirstName,
+    string? LastName,
     DateTime? BirthDate,
     string? PhoneNumber,
     string? Email,
@@ -911,7 +1150,7 @@ public sealed record StoreMember(
     ShopMembership Membership)
 {
     /// <summary>What to call this person on screen — their name if they have one, else the account.</summary>
-    public string DisplayLabel => string.IsNullOrWhiteSpace(DisplayName) ? UserName : DisplayName;
+    public string DisplayLabel => PersonName.Label(FirstName, LastName, UserName);
 }
 
 /// <summary>
@@ -919,7 +1158,8 @@ public sealed record StoreMember(
 /// Grouped into one object rather than passed as eight parameters.
 /// </summary>
 public sealed record MemberProfile(
-    string? DisplayName,
+    string? FirstName,
+    string? LastName,
     DateTime? BirthDate,
     string? PhoneNumber,
     string? Email,
@@ -928,6 +1168,23 @@ public sealed record MemberProfile(
     DateTime? JoinedOn,
     TimeOnly? ShiftStart,
     TimeOnly? ShiftEnd);
+
+/// <summary>
+/// The account-level half of a person, as the administrator's screen edits it: who they are, what
+/// they sign in as, and how to reach them.
+/// </summary>
+/// <remarks>
+/// <see cref="NewUserName"/> is the login the account should have AFTER the save — normally the one
+/// it already has. It travels with the rest so one Save applies the whole card: a rename that
+/// succeeded while the phone number failed would leave the screen describing an account that no
+/// longer answers to that name.
+/// </remarks>
+public sealed record AccountProfile(
+    string NewUserName,
+    string? FirstName,
+    string? LastName,
+    string? PhoneNumber,
+    string? Email);
 
 /// <summary>
 /// One person's membership of one shop: the role(s) they hold there, whether they still work there,
@@ -987,8 +1244,14 @@ public sealed class CredentialRecord
 {
     public string UserName { get; set; } = string.Empty;
 
-    /// <summary>The person's name, as the roster shows it. Null falls back to the user name.</summary>
-    public string? DisplayName { get; set; }
+    /// <summary>
+    /// The person's given name. This is what the application greets them by, so it is the half that
+    /// matters most — "Hi Tina" rather than "Hi tina.zhang".
+    /// </summary>
+    public string? FirstName { get; set; }
+
+    /// <summary>The person's family name. Optional: plenty of people are known by one name here.</summary>
+    public string? LastName { get; set; }
 
     public DateTime? BirthDate { get; set; }
 
@@ -1036,6 +1299,19 @@ public sealed class CredentialRecord
     [JsonPropertyName("Assignments")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<LegacyShopAssignment>? LegacyAssignments { get; set; }
+
+    /// <summary>
+    /// The single name field written by schema versions 1-3, before a name was split into
+    /// <see cref="FirstName"/> and <see cref="LastName"/>. Split on load and then cleared.
+    /// </summary>
+    /// <remarks>
+    /// It has to stay declared. Removing the property would make System.Text.Json discard the value
+    /// on exactly the load that was supposed to migrate it, so every existing person would silently
+    /// lose their name — and the file would be rewritten without it before anybody noticed.
+    /// </remarks>
+    [JsonPropertyName("DisplayName")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? LegacyDisplayName { get; set; }
 }
 
 /// <summary>One (shop, role) pair as schema version 2 stored it. Read-only history; do not extend.</summary>

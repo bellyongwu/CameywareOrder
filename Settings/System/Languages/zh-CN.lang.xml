@@ -122,6 +122,12 @@
   <Text key="Users.AssignmentsHint">请勾选该账户在各店铺中的角色。两项同时勾选即同时具备；一项都不勾选则无法进入该店铺。</Text>
   <Text key="Users.AdminNotice">管理员在所有店铺拥有全部权限，其角色不可更改，账户也不可删除。</Text>
   <Text key="Users.AccountLocked">已锁定</Text>
+  <!-- The WHOLE line shape, not just the words: Chinese brackets fullwidth text with （）where
+       English uses ( ), so composing this in code produces one language's punctuation in both. -->
+  <Text key="Users.AccountLabel">{0}（{1}）</Text>
+  <Text key="Users.LoginHint">该用户登录时输入的名称。修改后，将在其下次登录时生效。</Text>
+  <Text key="Users.LoginLocked">管理员的登录名不可修改。</Text>
+  <Text key="Users.RenameConfirm">要将登录名 {0} 改为 {1} 吗？此后该用户需使用新的登录名登录。</Text>
   <Text key="Users.NoAccess">未分配任何店铺</Text>
   <Text key="Users.ShopCount">{0} 家店铺</Text>
   <Text key="Users.ShopColumn">店铺</Text>
@@ -151,7 +157,8 @@
   <Text key="Members.SelectPrompt">请在左侧选择要编辑的成员。</Text>
   <Text key="Members.AccountLine">账户：{0}</Text>
   <Text key="Members.Profile">个人信息</Text>
-  <Text key="Members.Name">姓名</Text>
+  <Text key="Members.FirstName">名字</Text>
+  <Text key="Members.LastName">姓氏</Text>
   <Text key="Members.Birthday">生日</Text>
   <Text key="Members.Phone">联系电话</Text>
   <Text key="Members.Email">电子邮箱</Text>

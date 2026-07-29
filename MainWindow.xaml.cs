@@ -130,12 +130,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        // Greeted by NAME where there is one — an account name is what you sign in with, not what
-        // anybody calls you. The role shown is the one held in the OPEN shop, because that is the
-        // one the surrounding chrome has just been gated by.
-        var who = string.IsNullOrWhiteSpace(user.DisplayName) ? user.UserName : user.DisplayName;
+        // Greeted by FIRST NAME where there is one — a greeting says "Hi Tina", not "Hi Tina Zhang"
+        // and certainly not "Hi tina.zhang". Falls back through the full name to the login, so a
+        // person with no name recorded is still addressed as something. The role shown is the one
+        // held in the OPEN shop, because that is the one the surrounding chrome has just been gated
+        // by; the tooltip carries the login, which is the fact a support call actually needs.
         var role = UserPresentation.RoleText(_localization, auth.CurrentRole);
-        GreetingText.Text = _localization.Format("Main.Greeting", who, role);
+        GreetingText.Text = _localization.Format("Main.Greeting", user.GreetingName, role);
         GreetingText.ToolTip = _localization.Format("Shop.Picker.SignedInAs", user.UserName, role);
     }
 

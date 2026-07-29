@@ -88,6 +88,16 @@ components are added/renamed or the way pieces fit together changes.
     (`ListMembers` / `AddMember` / `UpdateMember` / `CanSetPasswordFor` → `AccountOperationResult`)
     backs 店铺成员; installation-wide CRUD (`CreateAccount` / `DeleteAccount` / `SetPassword` /
     `SetShopRoles` / `UpdateAccountContact`) backs 用户管理.
+    A person's name is **`FirstName` + `LastName`** (schema 4; the old single `DisplayName` is
+    split on load — see context.md for the rule and why it is conservative). `PersonName` composes
+    them: `Full`, `Label` (name, or the login when there is none — never blank) and `Greeting` (the
+    FIRST name, which is what the main window says Hi to). `UserAccount.HeldRoles()` is the distinct
+    roles held across ACTIVE memberships, strongest first — a method, not a property, because it
+    allocates.
+    `UpdateAccountProfile` writes the account-level half — name, login and contact — as ONE
+    validated operation, including a **rename**: guarded against the administrator (its login is a
+    const the seeding step tops up) and against a taken name, and it renames the
+    `ProvisionedAccounts` entry too, without which the old login gets re-seeded as a new account.
     `PhoneNumber` and `Email` are **account-level**, not per membership — one person
     working at two branches has one phone and one mailbox. Both nullable and stored
     null-when-blank (never `""`), so existing files need no migration.
@@ -96,10 +106,10 @@ components are added/renamed or the way pieces fit together changes.
     none; it touches no membership, so unlike a role change it is safe on the
     administrator and on one's own account. Validation is `ContactValidation`, shared
     with the order form. The administrator cannot be deleted or given memberships, and no
-    account can be promoted to administrator. File schema version 3: the version-2 fold (flat
-    assignments → memberships) runs on load, `ApplyLegacyShopMemberships` completes the version-1
-    upgrade once shops are readable, and `ProvisionedAccounts` makes deleting a seeded account
-    permanent.
+    account can be promoted to administrator. File schema version **4**: the version-2 fold (flat
+    assignments → memberships) and the version-3 name split both run on load,
+    `ApplyLegacyShopMemberships` completes the version-1 upgrade once shops are readable, and
+    `ProvisionedAccounts` makes deleting a seeded account permanent.
   - `CurrencySettingService` — singleton `Instance` (`INotifyPropertyChanged`)
     owning the **global** currency (`Current` + `Symbol`: ￥ for CNY else $),
     persisted to `currency-setting.json` under LocalAppData. Currency is an app
@@ -307,10 +317,14 @@ components are added/renamed or the way pieces fit together changes.
     glyph) via the `GridViewColumnHeader.Click` handler and the
     `OrderColumnSort` attached properties. The Edit toolbar button + context-menu
     item relabel to "查看订单 / View Order" for read-only orders
-    (`RefreshToolbarLabels`). The list also shows a **left-aligned**, wrappable
-    **定制服务** column (via `CustomMadeServiceFlagConverter`: 有/无 + bracketed
-    garment names; cell panel `Stretch`, both `TextBlock`s `Left`, so the flag and
-    the wrapped names share one left edge);
+    (`RefreshToolbarLabels`). **Every column is ONE LINE:** cells derive from the theme's
+    `ListCellText` (`NoWrap` + `CharacterEllipsis`), full values sit in tooltips, and both
+    scrollbars are `Auto` — so no row can end up taller than another, which is the whole point of a
+    list read by scanning down a column. The **定制服务** column (via
+    `CustomMadeServiceFlagConverter`: 有/无 + bracketed garment names) is a `Grid` with an
+    `Auto` + `*` pair rather than a stack: a horizontal StackPanel measures its children with
+    infinite width, so the names would never learn they had overflowed and the ellipsis would never
+    appear;
     the former Last Modified column moved into the detail panel (ordering still
     defaults to LastModifiedDate desc in `LoadOrdersAsync`). Rows gray out by
     status: **Cancelled/Returned** (`IsRefunded`) are the lightest gray,
@@ -396,22 +410,28 @@ components are added/renamed or the way pieces fit together changes.
   - `LanguageSelectionWindow` — first-run language picker.
   - `ShopPickerWindow` — chooses the shop to work in, at startup after sign-in and again for
     切换店铺. Redesigned as a gradient header (title + signed-in chip) over shop **cards** — avatar
-    tile, name, currency/language/order-count line, and the user's role in that shop as a badge —
+    tile, name, a currency / **installed languages** / order-count strip (`BuildDetails`, joining
+    the languages as prose with `JoinList` inside a `JoinFragments` strip; the INSTALLED set, not
+    the preferred language, because that is what the branch's people will be able to switch
+    between), and the user's role in that shop as a badge —
     with a footer carrying 新建店铺 / 用户管理 (administrators only), 取消 and 打开. The list is
     filtered by `AuthenticationService.FilterAccessibleShops`, and the empty state distinguishes
     "no shops exist" from "none is assigned to you". Row/badge presentation comes from the shared
     `UserPresentation` helper; `ShopPickerRow` is a top-level `internal` type so its `{Binding}`-only
     members do not each need an S1144 suppression.
   - `UserManagementWindow` — administrator-only accounts screen, reached from the shop picker and from
-    本地配置 → 用户管理. Left: searchable account list (avatar, role summary, 已锁定 badge on the
-    administrator) plus 新建用户. Right: identity card, password reset (blank = unchanged), and a
-    **shop × role checkbox matrix** — the shape that makes "manager AND staff in the same shop"
+    本地配置 → 用户管理. Left: searchable account list — each row reads **`Tina Zhang (Manager, Staff)`**
+    (`Users.AccountLabel`, whose whole shape including the brackets is translated), with the shop
+    count under it, an avatar and a 已锁定 badge on the administrator; search matches the name as well
+    as the login. Right: identity card showing the name over the **login**, a Person card editing
+    first name / last name / **login** / phone / email in one save, password reset (blank =
+    unchanged), and a **shop × role checkbox matrix** — the shape that makes "manager AND staff in the same shop"
     expressible. Archived shops are still listed, or saving would silently strip an assignment to one.
     Writes on 保存修改 rather than per tick, so a re-assignment cannot revoke access halfway through.
   - `StoreMembersWindow` — the OPEN shop's roster, opened from the main toolbar by a manager or an
     administrator. Header carries the head-count tiles (total / active / deactivated); the list shows
     each member's role and shift with an Active/Deactivated badge (delisted members stay, dimmed); the
-    editor covers person (name, birthday), role in THIS shop (manager and/or staff), activation, start
+    editor covers person (first name, last name, birthday), role in THIS shop (manager and/or staff), activation, start
     date, a read-only delisting stamp and a 15-minute shift picker. 添加成员 creates the account and its
     membership together. 删除账户 is administrator-only — deletion reaches every shop, whereas a
     manager's tool for "they left" is deactivation, which records when. Needs no database: members come
@@ -536,7 +556,9 @@ components are added/renamed or the way pieces fit together changes.
   administrator keeps every shipped language, because they work across branches. Every language
   picker in the app — the toolbar toggle, the shop editor, the measurement print dialog, the PDF
   download panel — resolves through `ShopLanguages`, never through
-  `LocalizationService.AvailableLanguages` directly. The login and shop-picker screens are the
+  `LocalizationService.AvailableLanguages` directly. The set is also STATED, not merely obeyed:
+  under the main window's greeting and on every shop-picker card, so nobody has to open a toggle
+  to find out what their branch supports. The login and shop-picker screens are the
   exception and stay unrestricted: no shop is open yet, and a user has to be able to read the screen
   they sign in on.
 - **Membership is the unit of access, and it can be switched off.** A person's standing at a shop —

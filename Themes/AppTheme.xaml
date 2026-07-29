@@ -981,14 +981,26 @@
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
 
-    <!-- The same tabular treatment for a list cell, but WITHOUT size or colour: a row in the orders
-         list takes its size from the font-size slider and its colour from the gray-out trigger for
-         completed and refunded orders. Setting either here would override both. -->
-    <Style x:Key="NumericCellText" TargetType="TextBlock">
+    <!-- ONE line, ellipsized, for any cell in a records list.
+
+         Every column in the orders list is built from this or from NumericCellText below it, and
+         the reason is row height: a cell that wraps makes its own row taller than the rest, so a
+         list that is meant to be scanned down a column stops lining up. Overflow is answered with
+         "…" and the full value in the tooltip rather than with a second line.
+
+         NO size and NO colour, deliberately: a row takes its size from the font-size slider and its
+         colour from the gray-out trigger for completed and refunded orders. Setting either here
+         would override both. -->
+    <Style x:Key="ListCellText" TargetType="TextBlock">
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextWrapping" Value="NoWrap"/>
+        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+    </Style>
+
+    <!-- The same, plus the tabular treatment that lets figures be compared down a column. -->
+    <Style x:Key="NumericCellText" TargetType="TextBlock" BasedOn="{StaticResource ListCellText}">
         <Setter Property="FontFamily" Value="{StaticResource NumericFontFamily}"/>
         <Setter Property="Typography.NumeralAlignment" Value="Tabular"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
-        <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
     </Style>
 
     <!-- Segoe MDL2 glyph. Screens reference this instead of naming the font. -->

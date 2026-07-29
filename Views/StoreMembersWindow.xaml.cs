@@ -198,7 +198,8 @@ public partial class StoreMembersWindow : Window
         SaveButton.IsEnabled = !member.IsAdministrator;
         DeleteAccountButton.IsEnabled = !member.IsAdministrator;
 
-        DisplayNameBox.Text = member.DisplayName ?? string.Empty;
+        FirstNameBox.Text = member.FirstName ?? string.Empty;
+        LastNameBox.Text = member.LastName ?? string.Empty;
         BirthDatePicker.SelectedDate = member.BirthDate;
         PhoneNumberBox.Text = member.PhoneNumber ?? string.Empty;
         EmailBox.Text = member.Email ?? string.Empty;
@@ -282,7 +283,8 @@ public partial class StoreMembersWindow : Window
             return;
 
         var profile = new MemberProfile(
-            DisplayNameBox.Text,
+            FirstNameBox.Text,
+            LastNameBox.Text,
             BirthDatePicker.SelectedDate,
             PhoneNumberBox.Text,
             EmailBox.Text,
@@ -371,7 +373,8 @@ public partial class StoreMembersWindow : Window
     private void OnAddMemberClick(object sender, RoutedEventArgs e)
     {
         NewUserNameBox.Clear();
-        NewDisplayNameBox.Clear();
+        NewFirstNameBox.Clear();
+        NewLastNameBox.Clear();
         NewPasswordBox.Clear();
         NewPasswordConfirmBox.Clear();
         NewBirthDatePicker.SelectedDate = null;
@@ -421,7 +424,8 @@ public partial class StoreMembersWindow : Window
         }
 
         var profile = new MemberProfile(
-            NewDisplayNameBox.Text,
+            NewFirstNameBox.Text,
+            NewLastNameBox.Text,
             NewBirthDatePicker.SelectedDate,
             NewPhoneNumberBox.Text,
             NewEmailBox.Text,
@@ -440,10 +444,11 @@ public partial class StoreMembersWindow : Window
             return;
         }
 
+        // Named in the confirmation the way the roster will list them, which is by name where one
+        // was given — through the same helper, so the two cannot phrase it differently.
         Reload(userName);
-        ShowStatus("Members.Created", string.IsNullOrWhiteSpace(NewDisplayNameBox.Text)
-            ? userName
-            : NewDisplayNameBox.Text.Trim());
+        ShowStatus("Members.Created",
+            PersonName.Label(NewFirstNameBox.Text, NewLastNameBox.Text, userName));
     }
 
     private void OnCreateCancelClick(object sender, RoutedEventArgs e) => ShowSelectedMember();

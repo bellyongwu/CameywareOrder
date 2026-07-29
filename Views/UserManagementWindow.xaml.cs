@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Media;
 using CameywareOrder.Data;
@@ -70,9 +71,12 @@ public partial class UserManagementWindow : Window
 
             _users.Clear();
 
+            // Matched on the NAME as well as the login, because the list now shows the name — a
+            // search that ignores what is on screen reads as broken.
             var matches = AuthenticationService.Instance.ListAccounts()
                 .Where(account => filter.Length == 0
-                    || account.UserName.Contains(filter, StringComparison.CurrentCultureIgnoreCase));
+                    || account.UserName.Contains(filter, StringComparison.CurrentCultureIgnoreCase)
+                    || account.FullName.Contains(filter, StringComparison.CurrentCultureIgnoreCase));
 
             foreach (var account in matches)
                 _users.Add(new UserListRow(account, BuildSummary(account), _localization));
@@ -122,7 +126,8 @@ public partial class UserManagementWindow : Window
         EmptySelectionText.Visibility = Visibility.Collapsed;
         DetailPanel.Visibility = Visibility.Visible;
 
-        DetailUserNameText.Text = row.UserName;
+        DetailNameText.Text = row.DisplayLabel;
+        DetailLoginText.Text = _localization.Format("Members.AccountLine", row.UserName);
         DetailSummaryText.Text = row.Summary;
 
         // The administrator's rights are not editable data — showing an unticked matrix for an
@@ -137,12 +142,21 @@ public partial class UserManagementWindow : Window
         ResetPasswordConfirmBox.Clear();
         StatusText.Text = string.Empty;
 
-        // Contact details are account-level, so they load for the administrator too — unlike the
-        // assignment matrix above, filling them in grants nobody anything.
+        // The profile is account-level, so it loads for the administrator too — unlike the
+        // assignment matrix above, filling it in grants nobody anything.
         var selected = FindAccount(row.UserName);
+        FirstNameBox.Text = selected?.FirstName ?? string.Empty;
+        LastNameBox.Text = selected?.LastName ?? string.Empty;
+        LoginBox.Text = row.UserName;
         ContactPhoneBox.Text = selected?.PhoneNumber ?? string.Empty;
         ContactEmailBox.Text = selected?.Email ?? string.Empty;
         ContactErrorText.Visibility = Visibility.Collapsed;
+
+        // The administrator's login is a constant this file tops up on every load, so renaming it
+        // would leave the next launch with two administrators. Read-only rather than hidden: the
+        // account still has to show what it signs in as.
+        LoginBox.IsReadOnly = row.IsAdministrator;
+        LoginHintText.Text = _localization[row.IsAdministrator ? "Users.LoginLocked" : "Users.LoginHint"];
 
         BuildAssignmentRows(row.UserName);
     }
@@ -152,6 +166,9 @@ public partial class UserManagementWindow : Window
             .FirstOrDefault(candidate =>
                 string.Equals(candidate.UserName, userName, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>
+    /// Saves the whole profile card: name, login and contact details, in one call.
+    /// </summary>
     private void OnSaveContactClick(object sender, RoutedEventArgs e)
     {
         if (UserList.SelectedItem is not UserListRow row)
@@ -170,17 +187,48 @@ public partial class UserManagementWindow : Window
             return;
         }
 
-        var result = AuthenticationService.Instance.UpdateAccountContact(
-            row.UserName, ContactPhoneBox.Text, ContactEmailBox.Text);
+        var login = LoginBox.Text.Trim();
+        if (!ConfirmRename(row.UserName, login))
+            return;
+
+        var result = AuthenticationService.Instance.UpdateAccountProfile(
+            row.UserName,
+            new AccountProfile(login, FirstNameBox.Text, LastNameBox.Text,
+                ContactPhoneBox.Text, ContactEmailBox.Text));
 
         if (result != AccountOperationResult.Success)
         {
-            ShowContactError("Users.Error.NotFound");
+            ShowContactError(ErrorKey(result));
             return;
         }
 
         ContactErrorText.Visibility = Visibility.Collapsed;
-        StatusText.Text = _localization.Format("Users.Saved", row.UserName);
+
+        // Reloaded selecting the NEW login: after a rename the old one no longer matches anything,
+        // and the list would silently fall back to the first account in it.
+        ReloadUsers(login);
+        ShowStatus("Users.Saved", login);
+    }
+
+    /// <summary>
+    /// Asks before changing what somebody signs in with. Returns true when the save may proceed.
+    /// </summary>
+    /// <remarks>
+    /// A rename sits behind the same button as a phone-number edit, so it is easy to trigger by
+    /// accident — and its consequence lands on somebody else, at their next sign-in, with nothing on
+    /// their screen to explain it. Silent is the wrong default for that.
+    /// </remarks>
+    private bool ConfirmRename(string currentUserName, string newUserName)
+    {
+        if (string.Equals(currentUserName, newUserName, StringComparison.Ordinal))
+            return true;
+
+        return MessageBox.Show(
+            this,
+            _localization.Format("Users.RenameConfirm", currentUserName, newUserName),
+            _localization["Users.Save"],
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question) == MessageBoxResult.Yes;
     }
 
     private void ShowContactError(string key)
@@ -458,15 +506,45 @@ internal sealed class UserListRow
         ArgumentNullException.ThrowIfNull(localization);
 
         UserName = account.UserName;
+        DisplayLabel = account.DisplayLabel;
         IsAdministrator = account.IsAdministrator;
         Summary = summary;
-        Initial = UserPresentation.Initial(account.UserName);
+        Label = BuildLabel(account, localization);
+
+        // The tile's LETTER comes from the name, because that is what the row shows; its COLOUR
+        // comes from the login, which is the stable identity — a person correcting the spelling of
+        // their own name should not find their avatar has changed colour.
+        Initial = UserPresentation.Initial(account.DisplayLabel);
         AvatarBrush = UserPresentation.AvatarBrush(account.UserName);
         AdminBadgeText = localization["Users.AccountLocked"];
         AdminBadgeVisibility = account.IsAdministrator ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// "Tina (Manager, Staff)" — who they are, and what they are. The whole shape lives in the
+    /// string table rather than being concatenated here: Chinese brackets fullwidth text with
+    /// （） where English uses ( ), and building it in code produces one of them in both languages.
+    /// An account holding no role at all is just its name — empty brackets read as a rendering fault.
+    /// </summary>
+    private static string BuildLabel(UserAccount account, LocalizationService localization)
+    {
+        var roles = UserPresentation.RoleList(localization, account.HeldRoles());
+
+        return roles.Length == 0
+            ? account.DisplayLabel
+            : localization.Format("Users.AccountLabel", account.DisplayLabel, roles);
+    }
+
     public string UserName { get; }
+
+    /// <summary>The person's name, or the login when they have none.</summary>
+    public string DisplayLabel { get; }
+
+    /// <summary>Name and roles as the list renders them.</summary>
+    [SuppressMessage("Major Code Smell", "S1144:Unused private types or members should be removed",
+        Justification = "Bound as Text=\"{Binding Label}\" in the UserList item template in " +
+                        "UserManagementWindow.xaml; XAML bindings are invisible to Roslyn.")]
+    public string Label { get; }
 
     public bool IsAdministrator { get; }
 

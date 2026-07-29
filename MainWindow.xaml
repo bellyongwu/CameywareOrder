@@ -448,6 +448,9 @@
                     </Grid>
                 </Border>
 
+                <!-- Both scrollbars are Auto. Nothing in a row wraps, so a window too narrow for the
+                     columns can only be answered by scrolling to them — Disabled left the rightmost
+                     columns clipped with no way to reach them. -->
                 <ListView Grid.Row="2"
                           x:Name="OrdersListView"
                           ItemsSource="{Binding Orders}"
@@ -458,7 +461,7 @@
                           GridViewColumnHeader.Click="OnOrderColumnHeaderClick"
                           SelectionMode="Single"
                           ItemContainerStyle="{StaticResource OrderListItemStyle}"
-                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
                           ScrollViewer.VerticalScrollBarVisibility="Auto"
                           BorderBrush="#DDD" BorderThickness="1">
                     <ListView.ContextMenu>
@@ -507,7 +510,18 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn local:OrderColumnSort.SortKey="CustomerName" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Width="170" DisplayMemberBinding="{Binding CustomerName}"/>
+                            <!-- A CellTemplate rather than DisplayMemberBinding, here and on the two
+                                 columns below. DisplayMemberBinding generates a bare TextBlock that
+                                 cannot be styled, so an over-long value is CLIPPED mid-glyph with no
+                                 ellipsis and no way to read the rest. -->
+                            <GridViewColumn local:OrderColumnSort.SortKey="CustomerName" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Width="170">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Style="{StaticResource ListCellText}" Text="{Binding CustomerName}"
+                                                   ToolTip="{Binding CustomerName}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                             <GridViewColumn local:OrderColumnSort.SortKey="PhoneNumber" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" Width="150">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
@@ -526,7 +540,15 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn local:OrderColumnSort.SortKey="Status" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Width="110" DisplayMemberBinding="{Binding Status, Converter={StaticResource OrderStatusToLocalizedTextConverter}}"/>
+                            <GridViewColumn local:OrderColumnSort.SortKey="Status" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Width="110">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Style="{StaticResource ListCellText}"
+                                                   Text="{Binding Status, Converter={StaticResource OrderStatusToLocalizedTextConverter}}"
+                                                   ToolTip="{Binding Status, Converter={StaticResource OrderStatusToLocalizedTextConverter}}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                             <GridViewColumn local:OrderColumnSort.SortKey="TotalAmount" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TotalAmount], Mode=OneWay}" Width="150">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
@@ -541,19 +563,43 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
-                            <GridViewColumn local:OrderColumnSort.SortKey="BalanceStatus" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Width="270" DisplayMemberBinding="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}"/>
+                            <GridViewColumn local:OrderColumnSort.SortKey="BalanceStatus" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.BalanceStatus], Mode=OneWay}" Width="270">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Style="{StaticResource ListCellText}"
+                                                   Text="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}"
+                                                   ToolTip="{Binding Converter={StaticResource OrderPaymentSummaryConverter}, ConverterParameter=Status}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                             <!-- 195 for the same reason: "Service sur mesure" is the longest of the
                                  three headers this column carries. -->
                             <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomMadeFlag], Mode=OneWay}" Width="195">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel HorizontalAlignment="Stretch" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Flag}"
-                                                       HorizontalAlignment="Left" TextAlignment="Left" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Names}"
+                                        <!-- One line, not two stacked. The garment names used to wrap
+                                             under the flag, which made a row with several garments
+                                             taller than its neighbours — the one thing a list read by
+                                             scanning down a column cannot afford.
+
+                                             A Grid, not a horizontal StackPanel: a StackPanel gives
+                                             its children infinite width, so the names would never
+                                             know they had overflowed and TextTrimming would never
+                                             fire. The star column is what makes the ellipsis work. -->
+                                        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Style="{StaticResource ListCellText}"
+                                                       Text="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Flag}"
+                                                       FontWeight="SemiBold"/>
+                                            <TextBlock Grid.Column="1" Style="{StaticResource ListCellText}" Margin="4,0,0,0"
+                                                       Text="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Names}"
+                                                       ToolTip="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Names}"
                                                        Visibility="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=NamesVisibility}"
-                                                       HorizontalAlignment="Left" TextAlignment="Left" TextWrapping="Wrap" FontSize="11" Foreground="#666"/>
-                                        </StackPanel>
+                                                       FontSize="11" Foreground="#666"/>
+                                        </Grid>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>

@@ -98,8 +98,11 @@
                                                    VerticalAlignment="Center"/>
                                     </Border>
 
+                                    <!-- The person, then what they can reach. The label is
+                                         "Name (Manager, Staff)" — built in code because it
+                                         interleaves stored text with localized role names. -->
                                     <StackPanel Grid.Column="1" Margin="10,0,6,0" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding UserName}" FontSize="13" FontWeight="SemiBold"
+                                        <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="SemiBold"
                                                    Foreground="#111827" TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="{Binding Summary}" FontSize="11" Foreground="#6B7280"
                                                    Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
@@ -181,11 +184,16 @@
                                                Foreground="White" FontSize="18" FontWeight="Bold"
                                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
+                                <!-- Name first, then the login underneath it. Which account this is
+                                     matters here in a way it does not in the list: this is the pane
+                                     that resets a password and reassigns shops. -->
                                 <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
-                                    <TextBlock x:Name="DetailUserNameText" FontSize="18" FontWeight="Bold"
+                                    <TextBlock x:Name="DetailNameText" FontSize="18" FontWeight="Bold"
                                                Foreground="#111827"/>
-                                    <TextBlock x:Name="DetailSummaryText" FontSize="12" Foreground="#6B7280"
+                                    <TextBlock x:Name="DetailLoginText" FontSize="12" Foreground="#4B5563"
                                                Margin="0,4,0,0"/>
+                                    <TextBlock x:Name="DetailSummaryText" FontSize="12" Foreground="#6B7280"
+                                               Margin="0,3,0,0"/>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
@@ -198,12 +206,44 @@
                                        Foreground="#3730A3" FontSize="13" TextWrapping="Wrap"/>
                         </Border>
 
-                        <!-- Contact details. Account-level, so an account that belongs to no shop —
-                             which the roster screen cannot reach — is still editable here. -->
+                        <!-- Who this person is and what they sign in as. Account-level, so an
+                             account that belongs to no shop — which the roster screen cannot reach —
+                             is still editable here, and so the administrator's own details are too:
+                             none of this grants anybody anything. One Save for the whole card,
+                             because a rename that landed while a bad phone number was rejected would
+                             leave the pane describing an account that no longer answers to it. -->
                         <Border x:Name="ContactPanel" Style="{StaticResource CardBorder}" Margin="0,0,0,14">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource CardHeading}"
                                            Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Profile], Mode=OneWay}"/>
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                                        <TextBlock Style="{StaticResource FieldLabel}"
+                                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.FirstName], Mode=OneWay}"/>
+                                        <TextBox x:Name="FirstNameBox" MaxLength="60"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                        <TextBlock Style="{StaticResource FieldLabel}"
+                                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.LastName], Mode=OneWay}"/>
+                                        <TextBox x:Name="LastNameBox" MaxLength="60"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- The login. Editable by an administrator, and locked for the
+                                     administrator's OWN account — its user name is a constant the
+                                     seeding step tops up, so renaming it would produce a second
+                                     administrator on the next launch. -->
+                                <TextBlock Style="{StaticResource FieldLabel}"
+                                           Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.UserName], Mode=OneWay}"/>
+                                <TextBox x:Name="LoginBox" MaxLength="60" HorizontalAlignment="Left" Width="300"/>
+                                <TextBlock x:Name="LoginHintText"
+                                           Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.LoginHint], Mode=OneWay}"
+                                           FontSize="12" Foreground="#9CA3AF" Margin="0,6,0,12" TextWrapping="Wrap"/>
+
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>

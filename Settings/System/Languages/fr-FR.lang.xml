@@ -115,6 +115,12 @@
   <Text key="Users.AssignmentsHint">Cochez le rôle que ce compte détient dans chaque boutique. Cocher les deux accorde les deux ; un compte sans aucune case cochée ne peut pas ouvrir cette boutique.</Text>
   <Text key="Users.AdminNotice">L’administrateur dispose de toutes les permissions dans toutes les boutiques. Son rôle ne peut pas être modifié et son compte ne peut pas être supprimé.</Text>
   <Text key="Users.AccountLocked">Verrouillé</Text>
+  <!-- The WHOLE line shape, not just the words: Chinese brackets fullwidth text with （）where
+       French uses ( ), so composing this in code produces one language's punctuation in both. -->
+  <Text key="Users.AccountLabel">{0} ({1})</Text>
+  <Text key="Users.LoginHint">Ce que cette personne saisit pour se connecter. La modification prend effet à sa prochaine connexion.</Text>
+  <Text key="Users.LoginLocked">L’identifiant de l’administrateur ne peut pas être modifié.</Text>
+  <Text key="Users.RenameConfirm">Remplacer l’identifiant {0} par {1} ? Cette personne se connectera désormais avec le nouveau.</Text>
   <Text key="Users.NoAccess">Aucune boutique attribuée</Text>
   <Text key="Users.ShopCount">{0} boutique(s)</Text>
   <Text key="Users.ShopColumn">Boutique</Text>
@@ -144,7 +150,8 @@
   <Text key="Members.SelectPrompt">Sélectionnez un membre à gauche pour le modifier.</Text>
   <Text key="Members.AccountLine">Compte : {0}</Text>
   <Text key="Members.Profile">Personne</Text>
-  <Text key="Members.Name">Nom</Text>
+  <Text key="Members.FirstName">Prénom</Text>
+  <Text key="Members.LastName">Nom de famille</Text>
   <Text key="Members.Birthday">Date de naissance</Text>
   <Text key="Members.Phone">Numéro de contact</Text>
   <Text key="Members.Email">Courriel</Text>

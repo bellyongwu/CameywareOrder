@@ -43,6 +43,19 @@ internal static class UserPresentation
         return localization[RoleKey(role)];
     }
 
+    /// <summary>
+    /// Several roles as one phrase — "Manager, Staff" — punctuated the way the current language
+    /// punctuates a list. Empty when the account holds none, so the caller can drop the whole
+    /// clause rather than print empty brackets.
+    /// </summary>
+    public static string RoleList(LocalizationService localization, IEnumerable<UserRole> roles)
+    {
+        ArgumentNullException.ThrowIfNull(localization);
+        ArgumentNullException.ThrowIfNull(roles);
+
+        return localization.JoinList(roles.Select(role => RoleText(localization, role)));
+    }
+
     /// <summary>First character of a name, upper-cased, for an avatar tile.</summary>
     public static string Initial(string? name)
     {
