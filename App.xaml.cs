@@ -11,6 +11,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Windows;
 using CameywareOrder.Configuration;
+using CameywareOrder.Controls;
 using CameywareOrder.Data;
 using CameywareOrder.GraphQL;
 using CameywareOrder.Localization;
@@ -79,6 +80,13 @@ public partial class App : Application
     {
         // Prevent WPF from shutting down when the language picker closes.
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        // Before the FIRST window is shown, because it works by class handler and a window already
+        // on screen has already been sized. One call covers every window in the application,
+        // including any added later — which is the point: the defect it fixes was a single window
+        // whose minimum height exceeded a laptop screen, and nothing structural stopped the next
+        // window from repeating it.
+        WindowFitting.Register();
 
         // FIRST, before anything resolves a storage path. The product rename moved the data folder
         // from %LocalAppData%\LeeYongeOrdering to \CameywareOrder, and EnsureDatabasePathReady

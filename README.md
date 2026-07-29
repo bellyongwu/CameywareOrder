@@ -195,7 +195,8 @@ Localization/    LocalizationService and the language preference store
 Configuration/   Locates shipped settings and the per-installation data folder
 Themes/          AppTheme.xaml — the application's single visual language
 Animations/      The shared panel open/close transition
-Controls/        Attached behaviours for things a style cannot express
+Controls/        Attached behaviours for things a style cannot express, and WindowFitting —
+                 which scales any window down to fit the screen it opens on
 GraphQL/         Query and Mutation types for the embedded API
 Migrations/      EF Core migrations and the model snapshot
 Settings/        Shipped, read-only configuration: language files and app defaults

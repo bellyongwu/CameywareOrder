@@ -497,6 +497,14 @@ components are added/renamed or the way pieces fit together changes.
     exactly as wide as its box. A behavior rather than a binding because the Calendar lives in a
     `Popup`, a separate visual tree that `RelativeSource` cannot cross — and fails silently when it
     tries. The home for any future "the theme cannot express this" hook; see context.md.
+  - `WindowFitting` — fits EVERY window to the screen it opens on, scaling the whole layout down
+    proportionally (`LayoutTransform`, so the window MEASURES smaller and its minimum can come down)
+    when the screen is smaller than the window was drawn for. Registered once from
+    `App.StartApplicationAsync` as a `Window.Loaded` **class handler**, so a window added later is
+    covered without being told to opt in — the defect it fixes was one window's `MinHeight="900"`
+    against a 752-tall work area, which put the pinned Save footer permanently off screen. Reads the
+    work area of the monitor the window is actually on (`MonitorFromWindow`), converted from device
+    pixels to DIPs. Never scales up; floors at 0.5.
 - **Animations/**
   - `PanelTransition` — the global open/close transition for panels: attached `Mode`
     (None / Fade / FadeSlide), 0.5s, cubic ease-in-out, 10px slide, with the duration and curve

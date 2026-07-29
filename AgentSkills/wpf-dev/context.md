@@ -1539,6 +1539,40 @@ once, both of which read like authorization regressions and were neither:
 The general rule: a harness reading live data must **establish** the state it
 asserts on, not assume the state it found the day it was written.
 
+## Fitting windows to the screen (2026-07-29)
+
+- **A window's `MinHeight` is a FLOOR that WPF honours against the desktop, not a
+  preference.** `OrderEditWindow` declared `MinHeight="900"` while a common laptop offers
+  a 752-tall work area, so the bottom 148px — the pinned Cancel/Save footer — sat below
+  the screen and **could not be dragged into view**. The layout was never wrong: it is
+  `Auto` title / `*` ScrollViewer / `Auto` footer, exactly right. The window simply
+  asserted a minimum bigger than the display. Check every `MinHeight` against 728 (a
+  1366×768 laptop) before adding one.
+- **`LayoutTransform`, never `RenderTransform`, for fitting.** Only a layout transform
+  makes the content MEASURE smaller, which is what allows the window's minimum to come
+  down. A render transform looks identical in a screenshot while the window goes on
+  demanding its full height — the bug would appear fixed and not be.
+- **Scale from the declared MINIMUM, not the design size.** A minimum is the author's
+  statement of "below this the layout breaks"; content beyond it is already the
+  ScrollViewer's job. Scaling from the design size shrinks far more than necessary.
+- **`Visual.PointToScreen` returns DEVICE pixels; every WPF size is device-INDEPENDENT.**
+  Comparing them raw cost a diagnosis: on a 150% display a correctly-placed button
+  reported `y=1087` against a 752 work area and looked catastrophically off screen, when
+  1087 device pixels is 725 DIPs and comfortably inside. Convert with
+  `PresentationSource.FromVisual(x).CompositionTarget.TransformFromDevice` first. The
+  dangerous direction is the other one: on a 100% monitor the raw comparison passes, so a
+  genuinely broken layout would have looked fine.
+- **`TransformToAncestor(window)` then `window.PointToScreen(...)` double-counts** any
+  transform between the element and the window. Call `PointToScreen` on the ELEMENT — it
+  walks the whole chain once.
+- **A `Popup` DOES inherit an ancestor `LayoutTransform` for rendering** — measured, not
+  assumed: a ComboBox drop-down under a 0.820 window draws its items at 0.821. Worth
+  knowing because the opposite is true for *bindings* (see `CalendarSizing`), so the
+  separate-visual-tree rule does not generalise from one to the other.
+- **`Math.Clamp` throws when max < min.** Pulling a window into the work area hits this
+  the moment the window is wider than the screen; the sane answer there is to align to
+  the near edge (which carries the title bar) rather than to throw.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies

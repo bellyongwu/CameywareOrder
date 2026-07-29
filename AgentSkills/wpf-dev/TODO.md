@@ -17,7 +17,70 @@ Entry format:
 
 ## Open / in progress
 
-### 2026-07-29 12:40 — English-only comments across the application  [DONE]
+### 2026-07-29 13:30 — Fit every window to the screen it opens on  [DONE]
+- Ask: "UI improvements: The application open in smaller screen, sections of UI (e.g.
+  eidt order panel-> cancel and save record button section) is cut. >TODO, to make sure
+  the application can be operated in different screen, can we make the UI proportionally
+  scale down based on the screen size?"
+- **Diagnosed before designing.** This machine's work area is **1280×752**.
+  `OrderEditWindow` declares `MinHeight="900"`, so the window can never be shorter than
+  900 DIPs: the bottom 148px — which is exactly the pinned Cancel/Save footer — is off
+  screen and **unreachable**, because the minimum forbids resizing it into view. The
+  layout itself is already right (Auto title / `*` ScrollViewer / Auto footer); nothing
+  is mis-laid-out. The window simply asserts a minimum bigger than the display.
+- Survey of every window against a 1366×768 laptop (work area ~728):
+  - **Cannot fit at all** (MinHeight > work area, footer unreachable): `OrderEditWindow`
+    900, `CustomMadeServiceWindow` 900.
+  - **Opens taller than the screen** but can be resized down: `DocumentPreviewWindow`
+    1040, `ReceiptBrandingWindow` 880, `ShopSetupWindow` 840, `MeasurementTermsWindow`
+    760, `StoreMembersWindow` 760, `MainWindow` 1440 (maximized, so benign in practice).
+- Plan:
+  - [ ] One helper, registered once — a `Window.Loaded`/`SourceInitialized` CLASS handler
+        so every window is covered and a NEW window cannot be forgotten
+  - [ ] Scale from the MINIMUM, not the design size: `MinHeight` is the author's
+        statement of "below this the layout breaks", and the ScrollViewer already handles
+        content beyond it
+  - [ ] Never scale UP (a 4K screen must not get giant chrome), and floor the scale so
+        text cannot become unreadable — below the floor the ScrollViewer takes over
+  - [ ] Use the work area of the monitor the window actually opens on, not the primary
+  - [x] Harness: assert the footer is inside the work area at small screen sizes
+- **`Controls/WindowFitting`**, registered from `App.StartApplicationAsync` as a
+  `Window.Loaded` CLASS handler. One registration covers every window including any added
+  later — the per-window alternative fails by omission, which is exactly how this shipped.
+  `LayoutTransform` (never `RenderTransform`: only a layout transform makes the content
+  MEASURE smaller, which is what lets the minimum come down — a render transform looks
+  identical in a screenshot while the window goes on demanding 900px). Reads the work area
+  of the monitor the window is actually on via `MonitorFromWindow`, converted device→DIP.
+  Never scales up; floors at 0.5 as a backstop.
+- Measured result on this machine (1280×752): editor scale **0.820**, window 1027×752,
+  minimum 863×752 — down from a minimum of 900 that could not fit — and the Save button's
+  bottom edge at y=725 against a work area ending at 752. It was previously unreachable.
+- **Two harness bugs found before the code was trusted, both worth keeping:**
+  - `PointToScreen` returns **device** pixels while every WPF size is device-independent.
+    On this 150% display a correctly-placed button reported y=1087 against a 752 work area
+    and read as catastrophically broken; 1087 device px is 725 DIP. The dangerous
+    direction is the opposite one — on a 100% monitor the raw comparison passes, so a
+    genuinely broken layout would have looked fine.
+  - `TransformToAncestor(window)` followed by `window.PointToScreen(...)` double-counts the
+    ancestor transform. Ask the ELEMENT; it walks the chain once.
+- **Checked rather than assumed:** a `Popup` DOES inherit an ancestor `LayoutTransform` for
+  rendering — a ComboBox drop-down under a 0.820 window draws its items at 0.821. Worth
+  measuring because the opposite holds for BINDINGS across a popup boundary
+  (`CalendarSizing`), so the separate-visual-tree rule does not carry over.
+- Windows that already fit are provably untouched (scale exactly 1, declared size and
+  minimum intact), and a hidden/re-shown window is not scaled twice — `Loaded` fires again
+  and a second transform would compound.
+- Notes: build 0 warnings / 0 errors. Suite **802 passed / 0 failed across 18 harnesses**;
+  new `scratchpad/fitcheck` is 22 of them, and every assertion is measured geometry on a
+  real window rather than a reading of the XAML. It opens with a precondition that this
+  screen really is smaller than the editor was drawn for, without which the whole file
+  would pass vacuously on a large monitor.
+  **Gate caveat, stated rather than glossed:** neither the SonarLint nor the IDE-diagnostics
+  tool is available in this session, so Gate 1 and Gate 2 could not be RUN. The new file was
+  reviewed by hand against the rules in SKILL.md §10 (all members static; native methods
+  wrapped per S4200; no nested ternary; complexity well under 15; every `MonitorInfo` field
+  documented as required by the native layout even though only `Work` is read). Worth a
+  Sonar pass when the tooling is next available.
 - Ask: "now remove all chinese words comments from all places" → narrowed to
   "Just keep English comments across the application" → "you need to add this into SKILL
   as well, even though I communicate with you by Chinese, you still need to use English

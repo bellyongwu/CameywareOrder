@@ -129,6 +129,39 @@ message. The footer's Save now applies the whole pane, profile first because it 
 rename. Taken names are reported as they are typed, under the field they belong to, and
 availability is settled *before* the rename confirmation.
 
+### Every window fits the screen it opens on
+`OrderEditWindow` declared `MinHeight="900"` against a 752-tall work area, so the pinned
+Cancel/Save footer sat 148px below the desktop and **could not be dragged into view** —
+saving an order was impossible, not merely awkward. Six other windows opened taller than
+such a screen without being unusable.
+
+> **A window minimum is a FLOOR WPF honours against the desktop, not a preference.** The
+> layout was never wrong (`Auto` title / `*` ScrollViewer / `Auto` footer is exactly
+> right); the window just asserted a minimum bigger than the display. Check any new
+> `MinHeight` against 728 — a 1366×768 laptop.
+
+`Controls/WindowFitting` scales the whole layout down proportionally, registered from
+`App` as a `Window.Loaded` **class handler** so a window added later is covered without
+opting in — the per-window alternative fails by omission, which is how this shipped.
+
+> **`LayoutTransform`, never `RenderTransform`.** Only a layout transform makes the content
+> MEASURE smaller, which is what lets the minimum come down. A render transform looks
+> identical in a screenshot while the window goes on demanding its full height — the bug
+> would appear fixed and not be.
+
+Scale comes from the declared MINIMUM (the author's "below this it breaks"), never the
+design size; never scales up; floors at 0.5. Measured: editor at 0.820 on this machine,
+Save button bottom at y=725 against a work area ending at 752.
+
+> **`PointToScreen` returns DEVICE pixels; every WPF size is device-independent.** On a
+> 150% display a correctly-placed button reported y=1087 against a 752 work area and read
+> as broken — 1087 device px is 725 DIP. The dangerous direction is the other one: raw
+> comparison passes on a 100% monitor, so a genuinely broken layout would look fine.
+
+*Measured rather than assumed:* a `Popup` DOES inherit an ancestor `LayoutTransform` for
+rendering (drop-down items at 0.821 under a 0.820 window). The separate-visual-tree rule
+that defeats *bindings* across a popup boundary does not carry over to rendering.
+
 ### Every comment in the application is English
 62 comments across 25 files named a menu or a field by its Chinese label. The rule was
 already in `SKILL.md` and had been broken steadily anyway — which is the point worth
