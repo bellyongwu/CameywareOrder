@@ -47,8 +47,7 @@
   <Text key="Branding.Description">印刷する領収書と採寸表のダウンロードに使うロゴ、ヘッダー、フッターを設定します（言語ごとに個別に設定できます）。</Text>
   <Text key="Branding.Header">ヘッダー</Text>
   <Text key="Branding.Footer">フッター</Text>
-  <Text key="Branding.TaxNumber">税番号（GST/HST）</Text>
-  <Text key="Branding.TaxNumberHint">領収書の税額票に使用します。設定するとヘッダーのすぐ下に印刷されます。この番号はすべての言語で共通です。</Text>
+  <Text key="Branding.TaxNumberHint">領収書の税額票に使用します。設定するとヘッダーのすぐ下に印刷されます。この番号はすべての言語で共通で、店舗の所在地が発行する番号の名称で表示されます。</Text>
   <Text key="Branding.Logo">ロゴ画像</Text>
   <Text key="Branding.ChooseLogo">画像を選択</Text>
   <Text key="Branding.RemoveLogo">削除</Text>
@@ -195,8 +194,7 @@
   <Text key="Shop.Setup.Email">メールアドレス</Text>
   <Text key="Shop.Setup.Website">ウェブサイト</Text>
   <Text key="Shop.Setup.ContactHint">任意。電話番号、メールアドレス、ウェブサイトは言語ごとの設定ではなく、すべての言語で同じ値が表示されます。</Text>
-  <Text key="Shop.Setup.TaxNumber">税番号（GST/HST）</Text>
-  <Text key="Shop.Setup.TaxNumberHint">任意。この店舗の領収書に印刷され、税額票としても使えるようになります。ヘッダー・フッター編集で入力した番号があれば、そちらが優先されます。</Text>
+  <Text key="Shop.Setup.TaxNumberHint">任意。店舗の所在地が番号を発行している場合にのみ入力欄が表示されます。この店舗の領収書に印刷され、税額票としても使えるようになります。ヘッダー・フッター編集で入力した番号があれば、そちらが優先されます。</Text>
   <Text key="Shop.Setup.InstalledLanguagesRequired">この店舗に言語を 1 つ以上インストールしてください。</Text>
   <Text key="Shop.Setup.SupportedCurrenciesRequired">この店舗に通貨を 1 つ以上選択してください。</Text>
   <Text key="Shop.Localization.Link">言語と通貨</Text>
@@ -234,6 +232,24 @@
   <Text key="Shop.Tax.SummaryFree">税は徴収しません</Text>
   <Text key="Shop.Tax.SummaryTaxable">{0}% で課税</Text>
   <Text key="Shop.Tax.RateInvalid">税率は 0 から 100 までの数値で入力してください。</Text>
+  <Text key="TaxNumber.Generic">税番号</Text>
+  <Text key="TaxNumber.GstHst">GST/HST 番号</Text>
+  <Text key="TaxNumber.Vat">付加価値税番号</Text>
+  <Text key="TaxNumber.ChinaTaxpayer">納税者識別番号</Text>
+  <Text key="TaxNumber.JapanInvoice">適格請求書発行事業者登録番号</Text>
+  <Text key="Shop.Tax.Location">店舗の所在地</Text>
+  <Text key="Shop.Tax.InclusiveRate">価格に含まれる税率：{0}%</Text>
+  <Text key="Shop.Tax.InclusiveNote">この地域の価格は税込みです。税額はレシートに表示され、会計時に追加されません。支払方法によって変わらないため、方法ごとの設定は不要です。</Text>
+  <Text key="Shop.Tax.ReseedConfirmTitle">税設定を置き換えますか？</Text>
+  <Text key="Shop.Tax.ReseedConfirm">「{0}」に変更すると、すべての支払方法にこの地域の標準税率が適用され、ここで設定した内容は破棄されます。続行しますか？</Text>
+  <Text key="TaxJurisdiction.CA-ON">カナダ — オンタリオ州（HST {0}%）</Text>
+  <Text key="TaxJurisdiction.CA-AB">カナダ — アルバータ州（GST {0}%）</Text>
+  <Text key="TaxJurisdiction.CA-BC">カナダ — ブリティッシュコロンビア州（GST+PST {0}%）</Text>
+  <Text key="TaxJurisdiction.US">アメリカ合衆国（売上税は別途加算）</Text>
+  <Text key="TaxJurisdiction.CN">中国（増値税 {0}%、税込み）</Text>
+  <Text key="TaxJurisdiction.JP">日本（消費税 {0}%、税込み）</Text>
+  <Text key="TaxJurisdiction.FR">フランス（付加価値税 {0}%、税込み）</Text>
+  <Text key="TaxJurisdiction.ES">スペイン（付加価値税 {0}%、税込み）</Text>
 
   <Text key="Shop.Receipt.Section">領収書番号の形式</Text>
   <Text key="Shop.Receipt.SectionHint">新しい注文（およびその領収書）の番号の付け方です。すでにある注文は元の番号のままです。</Text>
@@ -286,7 +302,7 @@
   <Text key="Status.ImportGlobalSettingsFailed">全体設定の復元に失敗しました：{0}</Text>
   <Text key="Status.ImportGlobalSettingsInvalid">選択したファイルは、有効な全体設定のバックアップパッケージではありません。</Text>
   <Text key="Receipt.Title">領収書</Text>
-  <Text key="Receipt.TaxNumberLine">GST/HST 番号：{0}</Text>
+  <Text key="Receipt.TaxNumberLine">{0}：{1}</Text>
   <Text key="Receipt.SectionTotal">合計</Text>
   <Text key="Search.Label">検索</Text>
   <Text key="Filter.Status.Label">状態</Text>
@@ -371,6 +387,7 @@
   <Text key="Order.Fields.DueDownpayment">請求する内金</Text>
   <Text key="Order.Fields.DueFinalBalance">請求する残金</Text>
   <Text key="Order.Fields.PaidTax">受領した税</Text>
+  <Text key="Order.Fields.IncludedTax">内税額</Text>
   <Text key="Order.Fields.BalanceStatus">入金状況</Text>
   <Text key="Order.Fields.PaymentBreakdown">支払いの内訳</Text>
   <Text key="Order.Fields.Notes">備考</Text>

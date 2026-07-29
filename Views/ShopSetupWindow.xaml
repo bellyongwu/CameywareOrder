@@ -226,12 +226,19 @@
 
                         <!-- The registration number identifies the BUSINESS, so it belongs to the
                              shop rather than to the receipt design. The header/footer editor carries
-                             one too and overrides this where both are set — see Shop.TaxRegistrationNumber. -->
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.TaxNumber], Mode=OneWay}"
-                                   Style="{StaticResource SectionLabelStyle}"/>
-                        <TextBox x:Name="TaxNumberBox" Style="{StaticResource InputStyle}" MaxLength="40"/>
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.TaxNumberHint], Mode=OneWay}"
-                                   Style="{StaticResource HintStyle}" Margin="0,2,0,16"/>
+                             one too and overrides this where both are set — see Shop.TaxRegistrationNumber.
+
+                             The whole block hides where the shop's location issues no such number,
+                             and its LABEL names whatever that location does issue — "GST/HST" used to
+                             be spelled into the label in all five languages, so a shop in Osaka read
+                             GST/HST on its own tax slip. The label is set in code because it comes
+                             from the jurisdiction, not from a fixed key. -->
+                        <StackPanel x:Name="TaxNumberPanel">
+                            <TextBlock x:Name="TaxNumberLabel" Style="{StaticResource SectionLabelStyle}"/>
+                            <TextBox x:Name="TaxNumberBox" Style="{StaticResource InputStyle}" MaxLength="40"/>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.TaxNumberHint], Mode=OneWay}"
+                                       Style="{StaticResource HintStyle}" Margin="0,2,0,16"/>
+                        </StackPanel>
 
                         <!-- Languages and currencies used to be two tick lists and two pickers,
                              inline, in an already long form. They are ONE decision — a language
@@ -285,9 +292,35 @@
                             <TextBlock Style="{StaticResource CardTitleStyle}"
                                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.Section], Mode=OneWay}"/>
                         </StackPanel>
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.SectionHint], Mode=OneWay}"
+                        <!-- Hidden for an inclusive location: it tells the reader to choose whether
+                             each payment method is taxed, and there is no such choice there. The
+                             inclusive panel below carries its own explanation instead. -->
+                        <TextBlock x:Name="TaxSectionHint"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.SectionHint], Mode=OneWay}"
                                    Style="{StaticResource HintStyle}" Margin="13,0,0,14"/>
 
+                        <!-- Store location decides the standard rate and whether prices are quoted
+                             tax-inclusive. Picking one seeds the matrix below; an inclusive location
+                             replaces it with the single rate that applies there, because tax is
+                             embedded in the price rather than added on top per payment method. -->
+                        <StackPanel Margin="13,0,0,14">
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.Location], Mode=OneWay}"
+                                       Style="{StaticResource SectionLabelStyle}"/>
+                            <ComboBox x:Name="LocationBox" Style="{StaticResource PickerStyle}"
+                                      SelectionChanged="OnLocationChanged"/>
+                        </StackPanel>
+
+                        <!-- Shown instead of the matrix. The RATE is the point: it is what the
+                             embedded tax is backed out at, and leaving it off screen meant an
+                             inclusive shop was taxed at a figure it had no way to see. -->
+                        <StackPanel x:Name="TaxInclusivePanel" Visibility="Collapsed" Margin="13,0,0,4">
+                            <TextBlock x:Name="TaxInclusiveRateText"
+                                       Style="{StaticResource SectionLabelStyle}" Foreground="#047857"/>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.InclusiveNote], Mode=OneWay}"
+                                       Style="{StaticResource HintStyle}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <StackPanel x:Name="TaxMatrixPanel">
                         <!-- Column captions; the row template below repeats this geometry exactly. -->
                         <Grid Margin="13,0,0,6">
                             <Grid.ColumnDefinitions>
@@ -344,6 +377,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

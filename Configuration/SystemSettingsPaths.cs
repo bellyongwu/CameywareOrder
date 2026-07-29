@@ -31,6 +31,9 @@ public static class SystemSettingsPaths
 
     public static string AppDefaultsFile => Path.Combine(DefaultsDirectory, "app-defaults.json");
 
+    /// <summary>Tax presets keyed by store location (see tax-jurisdictions.json).</summary>
+    public static string TaxJurisdictionsFile => Path.Combine(DefaultsDirectory, "tax-jurisdictions.json");
+
     /// <summary>
     /// The <c>Settings/System</c> directory. Resolved by probing rather than assumed, and it returns
     /// the base-directory path even when nothing is found so the caller's own "does this exist"

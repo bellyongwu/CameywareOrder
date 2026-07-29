@@ -17,6 +17,126 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-29 23:10 — Tax number named by the jurisdiction, asked for only where one is issued  [DONE]
+- Ask: "更改一下wording, 现在称为GST/HST 这种针对加拿大的版本。 如果当地区有针对消费税的才需要给出税号，否则可以不用给。你觉得这种改动合理么"
+- Follow-up ask: "如果改动合理，那么请继续改动，改动完提交到main 请更新相关日志。"
+- Assessment given: reasonable, and the same defect as the rate one level down — `"GST/HST"` was
+  spelled into 15 string-table values, so a shop in Osaka read `税番号（GST/HST）` and printed
+  `GST/HST 番号：…` on its own tax slip. One refinement recommended and applied: gate on the
+  jurisdiction DECLARING a tax number rather than on `pricesIncludeTax`, because Canada's GST/HST is a
+  consumption tax quoted tax-exclusive, so inferring would drop the home market. Field kept optional
+  rather than mandatory — a newly registered shop may not have a number yet.
+- Plan:
+  - [x] `taxNumberLabel` per jurisdiction in `tax-jurisdictions.json` (omitted for US), grouped by tax
+        REGIME: `GstHst` (CA-ON/AB/BC), `Vat` (FR/ES), `ChinaTaxpayer`, `JapanInvoice`
+  - [x] `TaxJurisdiction.TaxNumberLabel` / `.CollectsTaxNumber` / `.TaxNumberKey` / `.TaxNumberName`;
+        `TaxJurisdictions.CollectsTaxNumber` / `.TaxNumberName` / `.TaxNumberKey`
+  - [x] 5 new `TaxNumber.*` keys × 5 languages; `Shop.Setup.TaxNumber` and `Branding.TaxNumber`
+        PRUNED (orphaned once the label came from the jurisdiction); `Receipt.TaxNumberLine` →
+        `{0}: {1}` with per-language punctuation; both hints reworded
+  - [x] `ShopSetupWindow` — `TaxNumberPanel` hides where none is issued, `TaxNumberLabel` set from the
+        jurisdiction, both driven live from `ApplyLocationMode`
+  - [x] `ReceiptBrandingWindow` — `BuildCardTitled` overload so the card title can come from the
+        jurisdiction rather than a fixed key; card stays visible (it edits the OVERRIDE)
+  - [x] `MainWindow.CreateTaxNumberBlock` + `ShopLetterhead` pass the name into the line
+  - [x] `formatcheck` exempts `Receipt.TaxNumberLine` (now pure punctuation, identical en/es);
+        `taxcheck` gained `RunTaxNumberNaming` + settings-screen assertions
+- Notes: 562 keys × 5 languages, exact parity. The US-location assertion is driven on the NEW-shop
+  window because a new shop is never asked before reseeding — on an existing shop it would raise the
+  confirmation dialog and stall the harness, the same trap as earlier today. Final state: build
+  0 warnings / 0 errors, suite **1272 passed / 0 failed across 21 harnesses** (taxcheck 253 → 351),
+  0 CJK in `.cs`/`.xaml`. Committed to `main`.
+
+### 2026-07-29 21:40 — Review AND repair the store-location / tax-jurisdiction change set  [DONE]
+- Ask: "检查一下我最新的改动。我们添加了一部分预先设置的收税方式。看看还有没有哪里有问题"
+- Follow-up ask: "可以，根据你的建议去形象修改。" / "去进行修改" — implement the recommended fixes.
+- Scope: review only — the change set was authored outside this session (uncommitted working tree:
+  `Models/TaxJurisdiction.cs`, `Services/TaxJurisdictions.cs`,
+  `Settings/System/Defaults/tax-jurisdictions.json` new; `Shops.LocationCode` and
+  `Orders.PricesIncludeTax` columns; inclusive-pricing branch in `Order.CalculateSectionPayment`;
+  location picker in `ShopSetupWindow`; 10 new keys × 5 languages; README v3.0.0).
+- Plan:
+  - [x] Read every changed/new file and the diff
+  - [x] Build (0 warnings / 0 errors)
+  - [x] CJK sweep over `.cs`/`.xaml`
+  - [x] Language-table parity + translation spot-check across all five files
+  - [x] Probe the live database for what the one-shot backfill actually wrote
+  - [x] Run the scratchpad harness suite
+  - [x] Report findings, ranked
+- Notes: build 0/0; CJK sweep found 1 (`TaxJurisdiction.cs` doc comment); language tables 555 keys ×
+  5, parity exact, translations idiomatic; suite **919 passed / 2 failed** (balancecheck).
+  Findings, worst first:
+  1. **An inclusive location's `standardRatePercent` is never read.** `ApplyLocationMode` reseeds
+     only `if (reseedMatrix && !inclusive)`, so CN 6 / JP 10 / FR 20 / ES 21 are dead data and the
+     embedded tax is backed out at whatever the per-method matrix holds — which the same branch
+     HIDES, leaving no way to set it. Live proof: shop 1 is `LocationCode = JP` carrying
+     `RatePercent: 13` on all four methods, so its consumption tax computes at 13%, not 10% — and at
+     0% for any method a shop marked tax free, though VAT does not depend on how a sale is settled.
+  2. **The per-portion tax lines contradict the total in inclusive mode.** `DepositStageTax`,
+     `UpdateTaxBreakdownLines` and `OrderPaymentSummaryConverter` all derive tax as
+     `Received − Deposit` / `FinalCharge − FinalBase`, which is 0 when tax is embedded, while
+     `TotalTax` is not. The printed receipt says "Tax 0 | Tax 0" beside a non-zero "Tax paid".
+  3. **The 2 balancecheck failures are that divergence, caught.** The harness recomputes its
+     expectations through the 6-arg `CalculateSectionPayment`, whose new `pricesIncludeTax` defaults
+     to false, so it silently kept exclusive math while the window went inclusive (fixture shop is
+     the JP one). The optional parameter is the landmine: a caller that forgets it is wrong and still
+     compiles.
+  4. `TaxJurisdictions.Default` reads `_defaultCode` **before** `Find` triggers `Load()`, so a file
+     whose `defaultLocationCode` differs from the `CA-ON` const resolves differently on the first
+     call than on every later one. Masked only because the shipped file agrees with the const.
+  5. A new shop never gets `CreateForStandardRate` — the initial fill is guarded, so the seeding the
+     README promises happens only if the user re-picks a location by hand.
+  6. Rates are hard-coded into the display names in all five language files ("Ontario (HST 13%)"),
+     which defeats the JSON being editable without a rebuild — the file's own comment says display
+     names live in the language files.
+  7. Reseeding on a hand-pick silently discards a configured matrix, no confirmation; picking `US`
+     (rate 0) wipes tax entirely.
+  8. `PopulateLocation` builds `ComboBoxItem`s into `Items` — the pattern already removed once for
+     logging 4 binding errors per picker; `ItemsSource` + `DisplayMemberPath` is the house form.
+  9. Doc/code mismatches: `TaxJurisdiction`'s remark and the README both claim the ORDER EDITOR hides
+     a tax panel (only Shop Settings hides its matrix), and `DefaultCurrency` is documented as used
+     "to seed" when only the backfill reads it. One CJK phrase in `TaxJurisdiction.cs`.
+  10. No harness covers any of it: pricing mode, presets loader, corrupt-file fallback, or backfill.
+- Fixes applied (all ten):
+  - `Models/Order.cs` — `pricesIncludeTax` is now REQUIRED; the two modes split into
+    `IncludedTaxPayment` / `AddedTaxPayment` + an `EmbeddedTax` helper (exclusive arithmetic byte-for-byte
+    unchanged). The inclusive branch no longer consults `PaymentTaxRules`. `SectionPayment` gained
+    `DepositTax` / `FinalTax` / `PricesIncludeTax` as init properties (kept off the positional
+    constructor so it stays at seven params) and a computed `DepositStageTotal`.
+  - `Services/TaxJurisdictions.cs` — new `IncludedTaxRatePercent(shop)`; `Default` forces `All` before
+    reading `_defaultCode`; the JSON DTO's `PricesIncludeTax` renamed `Inclusive` with
+    `[property: JsonPropertyName]` (S3218 — it shadowed the enclosing method).
+  - `Models/TaxJurisdiction.cs` — `DisplayName` formats the rate from the FILE into the language
+    file's `{0}`; CJK removed; the remarks that claimed the ORDER EDITOR hides a panel and that
+    `DefaultCurrency` seeds a shop corrected.
+  - `Views/OrderEditWindow.xaml.cs` — `IncludedTaxRatePercent` property; `ApplyStageTaxRates` takes one
+    jurisdiction rate for both portions in inclusive mode and never zeroes it per method; the three
+    refreshers and `UpdateTaxBreakdownLines` read `money.DepositTax` / `money.FinalTax` /
+    `money.DepositStageTotal`; `DepositStageTax` helper deleted.
+  - `Views/ShopSetupWindow.xaml(.cs)` — `LocationRow` + `ItemsSource`/`DisplayMemberPath`; a NEW shop is
+    seeded (`reseedMatrix: _existing is null`); reseed no longer skipped for inclusive locations;
+    `WouldDiscardConfiguredRules` + `ConfirmReseed` ask before discarding a customised matrix;
+    `TaxInclusivePanel` states the rate; `TaxSectionHint` hides with the matrix it describes.
+    The predicate is split from the prompt because a `MessageBox` inside `SelectionChanged` blocked
+    the harness that drives the picker — diagnosed by enumerating the process's windows and finding a
+    `#32770` dialog; see `context.md`.
+  - `Converters/TaxLabelConverter.cs` (NEW) + `OrderPaymentSummaryConverter` + `MainWindow.xaml(.cs)` —
+    tax labels follow the mode (`Order.Fields.IncludedTax`), on the receipt totals block and all three
+    detail-panel section rows.
+  - Language files ×5 — rates replaced by `{0}`; new `Shop.Tax.InclusiveRate`,
+    `Shop.Tax.ReseedConfirm`, `Shop.Tax.ReseedConfirmTitle`, `Order.Fields.IncludedTax` (559 keys each).
+  - `tax-jurisdictions.json` comment and the README v3.0.0 entry corrected to what the code does.
+  - Harnesses: `scratchpad/taxcheck` NEW (253 assertions — presets, both modes, names in every
+    language, upgrade path, settings screen, the discard predicate); `balancecheck` now derives the
+    mode and rate from the shop instead of assuming a 13% card surcharge.
+  - `SKILL.md` gained §4a (second pricing mode) and had its own labels-by-key rule applied — six
+    Chinese UI labels in §4/§14 replaced with keys, one of them (实收定金) stale since the v2.0.1
+    rewording. Logged in `SkillUpdates.md`.
+- Notes: final state — build 0 warnings / 0 errors, Sonar clean (the one issue the IDE raised,
+  S3218, fixed), suite **1174 passed / 0 failed across 21 harnesses**, 559 keys × 5 languages with
+  exact parity, 0 CJK in `.cs`/`.xaml`.
+  Live DB backed up to `orders.db.bak-preTaxLocation` before running the guards. Tree uncommitted.
+
 ### 2026-07-29 18:05 — Hotfix: a fully-deposited order locks its own balance controls  [DONE]
 - Ask: "Price chaging bug: If my charge on the pretax is 123, the current tax rate is 13%, i
   paied pretax deposit 123, then I marked it as charged. >Then the final balance

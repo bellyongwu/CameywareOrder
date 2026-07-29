@@ -482,6 +482,10 @@ public partial class App : Application
         ("Email", "ALTER TABLE Orders ADD COLUMN Email TEXT NULL; "),
         ("Address", "ALTER TABLE Orders ADD COLUMN Address TEXT NULL; "),
         ("CurrencyType", "ALTER TABLE Orders ADD COLUMN CurrencyType INTEGER NOT NULL DEFAULT 1; "),
+        // Whether the order's amounts are quoted tax-inclusive, frozen at save from the shop's
+        // location. Default 0 (exclusive) is what every existing order was priced as, so their
+        // stored figures do not move.
+        ("PricesIncludeTax", "ALTER TABLE Orders ADD COLUMN PricesIncludeTax INTEGER NOT NULL DEFAULT 0; "),
         ("ServiceType", "ALTER TABLE Orders ADD COLUMN ServiceType INTEGER NOT NULL DEFAULT 1; "),
         ("ServiceDetails", "ALTER TABLE Orders ADD COLUMN ServiceDetails TEXT NULL; "),
         ("AdditionalNotes", "ALTER TABLE Orders ADD COLUMN AdditionalNotes TEXT NULL; "),
@@ -559,6 +563,10 @@ public partial class App : Application
         // been asked, which Shop.SupportedCurrencies reads back as just its own CurrencyType — the
         // behaviour every existing branch already had.
         ("SupportedCurrenciesJson", "ALTER TABLE Shops ADD COLUMN SupportedCurrenciesJson TEXT NULL; "),
+        // Where the shop is, as a tax-jurisdiction code. Nullable, and null is meaningful: it means
+        // "never located", which TaxJurisdictions.For reads back as the home market — the behaviour
+        // every existing branch already had. Backfilled once from the shop's currency on arrival.
+        ("LocationCode", "ALTER TABLE Shops ADD COLUMN LocationCode TEXT NULL; "),
     };
 
     /// <summary>
@@ -812,7 +820,8 @@ public partial class App : Application
                 Website TEXT NULL,
                 TaxRegistrationNumber TEXT NULL,
                 InstalledLanguagesJson TEXT NULL,
-                SupportedCurrenciesJson TEXT NULL
+                SupportedCurrenciesJson TEXT NULL,
+                LocationCode TEXT NULL
             );");
 
         // A database created by an earlier build already HAS the table, so CREATE TABLE IF NOT
@@ -820,6 +829,7 @@ public partial class App : Application
         // needs its own guard here, exactly like OrderColumnMigrations does for Orders.
         var shopColumns = await ReadShopColumnsAsync(db);
         var addingSupportedCurrencies = !shopColumns.Contains("SupportedCurrenciesJson");
+        var addingLocationCode = !shopColumns.Contains("LocationCode");
 
         foreach (var (column, ddl) in ShopColumnMigrations)
         {
@@ -829,6 +839,9 @@ public partial class App : Application
 
         if (addingSupportedCurrencies)
             await BackfillOrderCurrenciesAsync(db);
+
+        if (addingLocationCode)
+            await BackfillShopLocationsAsync(db);
 
         await db.Database.ExecuteSqlRawAsync(
             "CREATE UNIQUE INDEX IF NOT EXISTS IX_Shops_PublicId ON Shops (PublicId);");
@@ -867,6 +880,39 @@ public partial class App : Application
         await db.Database.ExecuteSqlRawAsync(
             "UPDATE Orders SET CurrencyType = (SELECT s.CurrencyType FROM Shops s WHERE s.Id = Orders.ShopId) " +
             "WHERE EXISTS (SELECT 1 FROM Shops s WHERE s.Id = Orders.ShopId);");
+    }
+
+    /// <summary>
+    /// Gives every existing shop a location, once, when the LocationCode column first arrives.
+    /// </summary>
+    /// <remarks>
+    /// A shop that predates the store-location feature has no location, and reading it back as the
+    /// home market (see <c>TaxJurisdictions.For</c>) is right for the overwhelmingly common Canadian
+    /// installation but wrong for one already trading in yen or yuan — those would silently adopt a
+    /// Canadian tax treatment. Its CURRENCY is the one thing such a shop has already said about
+    /// where it operates, so the location is inferred from it: CNY → CN, JPY → JP, EUR → FR, USD →
+    /// US, and CAD (or anything unrecognised) → the home market. The shop can change it afterwards;
+    /// this only ensures nobody starts out mislocated.
+    ///
+    /// Pinned to the one-shot arrival of the column rather than run on every launch, so a shop that
+    /// is later deliberately located somewhere its currency would not imply is never overwritten.
+    /// Existing orders are NOT touched: they were all priced tax-exclusive and their frozen
+    /// PricesIncludeTax stays 0, so their figures do not move even for a shop now marked inclusive.
+    /// </remarks>
+    private static async Task BackfillShopLocationsAsync(AppDbContext db)
+    {
+        foreach (var currency in Enum.GetValues<CurrencyType>())
+        {
+            var location = TaxJurisdictions.LocationForCurrency(currency);
+            await db.Database.ExecuteSqlRawAsync(
+                "UPDATE Shops SET LocationCode = {0} WHERE LocationCode IS NULL AND CurrencyType = {1};",
+                location, (int)currency);
+        }
+
+        // Anything whose currency did not map to a jurisdiction still gets the home market, so no
+        // shop is left unlocated.
+        await db.Database.ExecuteSqlRawAsync(
+            "UPDATE Shops SET LocationCode = {0} WHERE LocationCode IS NULL;", TaxJurisdictions.DefaultCode);
     }
 
     /// <summary>

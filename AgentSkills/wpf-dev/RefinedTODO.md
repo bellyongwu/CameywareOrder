@@ -19,8 +19,13 @@ A WPF (.NET 8) tailoring order system, multi-shop, EF Core + SQLite, in-process
 GraphQL, FlowDocument/QuestPDF printing.
 
 - **Shops** — every shop carries its own name, address (per language), phone,
-  email, website, tax registration number, currency, payment/tax rules, receipt
-  numbering, measurement terms, branding and product catalogue.
+  email, website, tax registration number, currency, **tax-jurisdiction location**,
+  payment/tax rules, receipt numbering, measurement terms, branding and product catalogue.
+- **Tax** — a function of the shop's LOCATION, from shipped presets in
+  `Settings/System/Defaults/tax-jurisdictions.json`. The location gives a standard rate and a pricing
+  MODE: tax added at settlement (Canada, the US) or already inside the price (China, Japan, the EU),
+  where the rate is the jurisdiction's alone and the per-method matrix is not consulted. The mode is
+  frozen onto each order, as its currency is.
 - **Auth** — per-shop memberships with roles, activation, shift; `admin` is
   permanent and never named on screen.
 - **Languages** — zh-CN, en-US, fr-FR, es-ES, ja-JP. One file per language, discovered
@@ -36,7 +41,7 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 ## Open
 
-Nothing in flight.
+Nothing in flight. v3.0.0 (store location / tax jurisdictions) is **committed to `main`**, not pushed.
 
 **Deferred, deliberately** — revisit only if asked:
 
@@ -50,6 +55,55 @@ Nothing in flight.
   so it needs a migration for no user-visible gain.
 
 ---
+
+## Recent work (2026-07-29)
+
+### Store location decides the tax, and whether prices already contain it
+`Shop.LocationCode` names a jurisdiction from a shipped preset file
+(`Settings/System/Defaults/tax-jurisdictions.json`); the jurisdiction gives a standard rate and a
+pricing MODE, and the mode is frozen onto `Order.PricesIncludeTax` at save the way `CurrencyType`
+already is. Tax lives on LOCATION because that is what tax law is a function of — not on language,
+not on how a customer pays. Null means "never located" and resolves to the home market (`CA-ON`,
+tax-exclusive), so nothing about the installed base changed until a shop says where it is.
+
+The change set arrived from outside a session and was reviewed the same day. It was right in shape
+and right in the back-out arithmetic (`amount − amount ÷ (1 + rate)`), and wrong in two ways that
+reached real money — both now fixed, and both worth keeping as warnings:
+
+- **An inclusive location's `standardRatePercent` was read nowhere.** The reseed was guarded
+  `reseedMatrix && !inclusive`, so the rate actually in force came from the per-method matrix that
+  the *same branch hides*. Live proof: a shop located in `JP` (consumption tax 10%) carrying 13% on
+  every method. Now an inclusive rate comes from the jurisdiction via
+  `TaxJurisdictions.IncludedTaxRatePercent`, applies to both portions, ignores the per-method rules
+  entirely — a value-added tax cannot vary by tender — and is STATED on screen where the matrix used
+  to be. See `context.md`, "a setting whose value the UI hides".
+- **Every breakdown derived tax as `Received − Deposit`,** which is structurally zero once the tax is
+  inside the price, so a receipt printed "tax 0" twice beside a non-zero total. `SectionPayment` now
+  carries `DepositTax`, `FinalTax`, `PricesIncludeTax` and `DepositStageTotal`, and the three
+  consumers read them instead of re-deriving. Labels follow the mode too (`Order.Fields.IncludedTax`
+  via `TaxLabelConverter`), because subtotal + tax ≠ total is correct here and reads as a defect.
+
+**The tax NUMBER got the same treatment.** `"GST/HST"` was spelled into fifteen string-table values —
+the settings label, the branding card title, the receipt line, in all five languages — so a shop in
+Osaka read `税番号（GST/HST）` and printed a Canadian tax number's name on its own tax slip. A
+jurisdiction now declares which number it issues (`TaxNumberLabel` → a `TaxNumber.<name>` key, grouped
+by tax REGIME: `GstHst` for the three Canadian entries, `Vat` for FR/ES, `ChinaTaxpayer`,
+`JapanInvoice`) or omits it, in which case Shop Settings does not ask for one at all — the US.
+`Shop.Setup.TaxNumber` and `Branding.TaxNumber` were pruned as orphans. Two traps recorded in
+`context.md`: this must NOT be inferred from `pricesIncludeTax` (Canada taxes consumption and quotes
+exclusive, so inferring drops the home market), and a stored number must keep printing under a generic
+label rather than vanish when a shop relocates.
+
+Also fixed in the same pass: `pricesIncludeTax` made a REQUIRED parameter of
+`CalculateSectionPayment` (it was optional, which is how a harness silently kept the old arithmetic);
+`TaxJurisdictions.Default` forcing the load before reading the cached default code; a NEW shop seeded
+from its location instead of only a re-picked one; the rate moved out of the five language files into
+a `{0}` filled from the JSON, so editing a rate cannot leave a translation stale; a confirmation
+before a location change discards a configured matrix — as a pure `WouldDiscardConfiguredRules`
+predicate plus a thin prompt, because the `MessageBox` blocked the harness that drives the picker
+(`context.md`, "a confirmation prompt inside an event handler"); and the picker moved off hand-built
+`ComboBoxItem`s. New `taxcheck` harness (253 assertions) covers the presets, both pricing modes, the
+names in every language, the upgrade path and the settings screen.
 
 ## Recent work (2026-07-27 → 07-28)
 

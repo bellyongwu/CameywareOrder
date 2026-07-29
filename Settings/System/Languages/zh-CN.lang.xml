@@ -49,8 +49,7 @@
   <Text key="Branding.Description">设置徽标、页眉和页脚，用于打印小票和量身单下载（可分别设置中英文）。</Text>
   <Text key="Branding.Header">页眉</Text>
   <Text key="Branding.Footer">页脚</Text>
-  <Text key="Branding.TaxNumber">税号（GST/HST）</Text>
-  <Text key="Branding.TaxNumberHint">用于小票税务凭证。填写后将打印在页眉正下方。各语言共用同一个税号。</Text>
+  <Text key="Branding.TaxNumberHint">用于小票税务凭证。填写后将打印在页眉正下方。各语言共用同一个税号，名称按门店所在地实际签发的税号显示。</Text>
   <Text key="Branding.Logo">徽标图片</Text>
   <Text key="Branding.ChooseLogo">选择图片</Text>
   <Text key="Branding.RemoveLogo">移除</Text>
@@ -199,8 +198,7 @@
   <Text key="Shop.Setup.Email">电子邮箱</Text>
   <Text key="Shop.Setup.Website">网址</Text>
   <Text key="Shop.Setup.ContactHint">选填。电话、邮箱和网址不区分语言，各语言显示同一内容。</Text>
-  <Text key="Shop.Setup.TaxNumber">税号（GST/HST）</Text>
-  <Text key="Shop.Setup.TaxNumberHint">选填。将打印在本店铺的小票上，使其可作为税务凭证。页眉页脚设置中填写的税号会覆盖此处。</Text>
+  <Text key="Shop.Setup.TaxNumberHint">选填，仅在门店所在地签发此类税号时才需填写。将打印在本店铺的小票上，使其可作为税务凭证。页眉页脚设置中填写的税号会覆盖此处。</Text>
   <Text key="Shop.Setup.InstalledLanguagesRequired">请至少为本店铺安装一种语言。</Text>
   <Text key="Shop.Setup.SupportedCurrenciesRequired">请至少为本店铺选择一种货币。</Text>
   <Text key="Shop.Localization.Link">语言与货币</Text>
@@ -239,6 +237,24 @@
   <Text key="Shop.Tax.SummaryFree">不收取税费</Text>
   <Text key="Shop.Tax.SummaryTaxable">按 {0}% 收取税费</Text>
   <Text key="Shop.Tax.RateInvalid">税率必须为 0 到 100 之间的数字。</Text>
+  <Text key="TaxNumber.Generic">税号</Text>
+  <Text key="TaxNumber.GstHst">GST/HST 税号</Text>
+  <Text key="TaxNumber.Vat">增值税税号</Text>
+  <Text key="TaxNumber.ChinaTaxpayer">纳税人识别号</Text>
+  <Text key="TaxNumber.JapanInvoice">发票开具事业者登记号</Text>
+  <Text key="Shop.Tax.Location">门店所在地</Text>
+  <Text key="Shop.Tax.InclusiveRate">价格已含税：{0}%</Text>
+  <Text key="Shop.Tax.InclusiveNote">该地区价格为含税价，税额在收据上列示，不在收银时另加；税额不因支付方式而异，无需按支付方式单独设置。</Text>
+  <Text key="Shop.Tax.ReseedConfirmTitle">是否替换税费规则？</Text>
+  <Text key="Shop.Tax.ReseedConfirm">切换到「{0}」将把所有支付方式设为该地区的标准税率，并丢弃此处已配置的规则。是否继续？</Text>
+  <Text key="TaxJurisdiction.CA-ON">加拿大 — 安大略省（HST {0}%）</Text>
+  <Text key="TaxJurisdiction.CA-AB">加拿大 — 阿尔伯塔省（GST {0}%）</Text>
+  <Text key="TaxJurisdiction.CA-BC">加拿大 — 不列颠哥伦比亚省（GST+PST {0}%）</Text>
+  <Text key="TaxJurisdiction.US">美国（销售税另加）</Text>
+  <Text key="TaxJurisdiction.CN">中国（增值税 {0}%，含税价）</Text>
+  <Text key="TaxJurisdiction.JP">日本（消费税 {0}%，含税价）</Text>
+  <Text key="TaxJurisdiction.FR">法国（增值税 {0}%，含税价）</Text>
+  <Text key="TaxJurisdiction.ES">西班牙（增值税 {0}%，含税价）</Text>
 
   <Text key="Shop.Receipt.Section">小票编号规则</Text>
   <Text key="Shop.Receipt.SectionHint">新订单的订单号（即小票号）的生成方式。已有订单的编号不会改变。</Text>
@@ -290,7 +306,7 @@
   <Text key="Status.ImportGlobalSettingsFailed">恢复全局设置失败: {0}</Text>
   <Text key="Status.ImportGlobalSettingsInvalid">所选文件不是有效的全局设置备份包。</Text>
   <Text key="Receipt.Title">销售小票</Text>
-  <Text key="Receipt.TaxNumberLine">GST/HST 税号：{0}</Text>
+  <Text key="Receipt.TaxNumberLine">{0}：{1}</Text>
   <Text key="Receipt.SectionTotal">合计</Text>
   <Text key="Search.Label">搜索</Text>
   <Text key="Filter.Status.Label">状态</Text>
@@ -374,6 +390,7 @@
   <Text key="Order.Fields.DueDownpayment">应收定金</Text>
   <Text key="Order.Fields.DueFinalBalance">应收尾款</Text>
   <Text key="Order.Fields.PaidTax">已收税额</Text>
+  <Text key="Order.Fields.IncludedTax">价内税额</Text>
   <Text key="Order.Fields.BalanceStatus">余额状态</Text>
   <Text key="Order.Fields.PaymentBreakdown">收款明细</Text>
   <Text key="Order.Fields.Notes">备注</Text>

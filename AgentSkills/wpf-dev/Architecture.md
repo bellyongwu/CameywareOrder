@@ -133,8 +133,10 @@ components are added/renamed or the way pieces fit together changes.
     `%LocalAppData%\CameywareOrder\Branding`. `ReceiptBrandingSettings` holds
     per-language `LocalizedBranding` (`HeaderXaml`/`FooterXaml`) plus
     `LogoFileName` + `LogoPlacement` (Left/Center/Right, default Center) and the shop's
-    `TaxRegistrationNumber` (GST/HST — NOT per language; printed directly under the
-    receipt header, and edited under the Header card in the branding editor).
+    `TaxRegistrationNumber` (NOT per language; printed directly under the
+    receipt header, and edited under the Header card in the branding editor. What it is CALLED comes
+    from the shop's tax jurisdiction — see `TaxJurisdiction.TaxNumberLabel`; "GST/HST" used to be
+    spelled into the label and the receipt line in all five languages).
     `ResolveTaxRegistrationNumber(settings)` applies the override rule — the number
     typed into the header/footer editor wins over the shop's own, being the more
     specific surface. It lives here rather than in either printer because the
@@ -266,13 +268,35 @@ components are added/renamed or the way pieces fit together changes.
     decide whether a portion is taxed at all. `ConfigurableMethods` drives the settings UI;
     `Normalize` maps the legacy `PaymentMethod.Card` onto `DebitCard`. Deliberately in Models
     rather than Services — the money calculation cannot resolve without it.
+  - `TaxJurisdiction` (`Models/TaxJurisdiction.cs`) + `TaxJurisdictions` (`Services/`) — one shipped
+    tax PRESET per store location (`Code`, `StandardRatePercent`, `PricesIncludeTax`,
+    `DefaultCurrency`), loaded once from `Settings/System/Defaults/tax-jurisdictions.json` with a
+    built-in home-market (`CA-ON`) fallback so a missing or corrupt file cannot leave the app unable
+    to price. Shaped after `ShopCurrencies`: a bounded shipped set the UI reads to seed a shop. The
+    location is stored on `Shop.LocationCode` (null = never located → home market) and its pricing
+    MODE is frozen onto `Order.PricesIncludeTax` at save, exactly as `CurrencyType` is.
+    `PaymentTaxRules.CreateForStandardRate` is the seed a picked location applies.
+    In an INCLUSIVE location `StandardRatePercent` is the only rate in play:
+    `TaxJurisdictions.IncludedTaxRatePercent(shop)` is what the order editor uses for both portions,
+    the per-method matrix is not consulted at all (a value-added tax cannot vary by tender), and Shop
+    Settings shows the rate in place of the matrix.
+    A jurisdiction also names the TAX NUMBER its businesses are issued (`TaxNumberLabel` → a
+    `TaxNumber.<name>` key; `GstHst` shared by the three Canadian entries, `Vat` by FR/ES,
+    `ChinaTaxpayer`, `JapanInvoice`), or omits it where none is issued — the US. `CollectsTaxNumber`
+    gates whether Shop Settings asks for one at all; `TaxNumberKey` / `TaxNumberName` name it on
+    screen and on the receipt line, falling back to `TaxNumber.Generic` so a stored number is never
+    printed unlabelled. This is declared per jurisdiction and **not** inferred from
+    `PricesIncludeTax`: Canada's GST/HST is a consumption tax quoted tax-exclusive.
   - `PaymentMethod` — `Etransfer`, `Card` (LEGACY, never delete: orders saved before the split
     still hold it), `Cash`, `None`, `DebitCard`, `CreditCard`.
   - `OrderNumberMode` (`Models/Shop.cs`) — Timestamp (default, the format the app always produced)
     / Sequential / DailySequential / YearlySequential.
   - `SectionPayment` — immutable `readonly record struct`
     (Subtotal, Deposit, FinalBase, ReceivedDownpayment, FinalCharge, Total, Tax)
-    holding one section's money split.
+    holding one section's money split, plus `DepositTax` / `FinalTax` / `PricesIncludeTax` as init
+    properties and a computed `DepositStageTotal`. The per-portion tax is CARRIED rather than
+    re-derived downstream as `Received − Deposit`: that difference is zero when tax is embedded in the
+    price, which is how the receipt came to print "tax 0" beside a non-zero total.
   - `OrderItem` — clothing line item (`UnitPrice`, `PromotionalPrice`, computed
     `EffectiveUnitPrice` / `TotalPrice`).
   - `CustomMadeServiceRecord` — measurement record (serialized to
@@ -306,7 +330,10 @@ components are added/renamed or the way pieces fit together changes.
 - **Converters/** — `CurrencyAmountConverter`, `LocalizationLookupConverter`,
   `NullToVisibilityConverter`, `OrderStatusToLocalizedTextConverter`,
   `CustomMadeRecordSummaryConverter`, `OrderPaymentSummaryConverter`,
-  `PositiveAmountToVisibilityConverter`, `CustomMadeServiceFlagConverter`
+  `PositiveAmountToVisibilityConverter`,
+  `TaxLabelConverter` (binds `Order.PricesIncludeTax`; picks between
+  `Order.Fields.TaxAmount` and `Order.Fields.IncludedTax`, because subtotal + tax = total only holds
+  in one of the two pricing modes), `CustomMadeServiceFlagConverter`
   (binds the whole `Order` row; ConverterParameter `Flag` → localized 有/无,
   `Names` → bracketed garment names with a zh 、 / en ", " separator,
   `NamesVisibility` → Visible/Collapsed), `BalanceStatusColorConverter`

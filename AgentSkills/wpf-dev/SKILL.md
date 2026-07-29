@@ -448,7 +448,7 @@ When an entity aggregates several independently-priced sections (services):
   preserved.
 - Expose `[NotMapped]` accessors per section (`XxxMoney => CalculateSectionPayment(...)`)
   and aggregate off them: `XxxTotal => XxxMoney.Total`, `XxxTax => XxxMoney.Tax`,
-  `ReceivedDownpayment = Σ XxxMoney.ReceivedDownpayment` (实收定金),
+  `ReceivedDownpayment = Σ XxxMoney.ReceivedDownpayment` (`Order.Fields.ReceivedDownpayment`),
   `TotalTax = Σ XxxTax`. Nominal deposit total (`TotalDownpayment`) stays the sum
   of the pre-tax deposits.
 - Model "cleared" / "residual" / "received-final" with small static helpers that
@@ -461,17 +461,47 @@ When an entity aggregates several independently-priced sections (services):
   static decimal SectionReceivedFinal(SectionPayment m, bool cleared)
       => (cleared && m.FinalBase > 0m) ? m.FinalCharge : 0m;
   ```
-- `FinalBalance` (剩余尾款) = Σ residuals; `ReceivedFinalBalance` (实收尾款) = Σ
+- `FinalBalance` (`Order.Fields.FinalBalance`) = Σ residuals; `ReceivedFinalBalance`
+  (`Order.Fields.ReceivedFinalBalance`) = Σ
   received finals. The live editor must call the **same** `CalculateSectionPayment`
   and compare "fully paid / cleared" against the **pre-tax subtotal base** (never
   the taxed total), so persisted and on-screen values match. Persisted
   `TotalAmount` is recomputed on save; legacy mixed-method rows keep their stored
   total while the breakdown recomputes.
 - When surfacing the split, show the nominal vs. received amounts **as a pair**
-  (定金/实收定金 on one row, 剩余尾款/实收尾款 on the next) and, in any per-section
-  breakdown text, show each portion's base amount **and** its card tax
-  (`ReceivedDownpayment − Deposit`, `FinalCharge − FinalBase`). On a receipt, only
-  print the received-deposit line when it differs from the nominal deposit.
+  (`Order.Fields.Downpayment` / `.ReceivedDownpayment` on one row, `.FinalBalance` /
+  `.ReceivedFinalBalance` on the next) and, in any per-section breakdown text, show each portion's
+  base amount **and** its tax — read from the struct's own `DepositTax` / `FinalTax`, never
+  re-derived as `ReceivedDownpayment − Deposit`. On a receipt, only print the received-deposit line
+  when it differs from the nominal deposit.
+
+### 4a. Adding a second pricing mode (tax-inclusive vs tax-exclusive)
+
+A market where prices are quoted with the tax already inside them is not a display toggle; it is a
+second arithmetic. Three rules, each learned by getting it wrong:
+
+- **Make the mode a REQUIRED parameter of the calculation, never an optional one.** A default turns
+  "every unconverted call site fails to compile" into silence: the compiler stops listing the callers,
+  and one that keeps the shorter overload keeps the *old* arithmetic while the screen it feeds has
+  moved. Nothing fails to build; the numbers simply stop agreeing. Required, and let the compiler
+  enumerate the call sites.
+- **Carry the per-portion tax and the mode ON the result struct.** Every consumer will otherwise
+  derive tax as `Received − Deposit`, which is structurally **zero** once the tax is embedded — so the
+  editor and the printed receipt show "tax 0" twice beside a total that is not zero. Add
+  `DepositTax`, `FinalTax`, `PricesIncludeTax` and any mode-dependent subtotal
+  (`DepositStageTotal => PricesIncludeTax ? Subtotal : Subtotal + DepositTax`) as `init` properties,
+  so the positional constructor stays inside the S107 parameter limit and the answer travels with the
+  money instead of being re-inferred five times.
+- **Labels are part of the arithmetic.** `subtotal + tax = total` holds in one mode only; in the other
+  the same three rows read as broken. Pick the label from the mode (`Order.Fields.TaxAmount` vs
+  `Order.Fields.IncludedTax`) everywhere the figure appears — receipt totals, detail panel, breakdown
+  line — which is what having the flag on the struct makes possible in a converter that only has the
+  order.
+
+And on where the rate comes from: in an inclusive market a value-added tax is a property of the
+**sale**, not of the tender, so it cannot be read from a per-payment-method table. Take it from the
+jurisdiction, apply it to both portions, and **do not** consult the per-method taxable/tax-free rules
+at all — otherwise one price yields two different taxes depending on how it was settled.
 
 ## 5. RadioButton/CheckBox sync without reentrancy
 
@@ -869,7 +899,7 @@ To copy an entity that owns child rows and derived state:
 - **Reset "closed" status on copy:** if the source status is a finished one
   (`Completed`/`Cancelled`/`Returned`), set the copy to the active default
   (`Processing`); otherwise keep the source status. Because status-derived flags
-  (e.g. the "已取货 / picked up" tick == `Status == Completed`) have no own
+  (e.g. the `OrderEdit.PickedUp` tick == `Status == Completed`) have no own
   column, resetting the status also clears them automatically.
 - Save, reload the list, then re-select the copy by its new `Id`; report a
   localized, formatted status message.
@@ -936,13 +966,13 @@ via `ListView.Items.SortDescriptions` (that would sort one page only).
 
 - **Read-only status → relabel the open action.** When an order's status is a
   read-only one (`Completed`/`Cancelled`/`Returned`), the toolbar button **and**
-  the row context-menu item should read "查看订单 / View Order" instead of
-  "编辑订单 / Edit Order". Drive both from one `RefreshToolbarLabels()` that sets
+  the row context-menu item should read `Toolbar.ViewOrder` instead of
+  `Toolbar.EditOrder`. Drive both from one `RefreshToolbarLabels()` that sets
   `EditOrderButton.Content` and the named `EditContextMenuItem.Header` to the same
   localized key; call it on `SelectedOrder` change and on `LanguageChanged`.
   Right-click already selects the row (via the `PreviewMouseRightButtonDown`
   `EventSetter`), so the menu reflects the right-clicked order.
-- **Gate a quick-complete checkbox on real state.** The "已取货 / picked up"
+- **Gate a quick-complete checkbox on real state.** The `OrderEdit.PickedUp`
   checkbox must be un-checkable until the order actually has a charge **and**
   every final balance is cleared. Because the order-cleared predicate already
   returns false when the total is zero, one condition covers both:

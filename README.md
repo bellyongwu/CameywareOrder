@@ -11,6 +11,59 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v3.0.0 — 2026-07-29
+
+Tax moved onto the axis it actually belongs on: the **store's location**. A shop now says where it
+is, and its location decides the standard tax rate its payment methods start from and — the reason
+this is a major version — whether its prices are quoted **tax-inclusive**. Both facts reach the
+database: a new column on the shop, a new column frozen onto every order.
+
+- **A shop has a location, chosen from a shipped table of tax jurisdictions.** Picking one seeds the
+  payment/tax matrix from that jurisdiction's standard rate, so the *lawful* configuration is the
+  starting point rather than something to remember to set — and a shop created and saved straight
+  through is seeded too, not only one whose owner re-picks a location by hand. Tax is a function of
+  where the store is, not of the language it runs in or of how a customer pays, so it is its own
+  setting — not inferred from the installed languages the way currency is.
+- **Tax-inclusive markets are handled as their own pricing mode, not a display toggle.** In China,
+  Japan and the EU prices already contain the tax, so the money split **backs the tax out** of the
+  price (`amount − amount ÷ (1 + rate)`) instead of adding it on top. The tax is still computed and
+  printed — inclusive does not mean invisible, it means embedded, and the receipt names it "tax
+  included" rather than "received tax" so nobody adds it to a total that already contains it. Canada
+  and the US keep adding tax at settlement, exactly as before.
+- **In an inclusive market the jurisdiction's rate is the only rate.** A value-added tax is a
+  property of the sale, not of how it was settled — a cash sale in Tokyo carries the same consumption
+  tax as a card one — so Shop Settings replaces its per-method matrix with that single rate and
+  states it on screen. Both portions of an order, deposit and final balance, use it.
+- **The standard rate is now the default, at every rate a jurisdiction charges.** Ontario seeds 13%,
+  Alberta 5%, Japan 10%, France 20%, and so on — every payment method taxable at that rate out of
+  the box. Making a method tax free (a cash discount, say) is now a deliberate opt-out a shop
+  chooses, not the default it inherits, and changing location asks first if it would discard rules
+  somebody had configured.
+- **Presets are shipped data, editable without a rebuild.** They live in
+  `Settings/System/Defaults/tax-jurisdictions.json` alongside the language tables, so a rate a
+  government changes is a one-line file edit, not a code release — including the rate quoted in the
+  picker, which each language file carries as a `{0}` rather than spelling out, so no translation goes
+  stale. A jurisdiction added there needs no code change; only its display name is translated.
+- **The tax number is called what the shop's location calls it, and is only asked for where one
+  exists.** "GST/HST" used to be written into the field label, the branding editor and the receipt line
+  in all five languages, so a shop in Osaka read *GST/HST* on its own tax slip. A jurisdiction now
+  declares which number its businesses are issued — one GST/HST number across the Canadian provinces,
+  an EU VAT number for France and Spain, a taxpayer ID in China, a qualified-invoice number in Japan —
+  and the United States, which issues no federal equivalent, is not asked at all. A number already
+  stored keeps printing under a generic label rather than disappearing if a shop relocates.
+- **The pricing mode is frozen onto each order**, exactly as its currency already is. A receipt
+  reprinted after a shop relocates, or after a rate changes, still reads as it was charged.
+
+**Upgrading from v2.x is automatic.** The first launch adds `Shops.LocationCode` and
+`Orders.PricesIncludeTax`, gives every existing shop a location inferred from its currency (CNY → CN,
+JPY → JP, EUR → FR, USD → US, CAD → the Ontario home market), and leaves every existing order
+tax-exclusive so its stored figures do not move. Nothing is asked of the user. A shop that is later
+deliberately located somewhere its currency would not imply is never overwritten: the inference is
+pinned to the arrival of the column, not run on every launch.
+
+Quality gates: build **0 warnings / 0 errors**, every SonarLint issue on a changed file cleared, and
+**1272 assertions across 21 harnesses**, all passing.
+
 ### v2.0.1 — 2026-07-29 (hotfix)
 
 - **Fixed: an order whose deposit covered its whole total could not have its balance re-opened.**

@@ -129,7 +129,12 @@ public partial class ReceiptBrandingWindow : Window
             Margin = new Thickness(0, 5, 0, 0)
         };
 
-        return BuildCard("Branding.TaxNumber", box, hint);
+        // Titled after whatever the open shop's location issues — GST/HST, an EU VAT number, a
+        // Japanese invoice registration number — rather than a fixed key that named Canada's to
+        // everybody. Unlike Shop Settings this card is always shown: it edits the number that
+        // OVERRIDES the shop's, and hiding the override would strand a value already stored in it.
+        return BuildCardTitled(
+            TaxJurisdictions.TaxNumberName(ShopContext.Instance.Current, _localization), box, hint);
     }
 
     // Keeps every tab's copy of the tax number in step. Guarded against reentrancy: assigning
@@ -152,11 +157,18 @@ public partial class ReceiptBrandingWindow : Window
     }
 
     private Border BuildCard(string labelKey, params UIElement[] content)
+        => BuildCardTitled(_localization[labelKey], content);
+
+    /// <summary>
+    /// Same card, given its title already resolved. For a title that does not come from a fixed key —
+    /// the tax number is named by the shop's tax jurisdiction, not by the string table alone.
+    /// </summary>
+    private static Border BuildCardTitled(string title, params UIElement[] content)
     {
         var stack = new StackPanel();
         stack.Children.Add(new TextBlock
         {
-            Text = _localization[labelKey],
+            Text = title,
             FontWeight = FontWeights.SemiBold,
             Foreground = new SolidColorBrush(Color.FromRgb(0x33, 0x41, 0x4D)),
             Margin = new Thickness(0, 0, 0, 6)

@@ -13,6 +13,18 @@ Entry format:
 - Why: <reason / triggering request>
 ```
 
+### 2026-07-29 — §4a: adding a second pricing mode (tax-inclusive vs tax-exclusive)
+- Changed: `SKILL.md` — new §4a under the money model; §4's breakdown bullet now says to read the
+  per-portion tax off the struct rather than re-derive it, and its Chinese label names replaced with
+  keys (the rule in "Who this skill is" applies to this file too, and had eroded here).
+- Why: reviewing a tax-jurisdiction change set surfaced three failures that are general, not
+  project-specific — an optional mode parameter that silenced the compiler and let one caller keep the
+  old arithmetic; every consumer deriving tax as `Received − Deposit`, which is structurally zero once
+  tax is embedded, so a receipt printed "tax 0" beside a non-zero total; and labels that only make
+  sense in one of the two modes (`subtotal + tax = total` does not hold in the other).
+- Also recorded: an inclusive rate cannot come from a per-payment-method table, because a value-added
+  tax is a property of the sale rather than of the tender.
+
 ### 2026-07-29 — "Who this skill is": the user's language never sets the code's language
 - Changed: `SKILL.md` — "Who this skill is" rewritten and given teeth.
 - Why: user instruction — "now remove all chinese words comments from all places",

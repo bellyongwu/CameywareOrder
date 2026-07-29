@@ -47,8 +47,7 @@
   <Text key="Branding.Description">Set a logo, header, and footer used on printed receipts and measurement-sheet downloads (separately for each language).</Text>
   <Text key="Branding.Header">Header</Text>
   <Text key="Branding.Footer">Footer</Text>
-  <Text key="Branding.TaxNumber">Tax Number (GST/HST)</Text>
-  <Text key="Branding.TaxNumberHint">Used for the receipt's tax slip. When set, it is printed directly under the header. The same number is shared by every language.</Text>
+  <Text key="Branding.TaxNumberHint">Used for the receipt's tax slip. When set, it is printed directly under the header. The same number is shared by every language, and it is named after whatever the shop's location issues.</Text>
   <Text key="Branding.Logo">Logo Image</Text>
   <Text key="Branding.ChooseLogo">Choose Image</Text>
   <Text key="Branding.RemoveLogo">Remove</Text>
@@ -195,8 +194,7 @@
   <Text key="Shop.Setup.Email">Email</Text>
   <Text key="Shop.Setup.Website">Website</Text>
   <Text key="Shop.Setup.ContactHint">Optional. Phone, email and website are not per language — every language shows the same value.</Text>
-  <Text key="Shop.Setup.TaxNumber">Tax number (GST/HST)</Text>
-  <Text key="Shop.Setup.TaxNumberHint">Optional. Printed on this shop's receipts so they double as a tax slip. A number entered in the header &amp; footer editor overrides this one.</Text>
+  <Text key="Shop.Setup.TaxNumberHint">Optional, and asked for only where the shop's location issues one. Printed on this shop's receipts so they double as a tax slip. A number entered in the header &amp; footer editor overrides this one.</Text>
   <Text key="Shop.Setup.InstalledLanguagesRequired">Install at least one language for this shop.</Text>
   <Text key="Shop.Setup.SupportedCurrenciesRequired">Accept at least one currency for this shop.</Text>
   <Text key="Shop.Localization.Link">Languages and currencies</Text>
@@ -234,6 +232,24 @@
   <Text key="Shop.Tax.SummaryFree">No tax charged</Text>
   <Text key="Shop.Tax.SummaryTaxable">Taxed at {0}%</Text>
   <Text key="Shop.Tax.RateInvalid">A tax rate must be a number between 0 and 100.</Text>
+  <Text key="TaxNumber.Generic">Tax number</Text>
+  <Text key="TaxNumber.GstHst">GST/HST number</Text>
+  <Text key="TaxNumber.Vat">VAT number</Text>
+  <Text key="TaxNumber.ChinaTaxpayer">Taxpayer identification number</Text>
+  <Text key="TaxNumber.JapanInvoice">Invoice registration number</Text>
+  <Text key="Shop.Tax.Location">Store location</Text>
+  <Text key="Shop.Tax.InclusiveRate">Tax included in prices: {0}%</Text>
+  <Text key="Shop.Tax.InclusiveNote">Prices in this location include tax, so it is shown on the receipt rather than added at the till. It does not vary by payment method, so there is nothing to set per method.</Text>
+  <Text key="Shop.Tax.ReseedConfirmTitle">Replace the tax rules?</Text>
+  <Text key="Shop.Tax.ReseedConfirm">Switching to {0} sets every payment method to that location's standard rate and discards the rules configured here. Continue?</Text>
+  <Text key="TaxJurisdiction.CA-ON">Canada — Ontario (HST {0}%)</Text>
+  <Text key="TaxJurisdiction.CA-AB">Canada — Alberta (GST {0}%)</Text>
+  <Text key="TaxJurisdiction.CA-BC">Canada — British Columbia (GST+PST {0}%)</Text>
+  <Text key="TaxJurisdiction.US">United States (sales tax added separately)</Text>
+  <Text key="TaxJurisdiction.CN">China (VAT {0}%, tax-inclusive)</Text>
+  <Text key="TaxJurisdiction.JP">Japan (consumption tax {0}%, tax-inclusive)</Text>
+  <Text key="TaxJurisdiction.FR">France (VAT {0}%, tax-inclusive)</Text>
+  <Text key="TaxJurisdiction.ES">Spain (VAT {0}%, tax-inclusive)</Text>
 
   <Text key="Shop.Receipt.Section">Receipt Number Format</Text>
   <Text key="Shop.Receipt.SectionHint">How a new order (and therefore its receipt) is numbered. Orders that already exist keep their numbers.</Text>
@@ -286,7 +302,7 @@
   <Text key="Status.ImportGlobalSettingsFailed">Failed to restore global settings: {0}</Text>
   <Text key="Status.ImportGlobalSettingsInvalid">The selected file is not a valid global settings backup package.</Text>
   <Text key="Receipt.Title">Sales Receipt</Text>
-  <Text key="Receipt.TaxNumberLine">GST/HST No.: {0}</Text>
+  <Text key="Receipt.TaxNumberLine">{0}: {1}</Text>
   <Text key="Receipt.SectionTotal">Total</Text>
   <Text key="Search.Label">Search</Text>
   <Text key="Filter.Status.Label">Status</Text>
@@ -371,6 +387,7 @@
   <Text key="Order.Fields.DueDownpayment">Deposit Due</Text>
   <Text key="Order.Fields.DueFinalBalance">Final Balance Due</Text>
   <Text key="Order.Fields.PaidTax">Received Tax</Text>
+  <Text key="Order.Fields.IncludedTax">Tax Included</Text>
   <Text key="Order.Fields.BalanceStatus">Balance Status</Text>
   <Text key="Order.Fields.PaymentBreakdown">Payment Breakdown</Text>
   <Text key="Order.Fields.Notes">Notes</Text>

@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using CameywareOrder.Data;
@@ -37,6 +38,12 @@ public partial class ShopSetupWindow : Window
     private List<CurrencyType> _supportedCurrencies = new();
     private CurrencyType _preferredCurrency;
 
+    // The shop's tax-jurisdiction location. Held as a plain code; the picker seeds the tax matrix
+    // from it and Save writes it. Guarded so the initial population does not reseed the matrix a
+    // shop was loaded with.
+    private string _locationCode = TaxJurisdictions.DefaultCode;
+    private bool _locationPopulating;
+
     /// <param name="existing">The shop to edit, or null to create a new one.</param>
     public ShopSetupWindow(
         LocalizationService localization,
@@ -65,6 +72,7 @@ public partial class ShopSetupWindow : Window
         // seeds it and writes the summary line the link card shows.
         PopulateLocalization();
         PopulatePaymentTaxRules();
+        PopulateLocation();
         PopulateReceiptFormat();
 
         if (!isEdit)
@@ -244,6 +252,17 @@ public partial class ShopSetupWindow : Window
     private void PopulatePaymentTaxRules()
     {
         var rules = _existing?.PaymentTaxRules ?? PaymentTaxRules.CreateDefault();
+        FillPaymentTaxRows(rules);
+        PaymentTaxItems.ItemsSource = _paymentTaxRows;
+    }
+
+    /// <summary>
+    /// (Re)builds the matrix rows from a set of rules. Clears first so it can be called again when
+    /// the location changes — the ObservableCollection is bound, so the rows on screen follow.
+    /// </summary>
+    private void FillPaymentTaxRows(PaymentTaxRules rules)
+    {
+        _paymentTaxRows.Clear();
 
         foreach (var method in PaymentTaxRules.ConfigurableMethods)
         {
@@ -254,9 +273,133 @@ public partial class ShopSetupWindow : Window
                 AccentColorFor(method),
                 rule));
         }
-
-        PaymentTaxItems.ItemsSource = _paymentTaxRows;
     }
+
+    /// <summary>One option in the location picker: what it reads as, and the code it stores.</summary>
+    /// <remarks>
+    /// A row type rather than hand-built <c>ComboBoxItem</c>s appended to <c>Items</c>. That shape was
+    /// already removed once from this project: an item added before its ComboBox is in a visual tree
+    /// logs four binding errors apiece. <c>DisplayMemberPath</c> also needs a property, and
+    /// <see cref="TaxJurisdiction.DisplayName"/> is a method — the name has to be resolved here.
+    /// </remarks>
+    private sealed record LocationRow(string Code, string Name);
+
+    /// <summary>
+    /// Fills the store-location picker and points the tax section at the chosen jurisdiction. An
+    /// existing shop shows the location it was saved with (an unknown or never-set one resolves to
+    /// the home market); a new shop starts on the home market.
+    /// </summary>
+    /// <remarks>
+    /// A NEW shop is seeded from its location's standard rate, because that is the whole promise of
+    /// picking a location — it was previously seeded only if the user re-picked one by hand, so a
+    /// shop created and saved straight through inherited the generic cash-is-tax-free default instead
+    /// of its jurisdiction's. An EXISTING shop is not reseeded: it keeps the exact rules it was saved
+    /// with, which may have been tuned by hand.
+    /// </remarks>
+    private void PopulateLocation()
+    {
+        _locationPopulating = true;
+
+        _locationCode = TaxJurisdictions.For(_existing).Code;
+
+        LocationBox.DisplayMemberPath = nameof(LocationRow.Name);
+        LocationBox.SelectedValuePath = nameof(LocationRow.Code);
+        LocationBox.ItemsSource = TaxJurisdictions.All
+            .Select(jurisdiction => new LocationRow(jurisdiction.Code, jurisdiction.DisplayName(_localization)))
+            .ToList();
+
+        LocationBox.SelectedValue = _locationCode;
+        _locationPopulating = false;
+
+        ApplyLocationMode(reseedMatrix: _existing is null);
+    }
+
+    /// <summary>
+    /// The location changed by hand: adopt it, and reseed the matrix from its standard rate so the
+    /// lawful configuration is the starting point. The shop can still edit any method afterwards.
+    /// </summary>
+    private void OnLocationChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_locationPopulating)
+            return;
+
+        _locationCode = LocationBox.SelectedValue as string ?? TaxJurisdictions.DefaultCode;
+        ApplyLocationMode(reseedMatrix: true);
+    }
+
+    /// <summary>
+    /// Shows the per-method matrix for an exclusive location and replaces it with the jurisdiction's
+    /// single rate for an inclusive one, where a value-added tax cannot vary by how a sale is
+    /// settled. Reseeds the matrix from the standard rate when the location was picked by hand.
+    /// </summary>
+    /// <remarks>
+    /// The reseed is NOT limited to exclusive locations any more. It used to be, and the consequence
+    /// was that an inclusive location's <c>StandardRatePercent</c> was read nowhere: the rate in force
+    /// came from the very matrix this branch hides. The order editor now takes an inclusive rate from
+    /// the jurisdiction directly, so reseeding here is hygiene — it keeps the stored matrix from being
+    /// stale nonsense if the shop later moves back to a location that uses it — and the rate the shop
+    /// is actually taxed at is now stated on screen instead of hidden.
+    /// </remarks>
+    private void ApplyLocationMode(bool reseedMatrix)
+    {
+        var jurisdiction = TaxJurisdictions.Find(_locationCode) ?? TaxJurisdictions.Default;
+        var inclusive = jurisdiction.PricesIncludeTax;
+
+        TaxMatrixPanel.Visibility = inclusive ? Visibility.Collapsed : Visibility.Visible;
+        // The section hint describes the matrix, so it goes with it rather than staying to contradict
+        // the inclusive note underneath.
+        TaxSectionHint.Visibility = inclusive ? Visibility.Collapsed : Visibility.Visible;
+        TaxInclusivePanel.Visibility = inclusive ? Visibility.Visible : Visibility.Collapsed;
+        TaxInclusiveRateText.Text = _localization.Format("Shop.Tax.InclusiveRate",
+            jurisdiction.StandardRatePercent.ToString("0.##", CultureInfo.CurrentCulture));
+
+        // The tax number is a different question from the rate: ask for it only where the location
+        // issues one, and call it what that location calls it. A hidden TextBox keeps its text in WPF,
+        // so a number already stored by a shop that relocates is never quietly wiped on save.
+        TaxNumberLabel.Text = jurisdiction.TaxNumberName(_localization);
+        TaxNumberPanel.Visibility = jurisdiction.CollectsTaxNumber ? Visibility.Visible : Visibility.Collapsed;
+
+        if (reseedMatrix && ConfirmReseed(jurisdiction))
+            FillPaymentTaxRows(PaymentTaxRules.CreateForStandardRate(jurisdiction.StandardRatePercent));
+    }
+
+    /// <summary>
+    /// Whether reseeding from this jurisdiction would throw away rules somebody configured — the
+    /// question, kept apart from the asking.
+    /// </summary>
+    /// <remarks>
+    /// The split is not decoration. A <c>MessageBox</c> reached from inside a
+    /// <c>SelectionChanged</c> handler blocks the thread that raised it, so any harness that drives
+    /// the picker hangs on a dialog nothing can answer — which is exactly what happened, and it looks
+    /// like a slow test rather than a stuck one. A pure predicate can be asserted directly, and the
+    /// prompt stays where a person is present to answer it.
+    ///
+    /// False for a NEW shop: there is nothing to lose, and the seed is the point of picking a
+    /// location. False when the rows already match the seed, so the prompt only ever appears when it
+    /// is genuinely about to discard something — which includes the sharpest case, a location with no
+    /// single rate to quote (the US, at 0%) zeroing a whole configured matrix.
+    /// </remarks>
+    private bool WouldDiscardConfiguredRules(TaxJurisdiction jurisdiction)
+    {
+        if (_existing is null)
+            return false;
+
+        var seed = PaymentTaxRules.CreateForStandardRate(jurisdiction.StandardRatePercent);
+        return !_paymentTaxRows.All(row =>
+        {
+            var seeded = seed.For(row.Method);
+            return row.IsTaxable == seeded.IsTaxable && row.TryResolveRate(out var rate) && rate == seeded.RatePercent;
+        });
+    }
+
+    /// <summary>Asks before overwriting a matrix somebody configured; silent when nothing is at stake.</summary>
+    private bool ConfirmReseed(TaxJurisdiction jurisdiction)
+        => !WouldDiscardConfiguredRules(jurisdiction)
+           || MessageBox.Show(
+                  _localization.Format("Shop.Tax.ReseedConfirm", jurisdiction.DisplayName(_localization)),
+                  _localization["Shop.Tax.ReseedConfirmTitle"],
+                  MessageBoxButton.YesNo,
+                  MessageBoxImage.Question) == MessageBoxResult.Yes;
 
     // Cash green, cards blue/purple, e-transfer teal — the colour only has to make the four rows
     // scannable at a glance, so it is fixed per method rather than configurable.
@@ -405,7 +548,7 @@ public partial class ShopSetupWindow : Window
             : _supportedCurrencies[0];
 
         var settings = new ShopFormValues(
-            names, addresses, languageCode, _installedLanguages, currencyType, _supportedCurrencies, taxRules);
+            names, addresses, languageCode, _installedLanguages, currencyType, _supportedCurrencies, taxRules, _locationCode);
 
         Shop = _existing is null ? CreateShop(settings) : UpdateShop(settings);
 
@@ -497,7 +640,8 @@ public partial class ShopSetupWindow : Window
         List<string> InstalledLanguages,
         CurrencyType CurrencyType,
         List<CurrencyType> SupportedCurrencies,
-        PaymentTaxRules TaxRules);
+        PaymentTaxRules TaxRules,
+        string LocationCode);
 
     private Shop CreateShop(ShopFormValues values)
     {
@@ -506,6 +650,7 @@ public partial class ShopSetupWindow : Window
             PublicId = Guid.NewGuid(),
             PreferredLanguageCode = values.LanguageCode,
             CurrencyType = values.CurrencyType,
+            LocationCode = values.LocationCode,
             CreatedAtUtc = DateTime.UtcNow
         };
         shop.SetNames(values.Names);
@@ -551,6 +696,7 @@ public partial class ShopSetupWindow : Window
         shop.PreferredLanguageCode = values.LanguageCode;
         shop.SetInstalledLanguages(values.InstalledLanguages);
         shop.CurrencyType = values.CurrencyType;
+        shop.LocationCode = values.LocationCode;
         shop.SetSupportedCurrencies(values.SupportedCurrencies);
         shop.SetPaymentTaxRules(values.TaxRules);
         ApplyContactDetails(shop);

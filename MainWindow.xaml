@@ -27,6 +27,7 @@
         <conv:LastItemBorderThicknessConverter x:Key="LastItemBorderThickness"/>
         <conv:OrderServicesSummaryConverter x:Key="OrderServicesSummaryConverter"/>
         <conv:PositiveAmountToVisibilityConverter x:Key="PositiveAmountToVisibility"/>
+        <conv:TaxLabelConverter x:Key="TaxLabel"/>
         <conv:CustomMadeServiceFlagConverter x:Key="CustomMadeServiceFlagConverter"/>
         <conv:ReturnReasonSummaryConverter x:Key="ReturnReasonSummaryConverter"/>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
@@ -813,7 +814,7 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.TaxAmount], Mode=OneWay}" FontSize="12" Foreground="#666"/>
+                                <TextBlock Text="{Binding SelectedOrder.PricesIncludeTax, Converter={StaticResource TaxLabel}}" FontSize="12" Foreground="#666"/>
                                 <TextBlock Grid.Column="1" FontSize="12">
                                     <TextBlock.Text>
                                         <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">

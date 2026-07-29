@@ -45,8 +45,7 @@
   <Text key="Branding.Description">Define un logotipo, un encabezado y un pie para los recibos impresos y las descargas de hojas de medidas (por separado para cada idioma).</Text>
   <Text key="Branding.Header">Encabezado</Text>
   <Text key="Branding.Footer">Pie de página</Text>
-  <Text key="Branding.TaxNumber">Número fiscal (GST/HST)</Text>
-  <Text key="Branding.TaxNumberHint">Se usa en el comprobante fiscal del recibo. Si se indica, se imprime justo debajo del encabezado. Todos los idiomas comparten el mismo número.</Text>
+  <Text key="Branding.TaxNumberHint">Se usa en el comprobante fiscal del recibo. Si se indica, se imprime justo debajo del encabezado. Todos los idiomas comparten el mismo número, y recibe el nombre del que expide la ubicación de la tienda.</Text>
   <Text key="Branding.Logo">Imagen del logotipo</Text>
   <Text key="Branding.ChooseLogo">Elegir imagen</Text>
   <Text key="Branding.RemoveLogo">Quitar</Text>
@@ -193,8 +192,7 @@
   <Text key="Shop.Setup.Email">Correo electrónico</Text>
   <Text key="Shop.Setup.Website">Sitio web</Text>
   <Text key="Shop.Setup.ContactHint">Opcional. El teléfono, el correo electrónico y el sitio web no son por idioma: todos los idiomas muestran el mismo valor.</Text>
-  <Text key="Shop.Setup.TaxNumber">Número fiscal (GST/HST)</Text>
-  <Text key="Shop.Setup.TaxNumberHint">Opcional. Se imprime en los recibos de esta tienda para que sirvan también de comprobante fiscal. Un número introducido en el editor de encabezado y pie tiene prioridad sobre este.</Text>
+  <Text key="Shop.Setup.TaxNumberHint">Opcional, y solo se pide donde la ubicación de la tienda expide uno. Se imprime en los recibos de esta tienda para que sirvan también de comprobante fiscal. Un número introducido en el editor de encabezado y pie tiene prioridad sobre este.</Text>
   <Text key="Shop.Setup.InstalledLanguagesRequired">Instala al menos un idioma para esta tienda.</Text>
   <Text key="Shop.Setup.SupportedCurrenciesRequired">Acepta al menos una moneda para esta tienda.</Text>
   <Text key="Shop.Localization.Link">Idiomas y monedas</Text>
@@ -232,6 +230,24 @@
   <Text key="Shop.Tax.SummaryFree">No se cobran impuestos</Text>
   <Text key="Shop.Tax.SummaryTaxable">Gravado al {0} %</Text>
   <Text key="Shop.Tax.RateInvalid">Una tasa impositiva debe ser un número entre 0 y 100.</Text>
+  <Text key="TaxNumber.Generic">Número fiscal</Text>
+  <Text key="TaxNumber.GstHst">Número de GST/HST</Text>
+  <Text key="TaxNumber.Vat">Número de IVA</Text>
+  <Text key="TaxNumber.ChinaTaxpayer">Número de identificación fiscal</Text>
+  <Text key="TaxNumber.JapanInvoice">Número de registro de facturación</Text>
+  <Text key="Shop.Tax.Location">Ubicación de la tienda</Text>
+  <Text key="Shop.Tax.InclusiveRate">Impuesto incluido en los precios: {0} %</Text>
+  <Text key="Shop.Tax.InclusiveNote">En esta región los precios incluyen impuestos: se muestran en el recibo en lugar de añadirse en caja. No varían según el método de pago, así que no hay nada que configurar por método.</Text>
+  <Text key="Shop.Tax.ReseedConfirmTitle">¿Sustituir las reglas de impuestos?</Text>
+  <Text key="Shop.Tax.ReseedConfirm">Cambiar a «{0}» aplicará el tipo estándar de esa ubicación a todos los métodos de pago y descartará las reglas configuradas aquí. ¿Continuar?</Text>
+  <Text key="TaxJurisdiction.CA-ON">Canadá — Ontario (HST {0} %)</Text>
+  <Text key="TaxJurisdiction.CA-AB">Canadá — Alberta (GST {0} %)</Text>
+  <Text key="TaxJurisdiction.CA-BC">Canadá — Columbia Británica (GST+PST {0} %)</Text>
+  <Text key="TaxJurisdiction.US">Estados Unidos (impuesto sobre ventas añadido aparte)</Text>
+  <Text key="TaxJurisdiction.CN">China (IVA {0} %, impuestos incluidos)</Text>
+  <Text key="TaxJurisdiction.JP">Japón (impuesto al consumo {0} %, impuestos incluidos)</Text>
+  <Text key="TaxJurisdiction.FR">Francia (IVA {0} %, impuestos incluidos)</Text>
+  <Text key="TaxJurisdiction.ES">España (IVA {0} %, impuestos incluidos)</Text>
 
   <Text key="Shop.Receipt.Section">Formato del número de recibo</Text>
   <Text key="Shop.Receipt.SectionHint">Cómo se numera un pedido nuevo (y, por tanto, su recibo). Los pedidos que ya existen conservan su número.</Text>
@@ -284,7 +300,7 @@
   <Text key="Status.ImportGlobalSettingsFailed">No se pudo restaurar la configuración global: {0}</Text>
   <Text key="Status.ImportGlobalSettingsInvalid">El archivo seleccionado no es un paquete válido de copia de seguridad de la configuración global.</Text>
   <Text key="Receipt.Title">Recibo de venta</Text>
-  <Text key="Receipt.TaxNumberLine">N.º de GST/HST: {0}</Text>
+  <Text key="Receipt.TaxNumberLine">{0}: {1}</Text>
   <Text key="Receipt.SectionTotal">Total</Text>
   <Text key="Search.Label">Buscar</Text>
   <Text key="Filter.Status.Label">Estado</Text>
@@ -369,6 +385,7 @@
   <Text key="Order.Fields.DueDownpayment">Depósito a cobrar</Text>
   <Text key="Order.Fields.DueFinalBalance">Saldo final a cobrar</Text>
   <Text key="Order.Fields.PaidTax">Impuesto recibido</Text>
+  <Text key="Order.Fields.IncludedTax">Impuesto incluido</Text>
   <Text key="Order.Fields.BalanceStatus">Estado del saldo</Text>
   <Text key="Order.Fields.PaymentBreakdown">Desglose del pago</Text>
   <Text key="Order.Fields.Notes">Notas</Text>

@@ -1,0 +1,15 @@
+{
+  "comment": "Tax presets keyed by store location. Shipped, read-only, editable without a rebuild — a rate change is a one-line edit here, not a code release. 'standardRatePercent' seeds every payment method when a shop picks this location, and in a tax-inclusive location it is the ONLY rate in play: the per-method matrix is not consulted there, because a value-added tax cannot vary by how a sale is settled. 'pricesIncludeTax' is the pricing MODE: true means prices are entered tax-inclusive (VAT/consumption-tax markets — the tax is backed out of the price and Shop Settings shows this single rate instead of the per-method matrix), false means tax is added on top at settlement (Canada/US). Display names come from each language file's 'TaxJurisdiction.<code>' key — those values are FORMAT strings carrying the local name of the tax and its punctuation, with '{0}' filled in from 'standardRatePercent' here, so editing a rate in this file is enough and no language file goes stale; a jurisdiction with no single rate to quote (US) simply omits the placeholder. 'defaultCurrency' is used only to infer a location for shops that predate this setting; it does not change what a shop prices in.",
+  "defaultLocationCode": "CA-ON",
+  "taxNumberComment": "'taxNumberLabel' names the tax number this jurisdiction issues to a business, as the suffix of a 'TaxNumber.<name>' key in the language files — Ontario, Alberta and BC share GstHst, France and Spain share Vat. OMIT it where the jurisdiction issues no such number: the field is then not asked for at all, which is why the United States has none (no federal consumption tax and no single rate). Do not infer this from 'pricesIncludeTax' — Canada's GST/HST is a consumption tax quoted tax-EXCLUSIVE, so the two questions have different answers.",
+  "jurisdictions": [
+    { "code": "CA-ON", "standardRatePercent": 13, "pricesIncludeTax": false, "defaultCurrency": "CAD", "taxNumberLabel": "GstHst" },
+    { "code": "CA-AB", "standardRatePercent": 5, "pricesIncludeTax": false, "defaultCurrency": "CAD", "taxNumberLabel": "GstHst" },
+    { "code": "CA-BC", "standardRatePercent": 12, "pricesIncludeTax": false, "defaultCurrency": "CAD", "taxNumberLabel": "GstHst" },
+    { "code": "US", "standardRatePercent": 0, "pricesIncludeTax": false, "defaultCurrency": "USD" },
+    { "code": "CN", "standardRatePercent": 6, "pricesIncludeTax": true, "defaultCurrency": "CNY", "taxNumberLabel": "ChinaTaxpayer" },
+    { "code": "JP", "standardRatePercent": 10, "pricesIncludeTax": true, "defaultCurrency": "JPY", "taxNumberLabel": "JapanInvoice" },
+    { "code": "FR", "standardRatePercent": 20, "pricesIncludeTax": true, "defaultCurrency": "EUR", "taxNumberLabel": "Vat" },
+    { "code": "ES", "standardRatePercent": 21, "pricesIncludeTax": true, "defaultCurrency": "EUR", "taxNumberLabel": "Vat" }
+  ]
+}

@@ -1539,6 +1539,13 @@ once, both of which read like authorization regressions and were neither:
 The general rule: a harness reading live data must **establish** the state it
 asserts on, not assume the state it found the day it was written.
 
+The same trap has a THIRD form, found when tax jurisdictions shipped: the shop the fixture happens to
+open is ambient state too. `balancecheck` opens the first shop by id, that shop acquired a
+tax-inclusive location from a one-shot backfill, and two assertions went red over a `13m` literal
+standing in for "the card surcharge". It now derives both the mode and the rate from the shop
+(`TaxJurisdictions.For(...)`, `PaymentTaxRules.Active.RateFor(...)`). Currency was the first thing
+this happened with, tax treatment the second — assume any shop-level setting is next.
+
 ## A checkbox the user cannot untick (2026-07-29)
 
 - **A control's state and the fact it describes are different questions.** The "clear all
@@ -1598,6 +1605,99 @@ distinct causes, and the second is the one that recurs:
   once for this precise symptom when a Shops column was added; the first ORDERS column added
   afterwards broke it again identically. A half-migration looks exactly like a regression,
   and costs the same diagnosis every time. The app runs both at startup; so must the fixture.
+
+## Never widen the money rule through an OPTIONAL parameter (2026-07-29)
+
+`CalculateSectionPayment` exists so the model and the live editor cannot diverge. Adding
+tax-inclusive pricing threaded a new `bool pricesIncludeTax = false` onto it — and the default
+turned a *compile error at every unconverted call site* into **silence**. Two balancecheck
+assertions went red: the harness recomputes its expected figures by calling the rule directly, kept
+the 6-argument form, and so kept exclusive arithmetic while the window it measures had switched to
+inclusive. Nothing failed to build; the numbers simply stopped agreeing.
+
+The default parameter looks like backward compatibility and is the opposite of it: the one thing the
+single-source rule guarantees is that everybody gets the SAME answer, and an optional argument
+guarantees that whoever forgets it gets a different one. It is now **required**, which is what listed
+the call sites. **And check the presentation layer, not only the arithmetic:** every breakdown here
+derived tax as `Received − Deposit`, which is structurally zero once tax is embedded, so the receipt
+printed "Tax 0" beside a non-zero "Tax paid". A second pricing mode is not one branch in one
+function; it is a branch in every place that *explains* the number — which is why the per-portion
+split and the mode itself now travel ON `SectionPayment` (`DepositTax`, `FinalTax`,
+`PricesIncludeTax`, `DepositStageTotal`) instead of being re-inferred downstream. Carrying the answer
+is cheaper than trusting five call sites to re-derive it the same way.
+
+## A setting whose value the UI hides has no way to be right (2026-07-29)
+
+The store-location picker hides the per-method tax matrix for an inclusive jurisdiction — correct
+reasoning (there is nothing per method to decide when tax is embedded in the price) applied to the
+wrong thing: the matrix is still where the RATE comes from. So an inclusive shop's tax is computed
+from a field it cannot see, and the jurisdiction's own `standardRatePercent` — the number the shipped
+presets exist to carry — is read at exactly one guarded call site and never for an inclusive
+location. Live data confirmed it: a shop located in `JP` carrying 13% on every method.
+
+Two rules fall out. **When you hide an input, move its value to the thing that replaces it** — do
+not leave the hidden control as the source of truth. The fix was to take the inclusive rate from the
+jurisdiction (`TaxJurisdictions.IncludedTaxRatePercent`), apply it to both portions, ignore the
+per-method rules entirely, and STATE the rate on screen where the matrix used to be. And **a shipped
+preset that is never read is indistinguishable from a wrong one**: grep every field of a new data
+file for a real consumer before believing the file is wired up — one guarded call site that the
+guard's own condition excludes reads, in a diff, exactly like a wired-up field.
+
+## One market's paperwork must not live in the shared string table (2026-07-29)
+
+`"GST/HST"` was spelled into **fifteen** string-table values — the Shop Settings field label, the
+branding card title, the receipt line, in all five languages. So a shop in Osaka read
+`税番号（GST/HST）` in its own settings and printed `GST/HST 番号：…` on its own tax slip. The
+translations were all correct; the *fact* was Canadian.
+
+The same shape as the rate hard-coded into jurisdiction display names, and the same fix: the
+jurisdiction declares which number it issues (`TaxNumberLabel` → a `TaxNumber.<name>` key), grouped by
+tax REGIME rather than by jurisdiction, because that is the real relationship — Ontario, Alberta and
+BC share one GST/HST number; France and Spain each issue an EU VAT number. Adding a market then costs
+one line of JSON plus one label per language, and never touches the code.
+
+Three things that fall out and are easy to get wrong:
+
+- **Do not infer "issues a tax number" from the pricing mode.** Canada's GST/HST *is* a consumption
+  tax, and Canada quotes prices tax-EXCLUSIVE — so the two questions have different answers, and
+  inferring one from the other silently drops the number from the home market. Declare it.
+- **Keep a generic fallback.** A shop that relocates somewhere issuing none still has a number
+  stored, and a receipt that drops it — or prints it unlabelled — is worse than one that calls it
+  "Tax number". Hide the INPUT, never the stored value.
+- **A hidden `TextBox` keeps its text in WPF**, so collapsing the field cannot wipe what is in it on
+  save. That is what makes hiding safe rather than destructive; it is asserted, not assumed.
+
+And where a printed document may be rendered in a language other than the UI's, the jurisdiction has
+to expose the KEY (`TaxNumberKey`) and not only the resolved string — `ShopLetterhead` prints a
+measurement sheet in the customer's language, not the operator's.
+
+## A confirmation prompt inside an event handler hangs every harness (2026-07-29)
+
+Adding "ask before this discards the configured tax matrix" put a `MessageBox.Show` inside
+`SelectionChanged`. It blocks the thread that raised the event, so the harness that sets
+`LocationBox.SelectedValue` never returns from the assignment — and the failure mode is the
+expensive part: **it looks like a slow test, not a stuck one.** The suite sat at 0/0 for that harness
+with the process `Responding=True` and low CPU, which reads exactly like heavy I/O. What proved it was
+enumerating the process's top-level windows and finding `class=#32770` — a dialog class — titled with
+the confirmation's own text:
+
+```powershell
+# EnumWindows filtered to the harness pid; #32770 is the Win32 dialog class
+[WinEnum]::For([uint32](Get-Process taxcheck).Id)
+```
+
+The fix is a seam, not a flag: split the **question** from the **asking**. A pure
+`WouldDiscardConfiguredRules(jurisdiction)` predicate is asserted directly, in both directions, while
+`ConfirmReseed` stays a one-liner that only reaches the dialog when a person is there to answer it.
+Then arrange the harness's *other* path so the prompt cannot trigger at all — start from rules the
+switch would not change — rather than hoping it does not. Any `MessageBox`, `ShowDialog`, or
+`PrintDialog` on a path a harness drives needs the same treatment.
+
+One assertion written for this was simply wrong and is worth keeping as a caution: "re-picking the
+location it already has asks nothing" failed, and the code was right — the predicate is about whether
+the ROWS would change, not about which code is selected, so a hand-tuned matrix would be flattened by
+its own location's seed too. When a new assertion fails, decide which of the two is wrong before
+touching either.
 
 ## Currencies derived from languages (2026-07-29)
 

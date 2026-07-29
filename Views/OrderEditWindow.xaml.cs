@@ -83,6 +83,26 @@ public partial class OrderEditWindow : Window
     private SectionPayment _clothingMoney;
     private SectionPayment _customMadeMoney;
 
+    // Whether this order's amounts are quoted tax-inclusive. An EXISTING order keeps the mode it was
+    // frozen with, so a historical receipt reprints unchanged; a NEW order takes the active shop's
+    // current jurisdiction. Threaded into every live money split so the editor's totals match what
+    // will be saved.
+    private bool PricesIncludeTax
+        => _existing?.PricesIncludeTax ?? TaxJurisdictions.PricesIncludeTax(ShopContext.Instance.Current);
+
+    /// <summary>
+    /// The rate an inclusive order's embedded tax is backed out at, from the shop's JURISDICTION.
+    /// </summary>
+    /// <remarks>
+    /// Not from <see cref="PaymentTaxRules.Active"/>, which is where the exclusive branch gets its
+    /// rates. A value-added tax is a property of the sale: it cannot differ between the deposit and
+    /// the final balance, or between a cash and a card settlement of the same price. Reading it from
+    /// the per-method matrix made it do both — and Shop Settings hides that matrix for an inclusive
+    /// location, so the rate in force was one the shop could not even see.
+    /// </remarks>
+    private static decimal IncludedTaxRatePercent
+        => TaxJurisdictions.IncludedTaxRatePercent(ShopContext.Instance.Current);
+
     // Groups the payment controls of a single service section so section-processing
     // methods take one logical parameter instead of a long positional list.
     private PaymentSectionControls _alterationControls = null!;
@@ -1694,9 +1714,27 @@ public partial class OrderEditWindow : Window
     /// read-only order — completed, shipped, cancelled or returned. That one keeps the rates it
     /// was actually charged, because its receipt has already been printed and the screen must not
     /// disagree with the paper.
+    ///
+    /// A tax-INCLUSIVE order takes one rate for both portions from the jurisdiction instead — see
+    /// <see cref="IncludedTaxRatePercent"/> — and never zeroes it per method, because the tax is
+    /// already inside the price whatever settles it.
     /// </summary>
     private void ApplyStageTaxRates(PaymentSectionControls c)
     {
+        if (PricesIncludeTax)
+        {
+            if (!_isReadOnly)
+            {
+                var includedRate = IncludedTaxRatePercent;
+                c.DepositTaxRate = includedRate;
+                c.FinalTaxRate = includedRate;
+            }
+
+            c.ShowingFinalRate = c.IsFinalStage;
+            ShowStageRate(c);
+            return;
+        }
+
         var rules = PaymentTaxRules.Active;
         var depositMethod = GetSelectedDownMethod(c);
         var finalMethod = EffectiveFinalMethod(c);
@@ -1735,13 +1773,16 @@ public partial class OrderEditWindow : Window
     // rather than as a missing charge.
     private void UpdateTaxBreakdownLines(PaymentSectionControls c, SectionPayment money)
     {
+        // Read off the split rather than re-derived as `Received − Deposit`: that difference is zero
+        // whenever the tax is already inside the price, which printed "tax 0" beside a total that
+        // was not zero. SectionPayment carries the per-portion figure for both modes.
         var depositMethod = GetSelectedDownMethod(c);
         c.DepositTaxLine.Text = _localization.Format("Order.Fields.DepositTaxLine",
             PaymentMethodName(depositMethod),
-            FormatCurrency(money.ReceivedDownpayment - money.Deposit));
+            FormatCurrency(money.DepositTax));
         c.FinalTaxLine.Text = _localization.Format("Order.Fields.FinalTaxLine",
             PaymentMethodName(EffectiveFinalMethod(c)),
-            FormatCurrency(money.FinalCharge - money.FinalBase));
+            FormatCurrency(money.FinalTax));
 
         UpdateDueAndReceivedLines(c, money);
     }
@@ -1813,7 +1854,7 @@ public partial class OrderEditWindow : Window
         var money = Order.CalculateSectionPayment(price, downpayment,
             _alterationControls.DepositTaxRate, _alterationControls.FinalTaxRate,
             GetSelectedDownMethod(_alterationControls),
-            EffectiveFinalMethod(_alterationControls));
+            EffectiveFinalMethod(_alterationControls), PricesIncludeTax);
         // A cleared balance means nothing is still owed for this section.
         var residual = AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : money.FinalCharge;
 
@@ -1821,13 +1862,19 @@ public partial class OrderEditWindow : Window
         _alterationSumTotal = money.Total;
         _alterationMoney = money;
 
-        // Deposit-stage rows are scoped to that stage and add up: subtotal + deposit tax.
-        var alterationStageTax = DepositStageTax(money);
+        // Deposit-stage rows are scoped to that stage and add up: subtotal + deposit tax — or just
+        // the subtotal when the tax is already inside it. SectionPayment owns that rule.
+        //
+        // The tax row shows the DEPOSIT portion's tax alone; the final portion's joins only at the
+        // final stage, whose panel shows the complete figure. Stage-scoping it is what makes the
+        // deposit amount visibly move it: a section's TOTAL tax is invariant to the deposit split
+        // whenever both portions share a rate (deposit*r + (subtotal−deposit)*r == subtotal*r), so
+        // showing the total here made the row look frozen.
         AlterationSubtotalText.Text = FormatCurrency(price);
         // Pre-tax balance still to come: the subtotal less the deposit, before any card tax.
         AlterationPreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
-        AlterationDepositTaxText.Text = FormatCurrency(alterationStageTax);
-        AlterationSumTotalText.Text = FormatCurrency(money.Subtotal + alterationStageTax);
+        AlterationDepositTaxText.Text = FormatCurrency(money.DepositTax);
+        AlterationSumTotalText.Text = FormatCurrency(money.DepositStageTotal);
         AlterationFinalPriceDisplayText.Text = FormatCurrency(price);
         AlterationFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
         AlterationFinalPreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
@@ -1853,7 +1900,7 @@ public partial class OrderEditWindow : Window
         var money = Order.CalculateSectionPayment(subtotal, downpayment,
             _clothingControls.DepositTaxRate, _clothingControls.FinalTaxRate,
             GetSelectedDownMethod(_clothingControls),
-            EffectiveFinalMethod(_clothingControls));
+            EffectiveFinalMethod(_clothingControls), PricesIncludeTax);
         // A cleared balance means nothing is still owed for this section.
         var residual = ClothingBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : money.FinalCharge;
 
@@ -1862,12 +1909,11 @@ public partial class OrderEditWindow : Window
         _clothingMoney = money;
 
         // Deposit-stage rows, same rule as RefreshAlterationTotals.
-        var clothingStageTax = DepositStageTax(money);
         ClothingPriceText.Text = FormatCurrency(subtotal);
         ClothingSubtotalText.Text = FormatCurrency(subtotal);
         ClothingPreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
-        ClothingDepositTaxText.Text = FormatCurrency(clothingStageTax);
-        ClothingSumTotalText.Text = FormatCurrency(money.Subtotal + clothingStageTax);
+        ClothingDepositTaxText.Text = FormatCurrency(money.DepositTax);
+        ClothingSumTotalText.Text = FormatCurrency(money.DepositStageTotal);
         ClothingFinalPriceDisplayText.Text = FormatCurrency(subtotal);
         ClothingFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
         ClothingFinalPreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
@@ -1886,7 +1932,7 @@ public partial class OrderEditWindow : Window
         var money = Order.CalculateSectionPayment(_customMadeSubtotal, downpayment,
             _customMadeControls.DepositTaxRate, _customMadeControls.FinalTaxRate,
             GetSelectedDownMethod(_customMadeControls),
-            EffectiveFinalMethod(_customMadeControls));
+            EffectiveFinalMethod(_customMadeControls), PricesIncludeTax);
         _customMadeSumTotal = money.Total;
         _customMadeMoney = money;
 
@@ -1894,12 +1940,11 @@ public partial class OrderEditWindow : Window
         var residual = CustomMadeBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : money.FinalCharge;
 
         // Deposit-stage rows, same rule as RefreshAlterationTotals.
-        var customMadeStageTax = DepositStageTax(money);
         CustomMadePriceText.Text = FormatCurrency(_customMadeSubtotal);
         CustomMadeSubtotalText.Text = FormatCurrency(_customMadeSubtotal);
         CustomMadePreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
-        CustomMadeDepositTaxText.Text = FormatCurrency(customMadeStageTax);
-        CustomMadeSumTotalText.Text = FormatCurrency(money.Subtotal + customMadeStageTax);
+        CustomMadeDepositTaxText.Text = FormatCurrency(money.DepositTax);
+        CustomMadeSumTotalText.Text = FormatCurrency(money.DepositStageTotal);
         CustomMadeFinalPriceDisplayText.Text = FormatCurrency(_customMadeSubtotal);
         CustomMadeFinalDownpaymentDisplayText.Text = FormatCurrency(money.Deposit);
         CustomMadeFinalPreTaxBalanceText.Text = FormatCurrency(money.FinalBase);
@@ -1916,15 +1961,6 @@ public partial class OrderEditWindow : Window
         RefreshServicesTotalBreakdown();
         RefreshPaymentSummary();
     }
-
-    // Tax committed at the DEPOSIT stage: the deposit portion's tax alone. The final
-    // portion's tax joins only at the final stage, whose panel shows the complete
-    // deposit + final figure. Keeping this row stage-scoped is what makes the deposit amount
-    // visibly move it — a section's TOTAL tax is invariant to the deposit split whenever both
-    // portions share a rate (deposit*r + (subtotal-deposit)*r == subtotal*r), so showing the
-    // total here made the row look frozen.
-    private static decimal DepositStageTax(SectionPayment money)
-        => money.ReceivedDownpayment - money.Deposit;
 
     // A section's deposit only counts as received once its "deposit received" box is ticked.
     private static decimal SectionReceivedDeposit(SectionPayment money, PaymentSectionControls c)

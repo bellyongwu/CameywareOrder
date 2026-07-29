@@ -79,6 +79,31 @@ public sealed class PaymentTaxRules
         return rules;
     }
 
+    /// <summary>
+    /// Every payment method taxable at one standard rate — the seed a shop gets when it picks a
+    /// location. Unlike <see cref="CreateDefault"/>, which leaves cash and e-transfer tax free, this
+    /// makes the LAWFUL configuration the starting point: a jurisdiction taxes a sale regardless of
+    /// how it is paid for, so "cash is untaxed" has to be a deliberate opt-out the shop chooses, not
+    /// the default it inherits. A rate of zero (e.g. a US location with no single rate) leaves every
+    /// method tax free, which is the right starting point there too.
+    /// </summary>
+    public static PaymentTaxRules CreateForStandardRate(decimal ratePercent)
+    {
+        var taxable = ratePercent > 0m;
+        var rules = new PaymentTaxRules();
+
+        foreach (var method in ConfigurableMethods)
+        {
+            rules.Methods[method.ToString()] = new PaymentTaxRule
+            {
+                IsTaxable = taxable,
+                RatePercent = ratePercent > 0m ? ratePercent : 0m
+            };
+        }
+
+        return rules;
+    }
+
     public static void SetActive(PaymentTaxRules rules)
         => Active = rules ?? CreateDefault();
 

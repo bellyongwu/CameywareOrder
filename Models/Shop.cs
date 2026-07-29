@@ -85,6 +85,21 @@ public class Shop
     public string? PreferredLanguageCode { get; set; }
 
     /// <summary>
+    /// Where this shop is, as a tax-jurisdiction code (e.g. "CA-ON", "CN", "JP"). It decides the
+    /// standard tax rate the shop seeds its payment rules from and whether its prices are quoted
+    /// tax-inclusive — see <c>TaxJurisdictions</c>.
+    /// </summary>
+    /// <remarks>
+    /// Tax is a function of LOCATION, not of language or of how a customer pays, so it gets its own
+    /// field rather than being inferred from the installed languages. Null means "never located",
+    /// which <c>TaxJurisdictions.For</c> reads back as the home market — exactly how the app behaved
+    /// before a shop could say where it is, so no existing branch changes until one is set. A code
+    /// whose preset has since been removed from the shipped file resolves back to the home market
+    /// rather than throwing.
+    /// </remarks>
+    public string? LocationCode { get; set; }
+
+    /// <summary>
     /// The language codes this shop has installed, as a JSON array — the set its managers and staff
     /// may switch between. A branch serving a bilingual neighbourhood installs two; one that does
     /// not installs one and its people never see a language toggle at all.

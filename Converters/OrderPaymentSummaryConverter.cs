@@ -60,9 +60,14 @@ public class OrderPaymentSummaryConverter : IValueConverter
         if (money.Total <= 0m && section.DownMethod is null && section.FinalMethod is null)
             return;
 
-        var depositTax = money.ReceivedDownpayment - money.Deposit;
-        var finalTax = money.FinalCharge - money.FinalBase;
-        var taxLabel = loc["Order.Fields.TaxAmount"];
+        // Read off the split, not re-derived as `Received − Deposit`: with the tax already inside the
+        // price both differences are zero while the section's tax is not, so this line used to print
+        // "tax 0" twice on a receipt whose totals block showed a real tax figure.
+        var depositTax = money.DepositTax;
+        var finalTax = money.FinalTax;
+        // The split knows which mode it was computed in, so the label can be right without this
+        // reaching back to the order — "tax" for tax added on top, "tax included" for tax carved out.
+        var taxLabel = loc[money.PricesIncludeTax ? "Order.Fields.IncludedTax" : "Order.Fields.TaxAmount"];
 
         builder.Append(loc[section.ServiceKey]).Append(": ");
         // Deposit portion: method, base amount and the tax charged on it.

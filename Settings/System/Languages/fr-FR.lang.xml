@@ -44,8 +44,7 @@
   <Text key="Branding.Description">Définissez un logo, un en-tête et un pied de page utilisés sur les reçus imprimés et les fiches de mesures téléchargées (séparément pour chaque langue).</Text>
   <Text key="Branding.Header">En-tête</Text>
   <Text key="Branding.Footer">Pied de page</Text>
-  <Text key="Branding.TaxNumber">Numéro de taxe (TPS/TVH)</Text>
-  <Text key="Branding.TaxNumberHint">Utilisé pour le volet fiscal du reçu. S’il est renseigné, il est imprimé juste sous l’en-tête. Le même numéro est partagé par toutes les langues.</Text>
+  <Text key="Branding.TaxNumberHint">Utilisé pour le volet fiscal du reçu. S’il est renseigné, il est imprimé juste sous l’en-tête. Le même numéro est partagé par toutes les langues, et il porte le nom de celui que délivre l’emplacement de la boutique.</Text>
   <Text key="Branding.Logo">Image du logo</Text>
   <Text key="Branding.ChooseLogo">Choisir une image</Text>
   <Text key="Branding.RemoveLogo">Retirer</Text>
@@ -192,8 +191,7 @@
   <Text key="Shop.Setup.Email">Courriel</Text>
   <Text key="Shop.Setup.Website">Site web</Text>
   <Text key="Shop.Setup.ContactHint">Facultatif. Le téléphone, le courriel et le site web ne dépendent pas de la langue — toutes les langues affichent la même valeur.</Text>
-  <Text key="Shop.Setup.TaxNumber">Numéro de taxe (TPS/TVH)</Text>
-  <Text key="Shop.Setup.TaxNumberHint">Facultatif. Imprimé sur les reçus de cette boutique afin qu’ils servent aussi de justificatif fiscal. Un numéro saisi dans l’éditeur d’en-tête et de pied de page remplace celui-ci.</Text>
+  <Text key="Shop.Setup.TaxNumberHint">Facultatif, et demandé uniquement là où l’emplacement de la boutique en délivre un. Imprimé sur les reçus de cette boutique afin qu’ils servent aussi de justificatif fiscal. Un numéro saisi dans l’éditeur d’en-tête et de pied de page remplace celui-ci.</Text>
   <Text key="Shop.Setup.InstalledLanguagesRequired">Installez au moins une langue pour cette boutique.</Text>
   <Text key="Shop.Setup.SupportedCurrenciesRequired">Acceptez au moins une devise pour cette boutique.</Text>
   <Text key="Shop.Localization.Link">Langues et devises</Text>
@@ -231,6 +229,24 @@
   <Text key="Shop.Tax.SummaryFree">Aucune taxe appliquée</Text>
   <Text key="Shop.Tax.SummaryTaxable">Taxé à {0} %</Text>
   <Text key="Shop.Tax.RateInvalid">Un taux de taxe doit être un nombre compris entre 0 et 100.</Text>
+  <Text key="TaxNumber.Generic">Numéro de taxe</Text>
+  <Text key="TaxNumber.GstHst">Numéro de TPS/TVH</Text>
+  <Text key="TaxNumber.Vat">Numéro de TVA</Text>
+  <Text key="TaxNumber.ChinaTaxpayer">Numéro d'identification fiscale</Text>
+  <Text key="TaxNumber.JapanInvoice">Numéro d'enregistrement de facturation</Text>
+  <Text key="Shop.Tax.Location">Emplacement du magasin</Text>
+  <Text key="Shop.Tax.InclusiveRate">Taxe incluse dans les prix : {0} %</Text>
+  <Text key="Shop.Tax.InclusiveNote">Dans cette région, les prix incluent la taxe : elle figure sur le reçu au lieu d'être ajoutée en caisse. Elle ne varie pas selon le moyen de paiement, il n'y a donc rien à définir par moyen.</Text>
+  <Text key="Shop.Tax.ReseedConfirmTitle">Remplacer les règles de taxe ?</Text>
+  <Text key="Shop.Tax.ReseedConfirm">Passer à « {0} » appliquera le taux standard de cet emplacement à tous les moyens de paiement et supprimera les règles définies ici. Continuer ?</Text>
+  <Text key="TaxJurisdiction.CA-ON">Canada — Ontario (TVH {0} %)</Text>
+  <Text key="TaxJurisdiction.CA-AB">Canada — Alberta (TPS {0} %)</Text>
+  <Text key="TaxJurisdiction.CA-BC">Canada — Colombie-Britannique (TPS+TVP {0} %)</Text>
+  <Text key="TaxJurisdiction.US">États-Unis (taxe de vente ajoutée séparément)</Text>
+  <Text key="TaxJurisdiction.CN">Chine (TVA {0} %, taxe incluse)</Text>
+  <Text key="TaxJurisdiction.JP">Japon (taxe à la consommation {0} %, taxe incluse)</Text>
+  <Text key="TaxJurisdiction.FR">France (TVA {0} %, taxe incluse)</Text>
+  <Text key="TaxJurisdiction.ES">Espagne (TVA {0} %, taxe incluse)</Text>
 
   <Text key="Shop.Receipt.Section">Format des numéros de reçu</Text>
   <Text key="Shop.Receipt.SectionHint">Comment une nouvelle commande (et donc son reçu) est numérotée. Les commandes existantes conservent leur numéro.</Text>
@@ -283,7 +299,7 @@
   <Text key="Status.ImportGlobalSettingsFailed">Échec de la restauration des paramètres globaux : {0}</Text>
   <Text key="Status.ImportGlobalSettingsInvalid">Le fichier sélectionné n’est pas un paquet de sauvegarde de paramètres globaux valide.</Text>
   <Text key="Receipt.Title">Reçu de vente</Text>
-  <Text key="Receipt.TaxNumberLine">N° TPS/TVH : {0}</Text>
+  <Text key="Receipt.TaxNumberLine">{0} : {1}</Text>
   <Text key="Receipt.SectionTotal">Total</Text>
   <Text key="Search.Label">Rechercher</Text>
   <Text key="Filter.Status.Label">Statut</Text>
@@ -367,6 +383,7 @@
   <Text key="Order.Fields.DueDownpayment">Acompte à encaisser</Text>
   <Text key="Order.Fields.DueFinalBalance">Solde à encaisser</Text>
   <Text key="Order.Fields.PaidTax">Taxe encaissée</Text>
+  <Text key="Order.Fields.IncludedTax">Taxe incluse</Text>
   <Text key="Order.Fields.BalanceStatus">État du solde</Text>
   <Text key="Order.Fields.PaymentBreakdown">Détail des paiements</Text>
   <Text key="Order.Fields.Notes">Notes</Text>

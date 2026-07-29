@@ -73,6 +73,10 @@ public class AppDbContext : DbContext
             // currency became a global setting; recording what was actually charged makes a
             // per-order currency history possible later without another migration.
             order.CurrencyType = shop.CurrencyType;
+            // Freeze the shop's pricing mode onto the order for the same reason: a receipt reprinted
+            // after the shop relocates, or a jurisdiction's rate changes, must still read as it was
+            // charged. Derived from the shop's location, not stored on the shop.
+            order.PricesIncludeTax = TaxJurisdictions.PricesIncludeTax(shop);
         }
     }
 
@@ -88,6 +92,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.Address).HasMaxLength(300);
             entity.Property(e => e.LastModifiedBy).HasMaxLength(120);
             entity.Property(e => e.CurrencyType);
+            entity.Property(e => e.PricesIncludeTax);
             entity.Property(e => e.ServiceDetails).HasMaxLength(500);
             entity.Property(e => e.AdditionalNotes).HasMaxLength(1000);
             entity.Property(e => e.Subtotal).HasPrecision(18, 2);
@@ -128,6 +133,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.PublicId).IsRequired();
             entity.HasIndex(e => e.PublicId).IsUnique();
             entity.Property(e => e.Code).HasMaxLength(20);
+            entity.Property(e => e.LocationCode).HasMaxLength(10);
             entity.Property(e => e.NamesJson).IsRequired().HasColumnType("TEXT");
             entity.Property(e => e.PreferredLanguageCode).HasMaxLength(20);
             entity.Property(e => e.PaymentTaxRulesJson).HasColumnType("TEXT");

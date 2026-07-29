@@ -1503,8 +1503,15 @@ public partial class MainWindow : Window
         if (order.ReceivedDownpayment != order.TotalDownpayment)
             blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedDownpayment"], Money(currency, order.ReceivedDownpayment)));
         blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedFinalBalance"], Money(currency, order.ReceivedFinalBalance)));
+        // Name the tax for what it is. On a tax-inclusive order this figure was never added to the
+        // total — it was carved out of it — and a receipt reading "tax paid" beside a total that
+        // already contained it invites the reader to add them together.
         if (order.TotalTax > 0m)
-            blocks.Add(ReceiptInfoLine(_localization["Order.Fields.PaidTax"], Money(currency, order.TotalTax)));
+        {
+            blocks.Add(ReceiptInfoLine(
+                _localization[order.PricesIncludeTax ? "Order.Fields.IncludedTax" : "Order.Fields.PaidTax"],
+                Money(currency, order.TotalTax)));
+        }
         // AddReceiptTotals runs for every order regardless of refund status (full parity
         // with the on-screen detail panel), so Order.Fields.FinalBalance is always shown here too.
         blocks.Add(ReceiptInfoLine(_localization["Order.Fields.FinalBalance"], Money(currency, order.FinalBalance)));
@@ -1610,9 +1617,10 @@ public partial class MainWindow : Window
         => ReceiptBrandingStore.ResolveTaxRegistrationNumber(settings);
 
     /// <summary>
-    /// The GST/HST line, or null when neither the shop nor the header/footer editor has a number.
+    /// The tax-number line, or null when neither the shop nor the header/footer editor has a number.
     /// The whole line shape comes from the string table so the separator is translated too — zh uses
-    /// a fullwidth colon where en uses ": ".
+    /// a fullwidth colon where en uses ": " — and the NAME of the number comes from the shop's tax
+    /// jurisdiction, so a receipt printed in Osaka does not announce a Canadian GST/HST number.
     /// </summary>
     /// <remarks>
     /// Left aligned with the rest of the letterhead. At 11pt it sits just under the body text: it is
@@ -1624,7 +1632,9 @@ public partial class MainWindow : Window
         if (string.IsNullOrWhiteSpace(taxRegistrationNumber))
             return null;
 
-        var text = LocalizationService.Instance.Format("Receipt.TaxNumberLine", taxRegistrationNumber.Trim());
+        var text = LocalizationService.Instance.Format("Receipt.TaxNumberLine",
+            TaxJurisdictions.TaxNumberName(ShopContext.Instance.Current, LocalizationService.Instance),
+            taxRegistrationNumber.Trim());
 
         return new Paragraph(new Run(text))
         {

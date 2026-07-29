@@ -29,7 +29,10 @@ public sealed class ShopLetterhead
 
     public IReadOnlyList<ShopLetterheadLine> ContactLines { get; init; } = [];
 
-    /// <summary>The finished GST/HST line, or null when no number is configured anywhere.</summary>
+    /// <summary>
+    /// The finished tax-number line, or null when no number is configured anywhere. Named after
+    /// whatever the shop's tax jurisdiction issues, not after Canada's GST/HST.
+    /// </summary>
     public string? TaxLine { get; init; }
 
     /// <summary>
@@ -59,11 +62,15 @@ public sealed class ShopLetterhead
                 .Select(line => new ShopLetterheadLine(
                     localization.GetText(line.LabelKey, languageCode), line.Value!.Trim()))
                 .ToList(),
+            // The number's NAME comes from the shop's tax jurisdiction, in the document's language —
+            // GetText rather than the indexer, because a measurement sheet can be printed in a
+            // language other than the one the UI is showing.
             TaxLine = string.IsNullOrWhiteSpace(taxNumber)
                 ? null
                 : string.Format(
                     System.Globalization.CultureInfo.CurrentCulture,
                     localization.GetText("Receipt.TaxNumberLine", languageCode),
+                    localization.GetText(TaxJurisdictions.TaxNumberKey(shop), languageCode),
                     taxNumber.Trim()),
         };
     }

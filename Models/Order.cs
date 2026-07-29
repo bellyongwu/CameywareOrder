@@ -44,6 +44,15 @@ public class Order
     /// </remarks>
     public string? LastModifiedBy { get; set; }
     public CurrencyType CurrencyType { get; set; } = CurrencyType.CAD;
+
+    /// <summary>
+    /// Whether the amounts on this order are quoted tax-inclusive. Frozen onto the order at save
+    /// time from its shop's location (<c>TaxJurisdictions</c>), exactly as <see cref="CurrencyType"/>
+    /// is, so a receipt reprinted after the shop moves or a rate changes still shows what was
+    /// actually charged. False on every order saved before this column existed — they were all
+    /// priced tax-exclusive — so their stored figures are unchanged.
+    /// </summary>
+    public bool PricesIncludeTax { get; set; }
     public OrderServiceType ServiceType { get; set; } = OrderServiceType.Alterations;
     public string? ServiceDetails { get; set; }
     public string? AdditionalNotes { get; set; }
@@ -117,13 +126,13 @@ public class Order
     public SectionPayment AlterationMoney
         => CalculateSectionPayment(AlterationSubtotal ?? 0m, AlterationDownpayment ?? 0m, AlterationTaxRate ?? 0m,
             AlterationFinalTaxRate ?? AlterationTaxRate ?? 0m,
-            AlterationDownpaymentMethod, AlterationFinalBalanceMethod);
+            AlterationDownpaymentMethod, AlterationFinalBalanceMethod, PricesIncludeTax);
 
     [NotMapped]
     public SectionPayment ClothingMoney
         => CalculateSectionPayment(ClothingSubtotal ?? 0m, ClothingDownpayment ?? 0m, ClothingTaxRate ?? 0m,
             ClothingFinalTaxRate ?? ClothingTaxRate ?? 0m,
-            ClothingDownpaymentMethod, ClothingFinalBalanceMethod);
+            ClothingDownpaymentMethod, ClothingFinalBalanceMethod, PricesIncludeTax);
 
     // Custom-made pricing mirrors the other sections: the base charge is the sum of the
     // individual records' prices, and tax is applied per payment portion.
@@ -134,7 +143,7 @@ public class Order
     public SectionPayment CustomMadeMoney
         => CalculateSectionPayment(CustomMadeSubtotal, CustomMadeDownpayment ?? 0m, CustomMadeTaxRate ?? 0m,
             CustomMadeFinalTaxRate ?? CustomMadeTaxRate ?? 0m,
-            CustomMadeDownpaymentMethod, CustomMadeFinalBalanceMethod);
+            CustomMadeDownpaymentMethod, CustomMadeFinalBalanceMethod, PricesIncludeTax);
 
     // Per-section totals (deposit charge + final-balance charge, each taxed by its own method).
     [NotMapped]
@@ -286,43 +295,102 @@ public class Order
     private static decimal SectionReceivedFinal(SectionPayment money, bool balanceCleared)
         => (balanceCleared && money.FinalBase > 0m) ? money.FinalCharge : 0m;
 
-    // Splits a service section into its deposit and final-balance money, applying tax to
-    // each portion only when the method that settled it is taxable under the shop's rules
-    // (PaymentTaxRules.Active — by default the two card types, not cash or e-transfer). Each
-    // portion carries its own
-    // rate, so the shop can charge e.g. 5% on a card deposit and 7% on the card final
-    // balance. The deposit is the pre-tax amount entered by the shop and ReceivedDownpayment
-    // is that deposit after any card tax. FinalBase is the pre-tax remainder and FinalCharge
-    // is that remainder after any card tax. The deposit is capped at the subtotal so the
-    // final balance never goes below zero.
+    /// <summary>
+    /// Splits a service section into its deposit and final-balance money. Each portion carries its
+    /// own rate, so the shop can charge e.g. 5% on a card deposit and 7% on the card final balance.
+    /// The deposit is capped at the subtotal so the final balance never goes below zero.
+    /// </summary>
+    /// <param name="pricesIncludeTax">
+    /// Which of the two pricing modes the amounts are quoted in — see <see cref="IncludedTaxPayment"/>
+    /// and <see cref="AddedTaxPayment"/>. REQUIRED on purpose: it was briefly optional, defaulting to
+    /// tax-exclusive, and the default turned "every unconverted call site fails to compile" into
+    /// silence. A harness that recomputed its expectations through the shorter overload kept exclusive
+    /// arithmetic while the window it measured had gone inclusive, and nothing failed to build. The
+    /// whole point of this being the one calculation is that every caller gets the SAME answer; an
+    /// optional argument guarantees that whoever forgets it gets a different one.
+    /// </param>
     public static SectionPayment CalculateSectionPayment(
         decimal subtotal, decimal deposit, decimal depositRatePercent, decimal finalRatePercent,
-        PaymentMethod? downpaymentMethod, PaymentMethod? finalBalanceMethod)
+        PaymentMethod? downpaymentMethod, PaymentMethod? finalBalanceMethod, bool pricesIncludeTax)
     {
         var safeSubtotal = subtotal < 0m ? 0m : subtotal;
         var safeDeposit = Math.Clamp(deposit, 0m, safeSubtotal);
         var finalBase = safeSubtotal - safeDeposit;
 
-        // The RATE comes from the order (what the shop actually charged and persisted); whether it
-        // applies at all comes from the shop's current rules. Keeping the stored rate is what makes
-        // a saved order print the same figures it was saved with, while the taxable/tax-free
-        // decision still follows the shop — a method the shop has since made tax free stops adding
-        // tax rather than silently keeping a rate nobody can see any more.
+        if (pricesIncludeTax)
+            return IncludedTaxPayment(safeSubtotal, safeDeposit, finalBase, depositRatePercent, finalRatePercent);
+
+        return AddedTaxPayment(safeSubtotal, safeDeposit, finalBase, depositRatePercent, finalRatePercent,
+            downpaymentMethod, finalBalanceMethod);
+    }
+
+    /// <summary>
+    /// TAX-INCLUSIVE (VAT / consumption-tax markets such as China, Japan and the EU): the entered
+    /// amount ALREADY contains the tax, so nothing is added — the received figures equal what was
+    /// entered, the total is the subtotal, and the tax is what was embedded in them.
+    /// </summary>
+    /// <remarks>
+    /// The shop's per-method rules are deliberately NOT consulted here. A value-added tax is a
+    /// property of the SALE, not of how it was settled: a cash sale in Tokyo carries the same
+    /// consumption tax as a card one, so letting a "cash is tax free" rule zero it would make one
+    /// price yield two different taxes depending on the tender. The rate arrives from the shop's
+    /// jurisdiction instead — see <c>TaxJurisdiction.StandardRatePercent</c> — and applies
+    /// unconditionally.
+    /// </remarks>
+    private static SectionPayment IncludedTaxPayment(
+        decimal subtotal, decimal deposit, decimal finalBase,
+        decimal depositRatePercent, decimal finalRatePercent)
+    {
+        var depositTax = EmbeddedTax(deposit, depositRatePercent);
+        var finalTax = EmbeddedTax(finalBase, finalRatePercent);
+
+        return new SectionPayment(subtotal, deposit, finalBase, deposit, finalBase, subtotal,
+            depositTax + finalTax)
+        {
+            DepositTax = depositTax,
+            FinalTax = finalTax,
+            PricesIncludeTax = true
+        };
+    }
+
+    /// <summary>The tax already inside a quoted amount: amount − amount ÷ (1 + rate).</summary>
+    private static decimal EmbeddedTax(decimal amount, decimal ratePercent)
+        => ratePercent <= 0m ? 0m : amount - (amount * 100m / (100m + ratePercent));
+
+    /// <summary>
+    /// TAX-EXCLUSIVE (Canada and the US, and every order saved before the mode existed): the entered
+    /// amount is pre-tax and tax is ADDED on top, per portion, only when the method that settled that
+    /// portion is taxable under the shop's current rules (<see cref="PaymentTaxRules.Active"/> — by
+    /// default the two card types, not cash or e-transfer).
+    /// </summary>
+    /// <remarks>
+    /// The RATE comes from the order (what the shop actually charged and persisted); whether it
+    /// applies at all comes from the shop's current rules. Keeping the stored rate is what makes a
+    /// saved order print the same figures it was saved with, while the taxable/tax-free decision
+    /// still follows the shop — a method the shop has since made tax free stops adding tax rather
+    /// than silently keeping a rate nobody can see any more.
+    /// </remarks>
+    private static SectionPayment AddedTaxPayment(
+        decimal subtotal, decimal deposit, decimal finalBase,
+        decimal depositRatePercent, decimal finalRatePercent,
+        PaymentMethod? downpaymentMethod, PaymentMethod? finalBalanceMethod)
+    {
         var rules = PaymentTaxRules.Active;
         var depositRate = rules.IsTaxable(downpaymentMethod) && depositRatePercent > 0m ? depositRatePercent : 0m;
         var finalRate = rules.IsTaxable(finalBalanceMethod) && finalRatePercent > 0m ? finalRatePercent : 0m;
 
-        var receivedDownpayment = safeDeposit + (safeDeposit * depositRate / 100m);
-        var finalCharge = finalBase + (finalBase * finalRate / 100m);
+        var depositTax = deposit * depositRate / 100m;
+        var finalTax = finalBase * finalRate / 100m;
+        var receivedDownpayment = deposit + depositTax;
+        var finalCharge = finalBase + finalTax;
 
-        return new SectionPayment(
-            safeSubtotal,
-            safeDeposit,
-            finalBase,
-            receivedDownpayment,
-            finalCharge,
-            receivedDownpayment + finalCharge,
-            (receivedDownpayment - safeDeposit) + (finalCharge - finalBase));
+        return new SectionPayment(subtotal, deposit, finalBase, receivedDownpayment, finalCharge,
+            receivedDownpayment + finalCharge, depositTax + finalTax)
+        {
+            DepositTax = depositTax,
+            FinalTax = finalTax,
+            PricesIncludeTax = false
+        };
     }
 
     [NotMapped]
@@ -375,7 +443,42 @@ public readonly record struct SectionPayment(
     decimal ReceivedDownpayment,
     decimal FinalCharge,
     decimal Total,
-    decimal Tax);
+    decimal Tax)
+{
+    /// <summary>
+    /// The tax on the deposit portion, and on the final portion; together they are <see cref="Tax"/>.
+    /// </summary>
+    /// <remarks>
+    /// Carried explicitly rather than left for each consumer to derive as
+    /// <c>ReceivedDownpayment − Deposit</c>, which is the shape they all used until tax-inclusive
+    /// pricing arrived: once the tax is embedded in the price those two differences are structurally
+    /// ZERO while the section's tax is not, so the editor and the printed receipt both showed
+    /// "tax 0" twice beside a non-zero total. A second pricing mode is not one branch in the money
+    /// calculation — it is a branch in every place that EXPLAINS the number, which is why the split
+    /// now travels with the money instead of being re-inferred downstream.
+    ///
+    /// Init properties rather than more constructor parameters, so the positional constructor stays
+    /// at seven. <see cref="Order.CalculateSectionPayment"/> is the only thing that builds one, and
+    /// it sets both on every path.
+    /// </remarks>
+    public decimal DepositTax { get; init; }
+
+    /// <inheritdoc cref="DepositTax"/>
+    public decimal FinalTax { get; init; }
+
+    /// <summary>
+    /// True when these amounts were quoted with the tax already inside them. Travels with the split
+    /// so a consumer can present the figures correctly without reaching back to the order or the
+    /// shop — the receipt converter has only the order, and a static formatting helper has neither.
+    /// </summary>
+    public bool PricesIncludeTax { get; init; }
+
+    /// <summary>
+    /// What the deposit stage adds up to: the section's subtotal plus the tax charged on the deposit
+    /// — or just the subtotal when the tax is already inside it, because nothing is added on top.
+    /// </summary>
+    public decimal DepositStageTotal => PricesIncludeTax ? Subtotal : Subtotal + DepositTax;
+}
 
 public enum OrderServiceType
 {
