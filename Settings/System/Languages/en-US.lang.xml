@@ -116,11 +116,15 @@
   <Text key="Users.AssignmentsHint">Tick the role this account holds in each shop. Ticking both grants both; an account with nothing ticked cannot open that shop.</Text>
   <Text key="Users.AdminNotice">The administrator has every permission in every shop. The role cannot be changed and the account cannot be deleted.</Text>
   <Text key="Users.AccountLocked">Locked</Text>
+  <Text key="Users.SignInAs">Sign in as</Text>
+  <Text key="Users.SignInAsHint">Work as this person to see the application the way they do. You will be signed out of your own account.</Text>
+  <Text key="Users.SignInAsConfirm">Sign in as {0} ({1})? You will be signed out of your own account, and will need to sign in again to come back.</Text>
+  <Text key="Users.Error.SignInAsDeactivated">That account has been deactivated in every shop, so it cannot be signed in to.</Text>
   <!-- The WHOLE line shape, not just the words: Chinese brackets fullwidth text with （）where
        English uses ( ), so composing this in code produces one language's punctuation in both. -->
   <Text key="Users.AccountLabel">{0} ({1})</Text>
   <Text key="Users.LoginHint">What this person types to sign in. Changing it takes effect the next time they sign in.</Text>
-  <Text key="Users.LoginLocked">The administrator's login cannot be changed.</Text>
+  <Text key="Users.LoginLocked">The administrator's login cannot be changed. That account must stay identifiable and can never be deleted.</Text>
   <Text key="Users.RenameConfirm">Change the login {0} to {1}? This person will sign in with the new one from now on.</Text>
   <Text key="Users.NoAccess">No shops assigned</Text>
   <Text key="Users.ShopCount">{0} shop(s)</Text>

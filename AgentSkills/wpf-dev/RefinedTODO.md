@@ -67,11 +67,31 @@ narrow window can only be answered by scrolling to the columns.
 > **A horizontal StackPanel defeats `TextTrimming`.** It gives children infinite width,
 > so a child never learns it overflowed. Use a Grid with a star column.
 
-### A person has a first and a last name, and a login an administrator can change
+### An administrator can sign in as another user
+A button in the account screen's identity card hands the session to the selected person.
+It grants an administrator nothing new — they can already set anybody's password — what
+it buys is SEEING the application as somebody else: which shops they get, which chrome
+is hidden, what their language toggle offers.
+
+Gated in the SERVICE, not only in the UI: the roster edits beside it write data, this
+one hands out a session. Refused for a non-administrator, for yourself, and for an
+account every shop has delisted — that last would spend the administrator's own session
+to reach "no shop is available" and then the login screen. The bound shop is cleared, or
+capabilities go on resolving against the shop the ADMINISTRATOR had open.
+
+The window only REPORTS the choice; the caller performs it, because it owns the main
+window that has to come down first. From the shop picker the switch becomes a THIRD
+`ShopSelection` state — folding it into Cancelled would sign the new user straight out.
+
+> **"Add an SVG icon" means `Path` geometry**, which is SVG path syntax. WPF renders it
+> natively; an `.svg` file needs a rasterizer that is not installed here, and a bitmap
+> will not stay crisp at every DPI.
+
+### A person has a first and a last name, and a login that can be changed
 `CredentialRecord.DisplayName` became `FirstName` + `LastName` (credentials.json schema
 3 → 4). The greeting is now "Hi Tina"; the user-management list reads
-`Tina Zhang (Manager, Staff)`; the detail pane shows the login and lets an
-administrator change it.
+`Tina Zhang (Manager, Staff)`; the detail pane shows the login and lets an administrator
+change it — for every account EXCEPT the administrator's own.
 
 > **The split rule is deliberately conservative.** No whitespace — "林艳", "Prince" —
 > puts the whole value in `FirstName`. A Chinese name is family-name-first with no
@@ -82,18 +102,30 @@ administrator change it.
 blank; `Greeting` is the first name. Known limitation, recorded rather than
 half-solved: the join is given-name-first, the western order.
 
-**Renaming a login has two traps, both now covered.** `ProvisionedAccounts` records
-seeded logins and must be renamed too — otherwise the next load sees the old name
-missing and seeds a fresh account with a known password beside the renamed one. And
-`RefreshCurrentUser` identifies the session BY user name, so after a rename the record
-no longer matches itself and the session kept a login that no longer existed. The
-administrator's login is refused outright: it is a `const` the seeding step tops up, so
-renaming it would produce two administrators on the next launch.
+**Renaming a login has two traps.** `RefreshCurrentUser` identifies the session BY user
+name, so after a rename the record no longer matches itself and the session kept a login
+that no longer existed — decide "is this the signed-in account" *before* renaming. And
+`CredentialFile.ProvisionedAccounts` must be **left alone**: it records which SEED NAMES
+have been created and `ProvisionSeedAccounts` looks each seed name up in it directly, so
+renaming the entry from `staff` to `sam` leaves `staff` unlisted and the next load seeds
+a fresh `staff` **with a known password** beside the renamed one.
 
-The whole profile card saves in one call, after validating everything — a rename that
-landed while a bad phone number was rejected would leave the pane describing an account
-that no longer answers to it — and asks for confirmation first, because the consequence
-lands on somebody else at their next sign-in.
+> That second one was got backwards first time round, with a confident comment saying so,
+> and the harness agreed because it only ever renamed an account that was never seeded. A
+> rename test that does not rename a SEEDED account proves nothing about it.
+
+The administrator's login cannot be changed — a product rule, kept at the user's
+instruction. Its box is DISABLED rather than read-only: a read-only box looks editable and
+silently swallows typing, which reads as the application being broken. Seeding identifies
+the administrator by its FLAG rather than its name, so "exactly one administrator" holds
+structurally rather than resting on that one guard.
+
+**One Save per screen.** The pane had two buttons both labelled Save Changes — the card's
+saved the profile, the footer's saved only the password and roles — so editing a name and
+pressing the obvious button discarded it on the reload, under a "changes were saved"
+message. The footer's Save now applies the whole pane, profile first because it may
+rename. Taken names are reported as they are typed, under the field they belong to, and
+availability is settled *before* the rename confirmation.
 
 ### Test shops now cover every language shape
 Five shops on the developer machine, chosen so each branch of `ShopLanguages` has

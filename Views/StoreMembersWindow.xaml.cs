@@ -373,6 +373,7 @@ public partial class StoreMembersWindow : Window
     private void OnAddMemberClick(object sender, RoutedEventArgs e)
     {
         NewUserNameBox.Clear();
+        NewUserNameTakenText.Visibility = Visibility.Collapsed;
         NewFirstNameBox.Clear();
         NewLastNameBox.Clear();
         NewPasswordBox.Clear();
@@ -449,6 +450,17 @@ public partial class StoreMembersWindow : Window
         Reload(userName);
         ShowStatus("Members.Created",
             PersonName.Label(NewFirstNameBox.Text, NewLastNameBox.Text, userName));
+    }
+
+    /// <summary>
+    /// Reports a login already in use as it is typed. Installation-wide, not per shop: an account
+    /// belongs to the whole installation, so a name taken by somebody at another branch is taken
+    /// here too — and "that name is free" would be the more confusing answer.
+    /// </summary>
+    private void OnNewUserNameTextChanged(object sender, TextChangedEventArgs e)
+    {
+        var taken = AuthenticationService.Instance.IsUserNameTaken(NewUserNameBox.Text);
+        NewUserNameTakenText.Visibility = taken ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnCreateCancelClick(object sender, RoutedEventArgs e) => ShowSelectedMember();

@@ -94,19 +94,64 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     the original back, which is the property to assert.
   - Guard against re-splitting: a record already carrying either half is left alone, or a later
     load could clobber an edited name from a stale single field.
-- **Renaming a login touches more than the record (2026-07-28).** Two things bite:
-  - `CredentialFile.ProvisionedAccounts` records SEEDED logins and is what stops a deleted seeded
-    account being re-created. Rename `staff` to `tina` without updating that list and the next load
-    sees `staff` as never provisioned and seeds a brand-new one — **with a known password** — beside
-    the renamed original. Rename the entry in the same operation.
+- **Renaming a login touches more than the record (2026-07-28).** Three things bite:
+  - **`CredentialFile.ProvisionedAccounts` must be LEFT ALONE.** It records which SEED NAMES this
+    installation has created, and `ProvisionSeedAccounts` looks each seed name up in it directly —
+    so the old name staying put is exactly what stops a re-seed. Rename the entry from `staff` to
+    `sam` and the next load finds `staff` both absent and unlisted, and creates a brand-new `staff`
+    **with a known password** beside the renamed one.
+    - Got backwards on the first attempt, with a confident comment asserting the opposite, and the
+      harness agreed because it only ever renamed an account that was never SEEDED. **A rename test
+      that does not rename a seeded account proves nothing about seeding.**
   - `RefreshCurrentUser` identifies the session BY USER NAME. After a rename the record no longer
     matches itself, so the refresh silently no-ops and the session keeps a login that no longer
     exists. Decide "is this the signed-in account" BEFORE the rename, and adopt the record after.
-  - The administrator's login can never change: `AdministratorUserName` is a const that
-    `ProvisionSeedAccounts` tops up every load, so a renamed administrator means TWO of them on the
-    next launch. Refuse in the service, and make the box read-only rather than hidden.
+  - The administrator's login can never change — a PRODUCT rule (that account must stay identifiable
+    and can never be deleted or demoted), refused in the service. Independently, `ProvisionSeedAccounts`
+    asks "is there an ADMINISTRATOR" by flag rather than "is there an account called admin", so the
+    "exactly one administrator" invariant holds structurally rather than resting on that guard.
   - Memberships need no attention — they key on `Shop.PublicId`, not on the login. That is the
     payoff of the decision recorded above.
+- **Handing out a SESSION is gated in the service, not just the UI (2026-07-28).** `SignInAs` lets an
+  administrator take over another account. Every roster edit beside it is gated by its caller —
+  "callers gate, this layer only stores" — but that convention is about writing DATA. A method that
+  changes who the application thinks you are must refuse in the service too, where a future call
+  site cannot skip it.
+  - Clear the bound shop on the switch. Capabilities resolve against `_activeShopPublicId`, and the
+    new user may hold no role in the shop the ADMINISTRATOR had open.
+  - Refuse an account that is delisted everywhere. Sign-in already refuses those, so becoming one
+    only spends the administrator's own session to reach "no shop is available" and then the login
+    screen — a trap, for information the roster already shows.
+  - The screen that offers it must only REPORT the choice. Swapping the session from inside a dialog
+    pulls that dialog's own ground out from under it, and the main window has to come down first
+    anyway (a capability swap under a live window leaves the previous person's chrome on screen).
+- **"Add an SVG icon" in WPF means `Path` geometry (2026-07-28).** `Path.Data` IS SVG path syntax,
+  rendered natively and crisp at every DPI. An actual `.svg` file cannot be shown at runtime — no
+  rasterizer is installed on this machine, which is why `Assets/ICONS/app-icon.svg` exists only as
+  the design source for the `.ico`. Follow the 店铺成员 button in `MainWindow`: a `Canvas` with
+  `Ellipse` + `Path` children, stroked from theme brushes so the icon follows the palette.
+- **Disable, do not make read-only, when a field cannot be edited (2026-07-28).** A read-only
+  `TextBox` looks exactly like an editable one and silently swallows typing; the report that came
+  back was "the system blocked me to update user name" with no idea why. `IsEnabled = false` greys
+  it, and a line underneath says which rule applies.
+- **Two buttons with the same label saving different subsets is a data-loss bug (2026-07-28).** The
+  user-management pane had a Save on the profile card and a Save in the footer, both reading "Save
+  Changes"; the footer's applied only the password and the shop roles, so a name or login typed into
+  the card was discarded by the reload that followed — under a "changes were saved" message. One
+  Save per screen, applying everything on it. Order matters when one part renames the record: apply
+  the profile FIRST, then use the new login for everything after.
+  - The check that would have caught it drives the REAL handler and reads the value back from the
+    service. A check that called `UpdateAccountProfile` itself would have passed throughout.
+- **A native MessageBox cannot be automated, and the seams that would let it be are worse
+  (2026-07-28).** A XAML window cannot be subclassed to override a confirmation —
+  `InitializeComponent` calls `Application.LoadComponent(this, uri)`, which resolves the resource by
+  EXACT type and throws for a derived class. An injectable delegate would be a test hook in shipping
+  code. So: drive the handler for every path EXCEPT the confirmed one, cover that one against the
+  service, and write the coverage boundary at the call site so the gap is visible rather than
+  assumed away.
+  - Corollary worth remembering: a harness that pops a modal blocks until a HUMAN clicks it — which
+    is how one appeared on the user's screen mid-run. Check for `MessageBox` on any path a harness
+    drives.
 - **A harness must establish the ACCOUNTS it reads, and "deleted" is a legitimate state
   (2026-07-28).** `authcheck` asserted that the seeded `test1` / `test2` accounts exist with no
   memberships. They had been deleted in the running application, and `ProvisionedAccounts` makes

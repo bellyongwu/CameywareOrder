@@ -189,7 +189,12 @@
                                 <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,14">
                                     <TextBlock Style="{StaticResource FieldLabel}"
                                                Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.UserName], Mode=OneWay}"/>
-                                    <TextBox x:Name="NewUserNameBox"/>
+                                    <TextBox x:Name="NewUserNameBox" TextChanged="OnNewUserNameTextChanged"/>
+                                    <!-- Answered at the keystroke. The same courtesy as the account
+                                         screen, because the same mistake costs the same re-typing. -->
+                                    <TextBlock x:Name="NewUserNameTakenText" Foreground="#B91C1C" FontSize="12"
+                                               Margin="0,6,0,0" TextWrapping="Wrap" Visibility="Collapsed"
+                                               Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.Error.NameTaken], Mode=OneWay}"/>
                                 </StackPanel>
                                 <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,14">
                                     <Grid>

@@ -17,6 +17,94 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-28 23:15 — "Sign in as this user" for an administrator  [DONE]
+- Ask: "Add new feature. >If you are login as admin, when manage user panel, you can
+  choose to login as the user. Place a button for that. add svg icon."
+- `AuthenticationService.SignInAs(userName)` hands the session to another account with
+  no password. It grants an administrator nothing new — they can already set anybody's
+  password and reach the same session in two more clicks — what it buys is SEEING the
+  application as somebody else: which shops they get, which chrome is hidden, what
+  their language toggle offers.
+- **Gated in the SERVICE, not only in the UI**, unlike the roster edits beside it.
+  Those write data; this hands out a session, so the check belongs where a new call
+  site cannot skip it. Refuses: a non-administrator, yourself, an unknown account, and
+  one every shop has delisted — that last would spend the administrator's own session
+  to land on "no shop is available" and then the login screen.
+- **The bound shop is cleared** on the switch. Capabilities would otherwise go on
+  resolving against the shop the ADMINISTRATOR had open, which the new user may hold no
+  role in. The picker binds one again immediately after.
+- Two routes, because 用户管理 opens from two places:
+  - `MainWindow` → `App.SignInAsAsync`, structurally a sign-out that skips the login
+    window: main window down first (a capability swap under a live window leaves the
+    previous person's chrome on screen), then the shop picker again.
+  - `ShopPickerWindow` → reported up as `SignInAsUserName` and the picker closes;
+    `OpenInitialShopAsync` performs the switch and returns the new `ShopSelection.UserSwitched`,
+    which makes the existing loop round again as the new user. A THIRD state, not a
+    flavour of Cancelled — folding it in would sign the new user straight back out.
+- The window only REPORTS the choice; switching from inside a dialog would pull its own
+  ground out from under it, and the caller owns the main window that has to come down.
+- Button sits in the identity card, with the person it acts on, rather than in the
+  footer where it would read as another thing Save does. Hidden — not disabled — when
+  it does not apply, per the convention on every other gated control here.
+- **On "add svg icon":** drawn as WPF `Path` geometry, which IS SVG path syntax. An
+  `.svg` file cannot be rendered at runtime — no rasterizer is installed on this machine
+  (context.md), which is why `app-icon.svg` exists only as a design source for the `.ico`
+  — and a bitmap would not stay crisp at every DPI. Same technique as the 店铺成员 glyph
+  in `MainWindow`.
+- Notes: build 0/0, Sonar 0, suite **731 passed / 0 failed across 17 harnesses**
+  (`namecheck` 102, up 15). New: the button's availability (offered / your own account /
+  delisted) and every service rule, including that administrator rights and the bound
+  shop are both gone after the switch. The click itself raises a confirmation modal,
+  which cannot be answered in-process, so the harness drives everything up to it.
+
+### 2026-07-28 22:30 — Authentication: taken-name feedback, and the login that would not save  [DONE]
+- Ask: "Improve authentication. IF the user name is registered, you need to let user
+  know that the username is not available when add new user name. >I check the admin
+  role, that trying to update user name, the system blocked me to update user name.
+  what is the reason? Do you have any concerns? If you cannot do, you can just gray
+  that area." — then, mid-turn: "管理员的登录名还是不能修改。这个rule不变" /
+  "其他人的登录名可以改，问题是现在改不了，save的时候会回退" /
+  "可不可以不用alert，直接用red error message" / "提示username 被占用了" /
+  "算了 你还是加回来吧".
+- **The real defect: TWO buttons labelled Save Changes.** The profile card carried one
+  (`OnSaveContactClick`) and the footer carried the primary one (`OnSaveClick`) — and
+  the footer's saved only the password and the shop roles. Anyone who edited a name or
+  a login and pressed the obvious button watched the edit vanish on the reload that
+  followed, under a "changes were saved" message. That is the "save 的时候会回退".
+  Now ONE Save for the screen: profile → password → roles, profile first because it
+  may rename and everything after has to act on the new login.
+- **A bug I introduced last turn and have now removed.** `ApplyRename` was renaming the
+  `ProvisionedAccounts` entry. That list records which SEED NAMES have been created, and
+  `ProvisionSeedAccounts` looks each seed name up in it — so renaming `staff` to `sam`
+  left `staff` unlisted and the next load seeded a fresh `staff` **with a known
+  password** beside the renamed one. The old name staying put is exactly what prevents
+  that. My comment last turn asserted the opposite; namecheck agreed with it because it
+  only ever renamed an account that was never seeded.
+- Seeding now identifies the administrator by its **flag**, not its name. Behaviour is
+  unchanged, but the "exactly one administrator" invariant no longer rests solely on
+  the rename guard.
+- Administrator's login stays locked, per the user. The box is **disabled** (greyed)
+  rather than read-only — a read-only box looks editable and silently swallows typing,
+  which is what "the system blocked me" with no explanation was.
+- Taken names are reported **as they are typed**, on the create form, the roster's add
+  form and the login box. `IsUserNameTaken` / `IsUserNameTakenByAnother` on the service;
+  the save path still re-checks, so this is the courtesy, not the guard. Availability is
+  settled BEFORE the rename confirmation — asking "rename to X?" and only then saying X
+  is unavailable wastes the question.
+- Login errors moved UNDER THE LOGIN (`LoginErrorText`) instead of the shared line at
+  the foot of the card, which was showing the same message twice; and a failed save
+  now clears the stale "changes were saved".
+- The rename confirmation was removed and then restored on request. It is a native
+  MessageBox, so `namecheck` cannot answer it — a XAML window cannot be subclassed
+  (`InitializeComponent` resolves its resource by exact type) and the alternatives are
+  test hooks in shipping code. The harness therefore drives the button for everything
+  except a confirmed rename and covers the rename against the service; the boundary is
+  written at the call site so the gap is visible rather than assumed away.
+- Notes: build 0/0, Sonar 0, suite **716 passed / 0 failed across 17 harnesses**
+  (`namecheck` 87, up 11). New coverage: renaming a SEEDED login and reloading, the
+  administrator refusal, live availability on both forms, and the footer Save persisting
+  the profile card — the last of which is the check whose absence let this ship.
+
 ### 2026-07-28 21:40 — Orders list: one line per cell, uniform row height  [DONE]
 - Ask: "UI improve: For all the main records section, Do not wrap the words for the
   each column. if the screen cannot hold as much content(overflowed) you can have a

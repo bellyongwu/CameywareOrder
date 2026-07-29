@@ -60,6 +60,13 @@ public partial class ShopPickerWindow : Window
     public Shop? SelectedShop { get; private set; }
 
     /// <summary>
+    /// Set when the administrator used 用户管理 to sign in as somebody else. Distinct from a
+    /// CANCELLED picker, which means "sign out": here the session simply belongs to a different
+    /// person and the picker has to run again for them.
+    /// </summary>
+    public string? SignInAsUserName { get; private set; }
+
+    /// <summary>
     /// Set when a newly created shop asked for its measurement terms to be configured. The window
     /// cannot do it itself: MeasurementTermsService edits whichever shop is BOUND, and the new shop
     /// is not bound until the caller opens it. The caller therefore opens the terms editor after
@@ -254,7 +261,18 @@ public partial class ShopPickerWindow : Window
         if (!AuthenticationService.Instance.CanManageUsers)
             return;
 
-        new UserManagementWindow(_localization, _scopeFactory) { Owner = this }.ShowDialog();
+        var users = new UserManagementWindow(_localization, _scopeFactory) { Owner = this };
+        users.ShowDialog();
+
+        // "Sign in as this user" changes who this picker is FOR, and its whole list is the previous
+        // user's accessible shops. Reported up and closed rather than reloaded in place: App runs
+        // the picker in a loop and will build a fresh one for whoever the session now belongs to.
+        if (users.SignInAsUserName is { } userName)
+        {
+            SignInAsUserName = userName;
+            Close();
+            return;
+        }
 
         // Reloaded because an administrator can revoke their OWN access to a shop here. Keeping the
         // stale list would offer a shop that the next click is no longer allowed to open.

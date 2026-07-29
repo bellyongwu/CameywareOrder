@@ -219,6 +219,42 @@ public partial class App : Application
     /// and Kestrel keep running throughout: they are not session state, and tearing them down would
     /// mean rebuilding the whole DI container to hand the next user an identical one.
     /// </summary>
+    /// <summary>
+    /// Hands the session to another account — the administrator's "sign in as this user".
+    /// </summary>
+    /// <remarks>
+    /// Structurally a sign-out that skips the login window: the main window has to come down first
+    /// (every capability gate reads <c>CurrentUser</c>, and swapping it under a live window would
+    /// leave the previous person's chrome on screen), and the shop picker has to run again because
+    /// the new user's accessible shops are not the administrator's.
+    ///
+    /// If the switch is refused after the window is already gone, this falls back to the ordinary
+    /// sign-in screen. The alternative is an application with no window at all.
+    /// </remarks>
+    internal async Task SignInAsAsync(string userName)
+    {
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        var previousWindow = MainWindow;
+        MainWindow = null;
+        previousWindow?.Close();
+
+        if (AuthenticationService.Instance.SignInAs(userName) != AccountOperationResult.Success)
+        {
+            await SignOutAsync();
+            return;
+        }
+
+        var shopSelection = await OpenShopOrSignInAgainAsync();
+        if (!shopSelection.Opened)
+        {
+            Shutdown();
+            return;
+        }
+
+        ShowMainWindow(shopSelection.ConfigureTerms);
+    }
+
     internal async Task SignOutAsync()
     {
         // ORDER MATTERS. ShutdownMode has to be relaxed BEFORE the main window closes, or WPF
@@ -283,6 +319,11 @@ public partial class App : Application
             var selection = await OpenInitialShopAsync();
             if (selection.Opened)
                 return selection;
+
+            // The administrator signed in as somebody else from the picker. Round again, as them —
+            // NOT out to the login screen, which is what every other non-opened outcome means.
+            if (selection.Switched)
+                continue;
 
             AuthenticationService.Instance.SignOut();
 
@@ -575,7 +616,18 @@ public partial class App : Application
             // usually where the next person is working too.
             currentShop: ShopContext.Instance.Current);
 
-        if (picker.ShowDialog() is not true || picker.SelectedShop is null)
+        picker.ShowDialog();
+
+        // The administrator reached 用户管理 from the picker and chose to sign in as somebody. The
+        // session changes and the caller's loop runs this again — the new user's accessible shops
+        // are not the administrator's, so the picker has to be rebuilt rather than reused.
+        if (picker.SignInAsUserName is { } switchTo
+            && AuthenticationService.Instance.SignInAs(switchTo) == AccountOperationResult.Success)
+        {
+            return ShopSelection.UserSwitched;
+        }
+
+        if (picker.DialogResult is not true || picker.SelectedShop is null)
             return ShopSelection.Cancelled;
 
         ApplyActiveShop(picker.SelectedShop);
@@ -583,11 +635,18 @@ public partial class App : Application
     }
 
     /// <summary>Outcome of choosing a shop: whether one was opened, and what to do next.</summary>
-    private readonly record struct ShopSelection(bool Opened, bool ConfigureTerms)
+    /// <remarks>
+    /// <see cref="Switched"/> is a third state, not a flavour of cancelled: the session changed and
+    /// the picker must run AGAIN for whoever it changed to. Folding it into Cancelled would sign the
+    /// new user straight back out.
+    /// </remarks>
+    private readonly record struct ShopSelection(bool Opened, bool ConfigureTerms, bool Switched)
     {
-        public static ShopSelection Cancelled => new(false, false);
+        public static ShopSelection Cancelled => new(false, false, false);
 
-        public static ShopSelection Success(bool configureTerms = false) => new(true, configureTerms);
+        public static ShopSelection UserSwitched => new(false, false, true);
+
+        public static ShopSelection Success(bool configureTerms = false) => new(true, configureTerms, false);
     }
 
     /// <summary>

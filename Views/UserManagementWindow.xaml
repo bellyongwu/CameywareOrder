@@ -144,7 +144,15 @@
                         <TextBlock Style="{StaticResource FieldLabel}"
                                    Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.UserName], Mode=OneWay}"/>
                         <TextBox x:Name="NewUserNameBox" MaxWidth="360"
-                                 HorizontalAlignment="Left" Width="360" Margin="0,0,0,14"/>
+                                 HorizontalAlignment="Left" Width="360"
+                                 TextChanged="OnNewUserNameTextChanged"/>
+                        <!-- Answered while the name is being typed. Finding out only on submit means
+                             re-typing a password as well, for a mistake the screen already knew
+                             about at the first keystroke. -->
+                        <TextBlock x:Name="NewUserNameTakenText" Foreground="#B91C1C" FontSize="12"
+                                   Margin="0,6,0,0" TextWrapping="Wrap" Visibility="Collapsed"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.Error.NameTaken], Mode=OneWay}"/>
+                        <Border Height="14"/>
 
                         <TextBlock Style="{StaticResource FieldLabel}"
                                    Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Password], Mode=OneWay}"/>
@@ -176,8 +184,14 @@
                     <StackPanel Margin="0,0,4,0">
                         <!-- Identity -->
                         <Border Style="{StaticResource CardBorder}" Margin="0,0,0,14">
-                            <StackPanel Orientation="Horizontal">
-                                <Border Width="46" Height="46" CornerRadius="23"
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Width="46" Height="46" CornerRadius="23"
                                         Background="{Binding ElementName=UserList, Path=SelectedItem.AvatarBrush}"
                                         VerticalAlignment="Center">
                                     <TextBlock Text="{Binding ElementName=UserList, Path=SelectedItem.Initial}"
@@ -187,15 +201,47 @@
                                 <!-- Name first, then the login underneath it. Which account this is
                                      matters here in a way it does not in the list: this is the pane
                                      that resets a password and reassigns shops. -->
-                                <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                                <StackPanel Grid.Column="1" Margin="14,0,12,0" VerticalAlignment="Center">
                                     <TextBlock x:Name="DetailNameText" FontSize="18" FontWeight="Bold"
-                                               Foreground="#111827"/>
+                                               Foreground="#111827" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock x:Name="DetailLoginText" FontSize="12" Foreground="#4B5563"
-                                               Margin="0,4,0,0"/>
+                                               Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock x:Name="DetailSummaryText" FontSize="12" Foreground="#6B7280"
-                                               Margin="0,3,0,0"/>
+                                               Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
                                 </StackPanel>
-                            </StackPanel>
+
+                                <!-- Take over this account's session. Sits WITH the person it acts
+                                     on rather than in the footer, where it would read as another
+                                     thing the Save button does. -->
+                                <Button x:Name="SignInAsButton" Grid.Column="2" Click="OnSignInAsClick"
+                                        VerticalAlignment="Center" Padding="12,7"
+                                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.SignInAsHint], Mode=OneWay}"
+                                        AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.SignInAs], Mode=OneWay}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <!-- Vector geometry, in SVG path syntax: a person, and an
+                                             arrow entering from the left. WPF renders Path data
+                                             natively; an .svg file would need a rasterizer that is
+                                             not installed on this machine (see context.md), and a
+                                             bitmap would not stay crisp at every DPI. -->
+                                        <Canvas Width="18" Height="16" VerticalAlignment="Center" Margin="0,0,7,0">
+                                            <!-- The person: head and shoulders. -->
+                                            <Ellipse Canvas.Left="10.0" Canvas.Top="1.6" Width="5.6" Height="5.6"
+                                                     Stroke="{StaticResource PrimaryBrush}" StrokeThickness="1.5"/>
+                                            <Path Stroke="{StaticResource PrimaryBrush}" StrokeThickness="1.5"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"
+                                                  Data="M 8.2 14.4 C 8.2 10.9 10.6 9.4 12.8 9.4 C 15.0 9.4 17.4 10.9 17.4 14.4"/>
+                                            <!-- The arrow: entering, not leaving. -->
+                                            <Path Stroke="{StaticResource AccentBrush}" StrokeThickness="1.5"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  StrokeLineJoin="Round"
+                                                  Data="M 0.8 8 L 6.4 8 M 3.9 5.2 L 6.7 8 L 3.9 10.8"/>
+                                        </Canvas>
+                                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.SignInAs], Mode=OneWay}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
                         </Border>
 
                         <!-- Shown instead of the assignment matrix for the locked administrator. -->
@@ -233,13 +279,23 @@
                                     </StackPanel>
                                 </Grid>
 
-                                <!-- The login. Editable by an administrator, and locked for the
-                                     administrator's OWN account — its user name is a constant the
-                                     seeding step tops up, so renaming it would produce a second
-                                     administrator on the next launch. -->
+                                <!-- The login. Editable for every account EXCEPT the administrator's,
+                                     whose box is disabled in code with the reason under it — that
+                                     account must stay identifiable and can never be deleted or
+                                     demoted, so its login is not the user's to lose. Availability is
+                                     reported as the name is typed: being told after filling in the
+                                     whole card is a worse answer than being told at the keystroke. -->
                                 <TextBlock Style="{StaticResource FieldLabel}"
                                            Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.UserName], Mode=OneWay}"/>
-                                <TextBox x:Name="LoginBox" MaxLength="60" HorizontalAlignment="Left" Width="300"/>
+                                <TextBox x:Name="LoginBox" MaxLength="60" HorizontalAlignment="Left" Width="300"
+                                         TextChanged="OnLoginTextChanged"/>
+                                <!-- Anything wrong with the LOGIN is reported here, under the login.
+                                     Its text is set in code because the same line carries both
+                                     "already taken" (live, as it is typed) and whatever the save
+                                     came back with — one message per field beats one shared line at
+                                     the bottom of the card that says which field only by implication. -->
+                                <TextBlock x:Name="LoginErrorText" Foreground="#B91C1C" FontSize="12"
+                                           Margin="0,6,0,0" TextWrapping="Wrap" Visibility="Collapsed"/>
                                 <TextBlock x:Name="LoginHintText"
                                            Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.LoginHint], Mode=OneWay}"
                                            FontSize="12" Foreground="#9CA3AF" Margin="0,6,0,12" TextWrapping="Wrap"/>
@@ -262,9 +318,11 @@
                                 </Grid>
                                 <TextBlock x:Name="ContactErrorText" Foreground="#B91C1C" FontSize="12"
                                            TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed"/>
-                                <Button x:Name="SaveContactButton" Click="OnSaveContactClick"
-                                        HorizontalAlignment="Left" Margin="0,10,0,0" Padding="14,6"
-                                        Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.Save], Mode=OneWay}"/>
+                                <!-- No Save of its own. This card used to carry one, labelled with
+                                     the same string as the footer's — and the footer's saved only
+                                     the password and the shop roles, so anybody who edited a name or
+                                     a login and pressed the obvious button watched their edit
+                                     silently revert on the reload. One screen, one Save. -->
                             </StackPanel>
                         </Border>
 

@@ -115,11 +115,15 @@
   <Text key="Users.AssignmentsHint">Cochez le rôle que ce compte détient dans chaque boutique. Cocher les deux accorde les deux ; un compte sans aucune case cochée ne peut pas ouvrir cette boutique.</Text>
   <Text key="Users.AdminNotice">L’administrateur dispose de toutes les permissions dans toutes les boutiques. Son rôle ne peut pas être modifié et son compte ne peut pas être supprimé.</Text>
   <Text key="Users.AccountLocked">Verrouillé</Text>
+  <Text key="Users.SignInAs">Se connecter en tant que</Text>
+  <Text key="Users.SignInAsHint">Travaillez en tant que cette personne pour voir l’application comme elle la voit. Vous serez déconnecté de votre propre compte.</Text>
+  <Text key="Users.SignInAsConfirm">Se connecter en tant que {0} ({1}) ? Vous serez déconnecté de votre compte et devrez vous reconnecter pour revenir.</Text>
+  <Text key="Users.Error.SignInAsDeactivated">Ce compte a été désactivé dans toutes les boutiques ; il est impossible de s’y connecter.</Text>
   <!-- The WHOLE line shape, not just the words: Chinese brackets fullwidth text with （）where
        French uses ( ), so composing this in code produces one language's punctuation in both. -->
   <Text key="Users.AccountLabel">{0} ({1})</Text>
   <Text key="Users.LoginHint">Ce que cette personne saisit pour se connecter. La modification prend effet à sa prochaine connexion.</Text>
-  <Text key="Users.LoginLocked">L’identifiant de l’administrateur ne peut pas être modifié.</Text>
+  <Text key="Users.LoginLocked">L’identifiant de l’administrateur ne peut pas être modifié. Ce compte doit rester identifiable et ne peut jamais être supprimé.</Text>
   <Text key="Users.RenameConfirm">Remplacer l’identifiant {0} par {1} ? Cette personne se connectera désormais avec le nouveau.</Text>
   <Text key="Users.NoAccess">Aucune boutique attribuée</Text>
   <Text key="Users.ShopCount">{0} boutique(s)</Text>

@@ -224,6 +224,49 @@ public sealed class AuthenticationService
             && record.Memberships.TrueForAll(membership => !membership.IsActive);
 
     /// <summary>
+    /// Takes over another account's session without its password — "sign in as this user", offered
+    /// to an administrator from the account screen.
+    /// </summary>
+    /// <remarks>
+    /// This grants nothing an administrator did not already have: they can set any account's
+    /// password, so they could reach the same session in two more clicks. What it buys is SEEING the
+    /// application as somebody else — which shops they get, which chrome is hidden, what their
+    /// language toggle offers — which is otherwise guesswork.
+    ///
+    /// Gated here as well as in the UI, unlike the roster edits nearby. Those only write data; this
+    /// one hands out a session, so the check belongs where it cannot be skipped by a new call site.
+    ///
+    /// A locked-out account is refused. Signing in as somebody every shop has delisted would land
+    /// the administrator on "no shop is available" and then back at the sign-in screen, having lost
+    /// their own session to learn something the roster already shows.
+    ///
+    /// The bound shop is cleared: capabilities must not go on resolving against the shop the
+    /// ADMINISTRATOR had open, which the new user may hold no role in at all. The caller opens a
+    /// shop next, which binds one again.
+    /// </remarks>
+    public AccountOperationResult SignInAs(string userName)
+    {
+        if (!IsAdministrator)
+            return AccountOperationResult.Protected;
+
+        var record = FindRecord(userName);
+
+        if (record is null)
+            return AccountOperationResult.NotFound;
+
+        if (IsCurrentUser(record.UserName))
+            return AccountOperationResult.Protected;
+
+        if (IsLockedOut(record))
+            return AccountOperationResult.Deactivated;
+
+        CurrentUser = ToAccount(record);
+        _activeShopPublicId = null;
+        CapabilitiesChanged?.Invoke(this, EventArgs.Empty);
+        return AccountOperationResult.Success;
+    }
+
+    /// <summary>
     /// Ends the session. Every capability gate reads <see cref="CurrentUser"/>, so clearing it
     /// immediately revokes them — which is why the caller must take down the main window before
     /// calling this, not after.
@@ -498,10 +541,10 @@ public sealed class AuthenticationService
     /// unchanged, which is the normal case — most saves are not renames.
     /// </summary>
     /// <remarks>
-    /// The administrator is refused outright. Its login is a CONSTANT in this file
-    /// (<see cref="AdministratorUserName"/>): <see cref="ProvisionSeedAccounts"/> tops that account
-    /// up on every load, so renaming it would create a SECOND administrator on the next launch and
-    /// leave the installation with two.
+    /// The administrator's login cannot be changed. That is a product rule rather than a technical
+    /// limitation — the administrator is the one account that must remain identifiable and can never
+    /// be deleted, demoted or locked out, and a login somebody can edit is one somebody can lose.
+    /// The UI disables the box and says so, rather than letting the attempt reach here.
     /// </remarks>
     private AccountOperationResult CheckRename(
         CredentialRecord record, string? requested, out string? newUserName)
@@ -519,14 +562,7 @@ public sealed class AuthenticationService
         if (record.IsAdministrator)
             return AccountOperationResult.Protected;
 
-        // Compared case-INSENSITIVELY against every other account, matching how FindRecord and
-        // sign-in resolve a name: "Tina" and "tina" must not both exist, or one of them can never
-        // be signed into.
-        var clash = _file.Users.Find(candidate =>
-            !ReferenceEquals(candidate, record)
-            && string.Equals(candidate.UserName, wanted, StringComparison.OrdinalIgnoreCase));
-
-        if (clash is not null)
+        if (IsUserNameTaken(wanted, record))
             return AccountOperationResult.UserNameTaken;
 
         newUserName = wanted;
@@ -534,27 +570,48 @@ public sealed class AuthenticationService
     }
 
     /// <summary>
-    /// Renames an account, including its entry in <see cref="CredentialFile.ProvisionedAccounts"/>.
+    /// Whether an account other than <paramref name="ignoring"/> already signs in with this name.
     /// </summary>
     /// <remarks>
-    /// That second half is not bookkeeping. The provisioning record is what stops a SEEDED account
-    /// being created again on the next load; leave a renamed account's old name in it and nothing
-    /// happens, but leave the record naming an account that no longer exists and — worse — rename
-    /// "staff" to "tina" without updating it, and the next launch sees "staff" as never provisioned
-    /// and seeds a brand-new one with a known password.
+    /// Case-INSENSITIVE, matching how <see cref="FindRecord"/> and sign-in resolve a name: "Tina"
+    /// and "tina" must not both exist, or one of them can never be signed into.
     ///
-    /// Memberships need no attention at all: they key on <c>Shop.PublicId</c>, not on the login.
+    /// Public because the screens ask it while the user is still typing — telling somebody a name is
+    /// taken after they have filled in the whole form is a worse answer than telling them at the
+    /// keystroke. The create and rename paths re-check it themselves regardless; this is the
+    /// courtesy, not the guard.
     /// </remarks>
-    private void ApplyRename(CredentialRecord record, string newUserName)
+    public bool IsUserNameTaken(string? userName, CredentialRecord? ignoring = null)
     {
-        var index = _file.ProvisionedAccounts.FindIndex(name =>
-            string.Equals(name, record.UserName, StringComparison.OrdinalIgnoreCase));
+        var wanted = (userName ?? string.Empty).Trim();
 
-        if (index >= 0)
-            _file.ProvisionedAccounts[index] = newUserName;
+        if (wanted.Length == 0)
+            return false;
 
-        record.UserName = newUserName;
+        return _file.Users.Exists(candidate =>
+            !ReferenceEquals(candidate, ignoring)
+            && string.Equals(candidate.UserName, wanted, StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>Whether a name is free for an account OTHER than the one signing in as it now.</summary>
+    public bool IsUserNameTakenByAnother(string? userName, string currentUserName)
+        => IsUserNameTaken(userName, FindRecord(currentUserName));
+
+    /// <summary>
+    /// Renames an account.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="CredentialFile.ProvisionedAccounts"/> is deliberately NOT touched. It records
+    /// which SEED names this installation has already created, so that deleting a seeded account
+    /// sticks — and <see cref="ProvisionSeedAccounts"/> looks each seed name up in it directly.
+    /// Renaming the entry from "staff" to "sam" would leave "staff" unlisted, and the next load
+    /// would seed a brand-new "staff" with a known password beside the renamed original. The old
+    /// name staying put is exactly what prevents that.
+    ///
+    /// Memberships need no attention either: they key on <c>Shop.PublicId</c>, not on the login.
+    /// </remarks>
+    private static void ApplyRename(CredentialRecord record, string newUserName)
+        => record.UserName = newUserName;
 
     /// <summary>
     /// Creates an account with no memberships. Deliberately no way to create an administrator: the
@@ -959,32 +1016,48 @@ public sealed class AuthenticationService
     {
         var added = false;
 
-        foreach (var (userName, password, isAdministrator) in SeedAccounts)
+        foreach (var seed in SeedAccounts)
         {
-            var exists = file.Users.Exists(user =>
-                string.Equals(user.UserName, userName, StringComparison.OrdinalIgnoreCase));
-
-            if (exists)
+            if (!NeedsProvisioning(file, seed))
                 continue;
 
-            // The administrator is restored unconditionally; everything else is created once and
-            // stays deleted if an administrator deletes it.
-            var isProtectedAccount = string.Equals(userName, AdministratorUserName, StringComparison.OrdinalIgnoreCase);
-            if (!isProtectedAccount
-                && file.ProvisionedAccounts.Contains(userName, StringComparer.OrdinalIgnoreCase))
-            {
-                continue;
-            }
+            file.Users.Add(CreateRecord(seed.UserName, seed.Password, seed.IsAdministrator));
 
-            file.Users.Add(CreateRecord(userName, password, isAdministrator));
-
-            if (!file.ProvisionedAccounts.Contains(userName, StringComparer.OrdinalIgnoreCase))
-                file.ProvisionedAccounts.Add(userName);
+            if (!file.ProvisionedAccounts.Contains(seed.UserName, StringComparer.OrdinalIgnoreCase))
+                file.ProvisionedAccounts.Add(seed.UserName);
 
             added = true;
         }
 
         return added;
+    }
+
+    /// <summary>Whether a seed account is missing and has not already been created once.</summary>
+    /// <remarks>
+    /// **The administrator is identified by its FLAG, never by its name.** "Is there an account
+    /// called admin" is not the question that was meant — "is there an administrator" is, and it is
+    /// the one that keeps the guarantee that matters: an installation can never end up with nobody
+    /// able to administer it. It also means the invariant holds structurally rather than resting on
+    /// the rename guard alone; asking by name, a login that somehow changed would leave the next
+    /// load minting a SECOND administrator carrying a default password.
+    ///
+    /// Every other seed account is created ONCE. <see cref="CredentialFile.ProvisionedAccounts"/>
+    /// records that it happened, which is what makes deleting a seeded account stick — and why a
+    /// rename must leave that record alone (see <see cref="ApplyRename"/>).
+    /// </remarks>
+    private static bool NeedsProvisioning(
+        CredentialFile file, (string UserName, string Password, bool IsAdministrator) seed)
+    {
+        if (seed.IsAdministrator)
+            return !file.Users.Exists(user => user.IsAdministrator);
+
+        if (file.Users.Exists(user =>
+                string.Equals(user.UserName, seed.UserName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        return !file.ProvisionedAccounts.Contains(seed.UserName, StringComparer.OrdinalIgnoreCase);
     }
 
     private static CredentialFile? TryLoad()
@@ -1051,7 +1124,10 @@ public enum AccountOperationResult
     RoleRequired,
 
     /// <summary>The account or the change is not editable — an administrator, or your own account.</summary>
-    Protected
+    Protected,
+
+    /// <summary>Every shop this account belongs to has delisted it, so it cannot be signed in to.</summary>
+    Deactivated
 }
 
 /// <summary>

@@ -30,6 +30,10 @@ components are added/renamed or the way pieces fit together changes.
   table + `ReadOrdersSchemaAsync` / `TableExistsAsync` / `ReadColumnNamesAsync`
   helpers); loads the saved language via `LanguagePreferenceStore`.
   Session flow: sign in → `OpenShopOrSignInAgainAsync` → main window.
+  `SignInAsAsync(userName)` is the administrator's "sign in as this user": structurally a sign-out
+  that skips the login window — main window down, session swapped, shop picker re-run. Reached from
+  `MainWindow`; from the shop picker the same switch arrives as `ShopSelection.UserSwitched`, a
+  THIRD outcome that makes the loop round again as the new user rather than signing them out.
   That method LOOPS — cancelling the shop picker signs the user out and shows
   sign-in again rather than ending the application, because the two steps read as
   one flow and Cancel on the second means "go back". `Shutdown()` is reached only
@@ -95,9 +99,18 @@ components are added/renamed or the way pieces fit together changes.
     roles held across ACTIVE memberships, strongest first — a method, not a property, because it
     allocates.
     `UpdateAccountProfile` writes the account-level half — name, login and contact — as ONE
-    validated operation, including a **rename**: guarded against the administrator (its login is a
-    const the seeding step tops up) and against a taken name, and it renames the
-    `ProvisionedAccounts` entry too, without which the old login gets re-seeded as a new account.
+    validated operation, including a **rename**, which is refused for the administrator (a product
+    rule) and for a name another account already holds. It deliberately does NOT touch
+    `ProvisionedAccounts`: that list records which SEED NAMES have been created, so the old name
+    staying in it is what stops the next load re-seeding the original.
+    `IsUserNameTaken` / `IsUserNameTakenByAnother` are public so the screens can report availability
+    as a name is typed; the save path re-checks regardless.
+    `SignInAs` hands the session to another account without its password — the administrator's
+    "sign in as this user". Gated IN THE SERVICE (unlike the roster edits, which only write data):
+    administrator only, never yourself, never an account delisted by every shop. Clears the bound
+    shop, since capabilities must not go on resolving against the shop the administrator had open.
+    `ProvisionSeedAccounts` identifies the administrator by its **flag**, not its name, so "exactly
+    one administrator" holds structurally.
     `PhoneNumber` and `Email` are **account-level**, not per membership — one person
     working at two branches has one phone and one mailbox. Both nullable and stored
     null-when-blank (never `""`), so existing files need no migration.
@@ -423,9 +436,17 @@ components are added/renamed or the way pieces fit together changes.
     本地配置 → 用户管理. Left: searchable account list — each row reads **`Tina Zhang (Manager, Staff)`**
     (`Users.AccountLabel`, whose whole shape including the brackets is translated), with the shop
     count under it, an avatar and a 已锁定 badge on the administrator; search matches the name as well
-    as the login. Right: identity card showing the name over the **login**, a Person card editing
-    first name / last name / **login** / phone / email in one save, password reset (blank =
-    unchanged), and a **shop × role checkbox matrix** — the shape that makes "manager AND staff in the same shop"
+    as the login. Right: identity card showing the name over the **login** plus a **Sign in as**
+    button (vector icon drawn as `Path` geometry; hidden for your own account and for one delisted
+    everywhere — it REPORTS the choice as `SignInAsUserName` and the caller performs the switch), a Person card editing
+    first name / last name / **login** / phone / email (the login box is DISABLED for the
+    administrator, whose login cannot change; a taken name is reported under the box as it is typed),
+    password reset (blank = unchanged), and a **shop × role checkbox matrix**.
+    **ONE Save, in the footer**, applying the whole pane — profile first, since it may rename and
+    everything after has to act on the new login. The Person card deliberately has no Save of its
+    own: it used to, labelled identically to the footer's, which saved only the password and roles
+    and so discarded name edits. A rename asks for confirmation, but only after availability is
+    settled — the shape that makes "manager AND staff in the same shop"
     expressible. Archived shops are still listed, or saving would silently strip an assignment to one.
     Writes on 保存修改 rather than per tick, so a re-assignment cannot revoke access halfway through.
   - `StoreMembersWindow` — the OPEN shop's roster, opened from the main toolbar by a manager or an

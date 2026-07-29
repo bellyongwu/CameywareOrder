@@ -845,19 +845,50 @@ public partial class MainWindow : Window
         ApplyRolePermissions();
     }
 
-    private void OnUserManagementClick(object sender, RoutedEventArgs e)
+    private async void OnUserManagementClick(object sender, RoutedEventArgs e)
     {
         // Defence in depth: the menu item is hidden for non-administrators, but the check belongs
         // where the action happens too.
         if (!AuthenticationService.Instance.CanManageUsers)
             return;
 
-        new UserManagementWindow(_localization, _scopeFactory) { Owner = this }.ShowDialog();
+        var users = new UserManagementWindow(_localization, _scopeFactory) { Owner = this };
+        users.ShowDialog();
+
+        // "Sign in as this user" ends THIS session, so it takes the same route sign-out does: the
+        // application tears the main window down and re-runs the shop picker as the new person.
+        // Nothing below runs — this window is one of the things being closed.
+        if (users.SignInAsUserName is { } userName)
+        {
+            await SwitchUserAsync(userName);
+            return;
+        }
 
         // An administrator can revoke their own access to the open shop here. Their capabilities in
         // it are resolved from the assignments that were just rewritten, so the chrome has to be
         // re-gated even though the shop itself did not change.
         ApplyRolePermissions();
+    }
+
+    /// <summary>
+    /// Hands the session to another account. Wrapped for the same reason as sign-out: the caller is
+    /// an <c>async void</c> handler on a window that is about to close, so an exception here would
+    /// take the dispatcher down with no explanation.
+    /// </summary>
+    private async Task SwitchUserAsync(string userName)
+    {
+        try
+        {
+            await ((App)Application.Current).SignInAsAsync(userName);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"{_localization["SignOut.Failed"]}{Environment.NewLine}{Environment.NewLine}{ex}",
+                _localization["App.MainTitle"],
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     private void OnShopSettingsClick(object sender, RoutedEventArgs e)

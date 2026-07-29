@@ -48,6 +48,16 @@ public partial class UserManagementWindow : Window
     }
 
     /// <summary>
+    /// The account the administrator asked to sign in as, or null when they did not.
+    /// </summary>
+    /// <remarks>
+    /// Reported rather than acted on. Swapping the session from inside a dialog would pull this
+    /// window's own ground out from under it — and the caller has to take the MAIN window down and
+    /// re-run the shop picker anyway, neither of which is this screen's job.
+    /// </remarks>
+    public string? SignInAsUserName { get; private set; }
+
+    /// <summary>
     /// Every shop, archived ones included. An archived shop can still hold an assignment, and
     /// hiding the row would silently strip that assignment the next time the account was saved.
     /// </summary>
@@ -152,13 +162,49 @@ public partial class UserManagementWindow : Window
         ContactEmailBox.Text = selected?.Email ?? string.Empty;
         ContactErrorText.Visibility = Visibility.Collapsed;
 
-        // The administrator's login is a constant this file tops up on every load, so renaming it
-        // would leave the next launch with two administrators. Read-only rather than hidden: the
-        // account still has to show what it signs in as.
-        LoginBox.IsReadOnly = row.IsAdministrator;
+        LoginErrorText.Visibility = Visibility.Collapsed;
+
+        // Signing in as YOURSELF does nothing, and signing in as an account every shop has delisted
+        // would land on "no shop is available" and then back at the login screen — having spent the
+        // administrator's own session to learn what the roster already shows. Hidden rather than
+        // disabled, per the convention on every other gated control here.
+        SignInAsButton.Visibility = CanSignInAs(selected) ? Visibility.Visible : Visibility.Collapsed;
+
+        // The administrator's login cannot be changed. DISABLED rather than read-only: a read-only
+        // box looks exactly like an editable one and simply swallows the typing, which reads as the
+        // application being broken — the report that prompted this said "the system blocked me" with
+        // no idea why. Greyed out, with the reason under it, the state is legible before anybody
+        // tries.
+        LoginBox.IsEnabled = !row.IsAdministrator;
         LoginHintText.Text = _localization[row.IsAdministrator ? "Users.LoginLocked" : "Users.LoginHint"];
 
         BuildAssignmentRows(row.UserName);
+    }
+
+    /// <summary>
+    /// Reports whether the login being typed is already somebody else's, at the keystroke.
+    /// </summary>
+    /// <remarks>
+    /// The save path re-checks and refuses regardless — this is the courtesy, not the guard. The
+    /// account being edited is excluded from the comparison, or every account would report its own
+    /// name as taken the moment the box was touched.
+    /// </remarks>
+    private void OnLoginTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (UserList.SelectedItem is not UserListRow row)
+            return;
+
+        if (AuthenticationService.Instance.IsUserNameTakenByAnother(LoginBox.Text, row.UserName))
+            ShowLoginError("Users.Error.NameTaken");
+        else
+            LoginErrorText.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>The same answer on the create form, where nothing is being edited to exclude.</summary>
+    private void OnNewUserNameTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        var taken = AuthenticationService.Instance.IsUserNameTaken(NewUserNameBox.Text);
+        NewUserNameTakenText.Visibility = taken ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private static UserAccount? FindAccount(string userName)
@@ -167,68 +213,89 @@ public partial class UserManagementWindow : Window
                 string.Equals(candidate.UserName, userName, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// Saves the whole profile card: name, login and contact details, in one call.
+    /// Whether "sign in as this user" is worth offering for an account.
     /// </summary>
-    private void OnSaveContactClick(object sender, RoutedEventArgs e)
+    /// <remarks>
+    /// The same three conditions the service enforces, asked here so the button is simply absent
+    /// rather than present and refusing. The service still enforces them — a hidden button is a fact
+    /// about the UI, not a permission.
+    /// </remarks>
+    private static bool CanSignInAs(UserAccount? account)
+    {
+        var auth = AuthenticationService.Instance;
+
+        if (account is null || !auth.CanManageUsers)
+            return false;
+
+        if (string.Equals(account.UserName, auth.CurrentUser?.UserName, StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Delisted everywhere: the same accounts sign-in itself refuses.
+        return account.Memberships.Count == 0
+               || account.Memberships.Any(membership => membership.IsActive);
+    }
+
+    /// <summary>
+    /// Hands the session to the selected account. Confirms first, then closes: the caller performs
+    /// the switch, because it owns the main window that has to come down with it.
+    /// </summary>
+    private void OnSignInAsClick(object sender, RoutedEventArgs e)
     {
         if (UserList.SelectedItem is not UserListRow row)
             return;
 
-        // The same rules the order form applies to a customer's details.
-        if (!ContactValidation.IsValidPhone(ContactPhoneBox.Text))
-        {
-            ShowContactError("OrderEdit.Validate.PhoneInvalid");
-            return;
-        }
-
-        if (!ContactValidation.IsValidEmail(ContactEmailBox.Text))
-        {
-            ShowContactError("OrderEdit.Validate.EmailInvalid");
-            return;
-        }
-
-        var login = LoginBox.Text.Trim();
-        if (!ConfirmRename(row.UserName, login))
+        // Defence in depth: the button is hidden otherwise, but the check belongs where the action
+        // happens too.
+        if (!CanSignInAs(FindAccount(row.UserName)))
             return;
 
-        var result = AuthenticationService.Instance.UpdateAccountProfile(
-            row.UserName,
-            new AccountProfile(login, FirstNameBox.Text, LastNameBox.Text,
-                ContactPhoneBox.Text, ContactEmailBox.Text));
+        // Consequential and not obviously reversible — the administrator's own session ends here and
+        // comes back only by signing in again — so it asks, the way deleting an account does.
+        var answer = MessageBox.Show(
+            this,
+            _localization.Format("Users.SignInAsConfirm", row.DisplayLabel, row.UserName),
+            _localization["Users.SignInAs"],
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
 
-        if (result != AccountOperationResult.Success)
-        {
-            ShowContactError(ErrorKey(result));
+        if (answer != MessageBoxResult.Yes)
             return;
-        }
 
-        ContactErrorText.Visibility = Visibility.Collapsed;
-
-        // Reloaded selecting the NEW login: after a rename the old one no longer matches anything,
-        // and the list would silently fall back to the first account in it.
-        ReloadUsers(login);
-        ShowStatus("Users.Saved", login);
+        SignInAsUserName = row.UserName;
+        Close();
     }
 
     /// <summary>
     /// Asks before changing what somebody signs in with. Returns true when the save may proceed.
+    /// Only ever reached for a login that IS changing and IS available.
     /// </summary>
     /// <remarks>
     /// A rename sits behind the same button as a phone-number edit, so it is easy to trigger by
     /// accident — and its consequence lands on somebody else, at their next sign-in, with nothing on
-    /// their screen to explain it. Silent is the wrong default for that.
+    /// their screen to explain it.
+    ///
+    /// Not reachable from an automated check, and deliberately left that way. A MessageBox is a
+    /// native modal that cannot be dismissed from inside the process, and the seams that would let a
+    /// harness answer it — a virtual method, an injectable delegate — are either impossible
+    /// (subclassing a XAML window breaks <c>InitializeComponent</c>, which resolves its resource by
+    /// exact type) or a test hook in shipping code. `namecheck` therefore drives this save path for
+    /// everything EXCEPT a confirmed rename, and covers the rename itself against the service.
     /// </remarks>
     private bool ConfirmRename(string currentUserName, string newUserName)
-    {
-        if (string.Equals(currentUserName, newUserName, StringComparison.Ordinal))
-            return true;
-
-        return MessageBox.Show(
+        => MessageBox.Show(
             this,
             _localization.Format("Users.RenameConfirm", currentUserName, newUserName),
             _localization["Users.Save"],
             MessageBoxButton.YesNo,
             MessageBoxImage.Question) == MessageBoxResult.Yes;
+
+    private void ShowLoginError(string key)
+    {
+        LoginErrorText.Text = _localization[key];
+        LoginErrorText.Visibility = Visibility.Visible;
+
+        // A stale "changes were saved" sitting under a failed save is worse than no message at all.
+        StatusText.Text = string.Empty;
     }
 
     private void ShowContactError(string key)
@@ -294,17 +361,34 @@ public partial class UserManagementWindow : Window
 
     // --- Save / delete --------------------------------------------------------------------------
 
+    /// <summary>
+    /// Saves everything on the pane: the person's name and login, their contact details, a password
+    /// if one was typed, and the shop × role matrix.
+    /// </summary>
+    /// <remarks>
+    /// ONE Save for the whole screen. The profile card used to carry a second button with the same
+    /// label, and this one saved only the password and the roles — so editing a name or a login and
+    /// pressing the obvious button in the footer discarded the edit on the reload that followed,
+    /// with a "changes were saved" message on top of it. Two buttons that say Save and mean
+    /// different subsets is not a thing to explain in a tooltip.
+    ///
+    /// The profile goes FIRST because it may rename the account, and everything after it has to act
+    /// on the new login.
+    /// </remarks>
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {
         if (UserList.SelectedItem is not UserListRow row)
             return;
 
-        if (!TryApplyPasswordChange(row.UserName))
+        if (!TryApplyProfileChange(row, out var userName))
+            return;
+
+        if (!TryApplyPasswordChange(userName))
             return;
 
         if (!row.IsAdministrator)
         {
-            var result = AuthenticationService.Instance.SetShopRoles(row.UserName, CollectRoles());
+            var result = AuthenticationService.Instance.SetShopRoles(userName, CollectRoles());
             if (result != AccountOperationResult.Success)
             {
                 ShowError(ErrorKey(result));
@@ -312,9 +396,69 @@ public partial class UserManagementWindow : Window
             }
         }
 
-        // Reloaded before the message, because the reload resets the status line.
-        ReloadUsers(row.UserName);
-        ShowStatus("Users.Saved", row.UserName);
+        // Reloaded before the message, because the reload resets the status line. Selecting the NEW
+        // login: after a rename the old one matches nothing and the list would fall to its first row.
+        ReloadUsers(userName);
+        ShowStatus("Users.Saved", userName);
+    }
+
+    /// <summary>
+    /// Applies the profile card. <paramref name="userName"/> comes back as the login the account has
+    /// AFTER the call, which is what the rest of the save must use.
+    /// </summary>
+    private bool TryApplyProfileChange(UserListRow row, out string userName)
+    {
+        userName = row.UserName;
+
+        // The same rules the order form applies to a customer's details.
+        if (!ContactValidation.IsValidPhone(ContactPhoneBox.Text))
+        {
+            ShowContactError("OrderEdit.Validate.PhoneInvalid");
+            return false;
+        }
+
+        if (!ContactValidation.IsValidEmail(ContactEmailBox.Text))
+        {
+            ShowContactError("OrderEdit.Validate.EmailInvalid");
+            return false;
+        }
+
+        // A disabled box still reports its text, so the administrator's login arrives unchanged and
+        // is not treated as a rename at all.
+        var login = LoginBox.Text.Trim();
+        var isRename = !string.Equals(login, row.UserName, StringComparison.Ordinal);
+
+        // Availability is settled BEFORE the confirmation. Asking "are you sure you want to rename
+        // this to X" and only then reporting that X is unavailable wastes the question.
+        if (isRename && AuthenticationService.Instance.IsUserNameTaken(login))
+        {
+            ShowLoginError("Users.Error.NameTaken");
+            return false;
+        }
+
+        if (isRename && !ConfirmRename(row.UserName, login))
+            return false;
+
+        var result = AuthenticationService.Instance.UpdateAccountProfile(
+            row.UserName,
+            new AccountProfile(login, FirstNameBox.Text, LastNameBox.Text,
+                ContactPhoneBox.Text, ContactEmailBox.Text));
+
+        if (result != AccountOperationResult.Success)
+        {
+            // Anything about the LOGIN belongs under the login box; everything else under the card.
+            if (result is AccountOperationResult.UserNameTaken or AccountOperationResult.UserNameRequired)
+                ShowLoginError(ErrorKey(result));
+            else
+                ShowContactError(ErrorKey(result));
+
+            return false;
+        }
+
+        ContactErrorText.Visibility = Visibility.Collapsed;
+        LoginErrorText.Visibility = Visibility.Collapsed;
+        userName = login;
+        return true;
     }
 
     /// <summary>
@@ -406,6 +550,7 @@ public partial class UserManagementWindow : Window
         NewPasswordBox.Clear();
         NewPasswordConfirmBox.Clear();
         CreateErrorText.Visibility = Visibility.Collapsed;
+        NewUserNameTakenText.Visibility = Visibility.Collapsed;
         StatusText.Text = string.Empty;
 
         DetailPanel.Visibility = Visibility.Collapsed;
@@ -454,6 +599,7 @@ public partial class UserManagementWindow : Window
         AccountOperationResult.UserNameTaken => "Users.Error.NameTaken",
         AccountOperationResult.PasswordRequired => "Users.Error.PasswordRequired",
         AccountOperationResult.NotFound => "Users.Error.NotFound",
+        AccountOperationResult.Deactivated => "Users.Error.SignInAsDeactivated",
         _ => "Users.Error.Protected"
     };
 
