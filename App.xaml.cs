@@ -520,6 +520,10 @@ public partial class App : Application
         ("ClothingFinalBalanceMethod", "ALTER TABLE Orders ADD COLUMN ClothingFinalBalanceMethod INTEGER NULL; "),
         ("ClothingBalanceCleared", "ALTER TABLE Orders ADD COLUMN ClothingBalanceCleared INTEGER NOT NULL DEFAULT 0; "),
         ("LastModifiedDate", "ALTER TABLE Orders ADD COLUMN LastModifiedDate TEXT NULL; "),
+        // Who last saved the order, as their name at the time — printed on the receipt. Nullable and
+        // stays null on every existing row: there is no record of who touched those, and inventing
+        // one would put a name on a receipt that nobody verified.
+        ("LastModifiedBy", "ALTER TABLE Orders ADD COLUMN LastModifiedBy TEXT NULL; "),
         ("StatusReason", "ALTER TABLE Orders ADD COLUMN StatusReason TEXT NULL; "),
         ("StatusReasonCategory", "ALTER TABLE Orders ADD COLUMN StatusReasonCategory TEXT NULL; "),
     };

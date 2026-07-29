@@ -938,6 +938,12 @@ public partial class OrderEditWindow : Window
         order.CurrencyType = SelectedCurrency;
         order.Notes = NullIfWhiteSpace(NotesBox.Text);
         order.LastModifiedDate = DateTime.UtcNow;
+        // Stamped beside the timestamp, from the session rather than from anything on the form —
+        // "who saved this" is not a field anybody should be able to type. Left untouched when
+        // nobody is signed in (only reachable from a harness), so a save can never blank a name a
+        // real crew member left behind.
+        if (AuthenticationService.Instance.CurrentUser is { } crew)
+            order.LastModifiedBy = crew.DisplayLabel;
         ApplyPaymentFields(order);
     }
 

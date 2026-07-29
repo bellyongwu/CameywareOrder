@@ -664,6 +664,16 @@
                     <TextBlock Text="{Binding SelectedOrder.LastModifiedDate, StringFormat='yyyy-MM-dd  HH:mm'}"
                                Margin="0,2,0,10" FontSize="13"/>
 
+                    <!-- Who served the order, beside when it was last saved — the two answer one
+                         question together. Label and value share a panel so they hide as a pair:
+                         every order saved before this column existed has no name, and a label with
+                         nothing under it reads as a value that failed to load. The receipt omits
+                         the same line for the same reason. -->
+                    <StackPanel Visibility="{Binding SelectedOrder.LastModifiedBy, Converter={StaticResource NullToVisibility}}">
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.LastModifiedBy], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                        <TextBlock Text="{Binding SelectedOrder.LastModifiedBy}" Margin="0,2,0,10" FontSize="13"/>
+                    </StackPanel>
+
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Foreground="#777" FontSize="11"/>
                     <TextBlock Text="{Binding SelectedOrder.Status, Converter={StaticResource OrderStatusToLocalizedTextConverter}}" Margin="0,2,0,10" FontSize="13"/>
 

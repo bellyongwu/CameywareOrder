@@ -153,9 +153,23 @@ over) with a RECEIVED partner that appears only once that portion is confirmed; 
 > when it was not, and a zero cannot be told apart from a portion that was genuinely free. Hide
 > label WITH value — a lone label reads as a value that failed to load.
 
+Shipped in the same hotfix: **receipts record who served the order** (`Order.LastModifiedBy`).
+
+> **Store the rendered NAME, not a key, for anything printed.** Resolving it at print time would
+> change what an old receipt says the day somebody is renamed and blank it the day they are
+> deleted — and accounts live in credentials.json, outside the database, so there is no key to
+> point at. Taken from the SESSION, never the form: "who saved this" is not a field anybody types.
+> Omitted rather than printed empty on rows that predate the column.
+
 *Harness traps worth keeping:* the snap-back arrived one recompute AFTER the click, so an
 assertion taken immediately passed while the bug was fully present; and a new order opens with
 the alteration category on "None", which switches the service off and makes every figure zero.
+
+> **Adding a model column breaks harnesses two ways.** Those reading the LIVE database inherit
+> whatever schema it has, and the guards only run at app startup — so run them against the live
+> file after adding a column (`scratchpad/livemigrate`). And a fixture that migrates ITSELF must
+> run EVERY guard: `headercheck` ran the Shops one alone and broke on the first Orders column
+> added afterwards, having already been fixed once for the identical symptom.
 
 ### Currencies come from the installed languages, chosen in a panel of their own
 The currency set is no longer a fixed list. Each `*.lang.xml` declares its market's currencies

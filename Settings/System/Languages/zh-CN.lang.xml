@@ -354,6 +354,7 @@
   <Text key="Order.Fields.ItemCategory">品类</Text>
   <Text key="Order.Fields.OrderDate">订单日期</Text>
   <Text key="Order.Fields.LastModifiedDate">最后修改时间</Text>
+  <Text key="Order.Fields.LastModifiedBy">经手人</Text>
   <Text key="Order.Fields.CustomMadeFlag">定制服务</Text>
   <Text key="CustomMade.Flag.Yes">有</Text>
   <Text key="CustomMade.Flag.No">无</Text>

@@ -1566,6 +1566,39 @@ asserts on, not assume the state it found the day it was written.
   service off, so the price box is ignored and every figure reads zero. Select a real
   category before pricing anything.
 
+## Recording who did something (2026-07-29)
+
+- **Store the RENDERED name, not a key, for anything that gets printed.** `LastModifiedBy`
+  holds the crew member's display name as it read when they saved. Resolving it at print
+  time would change what an old receipt says the day somebody is renamed and blank it the
+  day they are deleted — and accounts live in `credentials.json`, outside the database, so
+  there is no key to point at anyway. An audit line is a snapshot, not a join.
+- **Take it from the SESSION, never from the form.** "Who saved this" must not be a field
+  anybody can type into. Stamp it beside the timestamp in the save path, and leave it alone
+  when nobody is signed in so a save can never blank a real name.
+- **Omit an audit line rather than printing it empty.** Every row that predates the column
+  has no name; a label with nothing beside it reads as a printing fault, not as an absence.
+  Hide the LABEL with the value — wrap the pair in a panel and bind that panel's visibility.
+  Hiding only the value leaves a heading over nothing, which is worse than either.
+- **`IsVisible`, not `Visibility`, when a test asks "is this hidden".** A child of a Collapsed
+  panel still reports `Visibility.Visible` for itself, so checking the element alone reports a
+  hidden row as shown — exactly inverting the claim being made.
+
+## Adding a column to the model breaks harnesses in two different ways (2026-07-29)
+
+Adding `Orders.LastModifiedBy` failed four harnesses at once with "no such column". Two
+distinct causes, and the second is the one that recurs:
+
+- **Harnesses that read the LIVE database inherit whatever schema it has**, and the guards
+  only run when the app starts. After adding a column, run them against the live file
+  (`scratchpad/livemigrate` does it by reflection, never a copied ALTER) — that is exactly
+  what the user's next launch does, so it is simulation rather than fudging.
+- **A fixture that "migrates itself" must run EVERY guard.** `headercheck` called
+  `EnsureShopSchemaAsync` alone, covering Shops and not Orders. It had already been fixed
+  once for this precise symptom when a Shops column was added; the first ORDERS column added
+  afterwards broke it again identically. A half-migration looks exactly like a regression,
+  and costs the same diagnosis every time. The app runs both at startup; so must the fixture.
+
 ## Currencies derived from languages (2026-07-29)
 
 - **Put the language→currency mapping IN the language file, not in code.** Each

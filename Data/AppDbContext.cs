@@ -86,6 +86,7 @@ public class AppDbContext : DbContext
             entity.Property(e => e.PhoneNumber).IsRequired().HasMaxLength(30);
             entity.Property(e => e.Email).HasMaxLength(120);
             entity.Property(e => e.Address).HasMaxLength(300);
+            entity.Property(e => e.LastModifiedBy).HasMaxLength(120);
             entity.Property(e => e.CurrencyType);
             entity.Property(e => e.ServiceDetails).HasMaxLength(500);
             entity.Property(e => e.AdditionalNotes).HasMaxLength(1000);

@@ -430,6 +430,10 @@ public partial class MainWindow : Window
     /// Nudges the live region so a screen reader re-reads it. Rebinding the text alone does not
     /// raise the event, so the announcement has to be asked for explicitly.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "False positive: PageSummaryText is an x:Name instance field from the XAML-generated " +
+                        "partial, which the analyzer does not see. The method reads instance data and cannot be static.")]
     private void AnnouncePageChange()
     {
         var peer = UIElementAutomationPeer.FromElement(PageSummaryText)
@@ -1411,6 +1415,10 @@ public partial class MainWindow : Window
             ShopCurrencies.Name(order.CurrencyType, _localization)));
         var servicesSummary = new OrderServicesSummaryConverter().Convert(order, typeof(string), null, CultureInfo.CurrentCulture) as string;
         AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.ServiceType"], servicesSummary);
+        // Who served this order, for the record. Omitted rather than blank when unknown: every order
+        // saved before the column existed has no name, and a label with nothing beside it reads as a
+        // printing fault rather than as an absence.
+        AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.LastModifiedBy"], order.LastModifiedBy);
 
         document.Blocks.Add(card);
     }

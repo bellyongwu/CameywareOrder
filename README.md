@@ -24,10 +24,17 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
   deposit-due and a balance-due figure appear from the start; their received counterparts appear
   only once that portion is confirmed, so the pair reads as a charge and then as a receipt.
 - **Wording:** 实收定金 / 实收尾款 are now 已收定金 / 已收尾款.
+- **Orders record who served them.** The crew member who last saved an order is stamped onto it,
+  printed on its receipt and shown in the order detail panel beside the last-modified time. The
+  name is stored *as it read at the time* — a receipt is a historical document, so it must not
+  change the day somebody is renamed, or blank the day their account is removed. Orders saved
+  before this release have no name recorded and omit the line entirely rather than showing an
+  empty one.
 
-No data change and nothing to do on upgrade — this is display and control behaviour only.
+Upgrading adds one nullable column to the orders table on first launch. Nothing is asked of the
+user, and no existing value changes.
 
-Quality gates: build **0 warnings / 0 errors**, **910 assertions across 20 harnesses**, all passing.
+Quality gates: build **0 warnings / 0 errors**, **921 assertions across 20 harnesses**, all passing.
 
 ### v2.0.0 — 2026-07-29
 

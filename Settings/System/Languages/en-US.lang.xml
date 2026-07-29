@@ -351,6 +351,7 @@
   <Text key="Order.Fields.ItemCategory">Item Category</Text>
   <Text key="Order.Fields.OrderDate">Order Date</Text>
   <Text key="Order.Fields.LastModifiedDate">Last Modified</Text>
+  <Text key="Order.Fields.LastModifiedBy">Served by</Text>
   <Text key="Order.Fields.CustomMadeFlag">Custom Service</Text>
   <Text key="CustomMade.Flag.Yes">Yes</Text>
   <Text key="CustomMade.Flag.No">None</Text>

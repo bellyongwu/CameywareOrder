@@ -28,6 +28,21 @@ public class Order
     public string? Address { get; set; }
     public DateTime OrderDate { get; set; } = DateTime.UtcNow;
     public DateTime? LastModifiedDate { get; set; }
+
+    /// <summary>
+    /// The crew member who last saved this order, as their name READ AT THE TIME — for the record
+    /// printed on a receipt.
+    /// </summary>
+    /// <remarks>
+    /// The rendered name, not the login and not a foreign key. A receipt is a historical document:
+    /// resolving the name when it is printed would change what an old receipt says the day somebody
+    /// is renamed, and would leave it blank the day they are deleted. Accounts live in
+    /// credentials.json, outside this database, so there is nothing to point a key at in any case.
+    ///
+    /// Null on every order saved before this column existed, and on anything written by the GraphQL
+    /// API, which has no signed-in user. Callers omit the line rather than printing an empty one.
+    /// </remarks>
+    public string? LastModifiedBy { get; set; }
     public CurrencyType CurrencyType { get; set; } = CurrencyType.CAD;
     public OrderServiceType ServiceType { get; set; } = OrderServiceType.Alterations;
     public string? ServiceDetails { get; set; }

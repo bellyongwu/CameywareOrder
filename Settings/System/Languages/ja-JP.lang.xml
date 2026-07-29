@@ -351,6 +351,7 @@
   <Text key="Order.Fields.ItemCategory">品目カテゴリ</Text>
   <Text key="Order.Fields.OrderDate">注文日</Text>
   <Text key="Order.Fields.LastModifiedDate">最終更新</Text>
+  <Text key="Order.Fields.LastModifiedBy">担当者</Text>
   <Text key="Order.Fields.CustomMadeFlag">オーダーメイド</Text>
   <Text key="CustomMade.Flag.Yes">あり</Text>
   <Text key="CustomMade.Flag.No">なし</Text>

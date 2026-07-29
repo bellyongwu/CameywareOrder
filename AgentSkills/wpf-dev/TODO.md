@@ -71,6 +71,40 @@ Entry format:
   - Expected amounts are COMPUTED from `CalculateSectionPayment` and formatted in the
     currency the window is actually using, never written as literals: the fixture shop prices
     in a zero-decimal currency, so a hard-coded "25.99" failed against a correct "¥26".
+- **Added to the same hotfix: "served by" on the receipt.** Ask: "add to hotfix change / Add
+  last modified by crew member's name just for receipt recording purpose."
+  - `Order.LastModifiedBy` stores the **rendered name**, not the login and not a foreign key.
+    A receipt is a historical document: resolving the name at print time would change what an
+    old receipt says the day somebody is renamed and blank it the day they are deleted — and
+    accounts live in credentials.json, outside this database, so there is nothing to key on.
+    `UserAccount.DisplayLabel` is the value (name if they have one, else the login, never blank).
+  - Stamped in `ApplyEditableFields` beside `LastModifiedDate`, from the SESSION rather than
+    from anything on the form: "who saved this" is not a field anybody should be able to type.
+    Left untouched when nobody is signed in, so a save can never blank a real name.
+  - Printed via `AddReceiptInfoLineIfHasValue`, so an order from before the column simply omits
+    the line — a label with nothing beside it reads as a printing fault, not as an absence.
+  - Label `Order.Fields.LastModifiedBy` in all five languages ("Served by" / 经手人 / Servi par /
+    Atendido por / 担当者).
+  - Follow-up in the same turn ("app的订单详情里也要显示出来"): shown in the **order detail
+    panel** too, directly under `LastModifiedDate` — the two answer one question together.
+    Label and value share a `StackPanel` so they hide as a PAIR on an order that predates the
+    column; hiding only the value would leave a heading with nothing under it, which reads as
+    a control that failed to load rather than as an absence. Same rule the receipt follows.
+- **A model column broke four harnesses, in two different ways** — both the same underlying rule
+  and worth separating:
+  - Three read the LIVE database, which had not been started since the column was added, so the
+    guard had never run. Fixed by running the shipping guards against it (new
+    `scratchpad/livemigrate`, reflection rather than a copied ALTER) — which is exactly what the
+    user's next launch does.
+  - `headercheck` migrates its own shared fixture and called `EnsureShopSchemaAsync` **alone**,
+    so it covered Shops and not Orders. It had already been fixed once for this exact symptom
+    when a Shops column was added; the first ORDERS column added afterwards broke it again the
+    same way. It now runs both guards, in the order startup runs them.
+- Notes after the addition: build 0/0, suite **921 passed / 0 failed across 20 harnesses**
+  (balancecheck 35). Live database backed up to `orders.db.bak-preServedBy` before migrating.
+- **Harness note worth keeping:** the "is this row hidden" assertions read `TextBlock.IsVisible`,
+  not `Visibility`. A child of a Collapsed panel still reports `Visibility.Visible` for itself,
+  so testing the element alone would report a hidden row as shown — which is the entire claim.
 
 ### 2026-07-29 16:10 — Currencies derived from installed languages + a localization panel  [DONE]
 - Ask: "As our application grows, each store may support global clients. So accepted

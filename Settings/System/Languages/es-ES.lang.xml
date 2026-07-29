@@ -349,6 +349,7 @@
   <Text key="Order.Fields.ItemCategory">Categoría del artículo</Text>
   <Text key="Order.Fields.OrderDate">Fecha del pedido</Text>
   <Text key="Order.Fields.LastModifiedDate">Última modificación</Text>
+  <Text key="Order.Fields.LastModifiedBy">Atendido por</Text>
   <Text key="Order.Fields.CustomMadeFlag">Servicio a medida</Text>
   <Text key="CustomMade.Flag.Yes">Sí</Text>
   <Text key="CustomMade.Flag.No">Ninguno</Text>
