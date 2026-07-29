@@ -368,8 +368,10 @@
   <Text key="Order.Fields.Downpayment">定金</Text>
   <Text key="Order.Fields.FinalBalance">剩余尾款</Text>
   <Text key="Order.Fields.FinalBalanceShort">尾款</Text>
-  <Text key="Order.Fields.ReceivedDownpayment">实收定金</Text>
-  <Text key="Order.Fields.ReceivedFinalBalance">实收尾款</Text>
+  <Text key="Order.Fields.ReceivedDownpayment">已收定金</Text>
+  <Text key="Order.Fields.ReceivedFinalBalance">已收尾款</Text>
+  <Text key="Order.Fields.DueDownpayment">应收定金</Text>
+  <Text key="Order.Fields.DueFinalBalance">应收尾款</Text>
   <Text key="Order.Fields.PaidTax">已收税额</Text>
   <Text key="Order.Fields.BalanceStatus">余额状态</Text>
   <Text key="Order.Fields.PaymentBreakdown">收款明细</Text>

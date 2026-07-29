@@ -17,6 +17,61 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-29 18:05 — Hotfix: a fully-deposited order locks its own balance controls  [DONE]
+- Ask: "Price chaging bug: If my charge on the pretax is 123, the current tax rate is 13%, i
+  paied pretax deposit 123, then I marked it as charged. >Then the final balance
+  automatically ticked. however the global tick is ticked as well (this is good) required:
+  the global tick/untick on checkbox(结清所有尾款) should automatically untick itself and untick
+  for all services. even though the final balance is 0. User is able to pick the fianal
+  balance payment type, even though it is 0. Logic seems awkward, because we have paid the
+  full deposit, the reason is that we want to keep pricing logic for 结清所有尾款 globally the
+  same. Another feature：add 应收定金 to the breakdown pricing， once checkbox on the pre-tax
+  deposit is ticked, then display 实收定金 at the price breakdown as well. >Apply the same logic
+  for fianal balance section. >Update wording. 实收定金 实收尾款 改为已收定金，已收尾款。"
+- Three things, one of them a real defect:
+  - [ ] The "clear all final balances" master must untick, and take every section with it,
+        even when a section's final balance is zero
+  - [ ] The final-balance payment method stays pickable at zero
+  - [ ] Breakdown gains the DUE amounts (应收定金 / 应收尾款) beside the received ones, with the
+        received line appearing once its portion is marked received
+  - [x] Wording: 实收定金 → 已收定金, 实收尾款 → 已收尾款
+- **TWO independent things put the tick back**, which is why it looked unfixable from the UI:
+  - `AutoCompleteSection` re-evaluated "deposit covers the total AND is received" on EVERY
+    refresh, so it re-ticked the section the next time anything recomputed. Now it fires
+    only on ENTRY into that state (`if (!wasAutoCompleted)`), which is what the existing
+    `wasAutoCompleted` flag was always trying to express. A convenience must not be a rule
+    the user keeps losing an argument with.
+  - The master's own state came from `IsOrderBalanceCleared()` — "is anything owed" — which
+    is TRUE for a fully-deposited section whatever the tick says. New
+    `AreAllSectionsMarkedCleared()` reads the section TICKS instead. The two questions
+    diverge exactly in the reported case, and only there.
+- **The money model was left alone.** `Order.IsSectionCleared`'s `FinalBase <= 0` rule is a
+  fact about money (nothing IS owed) and drives `FinalBalance`, the receipt and the list
+  column. Only the checkbox's own state changed. The status display and the picked-up gate
+  still use the money question, deliberately — an order with a full deposit showing
+  "Outstanding" against a $0 balance would be worse than the oddity of a cleared status with
+  the box unticked.
+- Requirement 2 (final payment type pickable at a zero balance) fell out of requirement 1:
+  `IsSettled` gates on the tick, so once the untick sticks the radios unlock. Asserted rather
+  than assumed.
+- Breakdown gained a DUE line per portion (the TAXED figure — what the customer actually
+  hands over) with a RECEIVED partner that appears only once that portion is confirmed.
+  Label and value hide together: a lone label reads as a value that failed to load, and a
+  zero would be indistinguishable from a portion that was genuinely free.
+- Notes: build 0 warnings / 0 errors. Suite **910 passed / 0 failed across 20 harnesses**;
+  new `scratchpad/balancecheck` is 24 of them and reproduces the report's exact numbers
+  (123 pre-tax, 13% card, 123 deposit).
+- **Two harness traps, both the same shape as ones already recorded:**
+  - The snap-back arrived on the NEXT recompute, not on the click. An assertion taken
+    straight after unticking passed while the bug was fully present — the harness has to
+    force a refresh and re-assert.
+  - A new order opens with the alteration category on "None", which switches the service off,
+    so the price box is ignored and every figure reads zero. Six assertions failed for a
+    reason that had nothing to do with the fix.
+  - Expected amounts are COMPUTED from `CalculateSectionPayment` and formatted in the
+    currency the window is actually using, never written as literals: the fixture shop prices
+    in a zero-decimal currency, so a hard-coded "25.99" failed against a correct "¥26".
+
 ### 2026-07-29 16:10 — Currencies derived from installed languages + a localization panel  [DONE]
 - Ask: "As our application grows, each store may support global clients. So accepted
   lanuages should be very dynamic, at the same time, currencies may be vary. so, as we

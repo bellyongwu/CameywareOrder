@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -118,6 +118,20 @@ public partial class OrderEditWindow : Window
         // Small print under the final-stage total tax: one line per payment portion.
         public required TextBlock DepositTaxLine { get; init; }
         public required TextBlock FinalTaxLine { get; init; }
+        // What each portion COSTS, against what has actually been taken. The due figure shows from
+        // the start; its received partner appears only once that portion is confirmed, so the pair
+        // reads as a charge and then as a receipt rather than as one number that quietly changes
+        // meaning. The deposit-stage panel carries the deposit's due line alone — by definition
+        // nothing has been received while it is on screen.
+        public required TextBlock DueDownpaymentText { get; init; }
+        public required TextBlock FinalDueDownpaymentText { get; init; }
+        public required TextBlock FinalReceivedDownpaymentText { get; init; }
+        public required TextBlock FinalDueBalanceText { get; init; }
+        public required TextBlock FinalReceivedBalanceText { get; init; }
+        // Hidden alongside their values: a label with no figure beside it reads as a value that
+        // failed to load rather than as a payment that has not happened yet.
+        public required TextBlock FinalReceivedDownpaymentLabel { get; init; }
+        public required TextBlock FinalReceivedBalanceLabel { get; init; }
 
         // True when the section carries order items, which is what makes the service part of
         // this order at all. A section without items sits out the payment flow entirely; one
@@ -511,6 +525,13 @@ public partial class OrderEditWindow : Window
             TaxLabel = AlterationTaxLabel,
             DepositTaxLine = AlterationDepositTaxLineText,
             FinalTaxLine = AlterationFinalTaxLineText,
+            DueDownpaymentText = AlterationDueDownpaymentText,
+            FinalDueDownpaymentText = AlterationFinalDueDownpaymentText,
+            FinalReceivedDownpaymentText = AlterationFinalReceivedDownpaymentText,
+            FinalDueBalanceText = AlterationFinalDueBalanceText,
+            FinalReceivedBalanceText = AlterationFinalReceivedBalanceText,
+            FinalReceivedDownpaymentLabel = AlterationFinalReceivedDownpaymentLabel,
+            FinalReceivedBalanceLabel = AlterationFinalReceivedBalanceLabel,
             // Alterations has no item list of its own, so a typed price — even "0" — is what
             // marks the service as present on this order. Choosing the "None" category switches
             // the service off outright, so it stops counting whatever the price box holds.
@@ -542,6 +563,13 @@ public partial class OrderEditWindow : Window
             TaxLabel = CustomMadeTaxLabel,
             DepositTaxLine = CustomMadeDepositTaxLineText,
             FinalTaxLine = CustomMadeFinalTaxLineText,
+            DueDownpaymentText = CustomMadeDueDownpaymentText,
+            FinalDueDownpaymentText = CustomMadeFinalDueDownpaymentText,
+            FinalReceivedDownpaymentText = CustomMadeFinalReceivedDownpaymentText,
+            FinalDueBalanceText = CustomMadeFinalDueBalanceText,
+            FinalReceivedBalanceText = CustomMadeFinalReceivedBalanceText,
+            FinalReceivedDownpaymentLabel = CustomMadeFinalReceivedDownpaymentLabel,
+            FinalReceivedBalanceLabel = CustomMadeFinalReceivedBalanceLabel,
             HasItems = () => _customMadeRecords.Count > 0,
             SectionTotal = () => _customMadeSumTotal,
             SectionSubtotal = () => _customMadeSubtotal,
@@ -569,6 +597,13 @@ public partial class OrderEditWindow : Window
             TaxLabel = ClothingTaxLabel,
             DepositTaxLine = ClothingDepositTaxLineText,
             FinalTaxLine = ClothingFinalTaxLineText,
+            DueDownpaymentText = ClothingDueDownpaymentText,
+            FinalDueDownpaymentText = ClothingFinalDueDownpaymentText,
+            FinalReceivedDownpaymentText = ClothingFinalReceivedDownpaymentText,
+            FinalDueBalanceText = ClothingFinalDueBalanceText,
+            FinalReceivedBalanceText = ClothingFinalReceivedBalanceText,
+            FinalReceivedDownpaymentLabel = ClothingFinalReceivedDownpaymentLabel,
+            FinalReceivedBalanceLabel = ClothingFinalReceivedBalanceLabel,
             HasItems = () => _clothingItemRows.Count > 0,
             SectionTotal = () => _clothingSumTotal,
             SectionSubtotal = () => _clothingSubtotal,
@@ -1576,10 +1611,19 @@ public partial class OrderEditWindow : Window
 
         if (fullyPaid && depositReceived)
         {
-            // Deposit received covers the full total: mirror the method and mark cleared.
-            SetSelectedFinalMethod(c, downMethod);
-            if (c.BalanceClearedCheck.IsChecked is not true)
+            // Only on ENTRY into the fully-paid state, never on every refresh. Re-evaluating the
+            // condition each pass made the tick impossible to remove: unticking it (or the master
+            // "clear all balances") put it straight back on the next time anything recomputed, so a
+            // fully-deposited section could never be re-opened. The auto-complete is a convenience
+            // for the moment the deposit covers the total — not a rule the user has to keep losing
+            // an argument with. `wasAutoCompleted` stays true, so the state is remembered and
+            // re-arms only when the deposit or the received tick actually changes.
+            if (!wasAutoCompleted)
+            {
+                SetSelectedFinalMethod(c, downMethod);
                 c.BalanceClearedCheck.IsChecked = true;
+            }
+
             return true;
         }
 
@@ -1692,6 +1736,50 @@ public partial class OrderEditWindow : Window
         c.FinalTaxLine.Text = _localization.Format("Order.Fields.FinalTaxLine",
             PaymentMethodName(EffectiveFinalMethod(c)),
             FormatCurrency(money.FinalCharge - money.FinalBase));
+
+        UpdateDueAndReceivedLines(c, money);
+    }
+
+    /// <summary>
+    /// What each portion costs, beside what has actually been taken for it.
+    /// </summary>
+    /// <remarks>
+    /// The DUE figures are the taxed amounts — `ReceivedDownpayment` and `FinalCharge` on the
+    /// section split — because that is what the customer is actually asked for; the pre-tax rows
+    /// above already say what the work cost. Both are shown from the start.
+    ///
+    /// A RECEIVED line appears only once its portion is confirmed, and it carries the same figure.
+    /// Showing it from the start would state that money had been taken when it had not, and showing
+    /// a zero would be worse — indistinguishable from a portion that was genuinely free. Label and
+    /// value are hidden together: a lone label reads as a value that failed to load.
+    ///
+    /// The final balance's received line follows the section's own cleared TICK, not "is anything
+    /// owed". A deposit covering the whole total leaves nothing owed, but nothing has been collected
+    /// for the final portion either — and it is precisely that case where the two answers diverge.
+    /// </remarks>
+    private void UpdateDueAndReceivedLines(PaymentSectionControls c, SectionPayment money)
+    {
+        var depositDue = money.ReceivedDownpayment;
+        var balanceDue = money.FinalCharge;
+
+        c.DueDownpaymentText.Text = FormatCurrency(depositDue);
+        c.FinalDueDownpaymentText.Text = FormatCurrency(depositDue);
+        c.FinalDueBalanceText.Text = FormatCurrency(balanceDue);
+
+        var depositReceived = c.DownCompletedCheck.IsChecked is true;
+        c.FinalReceivedDownpaymentText.Text = FormatCurrency(depositReceived ? depositDue : 0m);
+        SetLineVisible(c.FinalReceivedDownpaymentLabel, c.FinalReceivedDownpaymentText, depositReceived);
+
+        var balanceReceived = c.BalanceClearedCheck.IsChecked is true;
+        c.FinalReceivedBalanceText.Text = FormatCurrency(balanceReceived ? balanceDue : 0m);
+        SetLineVisible(c.FinalReceivedBalanceLabel, c.FinalReceivedBalanceText, balanceReceived);
+    }
+
+    private static void SetLineVisible(TextBlock label, TextBlock value, bool visible)
+    {
+        var visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        label.Visibility = visibility;
+        value.Visibility = visibility;
     }
 
     // Normalized so an order still carrying the legacy single "Card" value reads as Debit Card
@@ -1892,11 +1980,15 @@ public partial class OrderEditWindow : Window
         else
             PickedUpCheck.IsEnabled = cleared || PickedUpCheck.IsChecked.GetValueOrDefault();
 
-        // Keep the master "clear all balances" checkbox in sync with the overall state
-        // without re-triggering its handler.
+        // The master follows the section TICKS, not IsOrderBalanceCleared(). The two disagree
+        // exactly when a deposit already covers a section's total: nothing is owed, so the order is
+        // financially cleared, but the user may still have unticked the box — and driving the master
+        // from the money meant it sprang back on the instant anything recomputed, taking the
+        // sections with it. The money question and the checkbox are different questions; only the
+        // status display and the picked-up gate below use the money one.
         var previousSync = _syncingPayment;
         _syncingPayment = true;
-        ClearAllBalancesCheck.IsChecked = cleared;
+        ClearAllBalancesCheck.IsChecked = AreAllSectionsMarkedCleared();
         _syncingPayment = previousSync;
 
         // Requirement 3b: indicate payment types with amount in labeling.
@@ -2377,6 +2469,29 @@ public partial class OrderEditWindow : Window
         if (balanceCleared)
             return true;
         return downpayment >= sectionTotal;
+    }
+
+    /// <summary>
+    /// Whether every participating section is TICKED as cleared — the master checkbox's own state.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately not <see cref="IsOrderBalanceCleared"/>, which answers a different question: "is
+    /// anything still owed". A section whose deposit already covers its total owes nothing, so that
+    /// method reports it cleared whatever the tick says — and using it to drive the checkbox made
+    /// the checkbox unremovable. This asks only what the user has marked.
+    ///
+    /// Participation is order ITEMS, matching <see cref="ApplyClearAllToSection"/>, which skips a
+    /// section with none: an empty section is not part of the payment flow, and counting it would
+    /// leave the master permanently unticked on an order that uses one service.
+    /// </remarks>
+    private bool AreAllSectionsMarkedCleared()
+    {
+        var participating = new[] { _alterationControls, _customMadeControls, _clothingControls }
+            .Where(section => section.HasItems())
+            .ToList();
+
+        return participating.Count > 0
+               && participating.TrueForAll(section => section.BalanceClearedCheck.IsChecked is true);
     }
 
     private void UpdatePaymentVisibility()

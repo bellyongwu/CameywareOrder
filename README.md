@@ -11,6 +11,24 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v2.0.1 — 2026-07-29 (hotfix)
+
+- **Fixed: an order whose deposit covered its whole total could not have its balance re-opened.**
+  Pay the full amount as a deposit and mark it received, and the service auto-cleared and the
+  "clear all final balances" tick came on — both correct — but the tick could not then be removed.
+  It sprang back the moment anything recalculated, so the order was stuck settled. Unticking now
+  unticks every service and stays unticked, even where the outstanding balance is zero.
+- **Fixed: the final-balance payment method could not be chosen on a fully-deposited service.** It
+  is selectable now, so how a zero balance was settled can still be recorded.
+- **The price breakdown shows what each portion COSTS beside what has been TAKEN for it.** A
+  deposit-due and a balance-due figure appear from the start; their received counterparts appear
+  only once that portion is confirmed, so the pair reads as a charge and then as a receipt.
+- **Wording:** 实收定金 / 实收尾款 are now 已收定金 / 已收尾款.
+
+No data change and nothing to do on upgrade — this is display and control behaviour only.
+
+Quality gates: build **0 warnings / 0 errors**, **910 assertions across 20 harnesses**, all passing.
+
 ### v2.0.0 — 2026-07-29
 
 Money became a property of the **order** rather than of the shop, and the languages a shop runs in

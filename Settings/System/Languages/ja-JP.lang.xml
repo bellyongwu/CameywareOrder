@@ -367,6 +367,8 @@
   <Text key="Order.Fields.FinalBalanceShort">残金</Text>
   <Text key="Order.Fields.ReceivedDownpayment">受領した内金</Text>
   <Text key="Order.Fields.ReceivedFinalBalance">受領した残金</Text>
+  <Text key="Order.Fields.DueDownpayment">請求する内金</Text>
+  <Text key="Order.Fields.DueFinalBalance">請求する残金</Text>
   <Text key="Order.Fields.PaidTax">受領した税</Text>
   <Text key="Order.Fields.BalanceStatus">入金状況</Text>
   <Text key="Order.Fields.PaymentBreakdown">支払いの内訳</Text>

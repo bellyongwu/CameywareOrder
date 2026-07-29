@@ -1539,6 +1539,33 @@ once, both of which read like authorization regressions and were neither:
 The general rule: a harness reading live data must **establish** the state it
 asserts on, not assume the state it found the day it was written.
 
+## A checkbox the user cannot untick (2026-07-29)
+
+- **A control's state and the fact it describes are different questions.** The "clear all
+  final balances" master was driven by `IsOrderBalanceCleared()` — "is anything owed" —
+  which is TRUE for a section whose deposit already covers its total, whatever the user has
+  ticked. So the box sprang back on the moment anything recomputed and a fully-deposited
+  order could never be reopened. Drive a checkbox from what the user has MARKED; keep the
+  derived money fact for the money.
+- **A convenience must not re-assert itself on every pass.** `AutoCompleteSection`
+  re-evaluated its condition on each refresh, so it re-ticked what the user had just
+  unticked. Auto-behaviour belongs on the TRANSITION into a state (`if (!wasAutoCompleted)`),
+  not on every evaluation of it — otherwise the user cannot win the argument, and the flag
+  that was supposed to remember the state is only remembering that the rule still applies.
+- **Fix the control, not the money model.** `Order.IsSectionCleared`'s `FinalBase <= 0` rule
+  feeds `FinalBalance`, the receipt and the list column. Changing it to satisfy a UI
+  complaint would have re-priced history; changing only what the checkbox reads did not.
+- **A "due / received" pair must hide the received half until it is true.** Showing it from
+  the start states money was taken when it was not; showing a zero is worse — it cannot be
+  told apart from a portion that was genuinely free. Hide the label WITH the value: a lone
+  label reads as a value that failed to load.
+- **Harness: the snap-back was one recompute away.** Asserting immediately after the click
+  passed while the bug was fully present. Any "does it stay?" claim has to force the pass
+  that used to undo it.
+- **Harness: a new order opens with the alteration category on "None"**, which switches the
+  service off, so the price box is ignored and every figure reads zero. Select a real
+  category before pricing anything.
+
 ## Currencies derived from languages (2026-07-29)
 
 - **Put the language→currency mapping IN the language file, not in code.** Each

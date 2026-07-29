@@ -129,6 +129,34 @@ message. The footer's Save now applies the whole pane, profile first because it 
 rename. Taken names are reported as they are typed, under the field they belong to, and
 availability is settled *before* the rename confirmation.
 
+### Hotfix: a fully-deposited order could not have its balance re-opened
+Price 123 pre-tax, 13% card, a 123 deposit marked received. The section auto-cleared and the
+master "clear all final balances" ticked — both wanted — but the master could not be UNTICKED.
+
+> **Two independent things put it back**, which is why it looked unfixable from the UI. The
+> auto-complete re-evaluated its rule on EVERY refresh rather than on entry into the state, and
+> the master's own tick was driven by `IsOrderBalanceCleared()` — "is anything owed" — which is
+> true for a fully-deposited section whatever the user ticked.
+
+> **A control's state and the fact it describes are different questions.** Drive a checkbox from
+> what the user has MARKED. The money model was left untouched: `IsSectionCleared`'s
+> `FinalBase <= 0` rule feeds `FinalBalance`, the receipt and the list column, and changing it to
+> satisfy a UI complaint would have re-priced history.
+
+Requirement "the final payment type stays pickable at a zero balance" fell out of the first fix —
+`IsSettled` gates on the tick — but is asserted rather than assumed.
+
+The breakdown gained a DUE line per portion (the taxed figure, which is what the customer hands
+over) with a RECEIVED partner that appears only once that portion is confirmed; 实收 became 已收.
+
+> **Hide the received half until it is true.** Showing it from the start states money was taken
+> when it was not, and a zero cannot be told apart from a portion that was genuinely free. Hide
+> label WITH value — a lone label reads as a value that failed to load.
+
+*Harness traps worth keeping:* the snap-back arrived one recompute AFTER the click, so an
+assertion taken immediately passed while the bug was fully present; and a new order opens with
+the alteration category on "None", which switches the service off and makes every figure zero.
+
 ### Currencies come from the installed languages, chosen in a panel of their own
 The currency set is no longer a fixed list. Each `*.lang.xml` declares its market's currencies
 under `Currency.Codes` — en-US `CAD,USD`, zh-CN `CNY`, fr-FR/es-ES `EUR`, ja-JP `JPY` — so

@@ -363,6 +363,8 @@
   <Text key="Order.Fields.FinalBalanceShort">Solde à payer</Text>
   <Text key="Order.Fields.ReceivedDownpayment">Acompte encaissé</Text>
   <Text key="Order.Fields.ReceivedFinalBalance">Solde encaissé</Text>
+  <Text key="Order.Fields.DueDownpayment">Acompte à encaisser</Text>
+  <Text key="Order.Fields.DueFinalBalance">Solde à encaisser</Text>
   <Text key="Order.Fields.PaidTax">Taxe encaissée</Text>
   <Text key="Order.Fields.BalanceStatus">État du solde</Text>
   <Text key="Order.Fields.PaymentBreakdown">Détail des paiements</Text>
