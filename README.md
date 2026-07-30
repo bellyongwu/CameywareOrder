@@ -11,6 +11,23 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.0.4 — 2026-07-30 (hotfix)
+
+- **A tax rate can carry three decimals.** Quebec's combined GST+QST is **14.975%**, and the settings
+  screen could not hold it: the rate was stored correctly but shown rounded to 14.98, and because the
+  edit box was filled from what was shown, opening the tax settings and pressing Save wrote the rounded
+  figure back. On a $600 sale that is 6 cents of tax, every time, in the shop's favour and against its
+  filing. Rates now read and save in full wherever they appear — the settings matrix, the order's tax
+  line, the per-payment split rows and the location's own quoted rate.
+- **The rate box only accepts a rate.** It previously accepted any text at all, and a fourth decimal
+  was taken and quietly rounded on the next load. It is now refused as it is typed, and the box is wide
+  enough to show 14.975 without scrolling.
+- **Calculated amounts round to the cent, and a half rounds up.** 89.425 is 89.43. Nothing was rounding
+  at all before: the screen looked right because the display format rounds, while the figures behind it
+  kept their full precision — so a total could differ from the lines above it. Where a payment is split,
+  **each line rounds before they are added**, because each line's tax is printed beside its amount and
+  a shop has to be able to check the total by hand.
+
 ### v4.0.3 — 2026-07-30 (hotfix)
 
 - **A phone number punctuates itself as it is typed**, the way the country it belongs to writes one:

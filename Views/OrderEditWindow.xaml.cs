@@ -1148,7 +1148,7 @@ public partial class OrderEditWindow : Window
         {
             foreach (var row in rows)
             {
-                var line = lines.FirstOrDefault(l => l.Method == row.Method);
+                var line = lines.Find(l => l.Method == row.Method);
                 row.Amount.Text = line is { Amount: > 0m } ? line.Amount.ToString("0.##") : string.Empty;
             }
         }
@@ -1156,29 +1156,20 @@ public partial class OrderEditWindow : Window
 
     /// <summary>Turning the split on or off re-shapes the card, so everything is recomputed.</summary>
     /// <remarks>
+    /// Serves BOTH stages' toggles — the deposit's and the balance's — because recomputing is all
+    /// either one has ever done. The stages still answer independently: which of them is split lives
+    /// in <c>SectionPaymentSplit.DepositEnabled</c> / <c>FinalEnabled</c>, which
+    /// <see cref="RefreshComputedTotals"/> reads back per stage. They were once mirrored, so picking
+    /// "split" for a balance re-shaped a deposit that had already been taken; what fixed that was
+    /// separating the DATA, not having two handlers with the same body.
+    ///
     /// Guarded on <see cref="_sectionsReady"/>, not only on the payment sync flag. A RadioButton whose
     /// <c>IsChecked</c> is set in MARKUP raises Checked while <c>InitializeComponent</c> is still
     /// running — before any of the section controls exist — so the first thing this handler did was
     /// dereference a null and take the whole window down on open. The markup default was removed as
-    /// well; this guard is what stops the next one from doing it again.
+    /// well, and this guard is what stops the next one from doing it again.
     /// </remarks>
     private void OnSplitModeChanged(object sender, RoutedEventArgs e)
-    {
-        if (_syncingPayment || !_sectionsReady)
-            return;
-
-        RefreshComputedTotals();
-    }
-
-    /// <summary>
-    /// The balance stage's own choice. It is NOT copied to or from the deposit's.
-    /// </summary>
-    /// <remarks>
-    /// These two used to be mirrored, so picking "split" for a balance re-shaped a deposit that had
-    /// already been taken. A customer who pays a deposit in cash and settles the balance across two
-    /// cards is ordinary; the stages answer separately.
-    /// </remarks>
-    private void OnFinalSplitModeChanged(object sender, RoutedEventArgs e)
     {
         if (_syncingPayment || !_sectionsReady)
             return;
@@ -1227,7 +1218,9 @@ public partial class OrderEditWindow : Window
             allocated += amount;
 
             var rate = rules.IsTaxable(row.Method) ? rules.RateFor(row.Method) : 0m;
-            var rowTax = amount * rate / 100m;
+            // Rounded exactly as PortionTax rounds it, per line and before summing. This figure is
+            // shown to the shop and that one is charged to the customer; they have to be one number.
+            var rowTax = MoneyRounding.Round(amount * rate / 100m);
             tax += rowTax;
 
             // Each line says what it costs the customer, not just its tax: the amount typed is
@@ -1796,9 +1789,9 @@ public partial class OrderEditWindow : Window
         order.CustomMadeRecordsJson = data.CustomMadeJson;
         order.Status = data.Status;
         order.TotalAmount = _totalAmount;
-        // The order records the money it was priced in. This line is the reason the column exists;
-        // until now nothing wrote it, so every saved order carried the enum default regardless of
-        // what its shop actually traded in.
+        // The order records the money it was priced in. This line is the reason the column exists.
+        // Until it was added nothing wrote the column, so every saved order carried the enum default
+        // regardless of what its shop actually traded in.
         order.CurrencyType = SelectedCurrency;
         order.Notes = NullIfWhiteSpace(NotesBox.Text);
         order.LastModifiedDate = DateTime.UtcNow;
@@ -2656,7 +2649,7 @@ public partial class OrderEditWindow : Window
         UpdateTaxLabel(c);
     }
 
-    private static string FormatTaxRate(decimal ratePercent) => $"{ratePercent:0.##}%";
+    private static string FormatTaxRate(decimal ratePercent) => TaxRateFormat.Percent(ratePercent);
 
     // Small print under Order.Fields.ServiceTotalTax: how the section's tax splits across the two portions
     // and which method settled each, so a $0 line reads as "that portion wasn't card"
@@ -2773,7 +2766,7 @@ public partial class OrderEditWindow : Window
         if (taxed)
         {
             c.IncTaxLabel.Text = _localization.Format("Order.Fields.IncludedTaxLabel",
-                ShopTaxName, rate.ToString("0.##", CultureInfo.CurrentCulture));
+                ShopTaxName, TaxRateFormat.Text(rate));
             c.IncTaxText.Text = FormatCurrency(money.Tax);
         }
 

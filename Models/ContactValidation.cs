@@ -18,8 +18,8 @@ public static class ContactValidation
 {
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(1);
 
-    // Deliberately loose. Full RFC 5322 rejects addresses that work and accepts ones that do not;
-    // what is worth catching here is a typo like a missing @ or domain.
+    // Deliberately loose. Full RFC 5322 rejects addresses that work and accepts ones that do not.
+    // What is worth catching here is a typo such as a missing @ or a missing domain.
     private static readonly Regex EmailPattern =
         new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.None, RegexTimeout);
 

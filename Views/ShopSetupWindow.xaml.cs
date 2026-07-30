@@ -1,9 +1,9 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using CameywareOrder.Data;
 using CameywareOrder.Localization;
 using CameywareOrder.Models;
@@ -351,7 +351,7 @@ public partial class ShopSetupWindow : Window
         TaxSectionHint.Visibility = inclusive ? Visibility.Collapsed : Visibility.Visible;
         TaxInclusivePanel.Visibility = inclusive ? Visibility.Visible : Visibility.Collapsed;
         TaxInclusiveRateText.Text = _localization.Format("Shop.Tax.InclusiveRate",
-            jurisdiction.StandardRatePercent.ToString("0.##", CultureInfo.CurrentCulture));
+            TaxRateFormat.Text(jurisdiction.StandardRatePercent));
 
         // The tax number is a different question from the rate: ask for it only where the location
         // issues one, and call it what that location calls it. A hidden TextBox keeps its text in WPF,
@@ -771,6 +771,60 @@ public partial class ShopSetupWindow : Window
     }
 
     /// <summary>
+    /// Keeps the rate box to a rate: digits and at most <see cref="TaxRateFormat.MaxDecimals"/>
+    /// decimal places.
+    /// </summary>
+    /// <remarks>
+    /// Refusing the keystroke, rather than accepting a fourth decimal and rounding it later, is the
+    /// point. The screen used to take anything and the number was silently reshaped on the next load;
+    /// a shop typing a rate it cannot have should find out while it is typing.
+    ///
+    /// Not static, and cannot be: XAML wires this from the item template as
+    /// <c>this.OnTaxRatePreviewTextInput</c>.
+    /// </remarks>
+    [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "Wired from the PaymentTaxItems item template in ShopSetupWindow.xaml; the " +
+                        "generated InitializeComponent references it as this.Handler, which does not " +
+                        "compile against a static method.")]
+    private void OnTaxRatePreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+
+        if (sender is not TextBox box)
+            return;
+
+        e.Handled = !TaxRateFormat.IsPartialRate(ProposedText(box, e.Text));
+    }
+
+    /// <summary>The same rule for a paste, which otherwise walks straight past PreviewTextInput.</summary>
+    [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
+        Justification = "Wired as DataObject.Pasting from the item template; see above.")]
+    private void OnTaxRatePaste(object sender, DataObjectPastingEventArgs e)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+
+        if (sender is not TextBox box)
+            return;
+
+        if (!e.SourceDataObject.GetDataPresent(DataFormats.Text))
+        {
+            e.CancelCommand();
+            return;
+        }
+
+        var pasted = e.SourceDataObject.GetData(DataFormats.Text) as string ?? string.Empty;
+        if (!TaxRateFormat.IsPartialRate(ProposedText(box, pasted)))
+            e.CancelCommand();
+    }
+
+    /// <summary>What the box would hold if <paramref name="insert"/> were accepted at the caret.</summary>
+    private static string ProposedText(TextBox box, string insert)
+        => string.Concat(
+            box.Text.AsSpan(0, box.SelectionStart),
+            insert,
+            box.Text.AsSpan(box.SelectionStart + box.SelectionLength));
+
+    /// <summary>
     /// One payment method's row in the tax matrix. Tax free and taxable are two radios in one
     /// group, so setting either drives the other — WPF unchecks the sibling but does not push that
     /// back through a one-way-to-source binding, and the rate box's enabled state hangs off it.
@@ -786,7 +840,7 @@ public partial class ShopSetupWindow : Window
             DisplayName = displayName;
             AccentColor = accentColor;
             _isTaxable = rule.IsTaxable;
-            _rateText = rule.RatePercent.ToString("0.##");
+            _rateText = TaxRateFormat.Text(rule.RatePercent);
         }
 
         public PaymentMethod Method { get; }
@@ -845,7 +899,7 @@ public partial class ShopSetupWindow : Window
                     return localization["Shop.Tax.SummaryFree"];
 
                 return TryResolveRate(out var rate)
-                    ? localization.Format("Shop.Tax.SummaryTaxable", rate.ToString("0.##"))
+                    ? localization.Format("Shop.Tax.SummaryTaxable", TaxRateFormat.Text(rate))
                     : localization["Shop.Tax.RateInvalid"];
             }
         }
@@ -861,11 +915,9 @@ public partial class ShopSetupWindow : Window
             if (!IsTaxable)
                 return true;
 
-            if (!decimal.TryParse(_rateText, out var parsed) || parsed < 0m || parsed > 100m)
-                return false;
-
-            rate = parsed;
-            return true;
+            // The shared rule, not a local re-statement of it: this is the check that decides what
+            // gets SAVED, so it has to agree exactly with what the box let the shop type.
+            return TaxRateFormat.TryParse(_rateText, out rate);
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

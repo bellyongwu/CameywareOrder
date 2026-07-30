@@ -162,7 +162,7 @@ public static class PhoneCountries
                 return Fallback;
 
             if (!string.IsNullOrWhiteSpace(payload!.DefaultCountryCode)
-                && parsed.Any(c => string.Equals(c.Code, payload.DefaultCountryCode, StringComparison.OrdinalIgnoreCase)))
+                && parsed.Exists(c => string.Equals(c.Code, payload.DefaultCountryCode, StringComparison.OrdinalIgnoreCase)))
             {
                 _defaultCode = payload.DefaultCountryCode!.Trim();
             }

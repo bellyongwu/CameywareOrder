@@ -17,6 +17,49 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-30 20:10 — v4.0.4: a tax rate with three decimals  [IN PROGRESS]
+- Ask: "Fix tax rate, make sure it can accept 3 numeric digts. for instances, Quebec can accept 14.975%
+  as the sells tax rate. need to consider it"
+- Findings before changing anything: the rate is `decimal` END TO END, so storage was never the
+  problem — 14.975 persists fine. Every DISPLAY is `"0.##"` (9 sites), so it reads back as 14.98, and
+  because the settings screen seeds its edit box from that same rounded string, re-saving WRITES the
+  rounded value. The rate box also has no input filter at all, so a 4th decimal can be typed and is
+  silently rounded on the next load.
+- Plan:
+  - [x] T1 one definition of the rate format (3 decimals) rather than a tenth copy of `"0.##"`
+  - [x] T2 apply it at all 9 formatting sites
+  - [x] T3 filter + validate the rate box, so 3 decimals is a rule rather than a coincidence
+  - [x] T4 harness coverage: the round-trip that was losing the third decimal
+  - [x] T5 build, suite, render, publish, docs, README v4.0.4
+- Notes: New `Models/TaxRateFormat.cs` is the one definition — `MaxDecimals`, the partial-input regex,
+  `TryParse` with the 0..100 range, `Text` and `Percent`. Nine `"0.##"` sites now call it
+  (`TaxLabelConverter`, `TaxJurisdiction.DisplayName`, `ShopSetupWindow` ×3, `OrderEditWindow` ×2).
+  `PaymentTaxRow.TryResolveRate` delegates rather than restating the rule — it decides what is SAVED,
+  so it has to agree exactly with what the box allowed. The box gained `PreviewTextInput` +
+  `DataObject.Pasting` (it previously accepted any text at all) and went 66px → 82px so "14.975" fits
+  without scrolling. Three separate answers to "what is a rate" had been live at once: the box took
+  anything, the parser demanded 0..100, the display rounded to two places.
+  **The partial pattern must not apply the range** — `"1"` is the first keystroke of `"14.975"`.
+  **Proved the test can fail**: stashing just `ShopSetupWindow` reproduced the defect exactly — box
+  seeded `14.98`, and re-saving an untouched screen wrote `14.98` back. `taxcheck` 323 → 355.
+- Mid-turn ask: "if the calculation of prices should be double up. if the price calculated like 89.425
+  it should be 89.43" → new `Models/MoneyRounding.cs`. Money had NO rounding at all: display formatting
+  (`ToString("N2")`) rounds half away from zero, so the screen looked right while the stored and summed
+  figures kept full precision. Derived amounts now round at the calculation — `EmbeddedTax`, and
+  `PortionTax` on both paths. **Split lines round PER LINE before summing**, because each line's tax is
+  printed beside its amount; three 0.10 lines at 5% must total the 0.03 shown and not the 0.02 a
+  rounded total would give. `OrderEditWindow` rounds its display copy identically or the two disagree.
+  Wrong assumption caught by a red assertion: `CreateForStandardRate` taxes EVERY method, unlike
+  `CreateDefault` — the code was right and my expectation was not.
+- Mid-turn ask: "Fix sonarqube issues after" → ran the analyzer as a package rather than trusting the
+  IDE view, which found **9 issues across 6 files**, most months old and none visible in a green build:
+  S6605 ×4 (`Any` → `Exists` on `List`), S6602 ×2 (`FirstOrDefault` → `Find`/`Array.Find`), S125 ×2
+  (prose comments whose trailing semicolon reads as code — reworded), S4144 (`OnFinalSplitModeChanged`
+  byte-identical to `OnSplitModeChanged`; neither read `sender` or `e`, so the six balance-stage
+  bindings were repointed at the one handler — stage independence lives in
+  `DepositEnabled`/`FinalEnabled`, not in having two identical methods). Now **0 warnings, 0 errors**
+  workspace-wide, and `Directory.Build.props` keeps the analyzer on so the gate is the build itself.
+
 ### 2026-07-30 18:40 — v4.0.3: the reason section wraps, and phone numbers punctuate themselves  [DONE]
 - Ask: "Another UI fixes: 1.Cancellation / Return reason section is overflowed. make this section >Make
   whole text in this section text wrappable. 2. Add auto format for phone numbers when user type in

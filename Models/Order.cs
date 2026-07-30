@@ -248,8 +248,9 @@ public class Order
             if (!PricesIncludeTax)
                 return 0m;
 
-            return new[] { AlterationTaxRate, CustomMadeTaxRate, ClothingTaxRate }
-                .FirstOrDefault(rate => rate is > 0m) ?? 0m;
+            return Array.Find(
+                new[] { AlterationTaxRate, CustomMadeTaxRate, ClothingTaxRate },
+                rate => rate is > 0m) ?? 0m;
         }
     }
 
@@ -434,8 +435,12 @@ public class Order
     }
 
     /// <summary>The tax already inside a quoted amount: amount − amount ÷ (1 + rate).</summary>
+    /// <remarks>
+    /// Rounded to money, because that division almost never lands on a cent: at 6% the embedded tax in
+    /// 100 is 5.660377…, and an unrounded figure would print one thing and add up to another.
+    /// </remarks>
     private static decimal EmbeddedTax(decimal amount, decimal ratePercent)
-        => ratePercent <= 0m ? 0m : amount - (amount * 100m / (100m + ratePercent));
+        => ratePercent <= 0m ? 0m : MoneyRounding.Round(amount - (amount * 100m / (100m + ratePercent)));
 
     /// <summary>
     /// TAX-EXCLUSIVE (Canada and the US, and every order saved before the mode existed): the entered
@@ -497,12 +502,15 @@ public class Order
         if (split is null || split.Count == 0)
         {
             var rate = rules.IsTaxable(method) && ratePercent > 0m ? ratePercent : 0m;
-            return portionBase * rate / 100m;
+            return MoneyRounding.Round(portionBase * rate / 100m);
         }
 
+        // Each LINE is rounded before they are added, not the sum afterwards. Every line's tax is
+        // printed on the card beside the amount it belongs to, so a total that is the sum of
+        // something other than the printed figures is a total the shop cannot reconcile by hand.
         return split
             .Where(line => line.Amount > 0m && rules.IsTaxable(line.Method) && line.RatePercent > 0m)
-            .Sum(line => line.Amount * line.RatePercent / 100m);
+            .Sum(line => MoneyRounding.Round(line.Amount * line.RatePercent / 100m));
     }
 
     [NotMapped]

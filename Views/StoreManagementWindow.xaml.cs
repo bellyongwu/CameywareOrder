@@ -131,8 +131,8 @@ public partial class StoreManagementWindow : Window
             : _localization.Format("Store.Manage.SelectedCount", selected.Count,
                 selected.Sum(row => row.OrderCount));
 
-        DelistButton.IsEnabled = selected.Any(row => !row.Shop.IsDelisted);
-        ActivateButton.IsEnabled = selected.Any(row => row.Shop.IsDelisted);
+        DelistButton.IsEnabled = selected.Exists(row => !row.Shop.IsDelisted);
+        ActivateButton.IsEnabled = selected.Exists(row => row.Shop.IsDelisted);
         DownloadButton.IsEnabled = selected.Count > 0;
         DeleteButton.IsEnabled = selected.Count > 0;
     }

@@ -41,7 +41,7 @@ public sealed class TaxLabelConverter : IValueConverter
 
         return localization.Format("Order.Fields.IncludedTaxLabel",
             TaxJurisdictions.TaxName(ShopContext.Instance.Current, localization),
-            rate.ToString("0.##", CultureInfo.CurrentCulture));
+            TaxRateFormat.Text(rate));
     }
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

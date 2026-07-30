@@ -2305,6 +2305,70 @@ months; an incremental build swept the copy away and six assertions went red at 
 in the middle of an unrelated change. `run-suite.ps1` now sets the working directory itself, and says
 why.
 
+## A display format that an EDIT BOX is seeded from is not a display format (2026-07-30)
+
+Tax rates were `decimal` end to end and persisted perfectly. Quebec's 14.975% still could not be kept,
+because every display used `"0.##"` — and the settings screen seeds its rate box from that formatted
+string. Opening the tax settings for something else and pressing Save rewrote 14.975 as 14.98. Nothing
+validated wrongly, nothing threw, and the stored value was correct right up until a person looked at it.
+
+**Wherever a formatted value is written back into an editable control, the format is part of the data
+path and must be lossless.** The tell is `box.Text = value.ToString(...)` — every rounding decision in
+that format is now a rounding decision about what gets saved.
+
+Two things follow from fixing it in one place (`Models/TaxRateFormat.cs`) rather than nine:
+
+- The input filter, the parser and the display cannot disagree about the limit. They had already
+  drifted: the box accepted any text at all while the parser demanded 0..100 and the display quietly
+  rounded, so three different answers to "what is a rate" were live at once.
+- A partial-input pattern must accept what a half-typed value looks like — `""`, `"14"`, `"14."`,
+  `"14.9"` — and must NOT apply the range, or `"1"` is refused as the first keystroke of `"14.975"`.
+  Range belongs to the finished value only.
+
+A regression test for this has to drive the SCREEN and save twice. Asserting the stored decimal alone
+passes throughout, because storage was never what broke.
+
+## Display formatting hid the absence of money rounding entirely (2026-07-30)
+
+There was no rounding anywhere in the money path — one `Math.Round` in the whole codebase, and it was
+for measurements. It went unnoticed for months because `decimal.ToString("N2")` rounds half away from
+zero, so every figure on screen was correct while the values behind them carried full precision. The
+defect only shows where two of them meet: a total that is the sum of unrounded parts, printed beside
+parts that were each rounded for display, does not add up.
+
+**Round derived amounts at the calculation, not at the label.** A number that is displayed rounded and
+stored unrounded is two different numbers with one name.
+
+**Round the PARTS, then add them** — the opposite of what feels precise. Three lines of 0.10 at 5% are
+0.005 each; rounding the total gives 0.02 under three printed 0.01s. Every figure a customer can see is
+a figure they can add up, so each one has to be real. Costs at most a cent against the unrounded ideal.
+
+Half goes UP (`MidpointRounding.AwayFromZero`), not to even. `decimal.Round` defaults to banker's
+rounding, which turns 89.425 into 89.42 — a till arguing with a figure the customer worked out on paper.
+
+A third decimal on the tax RATE is what made this everyday rather than rare: 14.975% lands on a
+half-cent constantly where a two-decimal rate almost never did. A precision change upstream turns a
+latent rounding question into a daily one.
+
+## Run the analyzer; do not trust the Problems view (2026-07-30)
+
+The Sonar gate was "check the IDE before building", and the first time it was run as an analyzer
+package instead — `SonarAnalyzer.CSharp` in `Directory.Build.props`, so the rules run inside
+`dotnet build` — it reported **9 issues across 6 files**, several months old, in a workspace that had
+been called Sonar-clean repeatedly. A gate you have to remember to walk through is not a gate.
+
+It is now permanent, so the baseline is zero and anything reported is new. Worth knowing about the
+findings themselves:
+
+- **S6605 / S6602** (`Any`→`Exists`, `FirstOrDefault`→`Find` on `List`/array) fire only on the
+  concrete collection types, so they appear as code moves from `IEnumerable` to `List`. Mechanical.
+- **S125** on a PROSE comment is usually a trailing semicolon making the line parse as a statement.
+  Reword the sentence; do not suppress.
+- **S4144** (two methods with identical bodies) was real: two split-mode handlers had the same body and
+  neither read `sender` or `e`. The distinction they were named for lives in the DATA
+  (`DepositEnabled`/`FinalEnabled`), so one handler serves both. Check what actually distinguishes the
+  two before merging — if it is only the name, the name was documentation, and a comment says it better.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies

@@ -1,0 +1,28 @@
+<Project>
+
+  <!--
+    Sonar runs on every build.
+
+    The project's rule is zero Sonar issues on changed files, and it used to be enforced by
+    remembering to look at the IDE's Problems view. That is a gate only as reliable as the person
+    checking it: the first scan run this way found nine issues across six files, several of them
+    months old, none of them visible in an otherwise green build.
+
+    As an analyzer package the same rules run inside `dotnet build`, so the gate IS the build and a
+    new issue cannot pass unnoticed. The baseline is zero — anything this reports is new.
+
+    PrivateAssets=all: analysis only, nothing ships in the build output.
+
+    This file applies to projects under the repository root, so the assertion harnesses in the
+    scratchpad are deliberately unaffected — they are test code held to a different standard.
+
+    To turn it off, delete this file.
+  -->
+  <ItemGroup>
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="9.32.0.97167">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+</Project>

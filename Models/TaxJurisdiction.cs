@@ -1,4 +1,3 @@
-using System.Globalization;
 using CameywareOrder.Localization;
 
 namespace CameywareOrder.Models;
@@ -170,6 +169,6 @@ public sealed class TaxJurisdiction
     public string DisplayName(LocalizationService localization)
     {
         ArgumentNullException.ThrowIfNull(localization);
-        return localization.Format($"TaxJurisdiction.{Code}", StandardRatePercent.ToString("0.##", CultureInfo.CurrentCulture));
+        return localization.Format($"TaxJurisdiction.{Code}", TaxRateFormat.Text(StandardRatePercent));
     }
 }

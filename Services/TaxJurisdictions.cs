@@ -179,7 +179,7 @@ public static class TaxJurisdictions
                 return Fallback;
 
             if (!string.IsNullOrWhiteSpace(payload!.DefaultLocationCode)
-                && parsed.Any(j => string.Equals(j.Code, payload.DefaultLocationCode, StringComparison.OrdinalIgnoreCase)))
+                && parsed.Exists(j => string.Equals(j.Code, payload.DefaultLocationCode, StringComparison.OrdinalIgnoreCase)))
             {
                 _defaultCode = payload.DefaultLocationCode!.Trim();
             }

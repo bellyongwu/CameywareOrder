@@ -370,9 +370,16 @@
                                                 <RadioButton GroupName="{Binding GroupName}" VerticalAlignment="Center"
                                                              IsChecked="{Binding IsTaxable, Mode=TwoWay}"
                                                              Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Tax.Charge], Mode=OneWay}"/>
-                                                <TextBox Width="66" Margin="10,0,0,0" Padding="6,4" FontSize="13" BorderBrush="#E5E7EB"
+                                                <!-- Wide enough for "14.975": Quebec's combined rate is
+                                                     the longest a shop can enter, and a box that
+                                                     scrolls its own value is a box nobody can check.
+                                                     The handlers refuse a fourth decimal at the
+                                                     keyboard rather than accept it and round it. -->
+                                                <TextBox Width="82" Margin="10,0,0,0" Padding="6,4" FontSize="13" BorderBrush="#E5E7EB"
                                                          TextAlignment="Right" VerticalContentAlignment="Center"
                                                          IsEnabled="{Binding IsTaxable}"
+                                                         PreviewTextInput="OnTaxRatePreviewTextInput"
+                                                         DataObject.Pasting="OnTaxRatePaste"
                                                          Text="{Binding RateText, UpdateSourceTrigger=PropertyChanged}"/>
                                                 <TextBlock Text="%" VerticalAlignment="Center" Margin="5,0,0,0" Foreground="#4B5563"/>
                                             </StackPanel>

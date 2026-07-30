@@ -70,6 +70,34 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-07-30)
 
+### v4.0.4 — a tax rate with three decimals
+
+Quebec's combined GST+QST is 14.975%, and the application could store it but not keep it. Rates were
+`decimal` end to end and persisted perfectly; every DISPLAY used `"0.##"`, and the settings screen seeds
+its rate box from that formatted string — so opening the tax settings for any reason and pressing Save
+rewrote 14.975 as 14.98. Six cents of tax on a $600 sale, silently, on every save.
+
+`Models/TaxRateFormat.cs` is now the one definition: the three-decimal limit, the partial-input pattern,
+`TryParse` with the 0..100 range, and the display text. Nine `"0.##"` sites call it. Three different
+answers to "what is a rate" had been live at once — the box accepted any text, the parser demanded
+0..100, the display rounded — which is what made the drift invisible.
+
+The lesson generalises and is in `context.md`: **a format that an edit box is seeded from is part of the
+data path, not decoration.** Its regression test drives the screen and saves twice; asserting the stored
+decimal alone passes throughout, because storage was never what broke.
+
+**Money now rounds**, which it never did — `Models/MoneyRounding.cs`, two places, half away from zero, so
+89.425 is 89.43 rather than banker's 89.42. The absence was invisible because `ToString("N2")` rounds on
+the way to the screen: every figure LOOKED right while the values behind them kept full precision, and
+only a total printed beside its own parts could show the disagreement. Split lines round per line before
+summing, because each line's tax is printed beside its amount. The third decimal on rates is what made
+this urgent — 14.975% lands on a half-cent constantly.
+
+**Sonar runs in the build now** (`Directory.Build.props`). Run as an analyzer for the first time rather
+than read out of the IDE's Problems view, it found 9 issues across 6 files in a workspace that had been
+called clean repeatedly — `Any`→`Exists`, `FirstOrDefault`→`Find`, two prose comments whose trailing
+semicolons parsed as code, and two byte-identical event handlers. All fixed; the baseline is zero.
+
 ### v4.0.3 — a phone number punctuates itself, and the reason section wraps
 
 `phone-countries.json` gained `nationalFormat`, keyed by DIGIT COUNT rather than by country, because a
