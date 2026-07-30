@@ -22,6 +22,19 @@
              at the place that relies on it. -->
         <Style TargetType="TextBox" BasedOn="{StaticResource ThemedTextBox}"/>
 
+        <!-- The message that appears UNDER an input that failed validation. One style rather than the
+             attributes copied per field: there are six of these now, they must be visually identical
+             for the eye to learn them, and the two that existed first had drifted into copy-pasted
+             literals. Collapsed by default so it takes no vertical space until it has something to
+             say — a reserved-but-empty row reads as a rendering fault. -->
+        <Style x:Key="FieldErrorText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#DC2626"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,3,0,0"/>
+            <Setter Property="Visibility" Value="Collapsed"/>
+        </Style>
+
         <!-- "Not applicable" checkbox for refunded (cancelled/returned) orders: the box
              and label turn red. The strikethrough LINE itself is NOT drawn here — see
              NotApplicableCheckBoxStrike below and its usages, which bind Width to this
@@ -199,9 +212,26 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Title -->
-        <TextBlock x:Name="TitleText" Grid.Row="0"
-                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.NewTitle], Mode=OneWay}" FontSize="18" FontWeight="Bold" Margin="0,0,0,18"/>
+        <!-- Title, and the validation banner directly under it -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,18">
+            <TextBlock x:Name="TitleText"
+                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.NewTitle], Mode=OneWay}" FontSize="18" FontWeight="Bold"/>
+
+            <!-- Everything that stops a save is summarised HERE, at the top, outside the scroller so
+                 it cannot scroll away. The per-field messages say WHERE; this says WHAT, all of it at
+                 once, which is the only surface that can report two missing fields as two. The
+                 ErrorText at the foot of the window keeps a different job: a save that threw. -->
+            <Border x:Name="ValidationBanner" Visibility="Collapsed"
+                    Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" CornerRadius="6"
+                    Padding="12,9" Margin="0,12,0,0">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE783;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                               Foreground="#DC2626" Margin="0,1,9,0" VerticalAlignment="Top"/>
+                    <TextBlock x:Name="ValidationBannerText" Foreground="#B91C1C" FontSize="12"
+                               TextWrapping="Wrap" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="FormRoot">
@@ -228,7 +258,10 @@
                                 <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE8EC;"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderNumber], Mode=OneWay}"/>
                             </StackPanel>
-                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="OrderNumberBox" Margin="0,8,14,8" Padding="6,4"/>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="0,8,14,8">
+                                <TextBox x:Name="OrderNumberBox" Padding="6,4"/>
+                                <TextBlock x:Name="OrderNumberErrorText" Style="{StaticResource FieldErrorText}"/>
+                            </StackPanel>
 
                             <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Margin="0,8">
                                 <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE7C1;"/>
@@ -246,7 +279,10 @@
                                 <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE77B;"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}"/>
                             </StackPanel>
-                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="CustomerNameBox" Margin="0,8,14,8" Padding="6,4"/>
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,8,14,8">
+                                <TextBox x:Name="CustomerNameBox" Padding="6,4"/>
+                                <TextBlock x:Name="CustomerNameErrorText" Style="{StaticResource FieldErrorText}"/>
+                            </StackPanel>
 
                             <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" Margin="0,8">
                                 <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE717;"/>
@@ -254,7 +290,7 @@
                             </StackPanel>
                             <StackPanel Grid.Row="1" Grid.Column="3" Margin="0,8">
                                 <TextBox x:Name="PhoneNumberBox" Padding="6,4" LostFocus="OnPhoneNumberBoxLostFocus"/>
-                                <TextBlock x:Name="PhoneErrorText" Foreground="#DC2626" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0" Visibility="Collapsed"/>
+                                <TextBlock x:Name="PhoneErrorText" Style="{StaticResource FieldErrorText}"/>
                             </StackPanel>
 
                             <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal" Margin="0,8">
@@ -263,7 +299,7 @@
                             </StackPanel>
                             <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,8,14,8">
                                 <TextBox x:Name="EmailBox" Padding="6,4" LostFocus="OnEmailBoxLostFocus"/>
-                                <TextBlock x:Name="EmailErrorText" Foreground="#DC2626" TextWrapping="Wrap" FontSize="11" Margin="0,3,0,0" Visibility="Collapsed"/>
+                                <TextBlock x:Name="EmailErrorText" Style="{StaticResource FieldErrorText}"/>
                             </StackPanel>
 
                             <!-- Which money this order is priced in. Filled in code from the SHOP's
@@ -283,27 +319,43 @@
                                 <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE707;" Margin="0,2,6,0"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Address], Mode=OneWay}"/>
                             </StackPanel>
-                            <TextBox Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" x:Name="AddressBox" Margin="0,8" Padding="6,4"
-                                     Height="68" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
+                            <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,8">
+                                <TextBox x:Name="AddressBox" Padding="6,4"
+                                         Height="68" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
+                                <TextBlock x:Name="AddressErrorText" Style="{StaticResource FieldErrorText}"/>
+                            </StackPanel>
 
                             <StackPanel Grid.Row="4" Grid.Column="0" x:Name="StatusReasonLabelPanel" Orientation="Horizontal" Margin="0,10,0,8" VerticalAlignment="Top" Visibility="Collapsed">
                                 <TextBlock Style="{StaticResource FieldIcon}" Text="&#xE7C1;" Margin="0,2,6,0"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.StatusReason], Mode=OneWay}"/>
                             </StackPanel>
-                            <ComboBox Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" x:Name="StatusReasonCategoryBox" Margin="0,8" Padding="6,4"
-                                      HorizontalAlignment="Left" MinWidth="260" Visibility="Collapsed" SelectionChanged="OnStatusReasonCategoryChanged">
+                            <!-- The error block is a sibling of the picker, not a wrapper around it:
+                                 UpdateStatusReasonVisibility and OnStatusReasonCategoryChanged both
+                                 read StatusReasonCategoryBox.Visibility, so the picker has to stay the
+                                 thing whose Visibility is toggled. -->
+                            <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,8" HorizontalAlignment="Left">
+                            <ComboBox x:Name="StatusReasonCategoryBox" Padding="6,4"
+                                      MinWidth="260" Visibility="Collapsed" SelectionChanged="OnStatusReasonCategoryChanged">
                                 <ComboBoxItem Tag="CustomerDoesNotWant" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.CustomerDoesNotWant], Mode=OneWay}"/>
                                 <ComboBoxItem Tag="ServiceUnsatisfactory" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.ServiceUnsatisfactory], Mode=OneWay}"/>
                                 <ComboBoxItem Tag="ProductIssue" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.ProductIssue], Mode=OneWay}"/>
                                 <ComboBoxItem Tag="PriceTooHigh" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.PriceTooHigh], Mode=OneWay}"/>
                                 <ComboBoxItem Tag="Other" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.Other], Mode=OneWay}"/>
                             </ComboBox>
+                                <TextBlock x:Name="StatusReasonCategoryErrorText" Style="{StaticResource FieldErrorText}"/>
+                            </StackPanel>
 
-                            <Grid Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" x:Name="StatusReasonContainer" Margin="0,8" Visibility="Collapsed">
-                                <TextBox x:Name="StatusReasonBox" Padding="6,4" Height="60" TextWrapping="Wrap" AcceptsReturn="True"
-                                         VerticalScrollBarVisibility="Auto" TextChanged="OnStatusReasonTextChanged"/>
-                                <TextBlock x:Name="StatusReasonHint" IsHitTestVisible="False" Foreground="#D1D5DB" Margin="9,7,0,0" VerticalAlignment="Top"/>
-                            </Grid>
+                            <!-- StatusReasonContainer stays the element whose Visibility is toggled, so
+                                 the error message hides with the box it belongs to; the inner Grid keeps
+                                 the placeholder overlaid on the TextBox. -->
+                            <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" x:Name="StatusReasonContainer" Margin="0,8" Visibility="Collapsed">
+                                <Grid>
+                                    <TextBox x:Name="StatusReasonBox" Padding="6,4" Height="60" TextWrapping="Wrap" AcceptsReturn="True"
+                                             VerticalScrollBarVisibility="Auto" TextChanged="OnStatusReasonTextChanged"/>
+                                    <TextBlock x:Name="StatusReasonHint" IsHitTestVisible="False" Foreground="#D1D5DB" Margin="9,7,0,0" VerticalAlignment="Top"/>
+                                </Grid>
+                                <TextBlock x:Name="StatusReasonErrorText" Style="{StaticResource FieldErrorText}"/>
+                            </StackPanel>
                         </Grid>
                     </StackPanel>
                 </Border>

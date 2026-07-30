@@ -503,6 +503,37 @@ And on where the rate comes from: in an inclusive market a value-added tax is a 
 jurisdiction, apply it to both portions, and **do not** consult the per-method taxable/tax-free rules
 at all — otherwise one price yields two different taxes depending on how it was settled.
 
+## 4b. Reporting a refused save
+
+A form that refuses to save has to answer three questions, and each needs its own surface. Give it all
+three or the user hunts for the reason:
+
+| Surface | Answers | Where |
+|---|---|---|
+| Modal dialog | something is wrong **now** | once, listing every problem |
+| Banner | **what** is wrong | above the form, OUTSIDE the `ScrollViewer` |
+| Inline message | **where** | under the offending input |
+
+- **One code path reports, or they drift.** `Fail(messageKey, inline, focus)` plus a
+  `TryRequireFilled(fields)` for the may-not-be-blank set. Left to individual `if`s, some checks grow a
+  dialog and others do not, and nothing says which — one real form reached eleven checks with five
+  dialogs and two inline messages.
+- **The summary belongs at the TOP.** A message beside the Save button is invisible on a form taller
+  than the window, which is exactly when it is needed. Outside the scroller, so it cannot scroll away.
+- **Collect the blank fields in one pass; do not fail fast.** Two missing fields are two facts. Report
+  them together, mark them all, focus the first.
+- **Keep the dialog in ONE wrapper.** Split "validate and mark" from "announce":
+  `TryValidateForSave` → `ValidateForSave` (marks, returns) + the dialog. A `MessageBox` reached from
+  inside a check blocks the thread, so any harness driving Save hangs on a dialog nothing can answer —
+  the same trap as a confirmation inside a `SelectionChanged` handler (§15 territory, but it is a
+  design problem, not an IDE one).
+- **Clear messages at the start of every pass, and as the user types.** A field corrected between two
+  attempts must stop being red immediately; typing clears only, never re-validates, or a half-typed
+  address turns red under the cursor. And clear a message when the control it belongs to is hidden —
+  red text under a collapsed row describes a rule that no longer applies.
+- One shared `Style` for the inline block, not per-field attributes: they must be identical for the eye
+  to learn them, and copies drift.
+
 ## 5. RadioButton/CheckBox sync without reentrancy
 
 Programmatically changing controls fires their own event handlers, causing

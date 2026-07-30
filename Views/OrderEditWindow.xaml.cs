@@ -22,6 +22,12 @@ public partial class OrderEditWindow : Window
     private const string DownpaymentMethodKey = "OrderEdit.DownpaymentMethod";
     private const string FinalBalanceMethodKey = "OrderEdit.FinalBalanceMethod";
     private const string ValidationTitleKey = "OrderEdit.ValidationTitle";
+
+    /// <summary>
+    /// What is currently wrong with the form, in the order it was found. Filled by the checks, read by
+    /// the banner and by the single dialog, cleared at the start of every pass.
+    /// </summary>
+    private readonly List<string> _validationProblems = new();
     // Stored in Order.ServiceDetails like the other alteration categories; marks the whole
     // alteration service as not part of this order. It is the first item in the picker and so
     // the default for a NEW order.
@@ -460,6 +466,7 @@ public partial class OrderEditWindow : Window
     {
         InitializePaymentSectionControls();
         RegisterDecimalTextBoxes();
+        RegisterValidationClearing();
         InitializeCustomMadeRecordsList();
         InitializeCurrencyChoices();
         SelectServiceType(OrderServiceType.Alterations);
@@ -778,81 +785,116 @@ public partial class OrderEditWindow : Window
         }
     }
 
+    /// <summary>
+    /// Validates, marks every problem in place, and raises ONE dialog if anything is wrong.
+    /// </summary>
+    /// <remarks>
+    /// The dialog lives here and nowhere else, which is what makes the rest of validation testable: a
+    /// <c>MessageBox</c> reached from inside a check blocks the thread, so a harness driving Save with
+    /// a blank field would hang on a dialog nothing can answer. <see cref="ValidateForSave"/> marks
+    /// without announcing; this announces what was marked. It also means one dialog listing every
+    /// problem rather than one dialog per field.
+    /// </remarks>
     private bool TryValidateForSave(out OrderStatus status)
     {
+        if (ValidateForSave(out status))
+            return true;
+
+        AnnounceValidationFailure();
+        return false;
+    }
+
+    /// <summary>The testable half: validates and MARKS the form, and never opens a dialog.</summary>
+    private bool ValidateForSave(out OrderStatus status)
+    {
         status = default;
+        ClearValidationErrors();
 
-        if (string.IsNullOrWhiteSpace(OrderNumberBox.Text))
-        {
-            ErrorText.Text = _localization["OrderEdit.Validate.OrderNumber"];
+        if (!TryRequireFilled(RequiredTextFields()))
             return false;
-        }
 
-        if (string.IsNullOrWhiteSpace(CustomerNameBox.Text))
-        {
-            ErrorText.Text = _localization["OrderEdit.Validate.CustomerName"];
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(PhoneNumberBox.Text))
-        {
-            var message = _localization["OrderEdit.Validate.PhoneNumber"];
-            ErrorText.Text = message;
-            MessageBox.Show(message, _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
-            return false;
-        }
-
+        // Present but malformed. Both already write their own inline message.
         if (!ValidatePhoneField())
-        {
-            ErrorText.Text = _localization["OrderEdit.Validate.PhoneInvalid"];
-            PhoneNumberBox.Focus();
-            return false;
-        }
+            return Fail("OrderEdit.Validate.PhoneInvalid", null, PhoneNumberBox);
 
         if (!ValidateEmailField())
-        {
-            ErrorText.Text = _localization["OrderEdit.Validate.EmailInvalid"];
-            EmailBox.Focus();
-            return false;
-        }
+            return Fail("OrderEdit.Validate.EmailInvalid", null, EmailBox);
 
         RefreshComputedTotals();
 
         if (HasPaymentMethodRequiringEmail() && string.IsNullOrWhiteSpace(EmailBox.Text))
-        {
-            var emailMessage = _localization["OrderEdit.Validate.EmailRequired"];
-            ErrorText.Text = emailMessage;
-            MessageBox.Show(emailMessage, _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
-            EmailBox.Focus();
-            return false;
-        }
+            return Fail("OrderEdit.Validate.EmailRequired", EmailErrorText, EmailBox);
 
         if (_totalAmount < 0)
-        {
-            ErrorText.Text = _localization["OrderEdit.Validate.TotalAmount"];
-            return false;
-        }
+            return Fail("OrderEdit.Validate.TotalAmount", null, null);
 
         if ((StatusBox.SelectedItem as ComboBoxItem)?.Tag is not OrderStatus selectedStatus)
-        {
-            ErrorText.Text = _localization["OrderEdit.Validate.Status"];
-            return false;
-        }
+            return Fail("OrderEdit.Validate.Status", null, StatusBox);
 
         if (selectedStatus == OrderStatus.Shipped && string.IsNullOrWhiteSpace(AddressBox.Text))
-        {
-            var addressMessage = _localization["OrderEdit.Validate.AddressRequired"];
-            ErrorText.Text = addressMessage;
-            MessageBox.Show(addressMessage, _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
-            AddressBox.Focus();
-            return false;
-        }
+            return Fail("OrderEdit.Validate.AddressRequired", AddressErrorText, AddressBox);
 
         if (selectedStatus is OrderStatus.Cancelled or OrderStatus.Returned && !ValidateStatusReason())
             return false;
 
         status = selectedStatus;
         return true;
+    }
+
+    /// <summary>
+    /// Every text field that may not be left blank, paired with the message that says so and the block
+    /// it belongs under.
+    /// </summary>
+    /// <remarks>
+    /// A list rather than a run of <c>if</c>s so the surfaces cannot drift apart per field — before
+    /// this, the phone popped up a dialog, the customer name did not, and neither wrote anything under
+    /// its own box. Conditionally-required fields (an address only when shipping, an email only when a
+    /// portion settles by e-transfer) stay as their own checks: their rule is about the rest of the
+    /// form, not about the box.
+    /// </remarks>
+    private IEnumerable<RequiredTextField> RequiredTextFields()
+    {
+        yield return new RequiredTextField(
+            OrderNumberBox, OrderNumberErrorText, _localization["OrderEdit.Validate.OrderNumber"]);
+
+        foreach (var field in CustomerContactFields())
+            yield return field;
+    }
+
+    /// <summary>
+    /// Who the order is for. Required to save, and required before a custom-made record can be
+    /// attached — that record belongs to a customer, so it cannot be taken for an unnamed one.
+    /// </summary>
+    private IEnumerable<RequiredTextField> CustomerContactFields()
+    {
+        yield return new RequiredTextField(
+            CustomerNameBox, CustomerNameErrorText, _localization["OrderEdit.Validate.CustomerName"]);
+        yield return new RequiredTextField(
+            PhoneNumberBox, PhoneErrorText, _localization["OrderEdit.Validate.PhoneNumber"]);
+    }
+
+    private sealed record RequiredTextField(TextBox Box, TextBlock Error, string Message);
+
+    /// <summary>
+    /// Flags every one of <paramref name="fields"/> that is blank, all at once, and focuses the first.
+    /// </summary>
+    /// <remarks>
+    /// One pass, not fail-fast. Fail-fast could only ever name the first missing field, and "the
+    /// customer name and the mobile number are missing" is two facts — a form that discloses them one
+    /// save at a time makes the user learn its rules by trial.
+    /// </remarks>
+    private bool TryRequireFilled(IEnumerable<RequiredTextField> fields)
+    {
+        var missing = fields.Where(field => string.IsNullOrWhiteSpace(field.Box.Text)).ToList();
+        if (missing.Count == 0)
+            return true;
+
+        foreach (var field in missing)
+            SetFieldError(field.Error, field.Message);
+
+        RecordValidationFailure(missing.Select(field => field.Message));
+        missing[0].Box.Focus();
+        return false;
     }
 
     // A cancelled/returned order must always carry a reason: a preset category is required
@@ -862,24 +904,94 @@ public partial class OrderEditWindow : Window
     {
         var category = (StatusReasonCategoryBox.SelectedItem as ComboBoxItem)?.Tag as string;
         if (string.IsNullOrWhiteSpace(category))
-        {
-            var message = _localization["OrderEdit.Validate.StatusReasonRequired"];
-            ErrorText.Text = message;
-            MessageBox.Show(message, _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
-            StatusReasonCategoryBox.Focus();
-            return false;
-        }
+            return Fail("OrderEdit.Validate.StatusReasonRequired", StatusReasonCategoryErrorText, StatusReasonCategoryBox);
 
         if (category == OtherStatusReasonTag && string.IsNullOrWhiteSpace(StatusReasonBox.Text))
-        {
-            var message = _localization["OrderEdit.Validate.StatusReasonOtherRequired"];
-            ErrorText.Text = message;
-            MessageBox.Show(message, _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
-            StatusReasonBox.Focus();
-            return false;
-        }
+            return Fail("OrderEdit.Validate.StatusReasonOtherRequired", StatusReasonErrorText, StatusReasonBox);
 
         return true;
+    }
+
+    /// <summary>
+    /// Reports one validation failure on every surface at once, and returns false so a check can be
+    /// written as <c>return Fail(...)</c>.
+    /// </summary>
+    /// <remarks>
+    /// The three surfaces answer three different questions and a failure needs all of them: the popup
+    /// says something is wrong NOW (the Save button is at the foot of a form taller than the window,
+    /// so a message that only appears elsewhere can be missed entirely), the banner says what, and the
+    /// inline block says where. Routing every check through here is what stops them diverging — the
+    /// previous code had five of eleven checks popping up a dialog and two writing anything under a
+    /// field, with no rule behind which.
+    ///
+    /// <paramref name="inline"/> is null where there is nothing to sit under: a computed total, or a
+    /// check whose own validator has already written the message itself.
+    /// </remarks>
+    private bool Fail(string messageKey, TextBlock? inline, Control? focus)
+    {
+        var message = _localization[messageKey];
+
+        if (inline is not null)
+            SetFieldError(inline, message);
+
+        RecordValidationFailure(new[] { message });
+        focus?.Focus();
+        return false;
+    }
+
+    /// <summary>Adds failures to the banner and to what the dialog will say. No dialog of its own.</summary>
+    /// <remarks>
+    /// Newline-joined rather than run together with <c>Format.ListSeparator</c>: these are whole
+    /// sentences, and "Please enter the customer name, The phone number cannot be empty" reads as a
+    /// mistake in every language that capitalises.
+    /// </remarks>
+    private void RecordValidationFailure(IEnumerable<string> messages)
+    {
+        _validationProblems.AddRange(messages);
+
+        ValidationBannerText.Text = string.Join(Environment.NewLine, _validationProblems);
+        ValidationBanner.Visibility = Visibility.Visible;
+
+        // The foot-of-window line is for a save that THREW; a stale one beside the button would read
+        // as a second, unrelated problem.
+        ErrorText.Text = string.Empty;
+    }
+
+    /// <summary>The one dialog, saying everything that was marked.</summary>
+    private void AnnounceValidationFailure()
+        => MessageBox.Show(
+            string.Join(Environment.NewLine, _validationProblems),
+            _localization[ValidationTitleKey],
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
+
+    /// <summary>
+    /// Wipes the banner and every inline message, so a validation pass reports the form as it is NOW.
+    /// </summary>
+    /// <remarks>
+    /// Without this a field fixed between two attempts keeps its red line, which is worse than never
+    /// having shown one: the user corrected the thing they were told about and the form still accuses
+    /// them of it.
+    /// </remarks>
+    private void ClearValidationErrors()
+    {
+        _validationProblems.Clear();
+        ValidationBannerText.Text = string.Empty;
+        ValidationBanner.Visibility = Visibility.Collapsed;
+
+        foreach (var block in ValidationErrorBlocks())
+            SetFieldError(block, null);
+    }
+
+    private IEnumerable<TextBlock> ValidationErrorBlocks()
+    {
+        yield return OrderNumberErrorText;
+        yield return CustomerNameErrorText;
+        yield return PhoneErrorText;
+        yield return EmailErrorText;
+        yield return AddressErrorText;
+        yield return StatusReasonCategoryErrorText;
+        yield return StatusReasonErrorText;
     }
 
     /// <summary>Adds the new order and returns the number it was given.</summary>
@@ -1184,12 +1296,12 @@ public partial class OrderEditWindow : Window
         if (!string.IsNullOrWhiteSpace(EmailBox.Text))
             return;
 
-        MessageBox.Show(
-            _localization["OrderEdit.Validate.EmailRequired"],
-            _localization[ValidationTitleKey],
-            MessageBoxButton.OK,
-            MessageBoxImage.Warning);
-        EmailBox.Focus();
+        // Through the shared path, so choosing e-transfer marks the email box the same way saving
+        // without one does. It used to raise a dialog and leave the form looking untouched, which is
+        // the case the user is most likely to dismiss and forget.
+        ClearValidationErrors();
+        Fail("OrderEdit.Validate.EmailRequired", EmailErrorText, EmailBox);
+        AnnounceValidationFailure();
     }
 
     private bool IsEtransferRadio(RadioButton radio)
@@ -1343,6 +1455,32 @@ public partial class OrderEditWindow : Window
         return valid;
     }
 
+    /// <summary>
+    /// Clears a field's own message as soon as it is typed into, so the correction is acknowledged
+    /// where it was made rather than at the next Save.
+    /// </summary>
+    /// <remarks>
+    /// Wired in code from one map rather than as five <c>TextChanged</c> attributes in the XAML: the
+    /// pairing of a box with its message block already exists here, and a second copy of it in markup
+    /// is the thing that goes stale when a field is added. Only clears — it does not re-validate, so
+    /// nothing turns red while somebody is halfway through typing an address.
+    /// </remarks>
+    private void RegisterValidationClearing()
+    {
+        var pairs = new (TextBox Box, TextBlock Error)[]
+        {
+            (OrderNumberBox, OrderNumberErrorText),
+            (CustomerNameBox, CustomerNameErrorText),
+            (PhoneNumberBox, PhoneErrorText),
+            (EmailBox, EmailErrorText),
+            (AddressBox, AddressErrorText),
+            (StatusReasonBox, StatusReasonErrorText),
+        };
+
+        foreach (var (box, error) in pairs)
+            box.TextChanged += (_, _) => SetFieldError(error, null);
+    }
+
     private static void SetFieldError(TextBlock target, string? message)
     {
         if (string.IsNullOrEmpty(message))
@@ -1357,21 +1495,19 @@ public partial class OrderEditWindow : Window
         }
     }
 
+    /// <summary>
+    /// The custom-made editor needs a customer to attach its record to. Routed through the same guard
+    /// as Save, so being stopped here marks the same fields in the same places rather than raising a
+    /// dialog and leaving the form looking untouched.
+    /// </summary>
     private bool CanOpenCustomMadeWindow()
     {
-        if (string.IsNullOrWhiteSpace(CustomerNameBox.Text))
-        {
-            MessageBox.Show(_localization["OrderEdit.Validate.CustomerName"], _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
-            return false;
-        }
+        ClearValidationErrors();
+        if (TryRequireFilled(CustomerContactFields()))
+            return true;
 
-        if (string.IsNullOrWhiteSpace(PhoneNumberBox.Text))
-        {
-            MessageBox.Show(_localization["OrderEdit.Validate.PhoneNumber"], _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
-            return false;
-        }
-
-        return true;
+        AnnounceValidationFailure();
+        return false;
     }
 
     private void RegisterDecimalTextBoxes()
@@ -2314,6 +2450,14 @@ public partial class OrderEditWindow : Window
         StatusReasonLabelPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
         StatusReasonCategoryBox.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
 
+        // A reason message must not outlive the reason row. Leaving one behind puts red text under a
+        // control that is no longer there, describing a rule that no longer applies.
+        if (!show)
+        {
+            SetFieldError(StatusReasonCategoryErrorText, null);
+            SetFieldError(StatusReasonErrorText, null);
+        }
+
         if (show && StatusReasonCategoryBox.SelectedIndex < 0)
             StatusReasonCategoryBox.SelectedIndex = 0;
 
@@ -2337,7 +2481,11 @@ public partial class OrderEditWindow : Window
     }
 
     private void OnStatusReasonCategoryChanged(object sender, SelectionChangedEventArgs e)
-        => UpdateOtherReasonRowVisibility(StatusReasonCategoryBox.Visibility == Visibility.Visible);
+    {
+        // Picking a category answers the "choose a reason" message, so it goes.
+        SetFieldError(StatusReasonCategoryErrorText, null);
+        UpdateOtherReasonRowVisibility(StatusReasonCategoryBox.Visibility == Visibility.Visible);
+    }
 
     // Selects the matching preset ComboBoxItem for a loaded order. Legacy records saved
     // before the preset picker existed (or an unrecognized/blank category) fall back to

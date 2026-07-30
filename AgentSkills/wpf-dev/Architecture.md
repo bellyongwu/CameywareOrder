@@ -505,6 +505,14 @@ components are added/renamed or the way pieces fit together changes.
   - `UserPresentation` (static, `Views/`) — localized role name (including "no role") and the stable
     name-hashed avatar brush/initial, shared by the picker, the user manager, the roster and the main
     toolbar so the role-name switch is not copied a fourth time.
+  - **Validation reporting in `OrderEditWindow`** — a refused save marks three surfaces from one path:
+    a `ValidationBanner` above the form and OUTSIDE the `ScrollViewer` (what is wrong, all of it), a
+    `*ErrorText` block under each input (where), and one dialog (that something is wrong now, which the
+    Save button at the foot of a taller-than-the-window form cannot convey). `Fail(key, inline, focus)`
+    and `TryRequireFilled(RequiredTextFields())` are the only reporters; `_validationProblems` is what
+    the banner and the dialog both read. `TryValidateForSave` owns the dialog and delegates the marking
+    to `ValidateForSave`, which is what a harness drives — a `MessageBox` inside a check blocks the
+    thread. `ErrorText` at the foot of the window keeps a separate job: a save that THREW.
   - `ShopLocalizationWindow` — the languages a shop runs in and the currencies it takes, in one
     panel because they are one decision: a language brings the currencies of its market. Languages
     left, a card per ticked language on the right listing what it brings. Opened from a link card in
@@ -513,6 +521,13 @@ components are added/renamed or the way pieces fit together changes.
     from two languages (EUR, under Français and Español) is ONE shared row object**, so the two cards
     are two views of one fact and cannot disagree. Both pickers list only what is ticked, so "opens in
     a language it runs in" and "prices in money it takes" are enforced by what the controls CONTAIN.
+    `OfferedByTickedLanguages()` is what the right pane shows, and `TickedCurrencies()` is scoped to it,
+    so **the panel returns exactly what it shows** — the rows are seeded from every language on the
+    SYSTEM plus whatever the shop already accepted, which is a wider set than the cards display, and a
+    ticked row outside it used to reach the picker and the saved record with no tick box to remove it.
+    `EnsureOneCurrency()` is the floor: clearing the last currency shows the red inline line and
+    re-ticks the first offered one, on every toggle and in the constructor, so an already-invalid shop
+    is repaired as the panel opens rather than refused when it closes.
   - `ShopSetupWindow` — creates a shop and edits one (Local Configuration → Shop Settings). A
     scrolling card layout: shop identity (per-language names, **per-language address**, **phone /
     email / website**, and a **link card into `ShopLocalizationWindow`** carrying a one-line summary

@@ -34,6 +34,9 @@ public partial class ShopLocalizationWindow : Window
     /// </summary>
     private readonly Dictionary<CurrencyType, CurrencyRow> _currencyRows = new();
 
+    /// <summary>Set while the panel re-ticks a currency itself, so the repair does not re-enter.</summary>
+    private bool _repairing;
+
     public ShopLocalizationWindow(
         LocalizationService localization,
         IReadOnlyList<string> installedLanguages,
@@ -52,6 +55,10 @@ public partial class ShopLocalizationWindow : Window
         CurrencyGroupItems.ItemsSource = _groups;
 
         RefreshLanguageBox(preferredLanguage);
+        // Run the guard on the way in, not only on the way out: a shop can arrive holding a currency
+        // no ticked language brings, and the panel would otherwise open on a selection it does not
+        // show. See EnsureOneCurrency.
+        EnsureOneCurrency();
         RefreshCurrencyBox(preferredCurrency);
     }
 
@@ -118,11 +125,19 @@ public partial class ShopLocalizationWindow : Window
     {
         RefreshCurrencyGroups();
         RefreshLanguageBox(LanguageBox.SelectedValue as string);
+        EnsureOneCurrency();
         RefreshCurrencyBox(CurrencyBox.SelectedValue as CurrencyType?);
     }
 
     private void OnCurrencyToggled(object? sender, PropertyChangedEventArgs e)
-        => RefreshCurrencyBox(CurrencyBox.SelectedValue as CurrencyType?);
+    {
+        // EnsureOneCurrency ticks a row when the last one is cleared, which raises this handler again.
+        if (_repairing)
+            return;
+
+        EnsureOneCurrency();
+        RefreshCurrencyBox(CurrencyBox.SelectedValue as CurrencyType?);
+    }
 
     /// <summary>
     /// Rebuilds the right pane from the ticked languages. A language that brings no currency still
@@ -185,14 +200,90 @@ public partial class ShopLocalizationWindow : Window
             CurrencyBox.SelectedIndex = 0;
     }
 
-    private List<CurrencyType> TickedCurrencies()
+    /// <summary>
+    /// Every currency the right pane currently shows a tick box for: what the TICKED languages bring,
+    /// in the offer's order — English's first, CAD before USD.
+    /// </summary>
+    private List<CurrencyType> OfferedByTickedLanguages()
     {
-        var ticked = _currencyRows.Values.Where(row => row.IsSupported).Select(row => row.Currency).ToHashSet();
-        var offered = ShopCurrencies.Offered(_localization);
+        var brought = _languages
+            .Where(row => row.IsInstalled)
+            .SelectMany(row => ShopCurrencies.ForLanguage(row.Code, _localization))
+            .ToHashSet();
 
-        return offered.Where(ticked.Contains)
-            .Concat(ticked.Where(currency => !offered.Contains(currency)))
+        return ShopCurrencies.Offered(_localization).Where(brought.Contains).ToList();
+    }
+
+    /// <summary>The currencies this shop takes: ticked, and shown on this screen.</summary>
+    /// <remarks>
+    /// Scoped to <see cref="OfferedByTickedLanguages"/> — the rows the right pane displays — because a
+    /// row can be ticked and invisible. The rows are seeded from every language installed on the
+    /// SYSTEM plus whatever the shop already accepted, while the cards are grouped by the languages
+    /// this SHOP runs in. Those two sets are not the same: a shop holding CAD and JPY with only
+    /// English and Français ticked had JPY in this record and in the preferred-currency picker, with
+    /// no tick box anywhere to remove it. Observed on a real shop, whose stored set was
+    /// <c>["CAD","JPY"]</c> against <c>["en-US","fr-FR"]</c>.
+    ///
+    /// This replaces an earlier rule that kept such a currency on purpose, so a branch would not
+    /// "silently stop taking money it had said it takes". The intent was right and the mechanism was
+    /// wrong: a tick nobody can see cannot be reviewed, confirmed or withdrawn, and the panel ended up
+    /// returning something it did not show. It now returns exactly what it shows, and what stops a
+    /// shop being left with nothing is <see cref="EnsureOneCurrency"/>. No ORDER is affected either
+    /// way — an order records the currency it was priced in and never reads the shop's.
+    /// </remarks>
+    private List<CurrencyType> TickedCurrencies()
+        => OfferedByTickedLanguages()
+            .Where(currency => _currencyRows.TryGetValue(currency, out var row) && row.IsSupported)
             .ToList();
+
+    /// <summary>
+    /// Keeps the shop on at least one currency. Clearing the last tick is REPAIRED rather than
+    /// refused: the red line says why, and the first currency the panel offers is re-ticked, so the
+    /// panel is never sitting in a state that Done would have to reject.
+    /// </summary>
+    /// <remarks>
+    /// A tick that springs back is normally a defect — one was fixed in this project for exactly that
+    /// — and the difference is the message beside it. Springing back silently reads as a broken
+    /// checkbox; springing back next to a red line naming the rule reads as the rule.
+    ///
+    /// When no language is ticked there is no currency to fall back TO, so it reports the missing
+    /// LANGUAGE instead — the line then always describes the state the panel is actually in.
+    /// <see cref="OnDoneClick"/> remains the last gate for both.
+    /// </remarks>
+    private void EnsureOneCurrency()
+    {
+        if (TickedCurrencies().Count > 0)
+        {
+            // Cleared with its text, and cleared as soon as the state is valid: a red line that
+            // outlives the problem it described is read as a second problem. Inline rather than a
+            // ClearError() helper — a method touching only x:Name fields is mis-flagged S2325 by
+            // SonarLint's single-file pass, which cannot see the XAML-generated partial.
+            ErrorText.Text = string.Empty;
+            ErrorText.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        var offered = OfferedByTickedLanguages();
+        if (offered.Count == 0)
+        {
+            // No language ticked: there is nothing to fall back TO, and the missing language is the
+            // real blocker. Naming it keeps the line describing the state it is actually in — leaving
+            // the currency message up would have it explaining a problem that is no longer the one.
+            ShowError("Shop.Setup.InstalledLanguagesRequired");
+            return;
+        }
+
+        ShowError("Shop.Setup.SupportedCurrenciesRequired");
+
+        _repairing = true;
+        try
+        {
+            _currencyRows[offered[0]].IsSupported = true;
+        }
+        finally
+        {
+            _repairing = false;
+        }
     }
 
     // ── result ────────────────────────────────────────────────────────────────────────────────

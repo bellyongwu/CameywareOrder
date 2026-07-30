@@ -56,6 +56,43 @@ Nothing in flight. v3.0.0 (store location / tax jurisdictions) is **committed to
 
 ---
 
+## Recent work (2026-07-30)
+
+### One path for a refused save: banner + inline message + one dialog
+`OrderEditWindow` had eleven validation checks and no rule behind how they reported — five raised a
+dialog, two wrote a message under their field, and every one set an `ErrorText` sitting at the FOOT of a
+form taller than the window. The customer name got none of the three.
+
+Three surfaces now, each answering a different question, all from `Fail(key, inline, focus)` /
+`TryRequireFilled(fields)`: a dialog (something is wrong NOW), a banner above the form and outside the
+`ScrollViewer` (what), a red line under each input (where). Required-empty fields are collected in ONE
+pass so two missing fields are reported as two — fail-fast could only ever name the first. Messages
+clear at the start of each pass, as the user types, and when the control they belong to is hidden.
+
+`TryValidateForSave` owns the dialog and delegates marking to `ValidateForSave`. That seam is load
+bearing, not tidiness: a `MessageBox` inside a check blocks the thread, so the harness would hang on it
+— the same trap as the reseed confirmation. New `validcheck` harness (41 assertions) drives the marking
+half. Reasoning in `context.md`; the general rules are now `SKILL.md` §4b.
+
+### The currency picker offered a currency with no tick box
+`ShopLocalizationWindow` seeded one row per currency the **system's** languages offer, plus whatever
+the shop already accepted, while the cards on the right are grouped by the languages the **shop** runs
+in. Nothing reconciled the two. A real shop stored `["CAD","JPY"]` against `["en-US","fr-FR"]`, so JPY
+had a ticked row in no card at all — invisible, listed in the preferred-currency picker, written back
+on save, and impossible to remove.
+
+`TickedCurrencies()` is now scoped to what the ticked languages bring, which is exactly what the cards
+show, so **the panel returns exactly what it shows**. That replaced a deliberate rule that kept such a
+currency so a branch would not "silently stop taking money it had said it takes" — right intent, wrong
+mechanism: an invisible tick preserves a value by making it unmanageable. The floor is guarded instead,
+live: `EnsureOneCurrency` shows the red inline line and re-ticks the first offered currency on every
+toggle *and* on the way in, rather than refusing at Done. Full reasoning, and the three other lessons
+this turn produced, in `context.md`.
+
+Diagnosis came from reading `SupportedCurrenciesJson` against `InstalledLanguagesJson` in the live
+database. Every fixture had ticked the language that brought the currency, so the two sets coincided
+and the defect could not appear — the regression test now uses the reported shop's stored state.
+
 ## Recent work (2026-07-29)
 
 ### Store location decides the tax, and whether prices already contain it

@@ -13,6 +13,16 @@ Entry format:
 - Why: <reason / triggering request>
 ```
 
+### 2026-07-30 — §4b: reporting a refused save
+- Changed: `SKILL.md` — new §4b between the money model and the reentrancy section.
+- Why: a request to "modularize the error message box" exposed a form with eleven validation checks and
+  no rule behind how any of them reported — five raised a dialog, two wrote a message under their
+  field, and the summary line sat at the foot of a form taller than the window. The three surfaces
+  (dialog / banner / inline) each answer a different question and a refusal needs all three.
+- Also recorded: collect the blank fields in one pass rather than failing fast (two missing fields are
+  two facts), and keep the dialog in ONE wrapper so the marking half stays testable — a `MessageBox`
+  inside a check blocks the thread and hangs any harness that drives Save.
+
 ### 2026-07-29 — §4a: adding a second pricing mode (tax-inclusive vs tax-exclusive)
 - Changed: `SKILL.md` — new §4a under the money model; §4's breakdown bullet now says to read the
   per-portion tax off the struct rather than re-derive it, and its Chinese label names replaced with

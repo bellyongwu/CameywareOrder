@@ -17,6 +17,74 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-30 01:20 — One validation path: banner + inline message + popup  [DONE]
+- Ask: ">Improve user experience. When new order / modify existing user, the missing of customer name
+  and mobile number should flag red error message on the top section. - Now modualrize the error
+  message box. If an input box is not allowed empty, first it pops up an error message, and secondly,
+  it also metioning the error message in respective place under the input. e.g. 电话号码不能为空 ，
+  this message should be appear under the customer phone area. 请输入客户名称 ， this message should be
+  appear under the customer name area. same as other fields, I can remember email and return/cancel
+  reasons. may have the validation."
+- Starting state, which is the problem: every check sets `ErrorText`, which is at the BOTTOM of the
+  form beside Save; only email and phone have an inline message, and only for the FORMAT check, not
+  the empty one; and the popup fires for 5 of the 11 checks. Customer name has neither.
+- Plan:
+  - [x] `ValidationBanner` under the title and OUTSIDE the `ScrollViewer`; `ErrorText` at the foot keeps
+        only save FAILURES (exceptions)
+  - [x] `Fail(key, inline, focus)` + `TryRequireFilled(fields)` are the only reporters;
+        `_validationProblems` is what the banner and the dialog both read
+  - [x] Inline blocks for order number, customer name, address, status-reason category and text (email
+        and phone already had them), all from one shared `FieldErrorText` style
+  - [x] Required-empty fields collected in ONE pass so name AND phone are both flagged
+  - [x] `RegisterValidationClearing` — typing clears that field's own message; reason messages cleared
+        when the row hides, and the category's when a category is picked
+  - [x] `WarnIfEmailMissing` (e-transfer) and `CanOpenCustomMadeWindow` routed through the same path —
+        both previously raised a dialog and left the form looking untouched
+  - [x] Dialog split into `TryValidateForSave` (announces) / `ValidateForSave` (marks) so the marking
+        half is drivable; a `MessageBox` inside a check blocks the thread and hangs the harness
+  - [x] New `scratchpad/validcheck` (41 assertions); suite runner now 22 harnesses
+- Notes: no new string-table keys — all 12 messages already existed in five languages, and `validcheck`
+  asserts that. One of my own assertions was wrong first: "the error block shares a parent with its
+  input" is false for the reason box, whose `TextBox` sits in a `Grid` so the placeholder can overlay
+  it; restated as "same container, after it". Final: build 0 warnings / 0 errors, no Sonar flags on the
+  changed files, suite **1327 passed / 0 failed across 22 harnesses**, 0 CJK in `.cs`/`.xaml`.
+  Uncommitted along with the v3.0.1 currency-panel fix.
+
+### 2026-07-30 00:05 — Bug: the currency picker offered a currency with no tick box  [DONE]
+- Ask: "Currently I have English and Francais language selected. the corresponding list of all
+  avaialbe currencies symbols are correctly displayed. -Issue: the dropdown didn't display correctly,
+  but keep JPY in the record. -Request: Find the reason and fix the issue." + ">Add a preventer, make
+  sure at least one currency must select for the store. show error message prevent in red text(no pop
+  up alert), then force auto select the first symbol as default"
+- Clarified mid-turn: "we should not have JPY in the dropdown record."
+- Reason, confirmed from the live database rather than reasoned about: shop #1 "Shanghai LeeYonge
+  Bespoke" stored `SupportedCurrenciesJson = ["CAD","JPY"]` against
+  `InstalledLanguagesJson = ["en-US","fr-FR"]`. `BuildCurrencyRows` seeds a row per currency the
+  SYSTEM's languages offer (CAD USD CNY EUR JPY) plus anything the shop accepted, while
+  `RefreshCurrencyGroups` groups cards by the SHOP's ticked languages (English → CAD USD,
+  Français → EUR). JPY therefore had a ticked row in no card at all: invisible, offered in the picker,
+  and written back on save with nothing on screen able to remove it.
+- Plan:
+  - [x] New `OfferedByTickedLanguages()` — what the right pane actually shows, in offer order
+  - [x] `TickedCurrencies()` scoped to it, so the panel returns exactly what it shows. Replaces the
+        earlier "keep an orphaned currency" rule — right intent, wrong mechanism (see `context.md`)
+  - [x] `EnsureOneCurrency()` — live floor guard: red inline text + re-tick the first offered
+        currency, run on every toggle AND in the constructor, `_repairing` guard against reentrancy
+  - [x] Error line cleared as soon as the state is valid (inlined, not a helper — S2325 false positive)
+  - [x] `currencycheck` gained `RunCurrencyWithoutALanguage` using the real shop's stored state as the
+        fixture; the "refused on Done" assertions rewritten for the repair-on-toggle behaviour
+  - [x] Fixed 3 unrelated red assertions in `currencycheck`: the backfill fixture SEARCHED live data
+        for a non-CAD shop and the user had since switched that shop to CAD. It now establishes the
+        state, and picks the shop with the most orders so the precondition cannot go vacuous
+  - [x] Same drift had made a `taxcheck` assertion go QUIET rather than red — `if (jpyShops > 0)`
+        skipped and the tally slipped 351 → 350 with nothing pointing at it. The yen shop is now
+        established and the assertion unconditional; recorded in `context.md` as the worse failure mode
+  - [x] When no language is ticked the red line now names the missing LANGUAGE rather than leaving a
+        currency message describing a state that is no longer the problem
+- Notes: build 0/0. Shop #1's stored `["CAD","JPY"]` is corrected the next time the panel is opened
+  and Done pressed — the panel now returns `["CAD"]`. No order moves: an order records the currency it
+  was priced in and never reads the shop's. Not force-migrated in the database without being asked.
+
 ### 2026-07-29 23:10 — Tax number named by the jurisdiction, asked for only where one is issued  [DONE]
 - Ask: "更改一下wording, 现在称为GST/HST 这种针对加拿大的版本。 如果当地区有针对消费税的才需要给出税号，否则可以不用给。你觉得这种改动合理么"
 - Follow-up ask: "如果改动合理，那么请继续改动，改动完提交到main 请更新相关日志。"

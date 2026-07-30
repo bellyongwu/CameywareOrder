@@ -1546,6 +1546,22 @@ standing in for "the card surcharge". It now derives both the mode and the rate 
 (`TaxJurisdictions.For(...)`, `PaymentTaxRules.Active.RateFor(...)`). Currency was the first thing
 this happened with, tax treatment the second — assume any shop-level setting is next.
 
+And a FOURTH, the same day: **searching live data for a fixture is assuming, not establishing.**
+`currencycheck` proved its currency backfill against `SELECT Id FROM Shops WHERE CurrencyType <> 1`
+and found a real JPY shop for weeks. The moment that shop was switched to CAD in the application,
+three assertions went red and read like a regression in a backfill nobody had touched. A query that
+happens to return a row today is a hard-coded expectation with extra steps: the fixture now *makes*
+the shop non-CAD (`UPDATE Shops SET CurrencyType = …`), and picks the shop with the most orders so the
+"orders start out wrongly marked" precondition cannot be vacuous either.
+
+**And the failure mode to fear is the QUIET one.** `taxcheck` — written the same day, by someone who
+had just recorded the rule above — guarded its yen assertion with `if (jpyShops > 0)`. When the same
+shop changed currency it did not go red: it silently skipped, the harness stayed green, and the tally
+dropped 351 → 350 with nothing pointing at it. Only a remembered number caught it. **A conditional
+assertion is a coverage hole with a timer on it.** If a precondition might not hold, establish it and
+assert it; never wrap the assertion in the condition. The same principle as "no silent caps" — a
+harness that quietly covers less is worse than one that fails, because failure is self-reporting.
+
 ## A checkbox the user cannot untick (2026-07-29)
 
 - **A control's state and the fact it describes are different questions.** The "clear all
@@ -1642,6 +1658,76 @@ per-method rules entirely, and STATE the rate on screen where the matrix used to
 preset that is never read is indistinguishable from a wrong one**: grep every field of a new data
 file for a real consumer before believing the file is wired up — one guarded call site that the
 guard's own condition excludes reads, in a diff, exactly like a wired-up field.
+
+## A refused save needs three surfaces, and one code path (2026-07-30)
+
+`OrderEditWindow` had eleven validation checks and no rule behind how any of them reported: five raised
+a `MessageBox`, two wrote a message under their field, and every one set an `ErrorText` that sits at the
+FOOT of a form taller than the window — where the eye that just clicked Save never goes. The customer
+name got none of the three.
+
+A refused save has to answer three different questions, and each surface answers one:
+
+- **the dialog** — something is wrong NOW (unmissable, which matters when the button is off-screen);
+- **a banner above the form, outside the ScrollViewer** — WHAT is wrong, all of it;
+- **a message under each input** — WHERE.
+
+Getting them consistent is a matter of one path, not of discipline: `Fail(key, inline, focus)` and
+`TryRequireFilled(fields)` are the only things that report, so a new check cannot forget a surface.
+
+Three details that are the actual work:
+
+- **Collect, don't fail fast.** The ask was "the customer name AND the mobile number" — two facts.
+  Fail-fast can only ever name the first, so a user clearing both learns the second rule only after
+  fixing the first. Required-empty fields are gathered in one pass, all marked, all listed.
+- **Clear on the way in, and clear as the user types.** A field corrected between two attempts keeps
+  its red line otherwise, which is worse than never having shown one: they did what they were told and
+  the form still accuses them. Typing clears only — it does not re-validate, so nothing turns red while
+  somebody is halfway through an address.
+- **A message must not outlive its control.** The cancel/return reason row is collapsed unless the
+  status is Cancelled/Returned, so its messages are cleared when the row hides — red text under a
+  control that is no longer there describes a rule that no longer applies.
+
+**And keep the dialog in ONE wrapper.** `TryValidateForSave` shows it; `ValidateForSave` marks and
+returns. That is not tidiness — a `MessageBox` reached from inside a check blocks the thread, so a
+harness driving Save with a blank field hangs on a dialog nothing can answer (the same trap as the
+reseed confirmation). The seam is what makes validation testable at all, and it also buys one dialog
+listing every problem instead of one per field.
+
+## A control the UI never shows cannot govern the value it owns (2026-07-29)
+
+`ShopLocalizationWindow` seeds one currency row per currency the **system's** languages offer, plus
+whatever the shop already accepted; the right-hand cards are grouped by the languages the **shop**
+runs in. Those two sets are not the same, and nothing reconciled them. A shop holding `["CAD","JPY"]`
+with `["en-US","fr-FR"]` ticked therefore had a JPY row that was ticked, invisible, offered in the
+preferred-currency picker, and written back on save — with no tick box anywhere on screen to remove
+it.
+
+The rule: **a panel must return exactly what it shows.** `TickedCurrencies()` is now scoped to what the
+ticked languages bring, which is precisely what the cards display, so the record and the screen cannot
+disagree. Note what this replaced: a deliberate rule that kept such a currency so a branch would not
+"silently stop taking money it had said it takes". The *intent* was right and the mechanism was wrong —
+an invisible tick cannot be reviewed, confirmed or withdrawn, so it preserved the value by making it
+unmanageable. Where a value must survive, give it a control; where it cannot have one, let it go and
+guard the floor instead.
+
+Two things that made this hard to see, both worth copying:
+
+- The bug was **only** visible in real data. Every fixture ticked the language that brought the
+  currency, so the two sets coincided and the defect could not appear. The regression test now uses
+  the reported shop's exact stored state as its fixture.
+- The stored record is the evidence. `SupportedCurrenciesJson` vs `InstalledLanguagesJson`, read
+  straight out of the live database, turned "the dropdown looks wrong" into a one-line diagnosis. Probe
+  the data before reasoning about the screen.
+
+**The floor guard belongs live, not on OK.** "At least one currency" was already checked in the Done
+handler, which is a refusal — the user clears the last tick, sees nothing, and is told only when they
+try to leave. It now repairs on every toggle *and on the way in*: red inline text naming the rule, and
+the first offered currency re-ticked. A tick that springs back is normally a defect (see "a checkbox
+the user cannot untick"); the difference is the message beside it. Springing back silently reads as a
+broken checkbox, springing back next to a red line reads as the rule. Repairing on the way in matters
+too, because a shop can arrive already invalid — and the red line is what stops that repair being a
+silent rewrite of its record.
 
 ## One market's paperwork must not live in the shared string table (2026-07-29)
 

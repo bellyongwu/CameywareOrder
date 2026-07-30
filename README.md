@@ -11,6 +11,45 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v3.1.0 — 2026-07-30
+
+**A refused save now tells you what is wrong, where, and at the moment it refuses.** The order editor
+had eleven validation checks and no rule behind how any of them reported: five raised a dialog, two
+wrote a message under the field they were about, and all of them set a summary line at the *foot* of a
+form taller than the window — where the eye that just clicked Save never lands. A missing customer name
+produced no dialog and no message anywhere near the box.
+
+- **Three surfaces, one code path.** A banner above the form (outside the scrolling area, so it cannot
+  scroll away) lists everything that is wrong; a red line under each offending input says which field;
+  and a single dialog makes sure the refusal cannot be missed. Every check reports through one place, so
+  a new one cannot forget a surface.
+- **Missing fields are reported together, not one per attempt.** Clear the customer name and the phone
+  number and both are named, both marked. Previously the form stopped at the first, so the second rule
+  was only discovered after fixing the first.
+- **Corrections are acknowledged where they are made.** Typing into a flagged field clears its message
+  immediately rather than leaving it red until the next save, and a cancel/return reason's message
+  disappears with the row when the status changes.
+- Covered: order number, customer name, phone, email (both malformed and required-for-e-transfer),
+  shipping address, and the cancel/return reason and its free-text detail. Opening the custom-made
+  editor without a customer marks the same fields the same way instead of only raising a dialog.
+
+Quality gates: build **0 warnings / 0 errors**, no SonarLint issue on a changed file, and **1327
+assertions across 22 harnesses**, all passing.
+
+### v3.0.1 — 2026-07-30 (hotfix)
+
+- **Fixed: the languages-and-currencies panel offered a currency it showed no tick box for.** The
+  currency rows behind the panel are built from every language installed on the *system*, while the
+  cards on the right are grouped by the languages the *shop* runs in. A shop accepting Canadian dollars
+  and yen but running only in English and French therefore had yen listed in its preferred-currency
+  picker, and saved back into its record, with nothing on screen able to remove it. The panel now
+  returns exactly what it shows: a currency none of the shop's languages brings is dropped. No order is
+  affected — an order records the currency it was priced in and never reads its shop's.
+- **A shop can no longer be left accepting no currency at all.** Clearing the last one now says so
+  immediately, in red, beside the buttons rather than in a dialog, and re-ticks the first currency the
+  panel offers. It is checked as the panel opens too, so a shop that was already in that state is put
+  right rather than refused when it closes.
+
 ### v3.0.0 — 2026-07-29
 
 Tax moved onto the axis it actually belongs on: the **store's location**. A shop now says where it
