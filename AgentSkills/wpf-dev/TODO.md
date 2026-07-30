@@ -17,6 +17,119 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-30 11:40 — A phone number carries the country it belongs to  [DONE]
+- Ask: "New feature: Update phone number validation based on store's location. the internation code
+  should show up front. with a dropbox with flag and internation code. by default, use the selected
+  currency as the default international code and validation."
+- Follow-up ask: "it impacts the new order, but not the exsiting order. meanwhile you can update the
+  DB mocking data based on the stores selection. For demo purpose"
+- Decisions taken from the user before building:
+  - **Default from LOCATION, currency only as the fallback.** The ask said both; they disagree for a
+    Spanish shop, because the currency→location table maps EUR to France. Location is never worse.
+  - **Flags drawn in XAML, not emoji.** Windows ships no country-flag glyphs — Segoe UI Emoji renders
+    a regional-indicator pair as the two LETTERS. Emoji here would have shipped "CA" in a box.
+  - **National length per country** (CA/US 10, CN 11, JP 10–11, FR 9, ES 9), keyed on the country
+    picked for THAT number rather than on the store, so a Canadian shop can still take a Chinese
+    customer's mobile.
+  - **All five phone fields**, through one control — they already share one validator, and a second
+    rule would be free to drift.
+  - **New records only.** An existing order keeps the loose rule, so nothing already saved starts
+    refusing to save over a phone number typed before the rule existed.
+- Plan:
+  - [ ] `Settings/System/Defaults/phone-countries.json` — code, dial code, national digit lengths.
+        Its OWN file: a phone rule is not a tax preset, and the two lists need not stay the same length
+  - [ ] `Models/PhoneCountry` + `Services/PhoneCountries` — shaped after TaxJurisdiction(s)
+  - [ ] `ContactValidation.IsValidPhone(phone, country)` beside the loose one, which stays for
+        legacy records
+  - [ ] `Themes/Flags.xaml` — six vector flags as `DrawingImage`
+  - [ ] `Views/Controls/PhoneNumberBox` — flag + dial-code picker in front of the number box
+  - [ ] Wire into OrderEdit, CustomMadeService, ShopSetup, StoreMembers, UserManagement
+  - [x] Keys ×5 languages; demo data refreshed per store location (BACKUP first)
+- Notes: New — `phone-countries.json`, `Models/PhoneCountry`, `Services/PhoneCountries`,
+  `Themes/Flags.xaml` (6 `DrawingImage`), `Controls/PhoneNumberField`. Changed —
+  `ContactValidation.IsValidNationalPhone` beside the loose rule, `SystemSettingsPaths`,
+  `AppTheme.xaml` (nests Flags by ABSOLUTE pack URI), and the five windows. Eight keys × five
+  languages (`Country.*`, `OrderEdit.Validate.PhoneDigits`); `OrderEdit.Validate.PhoneInvalid` reused
+  rather than duplicated.
+  `RequiredTextField` now holds `Func<bool> IsBlank` + `Action Focus` with a `For(TextBox…)` factory,
+  so the phone stays inside the one-pass required check that reports two missing fields as two.
+  Demo data: `scratchpad/phoneseed` (dry-run by default), backup written to
+  `orders.db.bak-20260730-113900`, 193 rows — shops whose number already fits their country were KEPT
+  and only had the dial code normalised onto the front.
+  Build 0 warnings / 0 errors. New `phonecheck` harness (112 assertions) added to `run-suite.ps1`;
+  `validcheck`, `balancecheck`, `namecheck` and `shopcheck` repointed at the new field, and
+  `formatcheck` gained (key, language) cognate exemptions for `Country.CN` in es-ES and
+  `Country.CA`/`Country.FR` in fr-FR — those names ARE the same word in those languages.
+  **`shopcheck` caught a real app bug, not a rename**: `SystemSettingsPaths` probed for the FOLDER
+  `Settings/System` rather than for the file wanted, so a root holding a partial copy won the probe and
+  the missing files degraded silently to built-in fallbacks — a stored "+86 …" then matched no dial
+  code and rendered as `+1 +86 20 1234 5678`. Now probed per file. Flags verified by rendering them
+  (`scratchpad/flagshot`), since "has a flag resource" passes just as happily for a blot. Six S2325 flags on the control are the documented
+  standalone-analysis false positive (the full build, which sees the generated `x:Name` partial,
+  reports none) and are resolved with one justified class-level `[SuppressMessage]`.
+  CJK sweep clean. Lessons in `context.md`, components in `Architecture.md`.
+- Known, reported not fixed: shop #10 "Shanghai LeeYonge Bespoke" is located `CA-BC`, so it seeded
+  Canadian numbers. Changing a shop's LOCATION also changes its tax treatment, which is the user's
+  call and not a phone-number task.
+
+### 2026-07-30 10:06 — A tax-inclusive order explains itself in its own words  [DONE]
+- Ask: "改变计税的breakdown， 当服务已经包含税的时候我们的wording需要更改。 对于已经选择了相应国家的地区，
+  此时计税方式也需要一定变化。税前服务总价标签要改为服务总价（含税），定金税率和尾款税率不再发生变化，那些含税的地区消费税
+  或者增值税是一致的。然后 在定金阶段就不需要给出price breakdown了。在尾款支付阶段， 只需要给出这几个， 比如中国：1.
+  服务总价（含税），已收定金，应收尾款，和剩余尾款。 然后就说明一下，已含增值税（6%） 多少多少。看看我说的还有哪些遗漏的 再做"
+- Gaps found in the ask and settled with the user before building:
+  - **The tax has a NAME, and it is not the same name everywhere.** The ask says 增值税 because the
+    example is China; Japan's is a consumption tax and the EU's is VAT. Only the generic
+    `Order.Fields.IncludedTax` existed. Decision: a jurisdiction DECLARES its tax name, exactly as it
+    already declares its tax number — new `taxNameLabel` → `TaxName.<name>` key.
+  - **A cleared final balance would state nothing it was paid.** The four requested rows leave
+    `Order.Fields.FinalBalance` at zero and no row saying what came in. Decision: show
+    `Order.Fields.ReceivedFinalBalance` as a fifth row when it is non-zero.
+  - **The rate box.** Kept, with the stage dropped from its label (there is one rate), because the
+    deposit stage now has no breakdown at all and this is the only place the rate appears there.
+  - **The receipt and the detail panel have the same defect** — one bare `价内税额` line, no rate, no
+    name. Decision: they follow the same wording.
+  - Also carried, unasked but the same bug: `Order.Fields.PreTaxDownpayment` labels a deposit that is
+    likewise tax-inclusive here.
+- Plan:
+  - [ ] `taxNameLabel` in the shipped presets + `TaxJurisdiction.TaxNameLabel/TaxNameKey/TaxName()`,
+        `TaxJurisdictions.TaxName(shop, loc)`, defaulting to a generic name where none is declared
+  - [ ] Keys ×5 languages: `TaxName.{Vat,ConsumptionTax,GstHst,SalesTax,Generic}`,
+        `Order.Fields.{InclusiveServiceTotal,InclusiveDownpayment,IncludedTaxLabel,IncludedTaxRateLabel}`
+  - [ ] `Order.IncludedTaxRatePercent` — the rate a saved inclusive order quotes
+  - [ ] `TaxLabelConverter` takes the order + a section, so one label serves screen, panel and receipt
+  - [ ] `OrderEditWindow`: mode-dependent price/deposit labels, stage-free rate label, deposit
+        breakdown collapsed, and a compact inclusive final panel per section (4 rows + note)
+  - [x] `MainWindow` detail rows + `AddReceiptTotals` line
+  - [x] `taxcheck`: repair for the Canada collapse, then cover the inclusive panel
+- Notes: `tax-jurisdictions.json` (+`taxNameLabel` on CN/JP/FR/ES and a `taxNameComment`),
+  `TaxJurisdiction` (`TaxNameLabel`/`TaxNameKey`/`TaxName`), `TaxJurisdictions.TaxName`,
+  `Order.IncludedTaxRatePercent`, `TaxLabelConverter` (rewritten: takes the order, `static Label`),
+  `MainWindow.xaml` detail row + `AddReceiptTotals`, `OrderEditWindow.xaml`/`.cs` (per section: named
+  price/deposit labels, `FinalInclusivePanel`, 11 new `PaymentSectionControls` members;
+  `UpdateInclusiveBreakdown`, mode-aware `UpdateTaxLabel`, `UpdateSectionVisibility(c, pricesIncludeTax)`),
+  seven keys × five languages. Build 0 warnings / 0 errors. `taxcheck` 323 assertions green, including a
+  new section that drives the ORDER WINDOW in both modes; suite 1346 passed / 2 failed, both in
+  `langcheck` and both pre-existing live-DATA drift — no shop in the live database installs ja-JP, so
+  "at least one shop installs every shipped language" cannot pass (see the entry below on adding a
+  language being a data task). Not touched: it is the user's own shop configuration.
+  CJK sweep clean over code + shipped data. Lessons in `context.md`, component map in `Architecture.md`.
+
+### 2026-07-30 09:30 — Canada: sales tax added separately, and one entry rather than three  [DONE]
+- Ask: "Make Canada sales tax added separately.  the same as US" → then "Do not split Canada by
+  regions, but keep the exsiting functions to detect country regions for tax rate"
+- Notes: `CA-ON`/`CA-AB`/`CA-BC` (13/5/12%) collapsed to one `CA` at `standardRatePercent: 0`, so a
+  Canadian shop is seeded TAX FREE and enters the rate it collects — the same treatment the US entry
+  already had, and the display name now says so in all five languages. `DefaultCode` and the built-in
+  fallback moved with it. The region machinery is deliberately intact: codes stay free-form, the
+  `TaxJurisdiction.CA-*` label keys stay in every language file marked dormant, and
+  **`TaxJurisdictions.For` now widens an unshipped regional code to its country** (`CA-ON` → `CA`,
+  `US-CA` → `US`, `JP-13` → `JP`) before falling back to the home market — without it every shop
+  already stored under a provincial code landed on the home market by luck. `Find` stays strict.
+  No migration rewrites a stored code, so a re-added province takes effect by itself. Verified against
+  the shipped file with a throwaway probe; `taxcheck` went red on the collapse and is repaired as part
+  of the entry above. Build 0 warnings, publish refreshed.
+
 ### 2026-07-30 03:10 — Store Management: delete / delist / download / restore / reinitialize  [DONE]
 - Ask: "UI Improve: Enlarge Select Shop panel. Make sure it has enough room for more buttons listed
   below for admin rights. Add new feature for admin right called Store Management, it will requires a

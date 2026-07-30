@@ -170,6 +170,41 @@ public class Order
     [NotMapped]
     public decimal TotalTax => AlterationTax + ClothingTax + CustomMadeTax;
 
+    /// <summary>
+    /// The one rate this order's embedded tax was carved out at, for the line that states it
+    /// ("Includes VAT (6%)"). Zero when nothing here is taxed, or on a tax-EXCLUSIVE order, where
+    /// there is no single rate to quote in the first place.
+    /// </summary>
+    /// <remarks>
+    /// Reading the FIRST non-zero section rate is exact rather than approximate, and only in this
+    /// mode: an inclusive order takes its rate from the jurisdiction, so every section and both
+    /// portions of each carry the same number by construction — see
+    /// <c>TaxJurisdictions.IncludedTaxRatePercent</c> and <c>OrderEditWindow.ApplyStageTaxRates</c>.
+    /// The rates are read from the ORDER, not from the shop, because they were frozen at save: a
+    /// receipt reprinted after the government moves the rate must still quote the rate it charged.
+    ///
+    /// Guarded on <see cref="PricesIncludeTax"/> rather than left general, because in the exclusive
+    /// mode the sections legitimately differ — a cash deposit at 0% beside a card balance at 13% —
+    /// and "the first non-zero one" would then be a number no line of the order actually agrees with.
+    /// </remarks>
+    [NotMapped]
+    public decimal IncludedTaxRatePercent
+    {
+        get
+        {
+            if (!PricesIncludeTax)
+                return 0m;
+
+            foreach (var rate in new[] { AlterationTaxRate, CustomMadeTaxRate, ClothingTaxRate })
+            {
+                if (rate is > 0m)
+                    return rate.Value;
+            }
+
+            return 0m;
+        }
+    }
+
     // Actually-received deposits across sections (received deposit): each nominal deposit
     // plus its tax when that deposit was paid by card. A deposit only counts once the shop
     // has confirmed it with the section's "deposit received" tick — an amount typed into

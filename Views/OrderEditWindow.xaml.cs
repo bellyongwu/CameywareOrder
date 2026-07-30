@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -159,6 +160,28 @@ public partial class OrderEditWindow : Window
         public required TextBlock FinalReceivedDownpaymentLabel { get; init; }
         public required TextBlock FinalReceivedBalanceLabel { get; init; }
 
+        // The section's price and its deposit are quoted PRE-TAX where tax is added at settlement and
+        // TAX-INCLUSIVE where it is not, so both labels are chosen per order rather than bound in
+        // markup — mislabelling these is a wrong price, not a wrong word.
+        public required TextBlock PriceLabel { get; init; }
+        public required TextBlock DepositLabel { get; init; }
+
+        // Tax-INCLUSIVE counterpart of FinalBreakdownPanel: the price, what has been taken, what is
+        // owed, and one line naming the tax already inside the price. Exactly one of the two panels is
+        // ever visible. See the markup for why they are separate rather than one panel with rows
+        // collapsed.
+        public required StackPanel FinalInclusivePanel { get; init; }
+        public required TextBlock IncTotalText { get; init; }
+        public required TextBlock IncReceivedDepositLabel { get; init; }
+        public required TextBlock IncReceivedDepositText { get; init; }
+        public required TextBlock IncDueBalanceText { get; init; }
+        public required TextBlock IncResidualText { get; init; }
+        public required TextBlock IncReceivedBalanceLabel { get; init; }
+        public required TextBlock IncReceivedBalanceText { get; init; }
+        // "Includes VAT (6%)" — the tax's own name for this location, and the rate it was carved out at.
+        public required TextBlock IncTaxLabel { get; init; }
+        public required TextBlock IncTaxText { get; init; }
+
         // True when the section carries order items, which is what makes the service part of
         // this order at all. A section without items sits out the payment flow entirely; one
         // WITH items takes part even when it is priced at zero.
@@ -211,7 +234,9 @@ public partial class OrderEditWindow : Window
         // window without saving cannot leave a gap in the shop's receipt run.
         OrderNumberBox.Text = OrderNumberFormatter.Preview(ShopContext.Instance.RequireCurrent(), DateTime.Now);
         CustomerNameBox.Text = string.Empty;
-        PhoneNumberBox.Text = string.Empty;
+        // Opens on the country this shop's customers usually call from — its LOCATION, not its
+        // currency, which is only the fallback for a shop that never said where it is.
+        PhoneField.ResetTo(ShopContext.Instance.Current);
         EmailBox.Text = string.Empty;
         AddressBox.Text = string.Empty;
         StatusReasonBox.Text = string.Empty;
@@ -250,7 +275,9 @@ public partial class OrderEditWindow : Window
         OrderNumberBox.Text = existing.OrderNumber;
         OrderNumberBox.IsEnabled = false;
         CustomerNameBox.Text = existing.CustomerName;
-        PhoneNumberBox.Text = existing.PhoneNumber;
+        // A stored number that names no country — everything saved before this control existed — comes
+        // back whole, under the shop's country, and is not rewritten.
+        PhoneField.Load(existing.PhoneNumber, ShopContext.Instance.Current);
         EmailBox.Text = existing.Email;
         AddressBox.Text = existing.Address;
         StatusReasonBox.Text = existing.StatusReason;
@@ -333,7 +360,7 @@ public partial class OrderEditWindow : Window
         ClearAllBalancesCheck.IsEnabled = false;
 
         CustomerNameBox.IsReadOnly = true;
-        PhoneNumberBox.IsReadOnly = true;
+        PhoneField.IsReadOnlyField = true;
         EmailBox.IsReadOnly = true;
         AddressBox.IsReadOnly = true;
         StatusReasonBox.IsReadOnly = true;
@@ -559,6 +586,18 @@ public partial class OrderEditWindow : Window
             FinalReceivedBalanceText = AlterationFinalReceivedBalanceText,
             FinalReceivedDownpaymentLabel = AlterationFinalReceivedDownpaymentLabel,
             FinalReceivedBalanceLabel = AlterationFinalReceivedBalanceLabel,
+            PriceLabel = AlterationPriceLabel,
+            DepositLabel = AlterationDepositLabel,
+            FinalInclusivePanel = AlterationFinalInclusivePanel,
+            IncTotalText = AlterationIncTotalText,
+            IncReceivedDepositLabel = AlterationIncReceivedDepositLabel,
+            IncReceivedDepositText = AlterationIncReceivedDepositText,
+            IncDueBalanceText = AlterationIncDueBalanceText,
+            IncResidualText = AlterationIncResidualText,
+            IncReceivedBalanceLabel = AlterationIncReceivedBalanceLabel,
+            IncReceivedBalanceText = AlterationIncReceivedBalanceText,
+            IncTaxLabel = AlterationIncTaxLabel,
+            IncTaxText = AlterationIncTaxText,
             // Alterations has no item list of its own, so a typed price — even "0" — is what
             // marks the service as present on this order. Choosing the "None" category switches
             // the service off outright, so it stops counting whatever the price box holds.
@@ -597,6 +636,18 @@ public partial class OrderEditWindow : Window
             FinalReceivedBalanceText = CustomMadeFinalReceivedBalanceText,
             FinalReceivedDownpaymentLabel = CustomMadeFinalReceivedDownpaymentLabel,
             FinalReceivedBalanceLabel = CustomMadeFinalReceivedBalanceLabel,
+            PriceLabel = CustomMadePriceLabel,
+            DepositLabel = CustomMadeDepositLabel,
+            FinalInclusivePanel = CustomMadeFinalInclusivePanel,
+            IncTotalText = CustomMadeIncTotalText,
+            IncReceivedDepositLabel = CustomMadeIncReceivedDepositLabel,
+            IncReceivedDepositText = CustomMadeIncReceivedDepositText,
+            IncDueBalanceText = CustomMadeIncDueBalanceText,
+            IncResidualText = CustomMadeIncResidualText,
+            IncReceivedBalanceLabel = CustomMadeIncReceivedBalanceLabel,
+            IncReceivedBalanceText = CustomMadeIncReceivedBalanceText,
+            IncTaxLabel = CustomMadeIncTaxLabel,
+            IncTaxText = CustomMadeIncTaxText,
             HasItems = () => _customMadeRecords.Count > 0,
             SectionTotal = () => _customMadeSumTotal,
             SectionSubtotal = () => _customMadeSubtotal,
@@ -631,6 +682,18 @@ public partial class OrderEditWindow : Window
             FinalReceivedBalanceText = ClothingFinalReceivedBalanceText,
             FinalReceivedDownpaymentLabel = ClothingFinalReceivedDownpaymentLabel,
             FinalReceivedBalanceLabel = ClothingFinalReceivedBalanceLabel,
+            PriceLabel = ClothingPriceLabel,
+            DepositLabel = ClothingDepositLabel,
+            FinalInclusivePanel = ClothingFinalInclusivePanel,
+            IncTotalText = ClothingIncTotalText,
+            IncReceivedDepositLabel = ClothingIncReceivedDepositLabel,
+            IncReceivedDepositText = ClothingIncReceivedDepositText,
+            IncDueBalanceText = ClothingIncDueBalanceText,
+            IncResidualText = ClothingIncResidualText,
+            IncReceivedBalanceLabel = ClothingIncReceivedBalanceLabel,
+            IncReceivedBalanceText = ClothingIncReceivedBalanceText,
+            IncTaxLabel = ClothingIncTaxLabel,
+            IncTaxText = ClothingIncTaxText,
             HasItems = () => _clothingItemRows.Count > 0,
             SectionTotal = () => _clothingSumTotal,
             SectionSubtotal = () => _clothingSubtotal,
@@ -701,7 +764,28 @@ public partial class OrderEditWindow : Window
         CustomMadeFinalMethodLabel.Text = finalLabel;
         ClothingDownMethodLabel.Text = downLabel;
         ClothingFinalMethodLabel.Text = finalLabel;
+
+        // What the price and deposit boxes actually hold depends on the order's pricing mode, so they
+        // are named here rather than bound in markup. Set from THIS order's frozen mode, not the
+        // shop's current one: a receipt and the screen behind it must agree about a saved order even
+        // after the shop moves.
+        var priceLabel = _localization[PricesIncludeTax
+            ? "Order.Fields.InclusiveServiceTotal"
+            : "Order.Fields.PreTaxServiceTotal"];
+        var depositLabel = _localization[PricesIncludeTax
+            ? "Order.Fields.InclusiveDownpayment"
+            : "Order.Fields.PreTaxDownpayment"];
+
+        foreach (var section in AllPaymentSections)
+        {
+            section.PriceLabel.Text = priceLabel;
+            section.DepositLabel.Text = depositLabel;
+        }
     }
+
+    /// <summary>The three service sections, for the settings that apply to all of them alike.</summary>
+    private PaymentSectionControls[] AllPaymentSections
+        => new[] { _alterationControls, _customMadeControls, _clothingControls };
 
     private void InitializeCustomMadeRecordsList()
     {
@@ -814,8 +898,13 @@ public partial class OrderEditWindow : Window
             return false;
 
         // Present but malformed. Both already write their own inline message.
+        // ValidatePhoneField has already written the inline message, which names the country and the
+        // digits it expects; the banner takes the general one so it stays one line per problem.
         if (!ValidatePhoneField())
-            return Fail("OrderEdit.Validate.PhoneInvalid", null, PhoneNumberBox);
+        {
+            PhoneField.FocusNumber();
+            return Fail("OrderEdit.Validate.PhoneInvalid", null, null);
+        }
 
         if (!ValidateEmailField())
             return Fail("OrderEdit.Validate.EmailInvalid", null, EmailBox);
@@ -854,7 +943,7 @@ public partial class OrderEditWindow : Window
     /// </remarks>
     private IEnumerable<RequiredTextField> RequiredTextFields()
     {
-        yield return new RequiredTextField(
+        yield return RequiredTextField.For(
             OrderNumberBox, OrderNumberErrorText, _localization["OrderEdit.Validate.OrderNumber"]);
 
         foreach (var field in CustomerContactFields())
@@ -867,13 +956,28 @@ public partial class OrderEditWindow : Window
     /// </summary>
     private IEnumerable<RequiredTextField> CustomerContactFields()
     {
-        yield return new RequiredTextField(
+        yield return RequiredTextField.For(
             CustomerNameBox, CustomerNameErrorText, _localization["OrderEdit.Validate.CustomerName"]);
         yield return new RequiredTextField(
-            PhoneNumberBox, PhoneErrorText, _localization["OrderEdit.Validate.PhoneNumber"]);
+            () => PhoneField.IsBlank, PhoneField.FocusNumber, PhoneErrorText,
+            _localization["OrderEdit.Validate.PhoneNumber"]);
     }
 
-    private sealed record RequiredTextField(TextBox Box, TextBlock Error, string Message);
+    /// <summary>
+    /// One field that may not be left blank: how to ask whether it is, how to put the caret in it, and
+    /// what to say.
+    /// </summary>
+    /// <remarks>
+    /// Two closures rather than the <c>TextBox</c> this used to hold, because the phone is no longer a
+    /// TextBox — it is a country picker and a number, and "blank" means the number half. Keeping the
+    /// TextBox here would have meant lifting the phone out of the one-pass check, and the whole point
+    /// of that pass is that two missing fields are reported as two.
+    /// </remarks>
+    private sealed record RequiredTextField(Func<bool> IsBlank, Action Focus, TextBlock Error, string Message)
+    {
+        public static RequiredTextField For(TextBox box, TextBlock error, string message)
+            => new(() => string.IsNullOrWhiteSpace(box.Text), () => box.Focus(), error, message);
+    }
 
     /// <summary>
     /// Flags every one of <paramref name="fields"/> that is blank, all at once, and focuses the first.
@@ -885,7 +989,7 @@ public partial class OrderEditWindow : Window
     /// </remarks>
     private bool TryRequireFilled(IEnumerable<RequiredTextField> fields)
     {
-        var missing = fields.Where(field => string.IsNullOrWhiteSpace(field.Box.Text)).ToList();
+        var missing = fields.Where(field => field.IsBlank()).ToList();
         if (missing.Count == 0)
             return true;
 
@@ -893,7 +997,7 @@ public partial class OrderEditWindow : Window
             SetFieldError(field.Error, field.Message);
 
         RecordValidationFailure(missing.Select(field => field.Message));
-        missing[0].Box.Focus();
+        missing[0].Focus();
         return false;
     }
 
@@ -1050,7 +1154,8 @@ public partial class OrderEditWindow : Window
     private void ApplyEditableFields(Order order, OrderSaveData data)
     {
         order.CustomerName = CustomerNameBox.Text.Trim();
-        order.PhoneNumber = PhoneNumberBox.Text.Trim();
+        // Stored with its dial code in front, in the same column it always used: "+1 905-401-6667".
+        order.PhoneNumber = PhoneField.FullNumber;
         order.Email = string.IsNullOrWhiteSpace(EmailBox.Text) ? null : EmailBox.Text.Trim();
         order.Address = string.IsNullOrWhiteSpace(AddressBox.Text) ? null : AddressBox.Text.Trim();
         ApplyStatusReasonFields(order, data.Status);
@@ -1341,7 +1446,7 @@ public partial class OrderEditWindow : Window
             _localization,
             defaultOrderNumber: OrderNumberBox.Text,
             defaultCustomerName: CustomerNameBox.Text,
-            defaultPhoneNumber: PhoneNumberBox.Text,
+            defaultPhoneNumber: PhoneField.FullNumber,
             defaultEmail: EmailBox.Text,
             isReadOnly: false)
         {
@@ -1375,7 +1480,7 @@ public partial class OrderEditWindow : Window
             existing: selected,
             defaultOrderNumber: OrderNumberBox.Text,
             defaultCustomerName: CustomerNameBox.Text,
-            defaultPhoneNumber: PhoneNumberBox.Text,
+            defaultPhoneNumber: PhoneField.FullNumber,
             defaultEmail: EmailBox.Text,
             isReadOnly: recordReadOnly)
         {
@@ -1435,7 +1540,7 @@ public partial class OrderEditWindow : Window
 
     private void OnEmailBoxLostFocus(object sender, RoutedEventArgs e) => ValidateEmailField();
 
-    private void OnPhoneNumberBoxLostFocus(object sender, RoutedEventArgs e) => ValidatePhoneField();
+    private void OnPhoneFieldCommitted(object? sender, EventArgs e) => ValidatePhoneField();
 
     // Requirement 5b - an entered email must be well formed. Empty stays allowed
     // here because the payment flow separately enforces email for e-transfer.
@@ -1446,12 +1551,26 @@ public partial class OrderEditWindow : Window
         return valid;
     }
 
-    // Requirement 5c: common phone validation — optional leading +, digits and
-    // separators only, with 7-15 actual digits.
+    /// <summary>
+    /// The number must be a possible one in the country picked for it — but only on an order being
+    /// created.
+    /// </summary>
+    /// <remarks>
+    /// An EXISTING order keeps the loose rule it was saved under: shape, and 7 to 15 digits. Applying
+    /// the national-length rule to one would mean an order taken last year could not be saved again —
+    /// its status could not be corrected, its balance could not be cleared — until somebody re-typed a
+    /// phone number they have no way to verify. The new rule earns its strictness at the point where
+    /// the customer is standing there to be asked.
+    /// </remarks>
     private bool ValidatePhoneField()
     {
-        var valid = ContactValidation.IsValidPhone(PhoneNumberBox.Text);
-        SetFieldError(PhoneErrorText, valid ? null : _localization["OrderEdit.Validate.PhoneInvalid"]);
+        var valid = _existing is null ? PhoneField.IsValid : PhoneField.IsValidLoose;
+        var message = _existing is null
+            ? PhoneField.ValidationMessage
+            : _localization["OrderEdit.Validate.PhoneInvalid"];
+
+        SetFieldError(PhoneErrorText, valid ? null : message);
+        PhoneField.MarkInvalid(!valid);
         return valid;
     }
 
@@ -1471,7 +1590,6 @@ public partial class OrderEditWindow : Window
         {
             (OrderNumberBox, OrderNumberErrorText),
             (CustomerNameBox, CustomerNameErrorText),
-            (PhoneNumberBox, PhoneErrorText),
             (EmailBox, EmailErrorText),
             (AddressBox, AddressErrorText),
             (StatusReasonBox, StatusReasonErrorText),
@@ -1479,6 +1597,15 @@ public partial class OrderEditWindow : Window
 
         foreach (var (box, error) in pairs)
             box.TextChanged += (_, _) => SetFieldError(error, null);
+
+        // The phone is not a TextBox any more, and its message must clear on a change to EITHER half —
+        // switching the country is as much a correction as retyping the digits.
+        PhoneField.PhoneChanged += (_, _) =>
+        {
+            SetFieldError(PhoneErrorText, null);
+            PhoneField.MarkInvalid(false);
+        };
+        PhoneField.PhoneCommitted += OnPhoneFieldCommitted;
     }
 
     private static void SetFieldError(TextBlock target, string? message)
@@ -1921,6 +2048,10 @@ public partial class OrderEditWindow : Window
             FormatCurrency(money.FinalTax));
 
         UpdateDueAndReceivedLines(c, money);
+        // Called from here rather than from each section's refresh: both panels are then written in
+        // one pass, from one reading of the split, for every section — which is the only way the two
+        // views of the same order stay in step.
+        UpdateInclusiveBreakdown(c, money);
     }
 
     /// <summary>
@@ -1956,6 +2087,48 @@ public partial class OrderEditWindow : Window
         var balanceReceived = c.BalanceClearedCheck.IsChecked is true;
         c.FinalReceivedBalanceText.Text = FormatCurrency(balanceReceived ? balanceDue : 0m);
         SetLineVisible(c.FinalReceivedBalanceLabel, c.FinalReceivedBalanceText, balanceReceived);
+
+        // The inclusive panel is filled from the SAME figures, in the same pass. Filling it from its
+        // own reading of the split is how the two panels would come to disagree about one order.
+        c.IncReceivedDepositText.Text = FormatCurrency(depositReceived ? depositDue : 0m);
+        SetLineVisible(c.IncReceivedDepositLabel, c.IncReceivedDepositText, depositReceived);
+        c.IncDueBalanceText.Text = FormatCurrency(balanceDue);
+        c.IncReceivedBalanceText.Text = FormatCurrency(balanceReceived ? balanceDue : 0m);
+        SetLineVisible(c.IncReceivedBalanceLabel, c.IncReceivedBalanceText, balanceReceived);
+    }
+
+    /// <summary>
+    /// The rows the inclusive panel owns alone: the tax-inclusive price, what is still outstanding,
+    /// and the line naming the tax already inside that price. Everything else it shows is written by
+    /// <see cref="UpdateDueAndReceivedLines"/>, which fills both panels from one reading of the split.
+    /// </summary>
+    /// <remarks>
+    /// Runs whatever the pricing mode: the panel it writes into is collapsed in the other one, and a
+    /// guard here would only mean the rows were stale the moment a shop's location changed under an
+    /// order being edited. The tax line is skipped when nothing is taxed — "Includes VAT (0%): 0.00"
+    /// is noise, and a zero-rated inclusive order is exactly the case where it would appear.
+    /// </remarks>
+    private void UpdateInclusiveBreakdown(PaymentSectionControls c, SectionPayment money)
+    {
+        // Same rule as every other residual on this screen: a cleared section owes nothing.
+        var residual = c.BalanceClearedCheck.IsChecked is true ? 0m : money.FinalCharge;
+
+        c.IncTotalText.Text = FormatCurrency(money.Subtotal);
+        c.IncResidualText.Text = FormatCurrency(residual);
+
+        // Either stage rate would do — they are the same number in this mode — but the tax must
+        // actually be non-zero as well, or a section priced at zero would advertise a rate it never
+        // charged anything at.
+        var rate = c.DepositTaxRate;
+        var taxed = money.Tax > 0m && rate > 0m;
+        if (taxed)
+        {
+            c.IncTaxLabel.Text = _localization.Format("Order.Fields.IncludedTaxLabel",
+                ShopTaxName, rate.ToString("0.##", CultureInfo.CurrentCulture));
+            c.IncTaxText.Text = FormatCurrency(money.Tax);
+        }
+
+        SetLineVisible(c.IncTaxLabel, c.IncTaxText, taxed);
     }
 
     private static void SetLineVisible(TextBlock label, TextBlock value, bool visible)
@@ -1970,12 +2143,28 @@ public partial class OrderEditWindow : Window
     private string PaymentMethodName(PaymentMethod? method)
         => _localization[$"PaymentMethod.{PaymentTaxRules.Normalize(method ?? PaymentMethod.None)}"];
 
-    // Names the stage the tax box is editing, so a rate typed here is never mistaken for
-    // the other portion's rate.
+    /// <summary>
+    /// Names the stage the tax box is showing, so a rate here is never mistaken for the other
+    /// portion's — except where the price already contains the tax, which has no stages to tell
+    /// apart: a value-added tax is a property of the sale, so the deposit and the final balance
+    /// carry the same rate by construction. There the label names the TAX instead ("VAT Rate"),
+    /// which is also the only place that rate appears once the deposit-stage breakdown is gone.
+    /// </summary>
     private void UpdateTaxLabel(PaymentSectionControls c)
-        => c.TaxLabel.Text = _localization[c.ShowingFinalRate
+    {
+        if (PricesIncludeTax)
+        {
+            c.TaxLabel.Text = _localization.Format("Order.Fields.IncludedTaxRateLabel", ShopTaxName);
+            return;
+        }
+
+        c.TaxLabel.Text = _localization[c.ShowingFinalRate
             ? "Order.Fields.FinalTaxRate"
             : "Order.Fields.DepositTaxRate"];
+    }
+
+    /// <summary>What this shop's location calls its tax, from its <c>TaxName.*</c> key.</summary>
+    private string ShopTaxName => TaxJurisdictions.TaxName(ShopContext.Instance.Current, _localization);
 
     private void RefreshAlterationTotals()
     {
@@ -2686,9 +2875,10 @@ public partial class OrderEditWindow : Window
 
     private void UpdatePaymentVisibility()
     {
-        UpdateSectionVisibility(_alterationControls);
-        UpdateSectionVisibility(_customMadeControls);
-        UpdateSectionVisibility(_clothingControls);
+        var pricesIncludeTax = PricesIncludeTax;
+        UpdateSectionVisibility(_alterationControls, pricesIncludeTax);
+        UpdateSectionVisibility(_customMadeControls, pricesIncludeTax);
+        UpdateSectionVisibility(_clothingControls, pricesIncludeTax);
 
         ApplySectionLock(_alterationControls);
         ApplySectionLock(_customMadeControls);
@@ -2729,7 +2919,10 @@ public partial class OrderEditWindow : Window
         c.DownpaymentBox.IsEnabled = !sectionLocked && c.DownNone.IsChecked is not true;
     }
 
-    private static void UpdateSectionVisibility(PaymentSectionControls c)
+    // The pricing mode arrives as an argument rather than being read off the window, so this stays a
+    // pure function of the section and the mode — the panel it decides between is chosen by the
+    // ORDER's frozen mode, and a saved order must keep the layout it was saved with.
+    private static void UpdateSectionVisibility(PaymentSectionControls c, bool pricesIncludeTax)
     {
         var anyDownSelected = c.DownNone.IsChecked is true || c.DownEtransfer.IsChecked is true
             || c.DownDebit.IsChecked is true || c.DownCredit.IsChecked is true || c.DownCash.IsChecked is true;
@@ -2756,12 +2949,25 @@ public partial class OrderEditWindow : Window
 
         // Deposit breakdown: visible whenever a payment method is chosen and deposit is not yet received.
         // This covers both "normal" deposit flow and the DownNone case so tax/total are always visible.
-        c.DepositBreakdownPanel.Visibility = (anyDownSelected && !depositCompleted)
+        //
+        // NEVER where the price already contains the tax. Every line it carries is then either the
+        // price restated (a "pre-tax" subtotal that is not pre-tax, a post-tax total equal to it) or a
+        // deposit tax nobody is being asked for — the deposit due IS the deposit typed in. Four rows
+        // of arithmetic that always cancels is not a breakdown, it is a puzzle.
+        c.DepositBreakdownPanel.Visibility = (!pricesIncludeTax && anyDownSelected && !depositCompleted)
             ? Visibility.Visible
             : Visibility.Collapsed;
 
         // Final breakdown: visible only when deposit is explicitly marked received (inside FinalBlock).
-        c.FinalBreakdownPanel.Visibility = depositCompleted
+        c.FinalBreakdownPanel.Visibility = (!pricesIncludeTax && depositCompleted)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        // Its inclusive counterpart follows the FINAL BLOCK, not the deposit tick: with "None" chosen
+        // there is no deposit to receive and the section goes straight to its balance, so keying this
+        // to depositCompleted would leave such an order showing no figures at all — the deposit panel
+        // that used to cover that case is gone in this mode.
+        c.FinalInclusivePanel.Visibility = (pricesIncludeTax && (isNone || depositCompleted))
             ? Visibility.Visible
             : Visibility.Collapsed;
     }

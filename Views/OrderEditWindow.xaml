@@ -5,6 +5,7 @@
         xmlns:loc="clr-namespace:CameywareOrder.Localization"
         xmlns:model="clr-namespace:CameywareOrder.Models"
         xmlns:anim="clr-namespace:CameywareOrder.Animations"
+        xmlns:ctrl="clr-namespace:CameywareOrder.Controls"
     Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.NewTitle], Mode=OneWay}" Height="1160" Width="1240"
         WindowStartupLocation="CenterOwner"
     MinHeight="900"
@@ -289,7 +290,10 @@
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}"/>
                             </StackPanel>
                             <StackPanel Grid.Row="1" Grid.Column="3" Margin="0,8">
-                                <TextBox x:Name="PhoneNumberBox" Padding="6,4" LostFocus="OnPhoneNumberBoxLostFocus"/>
+                                <!-- Carries the country the number belongs to; the shop's location only
+                                     decides what it opens on. Validation and the stored "+1 …" string
+                                     are the control's, so every phone field in the app agrees. -->
+                                <ctrl:PhoneNumberField x:Name="PhoneField"/>
                                 <TextBlock x:Name="PhoneErrorText" Style="{StaticResource FieldErrorText}"/>
                             </StackPanel>
 
@@ -463,7 +467,10 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                    <!-- Text is set in code-behind: this box holds a PRE-TAX price where tax is added
+                                         at settlement and a TAX-INCLUSIVE one where it is not, and mislabelling it is
+                                         a wrong price rather than a wrong word. See RefreshPaymentLabels. -->
+                                    <TextBlock Grid.Column="0" x:Name="AlterationPriceLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
                                     <TextBox Grid.Column="1" x:Name="AlterationPriceBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnAlterationValuesChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
 
                                     <!-- Text is set in code-behind: the box edits the deposit rate until the
@@ -491,7 +498,9 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                        <!-- Also mode-dependent: the deposit is quoted in the same terms as the price
+                                             above it. Text set in code-behind. -->
+                                        <TextBlock Grid.Column="0" x:Name="AlterationDepositLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
                                         <TextBox Grid.Column="1" x:Name="AlterationDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
                                     </Grid>
 
@@ -587,6 +596,50 @@
                                                 <TextBlock Grid.Row="11" Grid.Column="1" x:Name="AlterationFinalReceivedBalanceText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#047857"/>
                                             </Grid>
                                         </StackPanel>
+
+                                        <!-- The same stage, in a tax-INCLUSIVE market's terms. A SEPARATE panel rather
+                                             than rows collapsed inside the one above, for two reasons: most of that
+                                             panel is exclusive arithmetic that has no meaning here (a pre-tax subtotal,
+                                             a tax added on, a post-tax total), and the rows that do survive want a
+                                             different ORDER — a customer is told the price, what they have paid, and
+                                             what is left, in that sequence. Grid.Row is fixed in markup, so reusing the
+                                             rows would have meant re-numbering them from code, which is exactly how two
+                                             views of one calculation drift apart. Both panels read the same
+                                             SectionPayment; only one is ever visible. -->
+                                        <StackPanel x:Name="AlterationFinalInclusivePanel" Margin="0,10,0,4" Visibility="Collapsed">
+                                            <Border Height="1" Background="#E5E7EB" Margin="0,0,0,8"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.InclusiveServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="AlterationIncTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="AlterationIncReceivedDepositLabel" Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#047857"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="AlterationIncReceivedDepositText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#047857"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.DueFinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="AlterationIncDueBalanceText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="AlterationIncResidualText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#B91C1C"/>
+                                                <TextBlock x:Name="AlterationIncReceivedBalanceLabel" Grid.Row="4" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedFinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#047857"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="AlterationIncReceivedBalanceText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#047857"/>
+                                                <Border Grid.Row="5" Grid.ColumnSpan="2" Height="1" Background="#E5E7EB" Margin="0,8,14,6"/>
+                                                <!-- Label set in code-behind: it names the tax and its rate, neither of
+                                                     which markup can reach. The figure beside it was carved OUT of the
+                                                     total above, not added to it. -->
+                                                <TextBlock x:Name="AlterationIncTaxLabel" Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Margin="0,4" TextWrapping="Wrap" Foreground="#4B5563"/>
+                                                <TextBlock Grid.Row="6" Grid.Column="1" x:Name="AlterationIncTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#4B5563"/>
+                                            </Grid>
+                                        </StackPanel>
                                         <Grid Margin="0,10,0,0" HorizontalAlignment="Left">
                                             <CheckBox x:Name="AlterationBalanceClearedCheck" HorizontalAlignment="Left" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
                                             <Border x:Name="AlterationBalanceClearedStrike" Style="{StaticResource NotApplicableCheckBoxStrike}" Width="{Binding ActualWidth, ElementName=AlterationBalanceClearedCheck}"/>
@@ -635,7 +688,8 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                    <!-- Mode-dependent, set in code-behind; see AlterationPriceLabel. -->
+                                    <TextBlock Grid.Column="0" x:Name="CustomMadePriceLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
                                     <TextBlock Grid.Column="1" x:Name="CustomMadePriceText" Margin="0,8,14,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
 
                                     <!-- Text is set in code-behind (stage-aware); see AlterationTaxLabel. -->
@@ -662,7 +716,7 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                        <TextBlock Grid.Column="0" x:Name="CustomMadeDepositLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
                                         <TextBox Grid.Column="1" x:Name="CustomMadeDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
                                     </Grid>
 
@@ -758,6 +812,40 @@
                                                 <TextBlock Grid.Row="11" Grid.Column="1" x:Name="CustomMadeFinalReceivedBalanceText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#047857"/>
                                             </Grid>
                                         </StackPanel>
+
+                                        <!-- Tax-inclusive counterpart; see AlterationFinalInclusivePanel for why it is
+                                             a separate panel rather than rows hidden in the one above. -->
+                                        <StackPanel x:Name="CustomMadeFinalInclusivePanel" Margin="0,10,0,4" Visibility="Collapsed">
+                                            <Border Height="1" Background="#E5E7EB" Margin="0,0,0,8"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.InclusiveServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="CustomMadeIncTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="CustomMadeIncReceivedDepositLabel" Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#047857"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="CustomMadeIncReceivedDepositText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#047857"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.DueFinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="CustomMadeIncDueBalanceText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="CustomMadeIncResidualText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#B91C1C"/>
+                                                <TextBlock x:Name="CustomMadeIncReceivedBalanceLabel" Grid.Row="4" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedFinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#047857"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="CustomMadeIncReceivedBalanceText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#047857"/>
+                                                <Border Grid.Row="5" Grid.ColumnSpan="2" Height="1" Background="#E5E7EB" Margin="0,8,14,6"/>
+                                                <TextBlock x:Name="CustomMadeIncTaxLabel" Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Margin="0,4" TextWrapping="Wrap" Foreground="#4B5563"/>
+                                                <TextBlock Grid.Row="6" Grid.Column="1" x:Name="CustomMadeIncTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#4B5563"/>
+                                            </Grid>
+                                        </StackPanel>
                                         <Grid Margin="0,10,0,0" HorizontalAlignment="Left">
                                             <CheckBox x:Name="CustomMadeBalanceClearedCheck" HorizontalAlignment="Left" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.BalanceCleared], Mode=OneWay}" Checked="OnPaymentOptionChanged" Unchecked="OnPaymentOptionChanged"/>
                                             <Border x:Name="CustomMadeBalanceClearedStrike" Style="{StaticResource NotApplicableCheckBoxStrike}" Width="{Binding ActualWidth, ElementName=CustomMadeBalanceClearedCheck}"/>
@@ -793,7 +881,8 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                    <!-- Mode-dependent, set in code-behind; see AlterationPriceLabel. -->
+                                    <TextBlock Grid.Column="0" x:Name="ClothingPriceLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
                                     <TextBlock Grid.Column="1" x:Name="ClothingPriceText" Margin="0,8,14,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
 
                                     <!-- Text is set in code-behind (stage-aware); see AlterationTaxLabel. -->
@@ -820,7 +909,7 @@
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
 
-                                        <TextBlock Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PreTaxDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
+                                        <TextBlock Grid.Column="0" x:Name="ClothingDepositLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
                                         <TextBox Grid.Column="1" x:Name="ClothingDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
                                     </Grid>
 
@@ -914,6 +1003,40 @@
                                                 <TextBlock Grid.Row="10" Grid.Column="1" x:Name="ClothingFinalDueBalanceText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
                                                 <TextBlock x:Name="ClothingFinalReceivedBalanceLabel" Grid.Row="11" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedFinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#047857"/>
                                                 <TextBlock Grid.Row="11" Grid.Column="1" x:Name="ClothingFinalReceivedBalanceText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#047857"/>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <!-- Tax-inclusive counterpart; see AlterationFinalInclusivePanel for why it is
+                                             a separate panel rather than rows hidden in the one above. -->
+                                        <StackPanel x:Name="ClothingFinalInclusivePanel" Margin="0,10,0,4" Visibility="Collapsed">
+                                            <Border Height="1" Background="#E5E7EB" Margin="0,0,0,8"/>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="120"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.InclusiveServiceTotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="0" Grid.Column="1" x:Name="ClothingIncTotalText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="ClothingIncReceivedDepositLabel" Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedDownpayment], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#047857"/>
+                                                <TextBlock Grid.Row="1" Grid.Column="1" x:Name="ClothingIncReceivedDepositText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#047857"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.DueFinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="2" Grid.Column="1" x:Name="ClothingIncDueBalanceText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.FinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4"/>
+                                                <TextBlock Grid.Row="3" Grid.Column="1" x:Name="ClothingIncResidualText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#B91C1C"/>
+                                                <TextBlock x:Name="ClothingIncReceivedBalanceLabel" Grid.Row="4" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ReceivedFinalBalance], Mode=OneWay}" VerticalAlignment="Center" Margin="0,4" Foreground="#047857"/>
+                                                <TextBlock Grid.Row="4" Grid.Column="1" x:Name="ClothingIncReceivedBalanceText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#047857"/>
+                                                <Border Grid.Row="5" Grid.ColumnSpan="2" Height="1" Background="#E5E7EB" Margin="0,8,14,6"/>
+                                                <TextBlock x:Name="ClothingIncTaxLabel" Grid.Row="6" Grid.Column="0" VerticalAlignment="Center" Margin="0,4" TextWrapping="Wrap" Foreground="#4B5563"/>
+                                                <TextBlock Grid.Row="6" Grid.Column="1" x:Name="ClothingIncTaxText" Margin="8,4,14,4" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#4B5563"/>
                                             </Grid>
                                         </StackPanel>
                                         <Grid Margin="0,10,0,0" HorizontalAlignment="Left">

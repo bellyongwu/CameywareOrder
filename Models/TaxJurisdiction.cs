@@ -32,13 +32,15 @@ public sealed class TaxJurisdiction
         decimal standardRatePercent,
         bool pricesIncludeTax,
         CurrencyType defaultCurrency,
-        string? taxNumberLabel = null)
+        string? taxNumberLabel = null,
+        string? taxNameLabel = null)
     {
         Code = code;
         StandardRatePercent = standardRatePercent;
         PricesIncludeTax = pricesIncludeTax;
         DefaultCurrency = defaultCurrency;
         TaxNumberLabel = taxNumberLabel;
+        TaxNameLabel = taxNameLabel;
     }
 
     /// <summary>
@@ -107,6 +109,36 @@ public sealed class TaxJurisdiction
 
     /// <summary>Whether a business here is issued a tax number worth asking for and printing.</summary>
     public bool CollectsTaxNumber => !string.IsNullOrWhiteSpace(TaxNumberLabel);
+
+    /// <summary>
+    /// What this market calls the TAX ITSELF, as the suffix of a <c>TaxName.&lt;name&gt;</c> key —
+    /// <c>Vat</c>, <c>ConsumptionTax</c>. Null where none is declared.
+    /// </summary>
+    /// <remarks>
+    /// A different question from <see cref="TaxNumberLabel"/>, and the two must not be collapsed into
+    /// one: Japan issues a qualified-invoice NUMBER for a consumption TAX, so a shop naming its tax
+    /// after its tax number would print the wrong word on every receipt. China and the EU happen to
+    /// share <c>Vat</c> here because a value-added tax is the same idea in both, and each language
+    /// file spells that one key its own way.
+    ///
+    /// Only read where prices INCLUDE the tax, which is why the Canadian and US entries declare none:
+    /// a market that adds tax at settlement shows it as its own line, and <c>Order.Fields.TaxAmount</c>
+    /// already names that line. Declaring a name they never print would be data nothing reads.
+    /// </remarks>
+    public string? TaxNameLabel { get; }
+
+    /// <summary>
+    /// The string-table key naming this tax, falling back to the generic name so an inclusive
+    /// jurisdiction added without one still reads as a tax rather than as a missing key.
+    /// </summary>
+    public string TaxNameKey => string.IsNullOrWhiteSpace(TaxNameLabel) ? "TaxName.Generic" : $"TaxName.{TaxNameLabel}";
+
+    /// <summary>What to call this tax, in the current language.</summary>
+    public string TaxName(LocalizationService localization)
+    {
+        ArgumentNullException.ThrowIfNull(localization);
+        return localization[TaxNameKey];
+    }
 
     /// <summary>
     /// The string-table key naming this tax number. Falls back to the generic name, so a number

@@ -2,6 +2,19 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:loc="clr-namespace:CameywareOrder.Localization"
                     xmlns:ctrl="clr-namespace:CameywareOrder.Controls">
+    <ResourceDictionary.MergedDictionaries>
+        <!-- Merged HERE rather than in App.xaml so that anything pulling in the theme gets the flags
+             with it — the assertion harnesses merge this one dictionary by hand, and a picker whose
+             flag resource resolved only inside the running app would throw in every one of them.
+
+             The URI is ABSOLUTE, naming this assembly, and that is load-bearing. A relative
+             "/Themes/Flags.xaml" resolves against the application that is LOADING the dictionary, not
+             the assembly that declares it — so the moment a harness exe merged this file it went
+             looking for Themes/Flags.xaml inside ITSELF and threw "Cannot locate resource" before a
+             single window opened. -->
+        <ResourceDictionary Source="pack://application:,,,/CameywareOrder;component/Themes/Flags.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
     <!-- The application's single visual language, merged in App.xaml so every window inherits it.
          Three copies of a button template drift, and they drift silently — nothing fails when only
          two of them get a fix.

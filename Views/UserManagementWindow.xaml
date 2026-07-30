@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:CameywareOrder.Localization"
         xmlns:anim="clr-namespace:CameywareOrder.Animations"
+        xmlns:ctrl="clr-namespace:CameywareOrder.Controls"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.UserManagement], Mode=OneWay}"
         Height="720" Width="1020"
         MinHeight="600" MinWidth="900"
@@ -308,7 +309,7 @@
                                     <StackPanel Grid.Column="0" Margin="0,0,10,0">
                                         <TextBlock Style="{StaticResource FieldLabel}"
                                                    Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Phone], Mode=OneWay}"/>
-                                        <TextBox x:Name="ContactPhoneBox"/>
+                                        <ctrl:PhoneNumberField x:Name="ContactPhoneField"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Margin="10,0,0,0">
                                         <TextBlock Style="{StaticResource FieldLabel}"

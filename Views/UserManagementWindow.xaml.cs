@@ -158,7 +158,7 @@ public partial class UserManagementWindow : Window
         FirstNameBox.Text = selected?.FirstName ?? string.Empty;
         LastNameBox.Text = selected?.LastName ?? string.Empty;
         LoginBox.Text = row.UserName;
-        ContactPhoneBox.Text = selected?.PhoneNumber ?? string.Empty;
+        ContactPhoneField.Load(selected?.PhoneNumber, ShopContext.Instance.Current);
         ContactEmailBox.Text = selected?.Email ?? string.Empty;
         ContactErrorText.Visibility = Visibility.Collapsed;
 
@@ -412,7 +412,9 @@ public partial class UserManagementWindow : Window
         userName = row.UserName;
 
         // The same rules the order form applies to a customer's details.
-        if (!ContactValidation.IsValidPhone(ContactPhoneBox.Text))
+        // An existing account keeps the loose rule — see StoreMembersWindow for why editing a record
+        // saved before the country rule must not be blocked by it.
+        if (!ContactPhoneField.IsValidLoose)
         {
             ShowContactError("OrderEdit.Validate.PhoneInvalid");
             return false;
@@ -443,7 +445,7 @@ public partial class UserManagementWindow : Window
         var result = AuthenticationService.Instance.UpdateAccountProfile(
             row.UserName,
             new AccountProfile(login, FirstNameBox.Text, LastNameBox.Text,
-                ContactPhoneBox.Text, ContactEmailBox.Text));
+                ContactPhoneField.FullNumber, ContactEmailBox.Text));
 
         if (result != AccountOperationResult.Success)
         {

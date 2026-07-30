@@ -48,4 +48,36 @@ public static class ContactValidation
         var digits = value.Count(char.IsDigit);
         return digits is >= 7 and <= 15;
     }
+
+    /// <summary>
+    /// Whether a NATIONAL number — the part after the dial code — is a possible number in
+    /// <paramref name="country"/>: the right shape, and one of the digit counts that country uses.
+    /// </summary>
+    /// <remarks>
+    /// The country is the one PICKED FOR THIS NUMBER, never the shop's own. A Toronto shop takes a
+    /// visiting customer's Shanghai mobile, and checking that against Canada's ten digits would refuse
+    /// a number that is perfectly correct.
+    ///
+    /// Kept beside <see cref="IsValidPhone(string?)"/> rather than replacing it. The loose rule is what
+    /// every record saved before this feature was validated under, and it stays the rule for those:
+    /// tightening retroactively would mean an order from last year could no longer be saved at all
+    /// until someone re-typed a phone number they have no way to verify. New records get this one.
+    ///
+    /// A null country means the number names no country the build ships — a legacy number carrying an
+    /// unrecognised prefix — so the loose rule answers instead of a rule for a country nobody chose.
+    /// </remarks>
+    public static bool IsValidNationalPhone(string? national, PhoneCountry? country)
+    {
+        var value = national?.Trim() ?? string.Empty;
+        if (value.Length == 0)
+            return true;
+
+        if (!PhoneShape.IsMatch(value))
+            return false;
+
+        if (country is null)
+            return IsValidPhone(value);
+
+        return country.AcceptsDigitCount(value.Count(char.IsDigit));
+    }
 }

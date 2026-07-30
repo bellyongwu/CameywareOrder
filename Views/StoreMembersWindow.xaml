@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:CameywareOrder.Localization"
         xmlns:anim="clr-namespace:CameywareOrder.Animations"
+        xmlns:ctrl="clr-namespace:CameywareOrder.Controls"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Title], Mode=OneWay}"
         Height="760" Width="1060"
         MinHeight="620" MinWidth="940"
@@ -240,7 +241,7 @@
                                 <StackPanel Grid.Row="3" Grid.Column="0" Margin="0,0,10,14">
                                     <TextBlock Style="{StaticResource FieldLabel}"
                                                Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Phone], Mode=OneWay}"/>
-                                    <TextBox x:Name="NewPhoneNumberBox"/>
+                                    <ctrl:PhoneNumberField x:Name="NewPhoneField"/>
                                 </StackPanel>
                                 <StackPanel Grid.Row="3" Grid.Column="1" Margin="10,0,0,14">
                                     <TextBlock Style="{StaticResource FieldLabel}"
@@ -357,7 +358,7 @@
                                         <StackPanel Grid.Column="0" Margin="0,0,10,0">
                                             <TextBlock Style="{StaticResource FieldLabel}"
                                                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Phone], Mode=OneWay}"/>
-                                            <TextBox x:Name="PhoneNumberBox" LostFocus="OnPhoneNumberBoxLostFocus"/>
+                                            <ctrl:PhoneNumberField x:Name="PhoneField"/>
                                             <TextBlock x:Name="PhoneErrorText" Foreground="#B91C1C" FontSize="12"
                                                        TextWrapping="Wrap" Margin="0,4,0,0" Visibility="Collapsed"/>
                                         </StackPanel>

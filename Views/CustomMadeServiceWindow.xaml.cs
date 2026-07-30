@@ -73,7 +73,10 @@ public partial class CustomMadeServiceWindow : Window
         _workingRecord = existing is null ? new CustomMadeServiceRecord() : Clone(existing);
 
         CustomerNameBox.Text = _workingRecord.CustomerName = existing?.CustomerName ?? defaultCustomerName ?? string.Empty;
-        PhoneNumberBox.Text = _workingRecord.PhoneNumber = existing?.PhoneNumber ?? defaultPhoneNumber ?? string.Empty;
+        // Carried over from the order behind this window when it has one, so the record opens on the
+        // country that order's customer was already recorded under rather than on the shop's default.
+        _workingRecord.PhoneNumber = existing?.PhoneNumber ?? defaultPhoneNumber ?? string.Empty;
+        PhoneField.Load(_workingRecord.PhoneNumber, ShopContext.Instance.Current);
         EmailBox.Text = _workingRecord.Email = existing?.Email ?? defaultEmail;
 
         InitializeGarmentState();
@@ -117,7 +120,7 @@ public partial class CustomMadeServiceWindow : Window
         ReadOnlyNotice.Visibility = Visibility.Visible;
 
         CustomerNameBox.IsReadOnly = true;
-        PhoneNumberBox.IsReadOnly = true;
+        PhoneField.IsReadOnlyField = true;
         EmailBox.IsReadOnly = true;
         CustomPriceBox.IsReadOnly = true;
         GarmentSelectorPanel.IsEnabled = false;
@@ -293,7 +296,7 @@ public partial class CustomMadeServiceWindow : Window
         BuildGarmentsIntoRecord();
 
         var customerName = CustomerNameBox.Text.Trim();
-        var phoneNumber = PhoneNumberBox.Text.Trim();
+        var phoneNumber = PhoneField.FullNumber;
         if (string.IsNullOrWhiteSpace(customerName))
         {
             ErrorText.Text = _localization["OrderEdit.Validate.CustomerName"];
@@ -648,7 +651,7 @@ public partial class CustomMadeServiceWindow : Window
         var infoRows = new List<(string Label, string Value)>();
         AddInfoRow(infoRows, L("Order.Fields.OrderNumber"), _defaultOrderNumber);
         AddInfoRow(infoRows, L("Order.Fields.CustomerName"), CustomerNameBox.Text);
-        AddInfoRow(infoRows, L("Order.Fields.PhoneNumber"), PhoneNumberBox.Text);
+        AddInfoRow(infoRows, L("Order.Fields.PhoneNumber"), PhoneField.FullNumber);
         AddInfoRow(infoRows, L("Order.Fields.Email"), EmailBox.Text);
         AddInfoRow(infoRows, L("OrderEdit.Panel.MeasurementMode"), GetModeLabel(GetSelectedMode(), languageCode));
         AddInfoRow(infoRows, L("OrderEdit.Panel.AgeType"), $"{GetAgeGroupLabel(languageCode)} / {GetAgeTypeLabel(_workingRecord.AgeType, languageCode)}");

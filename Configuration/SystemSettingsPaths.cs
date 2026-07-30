@@ -22,17 +22,47 @@ public static class SystemSettingsPaths
 {
     private const string SettingsFolder = "Settings";
     private const string SystemFolder = "System";
+    private const string DefaultsFolder = "Defaults";
 
     /// <summary>Per-language string tables, one document per language.</summary>
     public static string LanguagesDirectory => Path.Combine(SystemDirectory, "Languages");
 
     /// <summary>Defaults that ship with the build (see app-defaults.json).</summary>
-    public static string DefaultsDirectory => Path.Combine(SystemDirectory, "Defaults");
+    public static string DefaultsDirectory => Path.Combine(SystemDirectory, DefaultsFolder);
 
-    public static string AppDefaultsFile => Path.Combine(DefaultsDirectory, "app-defaults.json");
+    public static string AppDefaultsFile => DefaultsFile("app-defaults.json");
 
     /// <summary>Tax presets keyed by store location (see tax-jurisdictions.json).</summary>
-    public static string TaxJurisdictionsFile => Path.Combine(DefaultsDirectory, "tax-jurisdictions.json");
+    public static string TaxJurisdictionsFile => DefaultsFile("tax-jurisdictions.json");
+
+    /// <summary>Dial codes and national number lengths per country (see phone-countries.json).</summary>
+    public static string PhoneCountriesFile => DefaultsFile("phone-countries.json");
+
+    /// <summary>
+    /// Locates one shipped defaults file, probing the same two roots as <see cref="SystemDirectory"/>
+    /// but asking whether THE FILE is there rather than whether a folder is.
+    /// </summary>
+    /// <remarks>
+    /// The distinction is not academic. <see cref="SystemDirectory"/> returns the first root that has
+    /// a <c>Settings/System</c> folder at all, so a deployment carrying that folder with only SOME of
+    /// its files in it wins the probe and every missing file then reads as absent — and each loader
+    /// answers a missing file by degrading, silently, to its built-in fallback. That is exactly how it
+    /// showed up: a harness whose output directory held a partial copy (app-defaults.json alone) read
+    /// back ONE phone country instead of six, so a stored "+86 …" matched no dial code and came out
+    /// with the home market's "+1" pasted in front of it. Nothing threw; the number was just wrong.
+    ///
+    /// Falls back to the base-directory path when neither root has the file, so a caller reporting
+    /// "not found" still names a path a person can go and look at.
+    /// </remarks>
+    private static string DefaultsFile(string fileName)
+    {
+        var beside = Path.Combine(AppContext.BaseDirectory, SettingsFolder, SystemFolder, DefaultsFolder, fileName);
+        if (File.Exists(beside))
+            return beside;
+
+        var working = Path.Combine(Environment.CurrentDirectory, SettingsFolder, SystemFolder, DefaultsFolder, fileName);
+        return File.Exists(working) ? working : beside;
+    }
 
     /// <summary>
     /// The <c>Settings/System</c> directory. Resolved by probing rather than assumed, and it returns

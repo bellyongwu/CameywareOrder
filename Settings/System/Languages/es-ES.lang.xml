@@ -295,6 +295,12 @@
   <Text key="TaxNumber.Vat">Número de IVA</Text>
   <Text key="TaxNumber.ChinaTaxpayer">Número de identificación fiscal</Text>
   <Text key="TaxNumber.JapanInvoice">Número de registro de facturación</Text>
+  <!-- The tax ITSELF, named by the shop's location (TaxJurisdiction.taxNameLabel) — not the number
+       it issues: Japan's qualified-invoice number belongs to a consumption tax. Lower case except
+       the acronym, because both keys that carry these read them mid-phrase. -->
+  <Text key="TaxName.Generic">impuesto</Text>
+  <Text key="TaxName.Vat">IVA</Text>
+  <Text key="TaxName.ConsumptionTax">impuesto al consumo</Text>
   <Text key="Shop.Tax.Location">Ubicación de la tienda</Text>
   <Text key="Shop.Tax.InclusiveRate">Impuesto incluido en los precios: {0} %</Text>
   <Text key="Shop.Tax.InclusiveNote">En esta región los precios incluyen impuestos: se muestran en el recibo en lugar de añadirse en caja. No varían según el método de pago, así que no hay nada que configurar por método.</Text>
@@ -409,9 +415,13 @@
   <Text key="Order.Fields.TaxAmount">Impuesto</Text>
   <Text key="Order.Fields.Subtotal">Subtotal</Text>
   <Text key="Order.Fields.PreTaxServiceTotal">Total del servicio antes de impuestos</Text>
+  <!-- The same figure where the location quotes prices with the tax already in them. A separate key
+       rather than a reworded one: both markets are live at once, and the panel picks per order. -->
+  <Text key="Order.Fields.InclusiveServiceTotal">Total del servicio (impuestos incluidos)</Text>
   <Text key="Order.Fields.DepositTaxRate">Tasa impositiva del depósito (%)</Text>
   <Text key="Order.Fields.FinalTaxRate">Tasa impositiva del saldo final (%)</Text>
   <Text key="Order.Fields.PreTaxDownpayment">Depósito antes de impuestos</Text>
+  <Text key="Order.Fields.InclusiveDownpayment">Depósito (impuestos incluidos)</Text>
   <Text key="Order.Fields.PreTaxSubtotal">Subtotal antes de impuestos</Text>
   <Text key="Order.Fields.PreTaxFinalBalance">Saldo final antes de impuestos</Text>
   <Text key="Order.Fields.PostTaxTotal">Total con impuestos</Text>
@@ -451,6 +461,12 @@
   <Text key="Order.Fields.DueFinalBalance">Saldo final a cobrar</Text>
   <Text key="Order.Fields.PaidTax">Impuesto recibido</Text>
   <Text key="Order.Fields.IncludedTax">Impuesto incluido</Text>
+  <!-- {0} = the tax's own name for this location (TaxName.*), {1} = its rate. The amount is the
+       value beside it. Says which tax and at what rate, so nobody adds it to a total containing it. -->
+  <Text key="Order.Fields.IncludedTaxLabel">{0} incluido ({1} %)</Text>
+  <!-- Rate box where the price already contains the tax: one rate, no stage — a value-added tax
+       cannot differ between the deposit and the final balance. -->
+  <Text key="Order.Fields.IncludedTaxRateLabel">Tipo de {0} (%)</Text>
   <Text key="Order.Fields.BalanceStatus">Estado del saldo</Text>
   <Text key="Order.Fields.PaymentBreakdown">Desglose del pago</Text>
   <Text key="Order.Fields.Notes">Notas</Text>
@@ -471,6 +487,17 @@
   <Text key="OrderEdit.Validate.EmailRequired">Escribe una dirección de correo electrónico cuando haya un método de pago seleccionado.</Text>
   <Text key="OrderEdit.Validate.EmailInvalid">Escribe una dirección de correo electrónico válida.</Text>
   <Text key="OrderEdit.Validate.PhoneInvalid">Escribe un número de teléfono válido.</Text>
+  <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
+       phone-countries.json so editing that file cannot leave this sentence stale. -->
+  <Text key="OrderEdit.Validate.PhoneDigits">Un número de teléfono en {0} tiene {1} dígitos.</Text>
+  <!-- Plain country names for the dial-code picker. Not the TaxJurisdiction.* names: those describe a
+       tax treatment and belong on a location picker. -->
+  <Text key="Country.CA">Canadá</Text>
+  <Text key="Country.US">Estados Unidos</Text>
+  <Text key="Country.CN">China</Text>
+  <Text key="Country.JP">Japón</Text>
+  <Text key="Country.FR">Francia</Text>
+  <Text key="Country.ES">España</Text>
   <Text key="OrderEdit.Validate.Status">Selecciona un estado del pedido.</Text>
   <Text key="OrderEdit.Validate.AddressRequired">Escribe una dirección cuando el estado sea Enviado.</Text>
   <Text key="OrderEdit.Validate.StatusReasonRequired">Selecciona un motivo de cancelación o devolución.</Text>

@@ -5,6 +5,7 @@
         xmlns:conv="clr-namespace:CameywareOrder.Converters"
         xmlns:primitives="clr-namespace:System.Windows.Controls.Primitives;assembly=PresentationFramework"
         xmlns:model="clr-namespace:CameywareOrder.Models"
+        xmlns:ctrl="clr-namespace:CameywareOrder.Controls"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.CustomMade], Mode=OneWay}"
         Height="1120" Width="1200"
         MinHeight="900" MinWidth="980"
@@ -174,7 +175,7 @@
                             <TextBox Grid.Row="0" Grid.Column="1" x:Name="CustomerNameBox" Margin="0,8,14,8" Padding="6,4"/>
 
                             <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="0" Grid.Column="3" x:Name="PhoneNumberBox" Margin="0,8" Padding="6,4"/>
+                            <ctrl:PhoneNumberField Grid.Row="0" Grid.Column="3" x:Name="PhoneField" Margin="0,8"/>
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Email], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBox Grid.Row="1" Grid.Column="1" x:Name="EmailBox" Margin="0,8,14,8" Padding="6,4"/>

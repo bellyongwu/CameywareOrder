@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:CameywareOrder.Localization"
+        xmlns:ctrl="clr-namespace:CameywareOrder.Controls"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.CreateTitle], Mode=OneWay}"
         Height="840" Width="820"
         MinHeight="620" MinWidth="760"
@@ -206,7 +207,10 @@
                             <StackPanel Grid.Column="0">
                                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Setup.Phone], Mode=OneWay}"
                                            Style="{StaticResource SectionLabelStyle}"/>
-                                <TextBox x:Name="PhoneBox" Style="{StaticResource InputStyle}" MaxLength="40"/>
+                                <!-- The shop's OWN number. It opens on the location picked further down
+                                     this same form, so a shop being moved to Japan gets +81 offered
+                                     rather than keeping the previous market's code. -->
+                                <ctrl:PhoneNumberField x:Name="PhoneField"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="2">

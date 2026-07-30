@@ -297,6 +297,11 @@
   <Text key="TaxNumber.Vat">VAT number</Text>
   <Text key="TaxNumber.ChinaTaxpayer">Taxpayer identification number</Text>
   <Text key="TaxNumber.JapanInvoice">Invoice registration number</Text>
+  <!-- The tax ITSELF, named by the shop's location (TaxJurisdiction.taxNameLabel) — not the number
+       it issues: Japan's qualified-invoice number belongs to a consumption tax. -->
+  <Text key="TaxName.Generic">Tax</Text>
+  <Text key="TaxName.Vat">VAT</Text>
+  <Text key="TaxName.ConsumptionTax">Consumption Tax</Text>
   <Text key="Shop.Tax.Location">Store location</Text>
   <Text key="Shop.Tax.InclusiveRate">Tax included in prices: {0}%</Text>
   <Text key="Shop.Tax.InclusiveNote">Prices in this location include tax, so it is shown on the receipt rather than added at the till. It does not vary by payment method, so there is nothing to set per method.</Text>
@@ -411,9 +416,13 @@
   <Text key="Order.Fields.TaxAmount">Tax</Text>
   <Text key="Order.Fields.Subtotal">Subtotal</Text>
   <Text key="Order.Fields.PreTaxServiceTotal">Pre-Tax Service Total</Text>
+  <!-- The same figure where the location quotes prices with the tax already in them. A separate key
+       rather than a reworded one: both markets are live at once, and the panel picks per order. -->
+  <Text key="Order.Fields.InclusiveServiceTotal">Service Total (Tax Included)</Text>
   <Text key="Order.Fields.DepositTaxRate">Deposit Tax Rate (%)</Text>
   <Text key="Order.Fields.FinalTaxRate">Final Balance Tax Rate (%)</Text>
   <Text key="Order.Fields.PreTaxDownpayment">Pre-Tax Deposit</Text>
+  <Text key="Order.Fields.InclusiveDownpayment">Deposit (Tax Included)</Text>
   <Text key="Order.Fields.PreTaxSubtotal">Pre-Tax Subtotal</Text>
   <Text key="Order.Fields.PreTaxFinalBalance">Pre-Tax Final Balance</Text>
   <Text key="Order.Fields.PostTaxTotal">Post-Tax Total</Text>
@@ -453,6 +462,12 @@
   <Text key="Order.Fields.DueFinalBalance">Final Balance Due</Text>
   <Text key="Order.Fields.PaidTax">Received Tax</Text>
   <Text key="Order.Fields.IncludedTax">Tax Included</Text>
+  <!-- {0} = the tax's own name for this location (TaxName.*), {1} = its rate. The amount is the
+       value beside it. Says which tax and at what rate, so nobody adds it to a total containing it. -->
+  <Text key="Order.Fields.IncludedTaxLabel">Includes {0} ({1}%)</Text>
+  <!-- Rate box where the price already contains the tax: one rate, no stage — a value-added tax
+       cannot differ between the deposit and the final balance. -->
+  <Text key="Order.Fields.IncludedTaxRateLabel">{0} Rate (%)</Text>
   <Text key="Order.Fields.BalanceStatus">Balance Status</Text>
   <Text key="Order.Fields.PaymentBreakdown">Payment Breakdown</Text>
   <Text key="Order.Fields.Notes">Notes</Text>
@@ -473,6 +488,17 @@
   <Text key="OrderEdit.Validate.EmailRequired">Please enter an email address when a payment method is selected.</Text>
   <Text key="OrderEdit.Validate.EmailInvalid">Please enter a valid email address.</Text>
   <Text key="OrderEdit.Validate.PhoneInvalid">Please enter a valid phone number.</Text>
+  <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
+       phone-countries.json so editing that file cannot leave this sentence stale. -->
+  <Text key="OrderEdit.Validate.PhoneDigits">A phone number in {0} has {1} digits.</Text>
+  <!-- Plain country names for the dial-code picker. Not the TaxJurisdiction.* names: those describe a
+       tax treatment ("Canada (sales tax added separately)") and belong on a location picker. -->
+  <Text key="Country.CA">Canada</Text>
+  <Text key="Country.US">United States</Text>
+  <Text key="Country.CN">China</Text>
+  <Text key="Country.JP">Japan</Text>
+  <Text key="Country.FR">France</Text>
+  <Text key="Country.ES">Spain</Text>
   <Text key="OrderEdit.Validate.Status">Please select an order status.</Text>
   <Text key="OrderEdit.Validate.AddressRequired">Please enter an address when the status is Shipped.</Text>
   <Text key="OrderEdit.Validate.StatusReasonRequired">Please select a cancellation/return reason.</Text>

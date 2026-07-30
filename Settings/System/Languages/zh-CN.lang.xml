@@ -302,6 +302,11 @@
   <Text key="TaxNumber.Vat">增值税税号</Text>
   <Text key="TaxNumber.ChinaTaxpayer">纳税人识别号</Text>
   <Text key="TaxNumber.JapanInvoice">发票开具事业者登记号</Text>
+  <!-- The tax ITSELF, named by the shop's location (TaxJurisdiction.taxNameLabel) — not the number
+       it issues: Japan's qualified-invoice number belongs to a consumption tax. -->
+  <Text key="TaxName.Generic">税</Text>
+  <Text key="TaxName.Vat">增值税</Text>
+  <Text key="TaxName.ConsumptionTax">消费税</Text>
   <Text key="Shop.Tax.Location">门店所在地</Text>
   <Text key="Shop.Tax.InclusiveRate">价格已含税：{0}%</Text>
   <Text key="Shop.Tax.InclusiveNote">该地区价格为含税价，税额在收据上列示，不在收银时另加；税额不因支付方式而异，无需按支付方式单独设置。</Text>
@@ -414,9 +419,13 @@
   <Text key="Order.Fields.TaxAmount">税额</Text>
   <Text key="Order.Fields.Subtotal">小计</Text>
   <Text key="Order.Fields.PreTaxServiceTotal">税前服务总价</Text>
+  <!-- The same figure where the location quotes prices with the tax already in them. A separate key
+       rather than a reworded one: both markets are live at once, and the panel picks per order. -->
+  <Text key="Order.Fields.InclusiveServiceTotal">服务总价（含税）</Text>
   <Text key="Order.Fields.DepositTaxRate">定金税率 (%)</Text>
   <Text key="Order.Fields.FinalTaxRate">尾款税率 (%)</Text>
   <Text key="Order.Fields.PreTaxDownpayment">税前定金</Text>
+  <Text key="Order.Fields.InclusiveDownpayment">定金（含税）</Text>
   <Text key="Order.Fields.PreTaxSubtotal">税前小计</Text>
   <Text key="Order.Fields.PreTaxFinalBalance">税前尾款</Text>
   <Text key="Order.Fields.PostTaxTotal">税后总价</Text>
@@ -456,6 +465,12 @@
   <Text key="Order.Fields.DueFinalBalance">应收尾款</Text>
   <Text key="Order.Fields.PaidTax">已收税额</Text>
   <Text key="Order.Fields.IncludedTax">价内税额</Text>
+  <!-- {0} = the tax's own name for this location (TaxName.*), {1} = its rate. The amount is the
+       value beside it. Says which tax and at what rate, so nobody adds it to a total containing it. -->
+  <Text key="Order.Fields.IncludedTaxLabel">已含{0}（{1}%）</Text>
+  <!-- Rate box where the price already contains the tax: one rate, no stage — a value-added tax
+       cannot differ between the deposit and the final balance. -->
+  <Text key="Order.Fields.IncludedTaxRateLabel">{0}率 (%)</Text>
   <Text key="Order.Fields.BalanceStatus">余额状态</Text>
   <Text key="Order.Fields.PaymentBreakdown">收款明细</Text>
   <Text key="Order.Fields.Notes">备注</Text>
@@ -476,6 +491,17 @@
   <Text key="OrderEdit.Validate.EmailRequired">选择付款方式时，请填写电子邮箱地址</Text>
   <Text key="OrderEdit.Validate.EmailInvalid">请输入有效的电子邮箱地址</Text>
   <Text key="OrderEdit.Validate.PhoneInvalid">请输入有效的电话号码</Text>
+  <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
+       phone-countries.json so editing that file cannot leave this sentence stale. -->
+  <Text key="OrderEdit.Validate.PhoneDigits">{0}的电话号码为 {1} 位数字。</Text>
+  <!-- Plain country names for the dial-code picker. Not the TaxJurisdiction.* names: those describe a
+       tax treatment and belong on a location picker. -->
+  <Text key="Country.CA">加拿大</Text>
+  <Text key="Country.US">美国</Text>
+  <Text key="Country.CN">中国</Text>
+  <Text key="Country.JP">日本</Text>
+  <Text key="Country.FR">法国</Text>
+  <Text key="Country.ES">西班牙</Text>
   <Text key="OrderEdit.Validate.Status">请选择订单状态</Text>
   <Text key="OrderEdit.Validate.AddressRequired">选择已发货状态时，请填写地址</Text>
   <Text key="OrderEdit.Validate.StatusReasonRequired">请选择退货/取消理由</Text>

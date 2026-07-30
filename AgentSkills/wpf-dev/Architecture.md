@@ -309,6 +309,11 @@ components are added/renamed or the way pieces fit together changes.
     `TaxJurisdictions.IncludedTaxRatePercent(shop)` is what the order editor uses for both portions,
     the per-method matrix is not consulted at all (a value-added tax cannot vary by tender), and Shop
     Settings shows the rate in place of the matrix.
+    A jurisdiction also names the TAX ITSELF where prices include it (`TaxNameLabel` → a
+    `TaxName.<name>` key; `Vat` for CN/FR/ES, `ConsumptionTax` for JP, absent on the exclusive
+    entries because nothing reads it there). That is the word on "Includes VAT (6%)", and it is a
+    DIFFERENT question from the tax number below — Japan issues a qualified-invoice number for a
+    consumption tax, so deriving one from the other prints the wrong word.
     A jurisdiction also names the TAX NUMBER its businesses are issued (`TaxNumberLabel` → a
     `TaxNumber.<name>` key; `GstHst` for Canada and any Canadian region, `Vat` by FR/ES,
     `ChinaTaxpayer`, `JapanInvoice`), or omits it where none is issued — the US. `CollectsTaxNumber`
@@ -316,6 +321,16 @@ components are added/renamed or the way pieces fit together changes.
     screen and on the receipt line, falling back to `TaxNumber.Generic` so a stored number is never
     printed unlabelled. This is declared per jurisdiction and **not** inferred from
     `PricesIncludeTax`: Canada's GST/HST is a consumption tax quoted tax-exclusive.
+  - `PhoneCountry` (`Models/`) + `PhoneCountries` (`Services/`) — one shipped phone rule per country
+    (`Code`, `DialCode`, `NationalDigits`), from
+    `Settings/System/Defaults/phone-countries.json`, cached with a one-entry fallback. Shaped after
+    `TaxJurisdiction(s)` and deliberately a SEPARATE file from it: a tax jurisdiction is a market this
+    build sells into, a phone country is anywhere a customer's number comes from, and the two lists
+    stop matching the first time a shop serves a visitor. `ForShop` decides what a field opens on —
+    the shop's LOCATION (widening `CA-ON` → `CA`), else the location its currency implies, else the
+    home market; location first because the currency table maps EUR to France and would open every
+    Spanish number on +33. `Split`/`Compose` turn a stored `"+86 138 0013 8000"` into (country,
+    national) and back, longest dial code first, leaving an unrecognised legacy number WHOLE.
   - `PaymentMethod` — `Etransfer`, `Card` (LEGACY, never delete: orders saved before the split
     still hold it), `Cash`, `None`, `DebitCard`, `CreditCard`.
   - `OrderNumberMode` (`Models/Shop.cs`) — Timestamp (default, the format the app always produced)
@@ -326,6 +341,10 @@ components are added/renamed or the way pieces fit together changes.
     properties and a computed `DepositStageTotal`. The per-portion tax is CARRIED rather than
     re-derived downstream as `Received − Deposit`: that difference is zero when tax is embedded in the
     price, which is how the receipt came to print "tax 0" beside a non-zero total.
+    `Order.IncludedTaxRatePercent` is the companion on the ORDER: the single rate an inclusive order
+    quotes, read off the first charged section because every section carries the jurisdiction's rate by
+    construction in that mode. Zero on an exclusive order, where the sections legitimately differ and
+    no single rate exists to name.
   - `OrderItem` — clothing line item (`UnitPrice`, `PromotionalPrice`, computed
     `EffectiveUnitPrice` / `TotalPrice`).
   - `CustomMadeServiceRecord` — measurement record (serialized to
@@ -360,9 +379,11 @@ components are added/renamed or the way pieces fit together changes.
   `NullToVisibilityConverter`, `OrderStatusToLocalizedTextConverter`,
   `CustomMadeRecordSummaryConverter`, `OrderPaymentSummaryConverter`,
   `PositiveAmountToVisibilityConverter`,
-  `TaxLabelConverter` (binds `Order.PricesIncludeTax`; picks between
-  `Order.Fields.TaxAmount` and `Order.Fields.IncludedTax`, because subtotal + tax = total only holds
-  in one of the two pricing modes), `CustomMadeServiceFlagConverter`
+  `TaxLabelConverter` (binds the whole `Order`; `Order.Fields.TaxAmount` where tax is added at
+  settlement, and `Order.Fields.IncludedTaxLabel` — the tax's own name plus its rate, "Includes VAT
+  (6%)" — where it is already in the price, because subtotal + tax = total holds in only one of the two
+  modes. Its `static Label(Order)` is what the printed receipt calls, so paper and screen cannot
+  word the same figure differently), `CustomMadeServiceFlagConverter`
   (binds the whole `Order` row; ConverterParameter `Flag` → localized
   `CustomMade.Flag.Yes`/`.No`,
   `Names` → bracketed garment names with a zh 、 / en ", " separator,
@@ -434,6 +455,18 @@ components are added/renamed or the way pieces fit together changes.
     (everything at once via `GlobalSettingsPackage`). Every import confirms with a
     Yes/No warning dialog first and reports through `MainViewModel.StatusMessage`;
     export file names get a date suffix via `BuildDatedExportFileName`.
+  - `PhoneNumberField` (`Controls/PhoneNumberField.xaml`) — the ONE phone control, used by all five
+    fields that collect a number (order customer, custom-made record, the shop's own, and both staff
+    screens). A dial-code picker with a drawn flag in front of the number box. Exposes `Load(stored,
+    shop)` / `FullNumber` / `NationalNumber` / `SelectedCountry`, `IsValid` (the picked country's
+    national length) beside `IsValidLoose` (the pre-existing 7–15 rule), `ValidationMessage`,
+    `IsReadOnlyField`, `FollowLocation`, and `PhoneChanged` / `PhoneCommitted`. The country is per
+    NUMBER, never per shop — a Toronto shop takes a Shanghai mobile. Storage is unchanged: one string
+    column holding `"+1 905-401-6667"`, no migration, legacy numbers left as they are.
+    **Strict validation applies to NEW records only** (`_existing is null`, or the create-member form);
+    an existing record keeps the loose rule so it stays saveable.
+  - `Themes/Flags.xaml` — six vector flags as `DrawingImage`, keyed `Flag.<code>`, merged INTO
+    `AppTheme.xaml` by absolute pack URI (see `context.md` for why relative fails in a harness).
   - `OrderColumnSort` (static, in `MainWindow.xaml.cs`) — attached properties
     `SortKey` (per-column sort member) and `SortGlyph` (header arrow), consumed by
     the header `ContentTemplate` and `UpdateSortGlyphs`.
@@ -445,6 +478,17 @@ components are added/renamed or the way pieces fit together changes.
     `ResolveStageRate` and seeded by `LoadStageTaxRates`), computed summary,
     "clear all balances" master checkbox, and the
     "OrderEdit.PickedUp" quick-complete checkbox that locks the status dropdown.
+    It carries **two breakdown vocabularies**. Where the price already contains the tax, the rate box
+    stops naming a stage and names the TAX (`Order.Fields.IncludedTaxRateLabel`, one rate for both
+    portions), the price and deposit labels become the `Inclusive*` keys, `DepositBreakdownPanel` is
+    collapsed outright — every line of it would be the price restated — and `FinalInclusivePanel`
+    replaces `FinalBreakdownPanel` with price / received deposit / balance due / still outstanding /
+    received balance when paid, plus one line naming the embedded tax and its rate. The two final
+    panels are siblings, never both visible, and BOTH are written in one pass by
+    `UpdateTaxBreakdownLines` → `UpdateDueAndReceivedLines` + `UpdateInclusiveBreakdown` from one
+    `SectionPayment`. The mode comes from the ORDER (frozen at save), not from the shop, so a saved
+    order keeps the layout it was written in; `UpdateSectionVisibility` takes it as an argument rather
+    than reading the window, which keeps it a pure function of the section and the mode.
     Switching the status to Status.Cancelled/Status.Returned puts the editor in a **refund lock**
     state (`_isRefunded`): every service/payment control (incl. OrderEdit.BalanceCleared)
     is disabled via `SetServiceControlsEnabled(false)`, all checkboxes (incl.

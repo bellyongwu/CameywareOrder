@@ -41,7 +41,18 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 ## Open
 
-Nothing in flight. v3.0.0 (store location / tax jurisdictions) is **committed to `main`**, not pushed.
+Nothing in flight. v3.0.0 (store location / tax jurisdictions) is **committed to `main`**, not pushed;
+the Canada collapse, the tax-inclusive wording and the phone-country field are on top of it,
+uncommitted.
+
+**Known red, not a regression:** `langcheck` fails two assertions because no shop in the live database
+installs ja-JP — Japanese shipped as a language and the existing shops were never told they install it.
+That is user DATA, so it is reported rather than edited. Fixing it means either seeding a shop that
+installs every language in the harness's own fixture, or ticking Japanese on a real shop.
+
+**Known odd, not a regression:** shop #10 "Shanghai LeeYonge Bespoke" is located `CA-BC`, so it prices
+tax-exclusive and dials +1. Reported to the user rather than corrected: a location change moves the tax
+treatment too, which is theirs to decide.
 
 **Deferred, deliberately** — revisit only if asked:
 
@@ -57,6 +68,76 @@ Nothing in flight. v3.0.0 (store location / tax jurisdictions) is **committed to
 ---
 
 ## Recent work (2026-07-30)
+
+### A phone number carries the country it belongs to
+Every phone field is now one control — `PhoneNumberField` — with a dial-code picker and a drawn flag in
+front of the number, on all five surfaces that collect one. The country is per NUMBER, not per shop: a
+Toronto shop takes a visiting customer's Shanghai mobile, and a rule keyed on the store would refuse a
+correct number. The shop's LOCATION only decides what the field opens on, with its currency as the
+fallback for a shop that never said where it is — location first because the currency table maps EUR to
+France, so a Barcelona shop defaulting off its currency would offer +33 for every number it takes.
+
+**Storage did not change**: one string column, `"+86 138 0013 8000"`, read back by longest-dial-code
+match. A legacy number naming no country comes back WHOLE under the shop's country rather than being
+reformatted — it is a fact about a customer, not something to tidy. And the strict national-length rule
+binds **new records only**; an existing order keeps the loose 7–15 rule, because an order taken last
+year must stay saveable over a phone number nobody can re-verify.
+
+Three things worth not rediscovering, all in `context.md`: **Windows ships no flag emoji** (a
+regional-indicator pair renders as two letters, so the six flags are drawn as vectors); **a relative
+`ResourceDictionary` Source resolves against the loading APPLICATION**, which killed every harness the
+moment `AppTheme.xaml` nested a flags dictionary; and **replacing a TextBox breaks the abstractions
+built on TextBox** — `RequiredTextField` now holds closures so the phone stays inside the one-pass
+required check.
+
+Demo data reseeded per store: 193 rows, backed up first, generated through `PhoneCountries.ForShop` so
+what is seeded cannot disagree with what the screen shows. A shop's own number is KEPT when it already
+belongs to that shop's country — only orders are mock data.
+
+The suite paid for itself twice here. Four harnesses went red on the control rename — the good failure,
+and only because they were run. The fourth was NOT a rename: `shopcheck` rendered `+1 +86 20 1234 5678`
+because `SystemSettingsPaths` probed for the *folder* `Settings/System` rather than for the file it
+needed, so an output directory holding a partial copy won the probe and every missing file degraded
+silently to a built-in fallback. That is fixed in the app, not worked around in the harness.
+
+### A tax-inclusive order explains itself in its own words
+The panel was written for tax added at settlement and still read that way where the tax is already in
+the price: `Order.Fields.PreTaxServiceTotal` over a price that is not pre-tax, a rate box switching
+between `Order.Fields.DepositTaxRate` and `Order.Fields.FinalTaxRate` when the two cannot differ, a
+deposit-stage breakdown whose every line is the price restated, and a final stage carrying twelve rows
+of exclusive arithmetic.
+
+Four gaps in the ask, settled with the user first — the two that matter: **the tax has a name and it is
+not the same name everywhere** (a VAT in China and the EU, a consumption tax in Japan), so a
+jurisdiction now DECLARES its tax name (`taxNameLabel` → `TaxName.*`) the way it already declares its
+tax number; and **the four requested rows say nothing about a final balance once it is paid**, so
+`Order.Fields.ReceivedFinalBalance` appears as a fifth row when non-zero. Receipt and detail panel take
+the same wording — a customer-facing document disagreeing with the screen is the version that gets
+questioned.
+
+Two shapes worth keeping: the deposit-stage breakdown is **deleted** in that mode rather than reworded
+(all four of its lines restate the price), and the inclusive final stage is a **sibling panel** rather
+than the same grid with rows hidden, because the rows that survive want a different order and
+`Grid.Row` is fixed in markup. Both panels are written in one pass from one `SectionPayment`, which is
+the only thing keeping two views of one order in step. Reasoning in `context.md`.
+
+`taxcheck` grew a section that drives the ORDER WINDOW in both modes — the defect was never
+arithmetic, it was vocabulary printed over correct arithmetic, and only a rendered panel shows that.
+
+### Canada — sales tax added separately, and ONE entry rather than three
+The three provincial rows (ON 13 / AB 5 / BC 12) became one `CA` at rate 0: Canada is treated exactly
+as the US already was, seeded **tax free** with the shop entering the rate it collects, and the picker
+says "added separately" in all five languages. Once no province quotes a rate, three rows differ in
+nothing but their name.
+
+**The region machinery stayed** — that was the explicit ask. Codes are free-form (`<country>-<region>`),
+the `TaxJurisdiction.CA-*` label keys stay in every language file marked dormant, and re-adding a
+province is a line of JSON. `TaxJurisdictions.For` now widens an unshipped regional code to its COUNTRY
+(`CA-ON` → `CA`, `US-CA` → `US`) before the home-market fallback: without it, every shop already stored
+under a provincial code reached the right answer only *by luck* — the home market happens to be Canada —
+and would have started reading wrong the day that changed. `Find` stays strict, because the settings
+screen relies on its null to tell a live code from a dead one, and no migration rewrites a stored code,
+so a re-added province takes effect on its own.
 
 ### Store Management — delist, delete, download, restore, reinitialize
 Administrator-only panel off an enlarged Select Shop (820×640 → 1000×740), with ctrl/shift multi-select.

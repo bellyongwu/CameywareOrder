@@ -814,7 +814,10 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding SelectedOrder.PricesIncludeTax, Converter={StaticResource TaxLabel}}" FontSize="12" Foreground="#666"/>
+                                <!-- Bound to the ORDER, not to its PricesIncludeTax flag: where the tax is
+                                     already in the price this line names the tax and its rate, which a bool
+                                     cannot carry. See TaxLabelConverter. -->
+                                <TextBlock Text="{Binding SelectedOrder, Converter={StaticResource TaxLabel}}" FontSize="12" Foreground="#666"/>
                                 <TextBlock Grid.Column="1" FontSize="12">
                                     <TextBlock.Text>
                                         <MultiBinding Converter="{StaticResource CurrencyAmountConverter}">

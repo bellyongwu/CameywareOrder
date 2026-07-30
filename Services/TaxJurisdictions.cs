@@ -136,6 +136,13 @@ public static class TaxJurisdictions
     public static string TaxNumberName(Shop? shop, LocalizationService localization)
         => For(shop).TaxNumberName(localization);
 
+    /// <summary>
+    /// What this shop's location calls the TAX ITSELF (a <c>TaxName.*</c> value), for the line that
+    /// tells a customer the price already contains it.
+    /// </summary>
+    public static string TaxName(Shop? shop, LocalizationService localization)
+        => For(shop).TaxName(localization);
+
     /// <summary>The key naming it, for a document rendered in a language other than the UI's.</summary>
     public static string TaxNumberKey(Shop? shop) => For(shop).TaxNumberKey;
 
@@ -164,7 +171,8 @@ public static class TaxJurisdictions
                     e.StandardRatePercent,
                     e.Inclusive,
                     Enum.Parse<CurrencyType>(e.DefaultCurrency!, ignoreCase: true),
-                    string.IsNullOrWhiteSpace(e.TaxNumberLabel) ? null : e.TaxNumberLabel.Trim()))
+                    string.IsNullOrWhiteSpace(e.TaxNumberLabel) ? null : e.TaxNumberLabel.Trim(),
+                    string.IsNullOrWhiteSpace(e.TaxNameLabel) ? null : e.TaxNameLabel.Trim()))
                 .ToList();
 
             if (parsed.Count == 0)
@@ -211,5 +219,6 @@ public static class TaxJurisdictions
         decimal StandardRatePercent,
         [property: JsonPropertyName("pricesIncludeTax")] bool Inclusive,
         string? DefaultCurrency,
-        string? TaxNumberLabel);
+        string? TaxNumberLabel,
+        string? TaxNameLabel);
 }

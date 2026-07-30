@@ -54,6 +54,13 @@ public partial class StoreMembersWindow : Window
 
         MemberList.ItemsSource = _members;
 
+        // Wired here rather than as a XAML attribute: the field raises its own event for a change to
+        // EITHER half, and a LostFocus on the markup would miss the country picker entirely.
+        PhoneField.PhoneCommitted += OnPhoneFieldCommitted;
+        // Both phone fields open on the country this shop's people are in.
+        PhoneField.ResetTo(_shop);
+        NewPhoneField.ResetTo(_shop);
+
         foreach (var box in new[] { ShiftStartBox, ShiftEndBox, NewShiftStartBox, NewShiftEndBox })
             box.ItemsSource = _timeOptions;
 
@@ -201,7 +208,7 @@ public partial class StoreMembersWindow : Window
         FirstNameBox.Text = member.FirstName ?? string.Empty;
         LastNameBox.Text = member.LastName ?? string.Empty;
         BirthDatePicker.SelectedDate = member.BirthDate;
-        PhoneNumberBox.Text = member.PhoneNumber ?? string.Empty;
+        PhoneField.Load(member.PhoneNumber, _shop);
         EmailBox.Text = member.Email ?? string.Empty;
 
         // Any complaint belongs to the member who was on screen a moment ago, not this one.
@@ -286,7 +293,7 @@ public partial class StoreMembersWindow : Window
             FirstNameBox.Text,
             LastNameBox.Text,
             BirthDatePicker.SelectedDate,
-            PhoneNumberBox.Text,
+            PhoneField.FullNumber,
             EmailBox.Text,
             ReadRoles(ManagerCheck, StaffCheck),
             ActiveCheck.IsChecked.GetValueOrDefault(),
@@ -379,7 +386,7 @@ public partial class StoreMembersWindow : Window
         NewPasswordBox.Clear();
         NewPasswordConfirmBox.Clear();
         NewBirthDatePicker.SelectedDate = null;
-        NewPhoneNumberBox.Clear();
+        NewPhoneField.ResetTo(_shop);
         NewEmailBox.Clear();
         NewJoinedDatePicker.SelectedDate = DateTime.Today;
         NewManagerCheck.IsChecked = false;
@@ -412,9 +419,11 @@ public partial class StoreMembersWindow : Window
 
         var userName = NewUserNameBox.Text.Trim();
 
-        if (!ContactValidation.IsValidPhone(NewPhoneNumberBox.Text))
+        // A member being CREATED gets the country rule; an existing one keeps the loose check below,
+        // because a record saved before this rule existed must stay editable.
+        if (!NewPhoneField.IsValid)
         {
-            ShowCreateError("OrderEdit.Validate.PhoneInvalid");
+            ShowCreateError(NewPhoneField.ValidationMessage, alreadyLocalized: true);
             return;
         }
 
@@ -428,7 +437,7 @@ public partial class StoreMembersWindow : Window
             NewFirstNameBox.Text,
             NewLastNameBox.Text,
             NewBirthDatePicker.SelectedDate,
-            NewPhoneNumberBox.Text,
+            NewPhoneField.FullNumber,
             NewEmailBox.Text,
             ReadRoles(NewManagerCheck, NewStaffCheck),
             IsActive: true,
@@ -500,8 +509,10 @@ public partial class StoreMembersWindow : Window
     // details. A member address the roster accepts but the order form rejects would be a defect
     // nobody sees until mail bounces.
 
-    private void OnPhoneNumberBoxLostFocus(object sender, RoutedEventArgs e)
-        => SetFieldError(PhoneErrorText, ContactValidation.IsValidPhone(PhoneNumberBox.Text)
+    // An EXISTING member keeps the loose rule: their record predates the country one, and a manager
+    // opening it to change a shift must not be stopped by a phone number they cannot re-verify.
+    private void OnPhoneFieldCommitted(object? sender, EventArgs e)
+        => SetFieldError(PhoneErrorText, PhoneField.IsValidLoose
             ? null
             : "OrderEdit.Validate.PhoneInvalid");
 
@@ -513,7 +524,7 @@ public partial class StoreMembersWindow : Window
     /// <summary>Re-checks both fields on save, since neither may ever have lost focus.</summary>
     private bool ValidateContactFields()
     {
-        OnPhoneNumberBoxLostFocus(this, new RoutedEventArgs());
+        OnPhoneFieldCommitted(this, EventArgs.Empty);
         OnEmailBoxLostFocus(this, new RoutedEventArgs());
 
         return PhoneErrorText.Visibility != Visibility.Visible
@@ -526,9 +537,14 @@ public partial class StoreMembersWindow : Window
         target.Visibility = messageKey is null ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private void ShowCreateError(string key)
+    /// <summary>
+    /// Shows one problem above the create form. Takes a KEY by default; a caller that already holds a
+    /// composed sentence — the phone rule names its country and digit count — passes it through with
+    /// <paramref name="alreadyLocalized"/>, rather than a key being invented per country.
+    /// </summary>
+    private void ShowCreateError(string keyOrMessage, bool alreadyLocalized = false)
     {
-        CreateErrorText.Text = _localization[key];
+        CreateErrorText.Text = alreadyLocalized ? keyOrMessage : _localization[keyOrMessage];
         CreateErrorText.Visibility = Visibility.Visible;
     }
 

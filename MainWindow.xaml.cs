@@ -1505,11 +1505,14 @@ public partial class MainWindow : Window
         blocks.Add(ReceiptInfoLine(_localization["Order.Fields.ReceivedFinalBalance"], Money(currency, order.ReceivedFinalBalance)));
         // Name the tax for what it is. On a tax-inclusive order this figure was never added to the
         // total — it was carved out of it — and a receipt reading "tax paid" beside a total that
-        // already contained it invites the reader to add them together.
+        // already contained it invites the reader to add them together. There it also names WHICH tax
+        // and at what rate ("Includes VAT (6%)"), which is the question the person holding this piece
+        // of paper actually asks. Exclusive orders keep "received tax": the line above it is the
+        // amount that was added, so nothing needs explaining.
         if (order.TotalTax > 0m)
         {
             blocks.Add(ReceiptInfoLine(
-                _localization[order.PricesIncludeTax ? "Order.Fields.IncludedTax" : "Order.Fields.PaidTax"],
+                order.PricesIncludeTax ? TaxLabelConverter.Label(order) : _localization["Order.Fields.PaidTax"],
                 Money(currency, order.TotalTax)));
         }
         // AddReceiptTotals runs for every order regardless of refund status (full parity

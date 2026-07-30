@@ -111,7 +111,7 @@ public partial class ShopSetupWindow : Window
     /// </summary>
     private void PopulateContact()
     {
-        PhoneBox.Text = _existing?.PhoneNumber ?? string.Empty;
+        PhoneField.Load(_existing?.PhoneNumber, _existing);
         EmailBox.Text = _existing?.Email ?? string.Empty;
         WebsiteBox.Text = _existing?.Website ?? string.Empty;
         TaxNumberBox.Text = _existing?.TaxRegistrationNumber ?? string.Empty;
@@ -359,6 +359,10 @@ public partial class ShopSetupWindow : Window
         TaxNumberLabel.Text = jurisdiction.TaxNumberName(_localization);
         TaxNumberPanel.Visibility = jurisdiction.CollectsTaxNumber ? Visibility.Visible : Visibility.Collapsed;
 
+        // The shop's own phone follows the location it is being given — but only while the box is
+        // empty, so re-picking a location never re-codes a number somebody typed.
+        PhoneField.FollowLocation(_locationCode);
+
         if (reseedMatrix && ConfirmReseed(jurisdiction))
             FillPaymentTaxRows(PaymentTaxRules.CreateForStandardRate(jurisdiction.StandardRatePercent));
     }
@@ -575,12 +579,12 @@ public partial class ShopSetupWindow : Window
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage(
         "Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
-        Justification = "False positive: PhoneBox, EmailBox and WebsiteBox are x:Name instance fields " +
+        Justification = "False positive: PhoneField, EmailBox and WebsiteBox are x:Name instance fields " +
                         "from the XAML-generated partial, which the analyzer does not see. The method " +
                         "reads instance data and cannot be static.")]
     private void ApplyContactDetails(Shop shop)
     {
-        shop.PhoneNumber = Blank(PhoneBox.Text);
+        shop.PhoneNumber = Blank(PhoneField.FullNumber);
         shop.Email = Blank(EmailBox.Text);
         shop.Website = Blank(WebsiteBox.Text);
         shop.TaxRegistrationNumber = Blank(TaxNumberBox.Text);

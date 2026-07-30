@@ -1,0 +1,179 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Country flags for the phone dial-code picker, drawn as vectors.
+
+         WHY NOT EMOJI: Windows ships no country-flag glyphs. Segoe UI Emoji renders a
+         regional-indicator pair (U+1F1E8 U+1F1E6) as the two LETTERS "CA", so an emoji flag would
+         have shipped a box with letters in it on every machine this runs on. That is not a font that
+         can be installed around — Microsoft leaves the glyphs out deliberately.
+
+         WHY NOT IMAGES: at 20x14 a vector stays crisp on a 200% display and adds no binary to the
+         repository. Each flag is one DrawingImage keyed Flag.<code>, so the picker binds by country
+         code and adding a country is a block here plus a line of phone-countries.json.
+
+         These are SIMPLIFIED at the size they are drawn: the US canton carries a suggestion of stars
+         rather than fifty, and the Canadian leaf is an eleven-point outline. Anything finer is
+         invisible at 20 pixels wide and only costs parse time. Proportions follow each flag's real
+         ratio where it reads at this size (Canada 1:2 is drawn 20x10 inside a 20x14 box). -->
+
+    <!-- ══ Canada — red / white / red bands, eleven-point maple leaf ═══════════════════════════ -->
+    <DrawingImage x:Key="Flag.CA">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,20,14"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#D80621">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,5,14"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#D80621">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="15,0,5,14"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- The leaf, centred on (10,7): stem, lower lobes, upper lobes, point. -->
+                <GeometryDrawing Brush="#D80621"
+                                 Geometry="M 10,2.2 L 10.7,4.2 L 12.5,3.3 L 12.0,5.4 L 13.6,5.2
+                                           L 13.0,6.6 L 15.2,7.6 L 13.4,8.4 L 13.9,9.6 L 11.9,9.3
+                                           L 11.6,10.2 L 10.4,9.0 L 10.7,12.0 L 9.3,12.0 L 9.6,9.0
+                                           L 8.4,10.2 L 8.1,9.3 L 6.1,9.6 L 6.6,8.4 L 4.8,7.6
+                                           L 7.0,6.6 L 6.4,5.2 L 8.0,5.4 L 7.5,3.3 L 9.3,4.2 Z"/>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- ══ United States — thirteen stripes, blue canton ══════════════════════════════════════ -->
+    <DrawingImage x:Key="Flag.US">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#B22234">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,20,14"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- Six white stripes over a red field makes the thirteen. -->
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="0,1.077,20,1.077"/>
+                            <RectangleGeometry Rect="0,3.231,20,1.077"/>
+                            <RectangleGeometry Rect="0,5.385,20,1.077"/>
+                            <RectangleGeometry Rect="0,7.538,20,1.077"/>
+                            <RectangleGeometry Rect="0,9.692,20,1.077"/>
+                            <RectangleGeometry Rect="0,11.846,20,1.077"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#3C3B6E">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,8,7.538"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <!-- A suggestion of the star field: fifty stars at this size is a grey smudge. -->
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <EllipseGeometry Center="1.6,1.5" RadiusX="0.42" RadiusY="0.42"/>
+                            <EllipseGeometry Center="4.0,1.5" RadiusX="0.42" RadiusY="0.42"/>
+                            <EllipseGeometry Center="6.4,1.5" RadiusX="0.42" RadiusY="0.42"/>
+                            <EllipseGeometry Center="2.8,3.3" RadiusX="0.42" RadiusY="0.42"/>
+                            <EllipseGeometry Center="5.2,3.3" RadiusX="0.42" RadiusY="0.42"/>
+                            <EllipseGeometry Center="1.6,5.1" RadiusX="0.42" RadiusY="0.42"/>
+                            <EllipseGeometry Center="4.0,5.1" RadiusX="0.42" RadiusY="0.42"/>
+                            <EllipseGeometry Center="6.4,5.1" RadiusX="0.42" RadiusY="0.42"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- ══ China — red field, one large star and four small ═══════════════════════════════════ -->
+    <DrawingImage x:Key="Flag.CN">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#DE2910">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,20,14"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#FFDE00"
+                                 Geometry="M 3.6,1.6 L 4.35,3.75 L 6.6,3.8 L 4.8,5.15 L 5.45,7.35
+                                           L 3.6,6.05 L 1.75,7.35 L 2.4,5.15 L 0.6,3.8 L 2.85,3.75 Z"/>
+                <GeometryDrawing Brush="#FFDE00">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <EllipseGeometry Center="7.6,1.5" RadiusX="0.62" RadiusY="0.62"/>
+                            <EllipseGeometry Center="9.2,3.1" RadiusX="0.62" RadiusY="0.62"/>
+                            <EllipseGeometry Center="9.2,5.4" RadiusX="0.62" RadiusY="0.62"/>
+                            <EllipseGeometry Center="7.6,7.0" RadiusX="0.62" RadiusY="0.62"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- ══ Japan — white field, centred red disc ═════════════════════════════════════════════ -->
+    <DrawingImage x:Key="Flag.JP">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,20,14"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#BC002D">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="10,7" RadiusX="4.2" RadiusY="4.2"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- ══ France — blue / white / red, vertical ═════════════════════════════════════════════ -->
+    <DrawingImage x:Key="Flag.FR">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,20,14"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#002395">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,6.667,14"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#ED2939">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="13.333,0,6.667,14"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- ══ Spain — red / yellow / red, the middle band double height ═════════════════════════ -->
+    <DrawingImage x:Key="Flag.ES">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#AA151B">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,20,14"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="#F1BF00">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,3.5,20,7"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+</ResourceDictionary>

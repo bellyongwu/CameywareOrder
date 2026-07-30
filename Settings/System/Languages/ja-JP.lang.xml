@@ -297,6 +297,11 @@
   <Text key="TaxNumber.Vat">付加価値税番号</Text>
   <Text key="TaxNumber.ChinaTaxpayer">納税者識別番号</Text>
   <Text key="TaxNumber.JapanInvoice">適格請求書発行事業者登録番号</Text>
+  <!-- The tax ITSELF, named by the shop's location (TaxJurisdiction.taxNameLabel) — not the number
+       it issues: Japan's qualified-invoice number belongs to a consumption tax. -->
+  <Text key="TaxName.Generic">税</Text>
+  <Text key="TaxName.Vat">付加価値税</Text>
+  <Text key="TaxName.ConsumptionTax">消費税</Text>
   <Text key="Shop.Tax.Location">店舗の所在地</Text>
   <Text key="Shop.Tax.InclusiveRate">価格に含まれる税率：{0}%</Text>
   <Text key="Shop.Tax.InclusiveNote">この地域の価格は税込みです。税額はレシートに表示され、会計時に追加されません。支払方法によって変わらないため、方法ごとの設定は不要です。</Text>
@@ -411,9 +416,13 @@
   <Text key="Order.Fields.TaxAmount">税</Text>
   <Text key="Order.Fields.Subtotal">小計</Text>
   <Text key="Order.Fields.PreTaxServiceTotal">サービス合計（税抜）</Text>
+  <!-- The same figure where the location quotes prices with the tax already in them. A separate key
+       rather than a reworded one: both markets are live at once, and the panel picks per order. -->
+  <Text key="Order.Fields.InclusiveServiceTotal">サービス合計（税込）</Text>
   <Text key="Order.Fields.DepositTaxRate">内金の税率（%）</Text>
   <Text key="Order.Fields.FinalTaxRate">残金の税率（%）</Text>
   <Text key="Order.Fields.PreTaxDownpayment">内金（税抜）</Text>
+  <Text key="Order.Fields.InclusiveDownpayment">内金（税込）</Text>
   <Text key="Order.Fields.PreTaxSubtotal">小計（税抜）</Text>
   <Text key="Order.Fields.PreTaxFinalBalance">残金（税抜）</Text>
   <Text key="Order.Fields.PostTaxTotal">合計（税込）</Text>
@@ -453,6 +462,12 @@
   <Text key="Order.Fields.DueFinalBalance">請求する残金</Text>
   <Text key="Order.Fields.PaidTax">受領した税</Text>
   <Text key="Order.Fields.IncludedTax">内税額</Text>
+  <!-- {0} = the tax's own name for this location (TaxName.*), {1} = its rate. The amount is the
+       value beside it. Says which tax and at what rate, so nobody adds it to a total containing it. -->
+  <Text key="Order.Fields.IncludedTaxLabel">{0}（{1}%）込み</Text>
+  <!-- Rate box where the price already contains the tax: one rate, no stage — a value-added tax
+       cannot differ between the deposit and the final balance. -->
+  <Text key="Order.Fields.IncludedTaxRateLabel">{0}率 (%)</Text>
   <Text key="Order.Fields.BalanceStatus">入金状況</Text>
   <Text key="Order.Fields.PaymentBreakdown">支払いの内訳</Text>
   <Text key="Order.Fields.Notes">備考</Text>
@@ -473,6 +488,17 @@
   <Text key="OrderEdit.Validate.EmailRequired">支払方法を選択した場合は、メールアドレスを入力してください。</Text>
   <Text key="OrderEdit.Validate.EmailInvalid">有効なメールアドレスを入力してください。</Text>
   <Text key="OrderEdit.Validate.PhoneInvalid">有効な電話番号を入力してください。</Text>
+  <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
+       phone-countries.json so editing that file cannot leave this sentence stale. -->
+  <Text key="OrderEdit.Validate.PhoneDigits">{0}の電話番号は{1}桁です。</Text>
+  <!-- Plain country names for the dial-code picker. Not the TaxJurisdiction.* names: those describe a
+       tax treatment and belong on a location picker. -->
+  <Text key="Country.CA">カナダ</Text>
+  <Text key="Country.US">アメリカ合衆国</Text>
+  <Text key="Country.CN">中国</Text>
+  <Text key="Country.JP">日本</Text>
+  <Text key="Country.FR">フランス</Text>
+  <Text key="Country.ES">スペイン</Text>
   <Text key="OrderEdit.Validate.Status">注文の状態を選択してください。</Text>
   <Text key="OrderEdit.Validate.AddressRequired">状態が「発送済み」の場合は、住所を入力してください。</Text>
   <Text key="OrderEdit.Validate.StatusReasonRequired">キャンセルまたは返品の理由を選択してください。</Text>

@@ -129,6 +129,18 @@ database: a new column on the shop, a new column frozen onto every order.
   stored keeps printing under a generic label rather than disappearing if a shop relocates.
 - **The pricing mode is frozen onto each order**, exactly as its currency already is. A receipt
   reprinted after a shop relocates, or after a rate changes, still reads as it was charged.
+- **A phone number carries the country it belongs to.** Every field that collects one — the customer on
+  an order, the customer on a custom-made record, the shop's own number, and both staff screens — puts
+  the international dial code in front of it, in a picker showing each country's flag, and checks the
+  number against that country's national length (Canada and the US 10, China 11, Japan 10 or 11, France
+  and Spain 9). The country is per NUMBER, not per shop: a Toronto shop takes a visiting customer's
+  Shanghai mobile by switching the picker, which a rule keyed on the store would have refused. The
+  shop's **location** decides only what the field opens on, with its currency as the fallback for a shop
+  that has never said where it is. Rules live in
+  `Settings/System/Defaults/phone-countries.json`, editable without a rebuild like the tax presets.
+  Storage is unchanged — one column holding `+1 905-401-6667` — and **the stricter rule applies to new
+  records only**, so nothing already saved starts refusing to save over a number typed before it
+  existed.
 
 **Upgrading from v2.x is automatic.** The first launch adds `Shops.LocationCode` and
 `Orders.PricesIncludeTax`, gives every existing shop a location inferred from its currency (CNY → CN,

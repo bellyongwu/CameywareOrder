@@ -1987,6 +1987,134 @@ touching either.
   failing.** `transform!.ScaleX` after "assert transform is not null" reports a CRASH where
   the honest answer is one failed check and a clean run of the rest. Guard and return.
 
+## A shipped list that changes SHAPE strands every code stored against the old one (2026-07-30)
+
+Canada shipped as three provincial jurisdictions (`CA-ON`/`CA-AB`/`CA-BC`) and became one country
+entry (`CA`). Every shop in the field still holds a provincial code, and `TaxJurisdictions.Find`
+answers null for all three — correctly, because they are no longer shipped.
+
+**The trap is that the fallback appeared to work.** `For(shop)` fell through to the home market, the
+home market IS Canada, so every assertion and every screen showed the right answer — by coincidence.
+The day the default moves, every one of those shops silently changes tax treatment, and nothing in the
+codebase records that the two were ever different questions.
+
+- **Widen at the RESOLUTION point, not in the lookup.** `For` now reads a code as
+  `<country>-<region>` and falls back to the country entry (`CA-ON` → `CA`, `US-CA` → `US`) before the
+  home market. `Find` stays strict: the settings screen relies on its null to tell a live code from a
+  dead one, so folding the widening into it would hide a retired code instead of surfacing it.
+- **Do not migrate the stored codes.** Rewriting `CA-ON` → `CA` in the database destroys the only
+  record that the shop is in Ontario, for no gain — the resolution already answers correctly, and a
+  re-added province takes effect on its own the day it ships. A migration here is a one-way door.
+- **Keep the dead label keys**, marked dormant. Re-adding a province is then a line of JSON with its
+  name already translated in five files, which is what makes "the presets are data" true rather than
+  aspirational.
+- Assert the retired codes explicitly. `taxcheck` now drives a shop stored as `CA-ON` through the
+  settings screen and asserts the picker opens on Canada — the upgrade path, not a hypothetical.
+
+## A second pricing mode is a second VOCABULARY, and some rows have no translation (2026-07-30)
+
+The money was already right in both modes; what was wrong was every word around it. A tax-inclusive
+order was still labelled `Order.Fields.PreTaxServiceTotal` over a price that is not pre-tax, and its
+rate box still switched between a deposit rate and a final rate that cannot differ where the tax is a
+property of the sale.
+
+- **Some rows must be DELETED, not reworded.** The deposit-stage breakdown showed subtotal, balance,
+  stage tax and post-tax total — where the tax is inside the price those are the price, the price
+  minus the deposit, zero, and the price again. Four rows of arithmetic that always cancels is not a
+  breakdown, it is a puzzle. It is now collapsed outright in that mode.
+- **The rows that survive want a different ORDER**, which is why the inclusive final stage is a
+  SIBLING panel rather than the same grid with rows hidden. `Grid.Row` is fixed in markup, so reusing
+  it would have meant renumbering rows from code — the exact mechanism by which two views of one
+  calculation drift apart.
+- **Write both panels in ONE pass, from one reading of the split.** `UpdateTaxBreakdownLines` calls
+  `UpdateDueAndReceivedLines` and `UpdateInclusiveBreakdown` back to back off a single
+  `SectionPayment`. A panel that fetches its own figures is a panel that will one day disagree.
+- **The tax has a NAME, and it is not the tax number's name.** A jurisdiction declares `taxNameLabel`
+  (→ `TaxName.*`) separately from `taxNumberLabel`: Japan issues a qualified-invoice NUMBER for a
+  consumption TAX, so deriving either from the other prints the wrong word. Only the inclusive
+  entries declare one, because it is only read where the price contains the tax — declaring it for
+  Canada and the US would be data nothing reads.
+- **The receipt takes the same words as the screen**, through one `static TaxLabelConverter.Label`.
+  The receipt is the copy the customer keeps; when the two disagree it is the paper that gets waved.
+
+## A harness that types a price into a section can still be measuring zero (2026-07-30)
+
+`taxcheck`'s new panel section set `AlterationPriceBox` to 1000 and every figure read 0.00. The
+alterations category defaults to "None", which switches the service OFF, and a switched-off section
+contributes nothing whatever the price box holds. Same family as "harnesses must seed their own
+fixture": pick the charged category first, then type the price. The failure is quiet — the panel
+renders perfectly, with zeros.
+
+## A harness whose assertion COUNT moves is telling you something (2026-07-30)
+
+`menucheck` reported 35 passed in one suite run and 33 in the next, both with zero failures. Nothing
+had regressed: several of its assertions sit behind guards like `if (headerXs.Count == names.Length)`
+or `if (rule is not null)`, which depend on a context menu having been measured. Under suite load a
+measurement comes back 0 and the whole block is skipped — silently, and reported as a clean run.
+
+Standalone it is 35/35, so the guards are what vary. **A conditional assertion is a test that can
+delete itself under load.** Where a guard is genuinely needed, count the skips and print them, so a
+run that checked less than the last one says so instead of looking identical.
+
+## Probe for the FILE, not for the folder it lives in (2026-07-30)
+
+`SystemSettingsPaths.SystemDirectory` returns the first root that has a `Settings/System` folder —
+beside the exe, else the working directory. Every shipped-defaults path was built on top of that, so a
+root holding that folder with only SOME of its files won the probe and the rest read as absent. Each
+loader answers "absent" by degrading to its built-in fallback, silently.
+
+It surfaced as a wrong phone number: a harness output directory held a partial copy (`app-defaults.json`
+and nothing else), so `PhoneCountries` fell back to its single home-market entry, a stored `"+86 …"`
+matched no dial code, and the field rendered `+1 +86 20 1234 5678`. Nothing threw. Two harnesses in the
+same suite disagreed for no visible reason — the one with NO `Settings` folder in its output fell
+through to the working directory and was fine.
+
+`DefaultsFile(name)` now probes each root for the file itself and only falls back to the base-directory
+path so an error message still names something a person can look at. **The general rule: when a probe
+picks between candidate locations, ask it about the thing you actually need.** A directory-level answer
+is a guess that the directory is complete.
+
+## A relative ResourceDictionary URI resolves against the APPLICATION, not the assembly (2026-07-30)
+
+`AppTheme.xaml` gained `<ResourceDictionary Source="/Themes/Flags.xaml"/>`. The app ran fine. Every
+harness died on startup with `IOException: Cannot locate resource 'themes/flags.xaml'` — before a
+window opened, so it read like the harness was broken rather than the theme.
+
+A relative pack URI is resolved against the application currently loading the dictionary. Inside
+`CameywareOrder.exe` that is the same assembly, so it works; inside `validcheck.exe`, which merges
+`pack://application:,,,/CameywareOrder;component/Themes/AppTheme.xaml` by hand, it goes looking in
+**validcheck** for a Themes folder it does not have. Any dictionary that a *different* executable can
+merge must name its assembly:
+
+```xml
+<ResourceDictionary Source="pack://application:,,,/CameywareOrder;component/Themes/Flags.xaml"/>
+```
+
+The general rule: nesting a dictionary inside `AppTheme.xaml` is the right way to reach the harnesses
+(they merge that one file), but the nested Source must be absolute or it reaches only the app.
+
+## Windows has no flag emoji, and a picker that needs one must draw it (2026-07-30)
+
+`🇨🇦` is two regional-indicator letters, and Segoe UI Emoji renders them as the letters — Microsoft
+leaves the flag glyphs out deliberately. There is no font to install around it. The dial-code picker
+draws six flags as `DrawingImage` in `Themes/Flags.xaml` instead: vector, no binaries in the repo,
+crisp at 200%, and keyed `Flag.<code>` so the row resolves its own by country code. Simplified on
+purpose at 20×14 — the US canton carries eight suggested stars, not fifty. `phonecheck` asserts every
+shipped country HAS one, because the failure mode is a blank space in a list, which reads as a
+rendering glitch rather than as missing data.
+
+## A control that replaces a TextBox breaks the abstractions built on TextBox (2026-07-30)
+
+Swapping the order form's phone `TextBox` for a `PhoneNumberField` broke `RequiredTextField`, which
+held a `TextBox` and asked it for `.Text`. The fix that preserved behaviour was to make the record hold
+two closures (`Func<bool> IsBlank`, `Action Focus`) with a `For(TextBox…)` factory for the ordinary
+fields — NOT to lift the phone out of the one-pass required check, which is what would have quietly
+undone "two missing fields are reported as two".
+
+The same swap breaks harnesses that reach a control by name and cast it (`(TextBox)Field(window,
+"PhoneNumberBox")`). Those are compile-time failures in the harness, which is the good case — but only
+if the harness is actually run.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies
