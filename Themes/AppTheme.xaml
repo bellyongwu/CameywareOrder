@@ -738,12 +738,116 @@
          The order editor drives dozens of radios and checkboxes through code (payment methods,
          cleared flags, the not-applicable strike) and swaps templates on some of them. Restyling
          the box itself here would fight that; only the text follows the theme. -->
-    <Style TargetType="CheckBox">
+    <!-- ══ Checkboxes ═══════════════════════════════════════════════════════════════════════
+         The radio's twin, and drawn the same way for the same reason: these two sit next to each
+         other on the payment cards ("deposit received", "clear all balances"), so a themed radio
+         beside a stock checkbox reads as an unfinished screen.
+
+         Square rather than round, with a drawn tick — the difference in SHAPE is what tells a user
+         "one of these" from "any of these", so the two templates deliberately share their colours and
+         their states while keeping their outlines distinct. -->
+    <Style x:Key="ThemedCheckBox" TargetType="CheckBox">
         <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+        <Setter Property="Padding" Value="9,0,0,0"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CheckBox">
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Width="18" Height="18" VerticalAlignment="Center">
+                            <Border x:Name="Halo" Width="26" Height="26" CornerRadius="6"
+                                    Background="{StaticResource PrimarySoftBrush}" Opacity="0"/>
+                            <Border x:Name="Box" CornerRadius="4" BorderThickness="1.5"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    Background="{TemplateBinding Background}"/>
+                            <!-- Drawn rather than a glyph: Segoe MDL2 is not on every machine this
+                                 ships to, and a missing tick is indistinguishable from an unticked box. -->
+                            <Path x:Name="Tick" Width="11" Height="9" Stretch="Uniform" Opacity="0"
+                                  Stroke="{StaticResource TextOnPrimaryBrush}" StrokeThickness="2"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Data="M 0,4.5 L 3.6,8 L 10,1"/>
+                            <!-- The indeterminate state, which the "clear all balances" master uses. -->
+                            <Rectangle x:Name="Dash" Width="9" Height="2" RadiusX="1" RadiusY="1"
+                                       Fill="{StaticResource TextOnPrimaryBrush}" Opacity="0"/>
+                        </Grid>
+
+                        <ContentPresenter Grid.Column="1" Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True"/>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource PrimaryHoverBorderBrush}"/>
+                            <Setter TargetName="Halo" Property="Opacity" Value="1"/>
+                        </Trigger>
+
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Box" Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Tick" Property="Opacity" Value="1"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+
+                        <Trigger Property="IsChecked" Value="{x:Null}">
+                            <Setter TargetName="Box" Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Dash" Property="Opacity" Value="1"/>
+                        </Trigger>
+
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsChecked" Value="True"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Box" Property="Background" Value="{StaticResource PrimaryDarkBrush}"/>
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource PrimaryDarkBrush}"/>
+                        </MultiTrigger>
+
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Halo" Property="Opacity" Value="1"/>
+                            <Setter TargetName="Halo" Property="Background" Value="{StaticResource PrimaryMutedBrush}"/>
+                        </Trigger>
+
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+                            <Setter TargetName="Box" Property="Background" Value="{StaticResource DisabledBackgroundBrush}"/>
+                            <Setter TargetName="Tick" Property="Stroke" Value="{StaticResource TextMutedBrush}"/>
+                            <Setter TargetName="Dash" Property="Fill" Value="{StaticResource TextMutedBrush}"/>
+                            <Setter TargetName="Halo" Property="Opacity" Value="0"/>
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForegroundBrush}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+
+                        <!-- A ticked box that is disabled keeps its fill, or a confirmed payment reads
+                             as one nobody ever confirmed. -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsChecked" Value="True"/>
+                                <Condition Property="IsEnabled" Value="False"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Box" Property="Background" Value="{StaticResource PrimaryMutedBrush}"/>
+                            <Setter TargetName="Box" Property="BorderBrush" Value="{StaticResource PrimaryMutedBrush}"/>
+                            <Setter TargetName="Tick" Property="Stroke" Value="{StaticResource SurfaceBrush}"/>
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
+
+    <Style TargetType="CheckBox" BasedOn="{StaticResource ThemedCheckBox}"/>
 
     <!-- ══ Radios ═══════════════════════════════════════════════════════════════════════════
          The stock WPF radio is a small grey ring with a black dot and no hover state at all, which

@@ -17,6 +17,29 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-30 18:05 — v4.0.2: a drawn checkbox, and two labels that would not wrap  [DONE]
+- Ask: "UI improvements: Do another hotfix version: >Add checkbox redesigning based on the main theme.
+  >the price breakdown labeling section should be a bit wider, make text wrappable, right now the text
+  is overflowed. >Basic information label is overflowed, make it veritcally middle, but wrappable."
+- Plan:
+  - [x] T1 `ThemedCheckBox` in `AppTheme.xaml` — keyed AND implicit, matching `ThemedRadioButton`
+  - [x] T2 breakdown label column wider + wrappable
+  - [x] T3 basic-info labels vertically centred + wrappable
+  - [x] Build, render, suite, publish, CJK sweep, docs
+- Notes: **T1** drawn square with a `Path` tick, a hover halo outside the box (so hover never reads as
+  half-ticked), an indeterminate dash, keyboard focus, and a disabled state. **Checked + disabled keeps
+  its fill** — a locked "deposit received" must still read as received, and the stock grey-out says the
+  opposite of what is true. `NotApplicableCheckBox` carries its own template and was left alone.
+  **T2/T3 had ONE cause and it was not the labels**: a horizontal `StackPanel` measures children at
+  infinite width, so `TextWrapping` on a `TextBlock` inside one does nothing. The 8 basic-info label
+  blocks became `DockPanel` + `DockPanel.Dock="Left"` icon + `VerticalAlignment="Center"`, which is what
+  makes both halves of that ask work at once. `FieldLabel` gained `TextWrapping="Wrap"`. The breakdown
+  labels were the other case — wrapping was live, the column was just too narrow: 18 columns `120`→`158`,
+  48 labels wrapped. Self-inflicted regex over-match left DockPanel tags 5-open/8-closed; found by
+  pairing every `</DockPanel>` to its opener. Build 0 warnings / 0 errors; suite 1530/0 across 25
+  harnesses; rendered `checkboxes.png` (all five states) and `editor.png` (both label blocks) — a
+  template is the one thing an assertion cannot judge. Lesson in `context.md`.
+
 ### 2026-07-30 17:20 — A drawn radio, and the custom-made window on the theme  [DONE]
 - Ask: "UI improvements: >Redsign the radio group themem globally. make a new look and feel for radios.
   >Apply the main theme to Custom made record view(especially the input fields). the styles is not

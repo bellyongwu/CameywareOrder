@@ -70,6 +70,28 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-07-30)
 
+### v4.0.2 — the selection controls are drawn, and two labels that would not wrap
+
+`ThemedRadioButton` and `ThemedCheckBox` replace the stock Windows controls in `AppTheme.xaml`, each
+keyed **and** implicit, matching `ThemedTextBox`. Both answer the pointer with a halo drawn OUTSIDE the
+ring/box, because a fill that appears on hover reads as half-selected. The checkbox keeps its fill when
+checked **and** disabled: a locked "deposit received" must still read as received, and the stock
+grey-out says the opposite of what is true.
+
+Keyed variants had to be hunted down and rebased or they would have kept the stock look while
+everything around them changed — `MethodRadio` (42 radios) and `ShopSetupWindow.ModeRadioStyle` now say
+`BasedOn`; `FilterChip`, `ChallengeBox` and `NotApplicableCheckBox` carry their own templates and were
+left alone. `CustomMadeServiceWindow` declared a local implicit `<Style TargetType="TextBox">` with no
+`BasedOn`, which REPLACES the theme's rather than extending it — that one line is why every input in
+that window looked wrong; fixed, with three inline paddings and 16 hex literals mapped to the palette.
+
+Two "label overflows" reports had one cause and it was not the labels: **a horizontal `StackPanel`
+measures its children at infinite width, so `TextWrapping` inside one is inert.** The 8 basic-info
+label blocks became `DockPanel` + docked icon + `VerticalAlignment="Center"`, which satisfies both
+halves of that ask at once. The breakdown labels were the other case — wrapping was live, the column
+was just too narrow: `120`→`158`. Both compiled, ran and asserted green the whole time they were wrong,
+so both were verified by rendering. `context.md` carries the rule.
+
 ### v4.0.1 — the split allocates itself
 Three bugs and five behaviours on top of v4.0. The bugs shared a shape: **"Skip deposit" left the split
 rows populated** (so a stage told to take nothing still owed something and could never balance), and the

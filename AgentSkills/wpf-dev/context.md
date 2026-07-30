@@ -2218,6 +2218,27 @@ The same swap breaks harnesses that reach a control by name and cast it (`(TextB
 "PhoneNumberBox")`). Those are compile-time failures in the harness, which is the good case — but only
 if the harness is actually run.
 
+## A horizontal StackPanel makes `TextWrapping` inert (2026-07-30)
+
+Two "the label overflows" reports had the same cause and neither was the label. A horizontal
+`StackPanel` measures its children with **infinite** available width, so a `TextBlock` inside one is
+never told it is too wide and never wraps, whatever `TextWrapping="Wrap"` says. The text simply runs
+past the panel and is clipped by whatever is downstream. Setting the property looks like a fix and
+changes nothing, which is the expensive part — it invites a hunt for the wrong bug.
+
+The basic-info labels were `StackPanel Orientation="Horizontal"` holding an icon and a caption; they
+became `DockPanel` with the icon `DockPanel.Dock="Left"`, which gives the caption the remaining width
+as a real constraint. `VerticalAlignment="Center"` on the panel then does what was asked of it — a
+two-line label sits centred against its field instead of riding the top.
+
+The rule: **if a `TextBlock` will not wrap, look at what measures it, not at the `TextBlock`.**
+Infinite-width parents are `StackPanel` (in its orientation), `ScrollViewer` (in its scrollable
+direction), `Canvas`, and any `Grid` column sized `Auto`. The breakdown labels were the `Auto`-column
+case in disguise — fixed-width `120` columns, so wrapping was live but the column was too narrow to
+hold "Pre-Tax Service Total" on one line; those went to `158`.
+
+Verify by RENDERING. Both of these compiled, ran, and asserted green the whole time they were wrong.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies

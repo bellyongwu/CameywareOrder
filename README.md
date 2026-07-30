@@ -11,6 +11,24 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.0.2 — 2026-07-30 (hotfix)
+
+Appearance and legibility, across every window.
+
+- **Radio buttons and checkboxes are drawn by the application** rather than by Windows, so a form no
+  longer mixes the product's own inputs with the operating system's. Both answer the pointer with a
+  halo around the control instead of a fill inside it — a fill on hover reads as half-selected — and
+  both carry a real disabled state. A checkbox that is **ticked and locked keeps its tick and its
+  colour**: a deposit confirmed earlier in the order must still read as confirmed, and the ordinary
+  grey-out says the opposite of what is true.
+- **The Custom-Made record window is on the shared theme.** Its inputs had kept the default Windows
+  look — square corners, a different border, a different focus ring — because the window declared a
+  text-box style of its own that replaced the theme's rather than extending it.
+- **The price-breakdown labels fit, and wrap when they cannot.** "Pre-Tax Service Total" and its
+  neighbours ran past the column and were clipped mid-word.
+- **The Basic Information labels wrap, and sit centred against their fields.** A label long enough to
+  need two lines — as several are in French and Spanish — was cut off instead.
+
 ### v4.0.1 — 2026-07-30 (hotfix)
 
 Fixes and sharpening for the payment split, all in the order editor.
