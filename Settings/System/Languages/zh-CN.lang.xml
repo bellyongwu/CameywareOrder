@@ -497,11 +497,12 @@
   <Text key="OrderEdit.Split.Off">不拆分付款</Text>
   <Text key="OrderEdit.Split.On">拆分付款</Text>
   <Text key="OrderEdit.Split.DepositTitle">按付款方式拆分定金</Text>
-  <Text key="OrderEdit.Split.RowTax">{0} 税 {1}</Text>
+  <Text key="OrderEdit.Split.RowDetail">{0} 税 {1}，应收 {2}</Text>
   <Text key="OrderEdit.Split.Summary">已分配 {0} / {1}  ·  税 {2}</Text>
   <Text key="OrderEdit.Split.Remaining">待分配：{0}</Text>
-  <Text key="OrderEdit.Split.Over">超出 {0}</Text>
+  <Text key="OrderEdit.Split.Overpaid">您多付了 {0}。</Text>
   <Text key="OrderEdit.Validate.SplitUnbalanced">{0}：还有 {1} 未分配到付款方式。</Text>
+  <Text key="OrderEdit.Validate.SplitOverpaid">{0}：比应收金额多分配了 {1}。</Text>
   <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
        phone-countries.json so editing that file cannot leave this sentence stale. -->
   <Text key="OrderEdit.Validate.PhoneDigits">{0}的电话号码为 {1} 位数字。</Text>

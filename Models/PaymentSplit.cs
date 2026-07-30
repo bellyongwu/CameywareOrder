@@ -29,10 +29,9 @@ public sealed class PaymentSplitLine
 /// How one service section's two stages were paid when the shop split them across payment types.
 /// </summary>
 /// <remarks>
-/// <see cref="Enabled"/> is the section's own choice, covering BOTH stages: the toggle lives on the
-/// payment card, and a card that splits its deposit across cash and a card almost always splits its
-/// balance too. A section with it off keeps the single-method shape the application has always had, and
-/// its line lists are not read at all.
+/// The two stages decide SEPARATELY. A customer can hand over the deposit in cash and settle the
+/// balance across two cards, and the first version of this tied both to one flag — so choosing to split
+/// a balance retrospectively re-shaped how the deposit was recorded.
 ///
 /// Stored rather than derived from "are there lines", because a shop can turn the split on and type
 /// nothing yet — and a half-filled split that silently reverted to the unsplit rule would charge a
@@ -40,11 +39,21 @@ public sealed class PaymentSplitLine
 /// </remarks>
 public sealed class SectionPaymentSplit
 {
-    public bool Enabled { get; set; }
+    /// <summary>Whether the DEPOSIT stage is split across payment types.</summary>
+    public bool DepositEnabled { get; set; }
+
+    /// <summary>Whether the FINAL BALANCE stage is split. Independent of the deposit's answer.</summary>
+    public bool FinalEnabled { get; set; }
 
     public List<PaymentSplitLine> Deposit { get; set; } = new();
 
     public List<PaymentSplitLine> Final { get; set; } = new();
+
+    /// <summary>Whether the named stage is split.</summary>
+    public bool IsEnabled(bool finalStage) => finalStage ? FinalEnabled : DepositEnabled;
+
+    /// <summary>True when either stage is split, which is what makes the section worth storing.</summary>
+    public bool AnyEnabled => DepositEnabled || FinalEnabled;
 
     /// <summary>The lines for one stage, ignoring any that carry no money.</summary>
     /// <remarks>

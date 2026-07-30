@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -201,13 +201,30 @@ public partial class OrderEditWindow : Window
         public required StackPanel FinalSplitPanel { get; init; }
         public required StackPanel FinalSplitRows { get; init; }
         public required TextBlock FinalSplitSummary { get; init; }
+        // The same choice offered again at the balance stage. Mirrored from the pair above rather than
+        // holding a second flag: one section, one answer, shown in two places.
+        public required StackPanel FinalSplitToggle { get; init; }
+        public required RadioButton FinalNoSplitRadio { get; init; }
+        public required RadioButton FinalSplitRadio { get; init; }
 
         /// <summary>The amount boxes, built in code so a new payment method needs no markup.</summary>
         public List<SplitRow> DepositRows { get; } = new();
         public List<SplitRow> FinalRows { get; } = new();
 
-        /// <summary>Whether this section splits its stages across payment types.</summary>
-        public bool IsSplit => SplitRadio.IsChecked is true;
+        /// <summary>
+        /// Whether the DEPOSIT stage is split, and whether the FINAL one is — two independent answers.
+        /// </summary>
+        /// <remarks>
+        /// They were one flag, with the balance stage's toggle mirrored onto the deposit's. That made
+        /// the two radios move together, so deciding to split a balance rewrote how the deposit was
+        /// recorded — a stage that had already been taken and confirmed.
+        /// </remarks>
+        public bool IsDepositSplit => SplitRadio.IsChecked is true;
+
+        public bool IsFinalSplit => FinalSplitRadio.IsChecked is true;
+
+        /// <summary>Whether the named stage is split.</summary>
+        public bool IsSplitAt(bool finalStage) => finalStage ? IsFinalSplit : IsDepositSplit;
 
         // True when the section carries order items, which is what makes the service part of
         // this order at all. A section without items sits out the payment flow entirely; one
@@ -254,9 +271,16 @@ public partial class OrderEditWindow : Window
     /// the same way the shop's tax matrix is: three sections times two stages times four methods is
     /// twenty-four rows of XAML that would all have to be found and edited to add a fifth method.
     /// </remarks>
-    private sealed record SplitRow(PaymentMethod Method, TextBox Amount, TextBlock Tax)
+    private sealed record SplitRow(PaymentMethod Method, TextBox Amount, TextBlock Detail, TextBlock Placeholder)
     {
         public decimal Value => ParseDecimalOrZero(Amount.Text);
+
+        /// <summary>
+        /// True when nothing has been typed here. Distinct from an amount of zero: a blank row is one
+        /// the shop has not answered yet and can still be offered the remainder, while a typed 0 is an
+        /// answer — "nothing was taken this way" — and must not be overwritten.
+        /// </summary>
+        public bool IsBlank => Amount.Text.Trim().Length == 0;
     }
 
     public OrderEditWindow(IServiceScopeFactory scopeFactory, LocalizationService localization)
@@ -651,6 +675,9 @@ public partial class OrderEditWindow : Window
             FinalSplitPanel = AlterationFinalSplitPanel,
             FinalSplitRows = AlterationFinalSplitRows,
             FinalSplitSummary = AlterationFinalSplitSummary,
+            FinalSplitToggle = AlterationFinalSplitToggle,
+            FinalNoSplitRadio = AlterationFinalNoSplitRadio,
+            FinalSplitRadio = AlterationFinalSplitRadio,
             // Alterations has no item list of its own, so a typed price — even "0" — is what
             // marks the service as present on this order. Choosing the "None" category switches
             // the service off outright, so it stops counting whatever the price box holds.
@@ -712,6 +739,9 @@ public partial class OrderEditWindow : Window
             FinalSplitPanel = CustomMadeFinalSplitPanel,
             FinalSplitRows = CustomMadeFinalSplitRows,
             FinalSplitSummary = CustomMadeFinalSplitSummary,
+            FinalSplitToggle = CustomMadeFinalSplitToggle,
+            FinalNoSplitRadio = CustomMadeFinalNoSplitRadio,
+            FinalSplitRadio = CustomMadeFinalSplitRadio,
             HasItems = () => _customMadeRecords.Count > 0,
             SectionTotal = () => _customMadeSumTotal,
             SectionSubtotal = () => _customMadeSubtotal,
@@ -769,6 +799,9 @@ public partial class OrderEditWindow : Window
             FinalSplitPanel = ClothingFinalSplitPanel,
             FinalSplitRows = ClothingFinalSplitRows,
             FinalSplitSummary = ClothingFinalSplitSummary,
+            FinalSplitToggle = ClothingFinalSplitToggle,
+            FinalNoSplitRadio = ClothingFinalNoSplitRadio,
+            FinalSplitRadio = ClothingFinalSplitRadio,
             HasItems = () => _clothingItemRows.Count > 0,
             SectionTotal = () => _clothingSumTotal,
             SectionSubtotal = () => _clothingSubtotal,
@@ -882,7 +915,12 @@ public partial class OrderEditWindow : Window
 
             // The default lives HERE rather than as IsChecked in the markup: set there it fires the
             // Checked handler during InitializeComponent, against controls that do not exist yet.
+            //
+            // BOTH pairs. The balance stage's copy was left unset, so that toggle opened with neither
+            // option chosen — the card said nothing about how the balance would be taken until somebody
+            // clicked one. "No split" is the answer every section starts from, at either stage.
             section.NoSplitRadio.IsChecked = true;
+            section.FinalNoSplitRadio.IsChecked = true;
         }
 
         // Everything the payment handlers touch now exists.
@@ -898,7 +936,7 @@ public partial class OrderEditWindow : Window
                 var grid = new Grid { Margin = new Thickness(0, 0, 14, 6) };
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
                 grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(220) });
 
                 var label = new TextBlock
                 {
@@ -906,24 +944,42 @@ public partial class OrderEditWindow : Window
                     VerticalAlignment = VerticalAlignment.Center,
                 };
 
-                var amount = new TextBox { Padding = new Thickness(6, 4, 6, 4), Margin = new Thickness(0, 0, 12, 0) };
+                var amount = new TextBox { Padding = new Thickness(6, 4, 6, 4) };
                 amount.PreviewTextInput += OnDecimalTextBoxPreviewTextInput;
                 amount.TextChanged += OnSplitAmountChanged;
-                Grid.SetColumn(amount, 1);
+                amount.GotKeyboardFocus += OnSplitAmountFocused;
+                amount.LostFocus += OnSplitAmountCommitted;
 
-                var tax = new TextBlock
+                // The placeholder sits BEHIND the box in the same cell, which is how the status-reason
+                // field already does it: a TextBox has no placeholder of its own, and a hint drawn
+                // beside the box would read as a value somebody had typed.
+                var placeholder = new TextBlock
+                {
+                    Margin = new Thickness(7, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = SplitPlaceholderBrush,
+                    IsHitTestVisible = false,
+                };
+
+                var field = new Grid { Margin = new Thickness(0, 0, 12, 0) };
+                field.Children.Add(amount);
+                field.Children.Add(placeholder);
+                Grid.SetColumn(field, 1);
+
+                var detail = new TextBlock
                 {
                     VerticalAlignment = VerticalAlignment.Center,
+                    TextWrapping = TextWrapping.Wrap,
                     Foreground = SplitRowTaxBrush,
                 };
-                Grid.SetColumn(tax, 2);
+                Grid.SetColumn(detail, 2);
 
                 grid.Children.Add(label);
-                grid.Children.Add(amount);
-                grid.Children.Add(tax);
+                grid.Children.Add(field);
+                grid.Children.Add(detail);
                 host.Children.Add(grid);
 
-                rows.Add(new SplitRow(method, amount, tax));
+                rows.Add(new SplitRow(method, amount, detail, placeholder));
             }
         }
     }
@@ -955,6 +1011,30 @@ public partial class OrderEditWindow : Window
         => target - (finalStage ? c.FinalRows : c.DepositRows).Sum(row => row.Value);
 
     /// <summary>
+    /// Whether a split deposit's rows add up to the deposit, which is what lets it be marked received.
+    /// </summary>
+    /// <remarks>
+    /// Ticking "received" is the shop saying the money is in hand and moving on: the deposit rows
+    /// disappear and the balance stage opens. Allowing that over an allocation that does not balance
+    /// stores a deposit whose payment types add up to something else, and the stage it came from is no
+    /// longer on screen to correct it. Refusing at SAVE was not enough — by then the evidence is gone.
+    ///
+    /// Always true for a section that is not split, and where the price already contains the tax:
+    /// there is nothing to balance in either case.
+    ///
+    /// Consulted from <c>ApplySectionLock</c> rather than assigned from the refresh pass. The checkbox's
+    /// enabled state has ONE owner, and that method assigns it unconditionally — a gate written
+    /// anywhere else is simply overwritten a moment later, which is what the first attempt did.
+    /// </remarks>
+    private bool IsSplitDepositBalanced(PaymentSectionControls c)
+    {
+        if (!c.IsDepositSplit || PricesIncludeTax)
+            return true;
+
+        return SplitShortfall(c, finalStage: false, SectionMoney(c).Deposit) == 0m;
+    }
+
+    /// <summary>
     /// Every split stage must account for exactly what that stage owes, or the order is refused.
     /// </summary>
     /// <remarks>
@@ -971,18 +1051,28 @@ public partial class OrderEditWindow : Window
     {
         foreach (var c in AllPaymentSections)
         {
-            if (!c.IsSplit || PricesIncludeTax || c.IsServiceSwitchedOff)
+            if (PricesIncludeTax || c.IsServiceSwitchedOff)
                 continue;
 
             var money = SectionMoney(c);
             var finalStage = c.DownCompletedCheck.IsChecked is true;
+
+            // Only the stage that is on screen, and only if THAT stage is the split one — the deposit
+            // and the balance answer separately now.
+            if (!c.IsSplitAt(finalStage))
+                continue;
+
             var target = finalStage ? money.FinalBase : money.Deposit;
             var shortfall = SplitShortfall(c, finalStage, target);
 
             if (shortfall == 0m)
                 continue;
 
-            var message = _localization.Format("OrderEdit.Validate.SplitUnbalanced",
+            // Short and over are different problems and need different sentences. One message with an
+            // absolute value told a shop that had allocated 1200 against 600 that "600 is not allocated
+            // to a payment type", which is the opposite of what happened.
+            var message = _localization.Format(
+                shortfall > 0m ? "OrderEdit.Validate.SplitUnbalanced" : "OrderEdit.Validate.SplitOverpaid",
                 _localization[c.ServiceNameKey], FormatCurrency(Math.Abs(shortfall)));
 
             RecordValidationFailure(new[] { message });
@@ -1021,7 +1111,8 @@ public partial class OrderEditWindow : Window
         void Capture(string key, PaymentSectionControls c)
         {
             var section = splits.For(key);
-            section.Enabled = c.IsSplit;
+            section.DepositEnabled = c.IsDepositSplit;
+            section.FinalEnabled = c.IsFinalSplit;
             section.Deposit = ReadSplitLines(c, finalStage: false).ToList();
             section.Final = ReadSplitLines(c, finalStage: true).ToList();
         }
@@ -1044,8 +1135,10 @@ public partial class OrderEditWindow : Window
         void Restore(string key, PaymentSectionControls c)
         {
             var section = splits.For(key);
-            c.SplitRadio.IsChecked = section.Enabled;
-            c.NoSplitRadio.IsChecked = !section.Enabled;
+            c.SplitRadio.IsChecked = section.DepositEnabled;
+            c.NoSplitRadio.IsChecked = !section.DepositEnabled;
+            c.FinalSplitRadio.IsChecked = section.FinalEnabled;
+            c.FinalNoSplitRadio.IsChecked = !section.FinalEnabled;
 
             Fill(c.DepositRows, section.Deposit);
             Fill(c.FinalRows, section.Final);
@@ -1070,6 +1163,22 @@ public partial class OrderEditWindow : Window
     /// well; this guard is what stops the next one from doing it again.
     /// </remarks>
     private void OnSplitModeChanged(object sender, RoutedEventArgs e)
+    {
+        if (_syncingPayment || !_sectionsReady)
+            return;
+
+        RefreshComputedTotals();
+    }
+
+    /// <summary>
+    /// The balance stage's own choice. It is NOT copied to or from the deposit's.
+    /// </summary>
+    /// <remarks>
+    /// These two used to be mirrored, so picking "split" for a balance re-shaped a deposit that had
+    /// already been taken. A customer who pays a deposit in cash and settles the balance across two
+    /// cards is ordinary; the stages answer separately.
+    /// </remarks>
+    private void OnFinalSplitModeChanged(object sender, RoutedEventArgs e)
     {
         if (_syncingPayment || !_sectionsReady)
             return;
@@ -1121,16 +1230,25 @@ public partial class OrderEditWindow : Window
             var rowTax = amount * rate / 100m;
             tax += rowTax;
 
-            row.Tax.Text = amount > 0m
-                ? _localization.Format("OrderEdit.Split.RowTax", FormatTaxRate(rate), FormatCurrency(rowTax))
+            // Each line says what it costs the customer, not just its tax: the amount typed is
+            // pre-tax, so the figure they are actually asked for at the till is amount + tax and
+            // nothing else on the card states it per method.
+            row.Detail.Text = amount > 0m
+                ? _localization.Format("OrderEdit.Split.RowDetail",
+                    FormatTaxRate(rate), FormatCurrency(rowTax), FormatCurrency(amount + rowTax))
                 : string.Empty;
         }
 
         var left = target - allocated;
+        ShowRemainderPlaceholders(rows, left);
+
+        // The line above already states the allocation against the target, so this one says what is
+        // WRONG: how much is missing, or how much too much. Naming the ceiling again read as a rule
+        // rather than as the thing to correct.
         var state = left switch
         {
             > 0m => _localization.Format("OrderEdit.Split.Remaining", FormatCurrency(left)),
-            < 0m => _localization.Format("OrderEdit.Split.Over", FormatCurrency(-left)),
+            < 0m => _localization.Format("OrderEdit.Split.Overpaid", FormatCurrency(-left)),
             _ => string.Empty,
         };
 
@@ -1143,6 +1261,143 @@ public partial class OrderEditWindow : Window
         summary.Foreground = left == 0m ? BalancedSplitBrush : UnbalancedSplitBrush;
     }
 
+    /// <summary>
+    /// Offers what is still unallocated as a placeholder in every row that has not been answered yet.
+    /// </summary>
+    /// <remarks>
+    /// A hint, not a value: nothing is charged until somebody puts it in the box. Recomputed on every
+    /// keystroke, so the offer is always the target LESS what has been entered — change one row from
+    /// 400 to 300 and every empty row is offering 100 before the next character can be typed.
+    ///
+    /// It disappears once the stage balances, and never appears on an over-allocated stage, where the
+    /// honest next move is to take an amount OUT rather than to be offered more.
+    /// </remarks>
+    private void ShowRemainderPlaceholders(List<SplitRow> rows, decimal left)
+    {
+        foreach (var row in rows)
+        {
+            row.Placeholder.Text = row.IsBlank && left > 0m ? FormatCurrency(left) : string.Empty;
+            row.Placeholder.Visibility = Show(row.IsBlank);
+        }
+    }
+
+    /// <summary>
+    /// Clicking into an empty row fills it with everything still unallocated.
+    /// </summary>
+    /// <remarks>
+    /// The figure it writes is ordinary editable text, and the rows it does NOT touch are every other
+    /// one: a row already carrying an amount is an answer, and a row still empty keeps offering
+    /// whatever is left. Typing 300 over an offered 400 therefore leaves 100, which the remaining empty
+    /// rows immediately offer in turn — the allocation walks down the list as the shop fills it in.
+    ///
+    /// An earlier version settled the other empty rows at zero, to balance the stage in one click. That
+    /// was wrong in the way that matters: a typed zero is an ANSWER ("nothing was taken this way"), so
+    /// writing it on the shop's behalf both stated something nobody had said and stopped those rows
+    /// from ever offering the remainder again.
+    /// </remarks>
+    private void OnSplitAmountFocused(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (_syncingPayment || !_sectionsReady || sender is not TextBox box)
+            return;
+
+        if (FindSplitSlot(box) is not { } slot || !slot.Row.IsBlank)
+            return;
+
+        var left = SplitTargetFor(slot.Section, slot.FinalStage) - slot.Rows.Sum(row => row.Value);
+        if (left <= 0m)
+            return;
+
+        _syncingPayment = true;
+        try
+        {
+            slot.Row.Amount.Text = left.ToString("0.##", CultureInfo.CurrentCulture);
+        }
+        finally
+        {
+            _syncingPayment = false;
+        }
+
+        RefreshComputedTotals();
+    }
+
+    /// <summary>
+    /// Leaving a row that has taken the stage over its target pulls it back to the largest amount that
+    /// still fits.
+    /// </summary>
+    /// <remarks>
+    /// The row CORRECTED is the one just edited, which is the one the shop meant to change — the others
+    /// are amounts already agreed, and moving those to make room would silently rewrite a payment that
+    /// had been recorded correctly.
+    ///
+    /// On losing focus rather than on each keystroke. Clamping as the digits arrive fights the typist:
+    /// "900" against a 400 ceiling would be rewritten at "9" and never reach a second character. While
+    /// typing, the summary says what is wrong; leaving the field is what accepts the correction.
+    /// </remarks>
+    private void OnSplitAmountCommitted(object sender, RoutedEventArgs e)
+    {
+        if (_syncingPayment || !_sectionsReady || sender is not TextBox box)
+            return;
+
+        if (FindSplitSlot(box) is not { } slot)
+            return;
+
+        var others = slot.Rows.Where(row => !ReferenceEquals(row, slot.Row)).Sum(row => row.Value);
+        var room = SplitTargetFor(slot.Section, slot.FinalStage) - others;
+
+        if (slot.Row.Value <= room)
+            return;
+
+        _syncingPayment = true;
+        try
+        {
+            // Never below zero: rows already agreed can add up past the target on their own, and the
+            // honest answer for this one is then "nothing left for you".
+            slot.Row.Amount.Text = Math.Max(room, 0m).ToString("0.##", CultureInfo.CurrentCulture);
+        }
+        finally
+        {
+            _syncingPayment = false;
+        }
+
+        RefreshComputedTotals();
+    }
+
+    /// <summary>Where one split amount box sits: which section, which stage, and among which rows.</summary>
+    private readonly record struct SplitSlot(
+        PaymentSectionControls Section, bool FinalStage, List<SplitRow> Rows, SplitRow Row);
+
+    /// <summary>
+    /// Finds the row a focused amount box belongs to, across every section and both stages.
+    /// </summary>
+    /// <remarks>
+    /// Separated from the handler because SEARCHING and ACTING were interleaved there: two nested loops
+    /// wrapped around the fill, with the guards inside them, which carried the method past the
+    /// cognitive-complexity limit. Neither half is complicated on its own.
+    /// </remarks>
+    private SplitSlot? FindSplitSlot(TextBox box)
+    {
+        foreach (var section in AllPaymentSections)
+        {
+            foreach (var finalStage in new[] { false, true })
+            {
+                var rows = finalStage ? section.FinalRows : section.DepositRows;
+                var row = rows.Find(candidate => ReferenceEquals(candidate.Amount, box));
+
+                if (row is not null)
+                    return new SplitSlot(section, finalStage, rows, row);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>What a stage's rows must add up to: the deposit typed in, or the balance left after it.</summary>
+    private decimal SplitTargetFor(PaymentSectionControls c, bool finalStage)
+    {
+        var money = SectionMoney(c);
+        return finalStage ? money.FinalBase : money.Deposit;
+    }
+
     // Green once a stage's allocation balances, amber while it does not. Through the file's OWN brush
     // helper rather than a second one taking hex: two helpers doing one job is how they drift.
     private static readonly Brush BalancedSplitBrush = CreateFrozenBrush(0x04, 0x78, 0x57);
@@ -1151,6 +1406,9 @@ public partial class OrderEditWindow : Window
     // The label colour on a split row, shared rather than built per row: this method runs for every
     // method, of both stages, of all three sections.
     private static readonly Brush SplitRowTaxBrush = CreateFrozenBrush(0x4B, 0x55, 0x63);
+
+    // Lighter than the typed text, so an offered remainder cannot be mistaken for an entered amount.
+    private static readonly Brush SplitPlaceholderBrush = CreateFrozenBrush(0x9C, 0xA3, 0xAF);
 
     private void InitializeCustomMadeRecordsList()
     {
@@ -2441,8 +2699,8 @@ public partial class OrderEditWindow : Window
         => new(subtotal, deposit, c.DepositTaxRate, c.FinalTaxRate,
             GetSelectedDownMethod(c), EffectiveFinalMethod(c), PricesIncludeTax)
         {
-            DepositSplit = c.IsSplit ? ReadSplitLines(c, finalStage: false) : null,
-            FinalSplit = c.IsSplit ? ReadSplitLines(c, finalStage: true) : null,
+            DepositSplit = c.IsDepositSplit ? ReadSplitLines(c, finalStage: false) : null,
+            FinalSplit = c.IsFinalSplit ? ReadSplitLines(c, finalStage: true) : null,
         };
 
     /// <summary>
@@ -3287,7 +3545,8 @@ public partial class OrderEditWindow : Window
         c.DownDebit.IsEnabled = !depositMethodLocked;
         c.DownCredit.IsEnabled = !depositMethodLocked;
         c.DownCash.IsEnabled = !depositMethodLocked;
-        c.DownCompletedCheck.IsEnabled = !sectionLocked;
+        // ...and not until a split deposit's rows add up to it: see IsSplitDepositBalanced.
+        c.DownCompletedCheck.IsEnabled = !sectionLocked && IsSplitDepositBalanced(c);
         c.FinalEtransfer.IsEnabled = !sectionLocked;
         c.FinalDebit.IsEnabled = !sectionLocked;
         c.FinalCredit.IsEnabled = !sectionLocked;
@@ -3306,15 +3565,19 @@ public partial class OrderEditWindow : Window
     // ORDER's frozen mode, and a saved order must keep the layout it was saved with.
     private static void UpdateSectionVisibility(PaymentSectionControls c, bool pricesIncludeTax)
     {
-        var split = ApplySplitModeVisibility(c, pricesIncludeTax);
+        var addedAtSettlement = !pricesIncludeTax;
+        var depositSplit = addedAtSettlement && c.IsDepositSplit;
+        var finalSplit = addedAtSettlement && c.IsFinalSplit;
+
+        ApplySplitModeVisibility(c, addedAtSettlement, depositSplit, finalSplit);
         var stage = ApplyDepositStageState(c);
 
         // In split mode the method radios are what USED to open this panel, so the split itself opens
         // it — otherwise turning the toggle on would hide the deposit box the split is allocating.
-        c.PricingPanel.Visibility = Show(split || stage.AnyMethodChosen);
+        c.PricingPanel.Visibility = Show(depositSplit || stage.AnyMethodChosen);
         c.FinalBlock.Visibility = Show(stage.IsSkipped || stage.DepositReceived);
 
-        ApplyBreakdownVisibility(c, pricesIncludeTax, split, stage);
+        ApplyBreakdownVisibility(c, pricesIncludeTax, depositSplit, finalSplit, stage);
     }
 
     /// <summary>Visible or collapsed. A helper so a visibility rule reads as the CONDITION it is.</summary>
@@ -3344,6 +3607,15 @@ public partial class OrderEditWindow : Window
         if (isSkipped && c.DownpaymentBox.Text != "0")
             c.DownpaymentBox.Text = "0";
 
+        // Skipping the deposit means a deposit of zero, so the split rows have to say zero too.
+        // Leaving amounts behind them made the section owe a deposit it had just been told not to take,
+        // and the allocation then refused to balance against a target of nothing.
+        if (isSkipped)
+        {
+            foreach (var row in c.DepositRows.Where(row => !row.IsBlank))
+                row.Amount.Text = string.Empty;
+        }
+
         c.DownpaymentBox.IsEnabled = !isSkipped;
 
         return new DepositStage(anyMethodChosen, isSkipped, c.DownCompletedCheck.IsChecked is true);
@@ -3364,20 +3636,30 @@ public partial class OrderEditWindow : Window
     /// to the tick would leave such an order showing no figures at all.
     /// </remarks>
     private static void ApplyBreakdownVisibility(
-        PaymentSectionControls c, bool pricesIncludeTax, bool split, DepositStage stage)
+        PaymentSectionControls c, bool pricesIncludeTax, bool depositSplit, bool finalSplit, DepositStage stage)
     {
         var addedAtSettlement = !pricesIncludeTax;
 
         c.DepositBreakdownPanel.Visibility =
-            Show(addedAtSettlement && stage.AnyMethodChosen && !stage.DepositReceived);
-        c.FinalBreakdownPanel.Visibility = Show(addedAtSettlement && stage.DepositReceived);
+            Show(addedAtSettlement && (depositSplit || stage.AnyMethodChosen) && !stage.DepositReceived);
+        // Follows the final BLOCK, not the deposit tick. A skipped deposit opens the final stage
+        // without ever ticking anything, and keying the breakdown to the tick left that order showing
+        // its balance with nothing explaining it.
+        c.FinalBreakdownPanel.Visibility =
+            Show(addedAtSettlement && (stage.IsSkipped || stage.DepositReceived));
         c.FinalInclusivePanel.Visibility =
             Show(pricesIncludeTax && (stage.IsSkipped || stage.DepositReceived));
 
         // The split rows follow their own stage: the deposit's until it is received, the balance's
-        // afterwards — the same two stages the rest of the card already moves through.
-        c.DepositSplitPanel.Visibility = Show(split && !stage.DepositReceived);
-        c.FinalSplitPanel.Visibility = Show(split && stage.DepositReceived);
+        // afterwards — the same two stages the rest of the card already moves through. The final rows
+        // also open on a SKIPPED deposit, which goes straight to the balance.
+        c.DepositSplitPanel.Visibility = Show(depositSplit && !stage.DepositReceived && !stage.IsSkipped);
+        c.FinalSplitPanel.Visibility = Show(finalSplit && (stage.IsSkipped || stage.DepositReceived));
+
+        // The toggle is repeated inside the final block so the choice can be made — or changed — at
+        // the balance stage without scrolling back to the top of the card. Both pairs drive the one
+        // per-section flag; FinalSplitRadio is mirrored from the deposit pair in SyncSplitToggles.
+        c.FinalSplitToggle.Visibility = Show(addedAtSettlement && (stage.IsSkipped || stage.DepositReceived));
     }
 
     /// <summary>
@@ -3386,20 +3668,18 @@ public partial class OrderEditWindow : Window
     /// and WHERE in the payment flow it has got to — and folding both into one method pushed it past
     /// the complexity limit.
     /// </summary>
-    private static bool ApplySplitModeVisibility(PaymentSectionControls c, bool pricesIncludeTax)
+    private static void ApplySplitModeVisibility(
+        PaymentSectionControls c, bool addedAtSettlement, bool depositSplit, bool finalSplit)
     {
         // Offered only where tax is ADDED at settlement. Where the price already contains it, splitting
         // the tender cannot move a figure on the screen.
-        c.SplitToggle.Visibility = Show(!pricesIncludeTax);
-
-        var split = !pricesIncludeTax && c.IsSplit;
+        c.SplitToggle.Visibility = Show(addedAtSettlement);
 
         // One method or several, never both on screen: choosing "Cash" while also allocating money to
-        // three types is a contradiction rather than a choice.
-        c.DownMethodRow.Visibility = Show(!split);
-        c.FinalMethodRow.Visibility = Show(!split);
-
-        return split;
+        // three types is a contradiction rather than a choice. Each stage hides only ITS OWN method
+        // row — the deposit can be a single cash payment while the balance is split three ways.
+        c.DownMethodRow.Visibility = Show(!depositSplit);
+        c.FinalMethodRow.Visibility = Show(!finalSplit);
     }
 
     private decimal? GetSubtotalForServiceType(OrderServiceType serviceType)

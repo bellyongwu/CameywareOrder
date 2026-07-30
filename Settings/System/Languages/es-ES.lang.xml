@@ -493,11 +493,12 @@
   <Text key="OrderEdit.Split.Off">Pago único</Text>
   <Text key="OrderEdit.Split.On">Pago dividido</Text>
   <Text key="OrderEdit.Split.DepositTitle">Dividir este depósito por método de pago</Text>
-  <Text key="OrderEdit.Split.RowTax">{0} impuesto {1}</Text>
+  <Text key="OrderEdit.Split.RowDetail">{0} impuesto {1}  ·  a cobrar {2}</Text>
   <Text key="OrderEdit.Split.Summary">Asignado {0} de {1}  ·  impuesto {2}</Text>
   <Text key="OrderEdit.Split.Remaining">Queda por asignar: {0}</Text>
-  <Text key="OrderEdit.Split.Over">Excedido en {0}</Text>
+  <Text key="OrderEdit.Split.Overpaid">Ha asignado {0} de más.</Text>
   <Text key="OrderEdit.Validate.SplitUnbalanced">{0}: {1} no está asignado a ningún método de pago.</Text>
+  <Text key="OrderEdit.Validate.SplitOverpaid">{0}: se ha asignado {1} más de lo debido.</Text>
   <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
        phone-countries.json so editing that file cannot leave this sentence stale. -->
   <Text key="OrderEdit.Validate.PhoneDigits">Un número de teléfono en {0} tiene {1} dígitos.</Text>

@@ -557,6 +557,14 @@
                                     <StackPanel x:Name="AlterationFinalBlock" anim:PanelTransition.Mode="FadeSlide" Visibility="Collapsed">
                                         <Border Style="{StaticResource StepDivider}"/>
                                         <TextBlock x:Name="AlterationFinalMethodLabel" Style="{StaticResource StepLabel}" Margin="0,14,0,6"/>
+                                        <!-- The same choice, offered again at the balance stage so it can be
+                                             made here without scrolling back up the card. Mirrored to the
+                                             deposit pair; both drive the one per-section flag. -->
+                                        <StackPanel x:Name="AlterationFinalSplitToggle" Orientation="Horizontal" Visibility="Collapsed" Margin="0,0,0,10">
+                                            <RadioButton x:Name="AlterationFinalNoSplitRadio" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.Off], Mode=OneWay}" Checked="OnFinalSplitModeChanged"/>
+                                            <RadioButton x:Name="AlterationFinalSplitRadio" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.On], Mode=OneWay}" Checked="OnFinalSplitModeChanged"/>
+                                        </StackPanel>
+
                                         <!-- Final-stage split, same rows, target fixed at the balance due. -->
                                         <StackPanel x:Name="AlterationFinalSplitPanel" Visibility="Collapsed" Margin="0,0,0,6">
                                             <StackPanel x:Name="AlterationFinalSplitRows"/>
@@ -791,6 +799,12 @@
                                     <StackPanel x:Name="CustomMadeFinalBlock" anim:PanelTransition.Mode="FadeSlide" Visibility="Collapsed">
                                         <Border Style="{StaticResource StepDivider}"/>
                                         <TextBlock x:Name="CustomMadeFinalMethodLabel" Style="{StaticResource StepLabel}" Margin="0,14,0,6"/>
+                                        <!-- See AlterationFinalSplitToggle. -->
+                                        <StackPanel x:Name="CustomMadeFinalSplitToggle" Orientation="Horizontal" Visibility="Collapsed" Margin="0,0,0,10">
+                                            <RadioButton x:Name="CustomMadeFinalNoSplitRadio" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.Off], Mode=OneWay}" Checked="OnFinalSplitModeChanged"/>
+                                            <RadioButton x:Name="CustomMadeFinalSplitRadio" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.On], Mode=OneWay}" Checked="OnFinalSplitModeChanged"/>
+                                        </StackPanel>
+
                                         <StackPanel x:Name="CustomMadeFinalSplitPanel" Visibility="Collapsed" Margin="0,0,0,6">
                                             <StackPanel x:Name="CustomMadeFinalSplitRows"/>
                                             <TextBlock x:Name="CustomMadeFinalSplitSummary" Margin="0,6,14,0" TextWrapping="Wrap" FontWeight="SemiBold"/>
@@ -1001,6 +1015,12 @@
                                     <StackPanel x:Name="ClothingFinalBlock" anim:PanelTransition.Mode="FadeSlide" Visibility="Collapsed">
                                         <Border Style="{StaticResource StepDivider}"/>
                                         <TextBlock x:Name="ClothingFinalMethodLabel" Style="{StaticResource StepLabel}" Margin="0,14,0,6"/>
+                                        <!-- See AlterationFinalSplitToggle. -->
+                                        <StackPanel x:Name="ClothingFinalSplitToggle" Orientation="Horizontal" Visibility="Collapsed" Margin="0,0,0,10">
+                                            <RadioButton x:Name="ClothingFinalNoSplitRadio" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.Off], Mode=OneWay}" Checked="OnFinalSplitModeChanged"/>
+                                            <RadioButton x:Name="ClothingFinalSplitRadio" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.On], Mode=OneWay}" Checked="OnFinalSplitModeChanged"/>
+                                        </StackPanel>
+
                                         <StackPanel x:Name="ClothingFinalSplitPanel" Visibility="Collapsed" Margin="0,0,0,6">
                                             <StackPanel x:Name="ClothingFinalSplitRows"/>
                                             <TextBlock x:Name="ClothingFinalSplitSummary" Margin="0,6,14,0" TextWrapping="Wrap" FontWeight="SemiBold"/>

@@ -11,6 +11,41 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.0.1 — 2026-07-30 (hotfix)
+
+Fixes and sharpening for the payment split, all in the order editor.
+
+- **Skipping the deposit now means a deposit of zero, rows included.** The split rows kept whatever had
+  been typed before "Skip deposit" was chosen, so the section owed a deposit it had just been told not
+  to take — and the allocation could not balance against a target of nothing.
+- **The balance stage shows its breakdown again**, including when the deposit was skipped. It had been
+  keyed to the deposit-received tick, which a skipped deposit never sets, so those orders reached the
+  final stage with nothing explaining the figure.
+- **The split toggle is offered at the balance stage too**, under that section — and the two stages
+  decide **independently**. A customer can hand over the deposit in cash and settle the balance across
+  two cards; tying both to one answer meant that choosing to split a balance re-shaped how a deposit
+  that had already been taken was recorded. Both toggles open on "no split", as every section does.
+- **Every unanswered row offers what is still unallocated**, as a placeholder rather than a value, and
+  re-offers it on every keystroke. With 600 to allocate, all four rows open showing 600; put 200 in cash
+  and the other three show 400; take 300 of that on a card and the two still empty both show 100.
+  Clicking into an empty row fills it with the remainder as ordinary editable text. Rows are otherwise
+  never written to: one that already holds an amount is an answer, and one still empty keeps offering
+  the balance rather than being settled at zero on the shop's behalf.
+- **"Deposit received" cannot be ticked until the deposit's rows add up to it.** Ticking it closes that
+  stage and opens the next, so it must not be possible over an allocation that does not balance — by
+  then the rows are off screen.
+- **Allocating more than the stage owes says so in those terms** — *you have allocated 600 too much* —
+  rather than describing an over-payment as something left unallocated, which is what one message
+  serving both directions used to do. The line above it already states the allocation against the
+  target, so this one names what is wrong. The check runs as the amount is typed, not at save, as does
+  the balance that gates "deposit received".
+- **Leaving an over-allocated row pulls it back to the most it can hold.** The row corrected is the one
+  just edited — the others are amounts already agreed, and moving those to make room would silently
+  rewrite a payment that was recorded correctly. It happens on leaving the field rather than on each
+  keystroke, which would rewrite "900" at the first digit and never let a second one be typed.
+- **Each row states its own tax and what is receivable for it** — `13% tax $39.00 · due $339.00` — so
+  the amount actually asked for at the till is on screen per payment type, not only as a section total.
+
 ### v4.0.0 — 2026-07-30
 
 **One stage, several payment types.** A customer paying a 600 deposit as 400 in cash and 200 on a card

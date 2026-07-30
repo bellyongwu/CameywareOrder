@@ -2045,6 +2045,36 @@ contributes nothing whatever the price box holds. Same family as "harnesses must
 fixture": pick the charged category first, then type the price. The failure is quiet — the panel
 renders perfectly, with zeros.
 
+## Filling a field on the user's behalf STATES something (2026-07-30)
+
+The split's auto-fill was first built to "settle the other rows at zero" when one was clicked into —
+taken from a request that said "the rest becomes 0". It balanced the stage in one click and it was
+wrong, in a way that only shows up a step later: a typed 0 is an ANSWER ("nothing was taken this way"),
+so writing it on the shop's behalf both asserted something nobody had said and stopped those rows from
+ever offering the remainder again. The next edit could not walk down the list.
+
+The rule that survives: **the only row an auto-fill may write is the one the user is in.** Everything
+else is either an answer already given or a question still open, and a placeholder — which charges
+nothing — is how an open question offers help.
+
+Same reason `SplitRow` keeps blank and 0 as different states rather than parsing both to zero.
+
+## A control's enabled state has ONE owner, and the last writer wins (2026-07-30)
+
+The v4.0.1 gate — "deposit received" cannot be ticked until a split deposit's rows add up — was first
+written into the refresh pass, next to the figures it depends on. It had no effect whatsoever.
+`ApplySectionLock` runs afterwards and assigns `c.DownCompletedCheck.IsEnabled = !sectionLocked`
+unconditionally, so the gate was overwritten a few milliseconds after being applied.
+
+That method already carries a comment about the same class of bug from the other direction (it used to
+only ever set false, stranding controls). The rule both halves point at: **a control's enabled state
+belongs to exactly one method**, and a new condition goes INTO that method rather than beside the data
+that motivated it. The gate is now a predicate — `IsSplitDepositBalanced` — that `ApplySectionLock`
+consults.
+
+Worth noting how it was caught: four assertions in `splitcheck` failed with everything else green, all
+saying the same thing. A UI rule asserted only through the model would have "passed".
+
 ## `IsChecked="True"` in markup fires its handler DURING InitializeComponent (2026-07-30)
 
 The v4.0 split toggle shipped as `<RadioButton IsChecked="True" Checked="OnSplitModeChanged"/>`. Every

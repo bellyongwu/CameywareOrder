@@ -494,11 +494,12 @@
   <Text key="OrderEdit.Split.Off">分割しない</Text>
   <Text key="OrderEdit.Split.On">分割して支払う</Text>
   <Text key="OrderEdit.Split.DepositTitle">内金を支払方法ごとに分割</Text>
-  <Text key="OrderEdit.Split.RowTax">{0} 税 {1}</Text>
+  <Text key="OrderEdit.Split.RowDetail">{0} 税 {1}  ·  請求額 {2}</Text>
   <Text key="OrderEdit.Split.Summary">割当 {0} / {1}  ·  税 {2}</Text>
   <Text key="OrderEdit.Split.Remaining">未割当：{0}</Text>
-  <Text key="OrderEdit.Split.Over">超過 {0}</Text>
+  <Text key="OrderEdit.Split.Overpaid">{0} 多く割り当てられています。</Text>
   <Text key="OrderEdit.Validate.SplitUnbalanced">{0}：{1} がどの支払方法にも割り当てられていません。</Text>
+  <Text key="OrderEdit.Validate.SplitOverpaid">{0}：請求額より {1} 多く割り当てられています。</Text>
   <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
        phone-countries.json so editing that file cannot leave this sentence stale. -->
   <Text key="OrderEdit.Validate.PhoneDigits">{0}の電話番号は{1}桁です。</Text>

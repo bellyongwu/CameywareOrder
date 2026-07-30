@@ -17,6 +17,69 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-30 15:10 — v4.0.1 hotfix: the split allocates itself  [DONE]
+- Ask: "Hotfix for v 4.0 > Bug Fix - the Skip deposit will be the same as Pre-tax deposit as $0 -
+  Issue: Missing break down for final balance stage. - The toggle on the split and non split payment
+  action, the UI should work on the final balance, and displayed under the section. > Improvements:
+  Make sure the total allocations shoulnd't over than the pretax- total amount. >For input in any
+  fields, for example, i have total 600, I type 200 in cash, the other fields automatically applies
+  400 as place holder, >If i then activate in another field, 400 should automatically inputed(the
+  automatically inputed text should be editable. ), the rest becomes 0 >Also i can change to 300, then
+  the rest fields with place holder can be changed to 100. >The downpayment received checkbox cannot
+  be activated until all fields are equally balanced >If the amount i entered is over than 600, show
+  error message that total amount should not over than 600 >Display 应收after each inputed payment
+  type. for instance. 13% tax ${tax}，应收${currentpaymentamount + tax}"
+- Plan:
+  - [ ] Skip deposit zeroes the split rows too, not only the deposit box
+  - [ ] The final stage shows its breakdown AND its own split toggle, under that section
+  - [ ] Remaining-amount PLACEHOLDER in every empty row; focusing one commits it and zeroes the rest
+  - [ ] Over-allocation refused with a message naming the target
+  - [ ] "Deposit received" stays disabled until the stage balances
+  - [x] Each row states its tax and what is receivable for that line
+- Notes: `SplitRow` gained a `Placeholder` TextBlock overlaid on the amount box (the status-reason
+  field's pattern — a TextBox has no placeholder, and a hint beside it reads as a typed value) and the
+  tax cell became a `Detail` cell carrying rate, tax and the receivable. `OnSplitAmountFocused` commits
+  the remainder and zeroes the other BLANK rows — blank and 0 are deliberately different states, a typed
+  0 being an answer that must not be overwritten. Keys `OrderEdit.Split.RowTax` → `.RowDetail` (3
+  placeholders) and `.Over` → `.Exceeds` (names the ceiling, which is what the user acts on) in five
+  languages. Final-stage toggle added per section, mirrored onto the deposit pair, which stays the one
+  the flag is read from.
+  **The gate was written in the wrong place first**: `ApplySectionLock` owns
+  `DownCompletedCheck.IsEnabled` and assigns it unconditionally, so a gate applied during the refresh
+  pass was silently overwritten — it is now the predicate `IsSplitDepositBalanced` that method consults
+  (`context.md`). Caught by four failing assertions in `splitcheck`, which grew an EDITOR section for
+  this hotfix: placeholders, focus-fill, editability, the shortfall, the ceiling, the per-row
+  receivable and skip-deposit are all control state, none of them reachable from the model.
+  Build 0 warnings / 0 errors; `splitcheck` 44 assertions green.
+- Follow-up ask: "The edit of any of the fields should reset the placeholder of the pre-taxed amount -
+  the inputed amount. for the other fields that didn't entered, should be the placeholder having the
+  balance. ... but for exsited fields with value, should not touch. >autovalidation on allocation
+  amount should be monitor user input realtime."
+  This CORRECTS the earlier "the rest becomes 0": the other rows must stay EMPTY and re-offer the
+  balance, not be answered with a zero. Zeroing removed — the auto-fill now writes only the row the user
+  is in. `splitcheck` grew the walk the request describes (600 offered everywhere → cash 200 → 400
+  offered → debit 300 → 100 offered in BOTH remaining rows, cash untouched) plus two keystroke-level
+  assertions that the tick flips as it is typed. 53 assertions.
+- Follow-up ask (zh): "所有的付款方式，不拆分方式始终为预选项。现在的情况是尾款预选项没有选择。另外，我如果交付的钱多了，
+  连个地方要改。首先wording：还有xxx未分配到付款方式比较难理解。应该是您多付了XXX，第二，以上确认后应该自动把最后一个
+  update的位置改为剩余最大值。" + "拆分payment应该独立于各自的payment stage，目前change radiobutton 已经互相影响了"
+  Four things: (1) the FINAL toggle opened with neither option chosen — only the deposit pair got a
+  default; both are set now. (2) One save message served both directions, so allocating 1200 against 600
+  said "600 is not allocated to a payment type" — split into `SplitUnbalanced` / `SplitOverpaid`, and
+  the live line now names the overshoot rather than the ceiling (the line above already shows the
+  target). (3) Leaving an over-allocated row clamps it to the remaining maximum — on LostFocus, not per
+  keystroke, which would rewrite "900" at the first digit. (4) **The two stages are now INDEPENDENT**:
+  `SectionPaymentSplit.Enabled` became `DepositEnabled` + `FinalEnabled`, `IsSplit` became
+  `IsDepositSplit`/`IsFinalSplit`/`IsSplitAt(stage)`, and the toggle mirroring (`SyncSplitToggles`) is
+  gone. Mirroring them meant choosing to split a BALANCE re-shaped a deposit already taken. JSON shape
+  changed with it — safe only because no order has been saved with a split outside this uncommitted
+  work. `splitcheck` at 60 assertions.
+- Sonar follow-up: `OnSplitAmountFocused` tripped S3776 (~17). The cause was SEARCHING and ACTING
+  interleaved — two nested loops looking for the row that owns the focused box, with the guards and the
+  fill inside them. Split into `FindSplitSlot` (returns a `SplitSlot` record struct) plus a flat
+  handler: ~4 branch points, and neither half is complicated. The rest of the hotfix methods were
+  audited the same way and are all ≤ 8.
+
 ### 2026-07-30 13:05 — v4.0: one stage, several payment types  [DONE]
 - Ask: "now we are gonna doing a Major release for V4.0, it will be related to split on Payment
   section. Some customers they may pay differnt payment type in deposit stage and final payment stage.

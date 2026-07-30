@@ -133,7 +133,7 @@ public class Order
 
     /// <summary>Writes the splits back, storing null when no section is split so the column stays empty.</summary>
     public void SetPaymentSplits(OrderPaymentSplits? splits)
-        => PaymentSplitsJson = splits is null || !splits.Sections.Values.Any(s => s.Enabled)
+        => PaymentSplitsJson = splits is null || !splits.Sections.Values.Any(s => s.AnyEnabled)
             ? null
             : splits.ToJson();
 
@@ -187,15 +187,14 @@ public class Order
         PaymentMethod? depositMethod, PaymentMethod? finalMethod)
     {
         var split = PricesIncludeTax ? null : PaymentSplits.For(sectionKey);
-        // `is { Enabled: true }` rather than `?.Enabled == true`: comparing against a boolean literal
-        // is S1125, and the pattern says the same thing without one.
-        var enabled = split is { Enabled: true };
 
+        // Per STAGE, not per section: a deposit taken one way and a balance split across three is an
+        // ordinary thing for a customer to do, and each stage answers only for itself.
         return new SectionPaymentInput(subtotal, deposit, depositRate, finalRate,
             depositMethod, finalMethod, PricesIncludeTax)
         {
-            DepositSplit = enabled ? split!.Charged(finalStage: false) : null,
-            FinalSplit = enabled ? split!.Charged(finalStage: true) : null,
+            DepositSplit = split?.IsEnabled(finalStage: false) == true ? split.Charged(finalStage: false) : null,
+            FinalSplit = split?.IsEnabled(finalStage: true) == true ? split.Charged(finalStage: true) : null,
         };
     }
 

@@ -69,6 +69,25 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-07-30)
 
+### v4.0.1 — the split allocates itself
+Three bugs and five behaviours on top of v4.0. The bugs shared a shape: **"Skip deposit" left the split
+rows populated** (so a stage told to take nothing still owed something and could never balance), and the
+**final-balance breakdown was keyed to the deposit-received tick**, which a skipped deposit never sets —
+so those orders reached their balance with nothing explaining it. The toggle is now offered at the
+balance stage too, mirrored onto the deposit pair that remains the one the flag is read from.
+
+The allocation now helps: every unanswered row OFFERS the remainder as a placeholder, clicking into one
+commits it and settles the others at zero, and what it writes is ordinary editable text. Blank and 0 are
+deliberately different states — a typed 0 is an answer and is never overwritten. "Deposit received" is
+refused until the rows add up, over-allocation names the CEILING rather than the overshoot, and each row
+states its own tax and receivable (`13% tax $39.00 · due $339.00`).
+
+**The gate went in the wrong place first and did nothing**: `ApplySectionLock` owns
+`DownCompletedCheck.IsEnabled` and assigns it unconditionally, so a rule applied during the refresh pass
+was overwritten milliseconds later. A control's enabled state has one owner (`context.md`). Caught only
+because `splitcheck` grew an EDITOR section — placeholders, focus, editability and enablement are
+control state, invisible to a model-only harness.
+
 ### v4.0 — one stage, several payment types
 A 600 deposit paid 400 cash + 200 card is now recorded as that, and taxed as that: **26.00, not 78.00**.
 The old model held one method and one rate per portion, so it could only record one of the two — which

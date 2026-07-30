@@ -493,11 +493,12 @@
   <Text key="OrderEdit.Split.Off">Paiement unique</Text>
   <Text key="OrderEdit.Split.On">Paiement fractionné</Text>
   <Text key="OrderEdit.Split.DepositTitle">Répartir cet acompte par moyen de paiement</Text>
-  <Text key="OrderEdit.Split.RowTax">{0} taxe {1}</Text>
+  <Text key="OrderEdit.Split.RowDetail">{0} taxe {1}  ·  à percevoir {2}</Text>
   <Text key="OrderEdit.Split.Summary">Réparti {0} sur {1}  ·  taxe {2}</Text>
   <Text key="OrderEdit.Split.Remaining">Reste à répartir : {0}</Text>
-  <Text key="OrderEdit.Split.Over">Excédent de {0}</Text>
+  <Text key="OrderEdit.Split.Overpaid">Vous avez réparti {0} de trop.</Text>
   <Text key="OrderEdit.Validate.SplitUnbalanced">{0} : {1} n'est affecté à aucun moyen de paiement.</Text>
+  <Text key="OrderEdit.Validate.SplitOverpaid">{0} : {1} de plus que le montant dû a été réparti.</Text>
   <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
        phone-countries.json so editing that file cannot leave this sentence stale. -->
   <Text key="OrderEdit.Validate.PhoneDigits">Un numéro de téléphone en {0} comporte {1} chiffres.</Text>
