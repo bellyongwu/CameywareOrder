@@ -335,6 +335,16 @@ components are added/renamed or the way pieces fit together changes.
     still hold it), `Cash`, `None`, `DebitCard`, `CreditCard`.
   - `OrderNumberMode` (`Models/Shop.cs`) — Timestamp (default, the format the app always produced)
     / Sequential / DailySequential / YearlySequential.
+  - `PaymentSplitLine` / `SectionPaymentSplit` / `OrderPaymentSplits` (`Models/PaymentSplit.cs`) — one
+    stage paid with several payment types (v4.0). A line is (method, amount, frozen rate); a section
+    holds `Enabled` plus a line list per stage; the order holds all three sections in ONE column,
+    `Orders.PaymentSplitsJson`, null for every order written before v4.0. `Enabled` is stored rather
+    than inferred from "are there lines", because a shop can turn the split on before typing anything
+    and a half-filled split that silently reverted would charge a different tax than the screen showed.
+  - `SectionPaymentInput` — everything one section's money is computed from, passed as a STRUCT so a
+    call site cannot forget the split. The parameter list had already reached the S107 limit, but the
+    real reason is the pricing-mode flag: it shipped optional, a harness kept the shorter overload and
+    the old arithmetic, and nothing failed to build while the numbers stopped agreeing.
   - `SectionPayment` — immutable `readonly record struct`
     (Subtotal, Deposit, FinalBase, ReceivedDownpayment, FinalCharge, Total, Tax)
     holding one section's money split, plus `DepositTax` / `FinalTax` / `PricesIncludeTax` as init

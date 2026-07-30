@@ -17,6 +17,64 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-30 13:05 — v4.0: one stage, several payment types  [DONE]
+- Ask: "now we are gonna doing a Major release for V4.0, it will be related to split on Payment
+  section. Some customers they may pay differnt payment type in deposit stage and final payment stage.
+  >only applies to tax appied extra countries, like Canada and US >Provide an option to split the
+  payment by types. by default, no split, which follow the same structure as we had (no split
+  payments->this is the default or Split payments) >when click Split payments after,For instance, as a
+  customer, I want to pay total of 600 pre-taxed deposit -allow user to fill different amount of money
+  for different payement type -lets say I pay 400 cash, and 200 by card (if cash is 0%, 13% for card).
+  then the tax rate should only apply on the card automatically -also I can select 200 cash, 200 card
+  and 200 for the etransfer. >On final payment step, Follow the same logic >Even I can choose all types
+  of the payments. Note, the UI may need adjustment, think of a good UI to handle this situation.
+  >Update none selection. Update currently None be more descriptive, lets call it (Skip deposit)"
+- Decisions taken from the user before building:
+  - **Fixed rows, one per method**, each with an amount box and its own tax shown, plus a running
+    "left to allocate". No add/remove list state, and the same shape serves both stages.
+  - **The toggle is PER SECTION**, like every other payment setting on this form, and covers both
+    stages of that section.
+  - **The typed deposit stays the target** and the lines must add up to it — which is also the only
+    shape the final stage can have, since its target is subtotal − deposit and cannot be typed.
+  - **A final stage that does not add up is refused at save.** A shortfall would be a partial payment,
+    and there is no such state anywhere in the model, the receipt or the balance column.
+  - Tax-EXCLUSIVE locations only, as asked: where the price already contains the tax there is nothing
+    for a per-method split to change.
+- Plan:
+  - [ ] `Models/PaymentSplit` — one line (method, amount, frozen rate) + a section's two stages
+  - [ ] `Order.PaymentSplitsJson` (one column, runtime guard) + per-section accessors
+  - [ ] `CalculateSectionPayment` takes an INPUT STRUCT so the split cannot be forgotten by a call
+        site (S107, and the lesson from the pricing-mode flag: never an optional parameter)
+  - [ ] Per-portion tax = Σ line × that line's rate; no-split stays the one-line case
+  - [ ] UI: toggle + split rows per section, live allocation, in the three payment cards
+  - [ ] Validation: both stages must balance; message names the shortfall
+  - [ ] `PaymentMethod.None` → "Skip deposit" in five languages (NOT Alteration.Category.None)
+  - [x] Harness, suite, README v4.0.0
+- Notes: New — `Models/PaymentSplit.cs` (line / section / order), `SectionPaymentInput`,
+  `Order.PaymentSplitsJson` + `PaymentSplits` + `SetPaymentSplits`, `Order.PortionTax`, the column
+  guard in `App.xaml.cs`. `OrderEditWindow`: per-section toggle, split rows BUILT in code from
+  `PaymentTaxRules.ConfigurableMethods` (three sections × two stages × four methods is twenty-four
+  rows nobody wants in markup), live per-row tax and allocation summary, `ApplySplitModeVisibility`
+  split out of `UpdateSectionVisibility` to keep S3776 under 15, save/load, and
+  `ValidateSplitAllocations`. Eight keys × five languages; `PaymentMethod.None` → "Skip deposit"
+  (`Alteration.Category.None` deliberately untouched — a different "None").
+  Build 0 warnings / 0 errors. New `splitcheck` (24 assertions) covers the asked example, three- and
+  four-way splits, the final stage, one-line-split == unsplit, a legacy null column, the shop's rules
+  still governing per line, tax-inclusive ignoring the split, and the JSON round trip.
+  A UTF-8 BOM was introduced into all five language files by a PowerShell rewrite and stripped again —
+  `Set-Content -Encoding UTF8` writes a BOM in PS 5.1; use `UTF8Encoding($false)`.
+  **The suite caught a crash the build could not**: the toggle shipped with `IsChecked="True"` in
+  markup, which raises Checked during `InitializeComponent`, before the section controls exist — every
+  order window died on open with an NRE. Default moved into code and the handler guarded with
+  `_sectionsReady` (`_syncingPayment` is false at parse time and does not cover it). Also: the live
+  database needed `scratchpad/livemigrate` to gain `PaymentSplitsJson` before any harness reading it
+  could run, and `balancecheck`/`taxcheck` were converted to the new input struct through a local
+  `Money(...)` helper that keeps the original parameter names so their assertions read unchanged.
+- Follow-ups NOT done, and deliberately: the receipt and the order detail panel still print the single
+  stored method per portion, so a split order's paperwork names one method rather than listing what was
+  taken by each. The money on them is right — it comes from `SectionPayment` — but the narrative line
+  is not yet split-aware.
+
 ### 2026-07-30 11:40 — A phone number carries the country it belongs to  [DONE]
 - Ask: "New feature: Update phone number validation based on store's location. the internation code
   should show up front. with a dropbox with flag and internation code. by default, use the selected

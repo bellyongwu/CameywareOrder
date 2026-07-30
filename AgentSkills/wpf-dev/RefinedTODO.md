@@ -69,6 +69,24 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-07-30)
 
+### v4.0 — one stage, several payment types
+A 600 deposit paid 400 cash + 200 card is now recorded as that, and taxed as that: **26.00, not 78.00**.
+The old model held one method and one rate per portion, so it could only record one of the two — which
+is not a display limitation, it is the wrong tax.
+
+`Order.PortionTax` takes an optional line list; no lines is the rule the app always had. The input moved
+into `SectionPaymentInput`, a struct, so the compiler enumerates every call site when the next field is
+added — the pricing-mode flag taught that lesson by shipping optional and letting a harness keep the old
+arithmetic silently. Storage is ONE nullable column (`Orders.PaymentSplitsJson`), empty for the whole
+installed base, so nothing is recalculated on upgrade.
+
+Decisions taken with the user first: fixed rows one per method (no add/remove list state) with a live
+"left to allocate"; the toggle per SECTION covering both its stages; the typed deposit stays the target
+the lines must meet, which is also the only shape the final stage can have; and a stage that does not
+balance is REFUSED, because a shortfall is a partial payment and no such state exists anywhere in the
+model, the receipt or the balance column. Offered only where tax is added at settlement — where the
+price contains it, the tender cannot move it.
+
 ### A phone number carries the country it belongs to
 Every phone field is now one control — `PhoneNumberField` — with a dial-code picker and a drawn flag in
 front of the number, on all five surfaces that collect one. The country is per NUMBER, not per shop: a

@@ -11,6 +11,35 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.0.0 — 2026-07-30
+
+**One stage, several payment types.** A customer paying a 600 deposit as 400 in cash and 200 on a card
+is now recorded as exactly that — and taxed as exactly that.
+
+- **Off by default.** Every payment card carries a *No split payments* / *Split payments* choice, and
+  the first is what it opens on. A shop that never touches it sees the form it has always seen, and
+  every order already in the database keeps the arithmetic it was saved with.
+- **The tax follows each payment, not the stage.** 400 cash and 200 on a card at 13% is **26.00** of
+  tax, not 78.00. This is the whole point of the release: a single rate per stage cannot express a
+  customer who pays two ways, and the old model had to pick one method for the whole portion.
+- **Any combination, at either stage.** Two types, three, or all four; the deposit and the final
+  balance are split independently, each against its own target.
+- **It applies only where tax is ADDED at settlement** — Canada and the US. Where the price already
+  contains the tax (China, Japan, the EU) the controls are not shown at all, because how a sale is
+  tendered cannot move a tax that is already inside the price.
+- **A stage that does not add up is refused**, naming the amount left over. A shortfall would be a
+  partial payment, and there is no such state anywhere in this application; better to refuse than to
+  store a number no screen can explain.
+- **The toggle is per service section**, alongside every other payment setting on that card, so a shop
+  can split its alterations payment without seeing split rows on services nobody split.
+- **"None" is now "Skip deposit".** It only ever appears where a deposit is being chosen, and that is
+  what choosing it means.
+
+**Upgrading from v3.x is automatic and changes nothing on its own.** The first launch adds
+`Orders.PaymentSplitsJson`, which is empty for every existing order — read back as "no section is
+split", which is the single-method arithmetic those orders already had. Nothing is recalculated and no
+receipt changes.
+
 ### v3.2.0 — 2026-07-30
 
 **Store Management** — a new administrator-only panel, reached from an enlarged Select Shop screen.

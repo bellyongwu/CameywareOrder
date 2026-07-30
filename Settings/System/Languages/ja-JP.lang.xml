@@ -488,6 +488,17 @@
   <Text key="OrderEdit.Validate.EmailRequired">支払方法を選択した場合は、メールアドレスを入力してください。</Text>
   <Text key="OrderEdit.Validate.EmailInvalid">有効なメールアドレスを入力してください。</Text>
   <Text key="OrderEdit.Validate.PhoneInvalid">有効な電話番号を入力してください。</Text>
+  <!-- v4.0: one stage paid with several payment types. {0}/{1} are money, already formatted.
+       The tax follows each line's own method, so a split of cash and a card is taxed on the
+       card alone - which is the whole point and is what the summary line has to make visible. -->
+  <Text key="OrderEdit.Split.Off">分割しない</Text>
+  <Text key="OrderEdit.Split.On">分割して支払う</Text>
+  <Text key="OrderEdit.Split.DepositTitle">内金を支払方法ごとに分割</Text>
+  <Text key="OrderEdit.Split.RowTax">{0} 税 {1}</Text>
+  <Text key="OrderEdit.Split.Summary">割当 {0} / {1}  ·  税 {2}</Text>
+  <Text key="OrderEdit.Split.Remaining">未割当：{0}</Text>
+  <Text key="OrderEdit.Split.Over">超過 {0}</Text>
+  <Text key="OrderEdit.Validate.SplitUnbalanced">{0}：{1} がどの支払方法にも割り当てられていません。</Text>
   <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
        phone-countries.json so editing that file cannot leave this sentence stale. -->
   <Text key="OrderEdit.Validate.PhoneDigits">{0}の電話番号は{1}桁です。</Text>
@@ -678,7 +689,7 @@
   <Text key="PaymentMethod.DebitCard">デビットカード</Text>
   <Text key="PaymentMethod.CreditCard">クレジットカード</Text>
   <Text key="PaymentMethod.Cash">現金</Text>
-  <Text key="PaymentMethod.None">なし</Text>
+  <Text key="PaymentMethod.None">内金なし</Text>
   <Text key="Payment.Status.Cleared">精算済み</Text>
   <Text key="Payment.Status.ClearedPickedUp">精算済み（受け取り済み）</Text>
   <Text key="Payment.Status.ClearedNotPickedUp">精算済み（未受け取り）</Text>

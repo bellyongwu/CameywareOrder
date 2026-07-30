@@ -487,6 +487,17 @@
   <Text key="OrderEdit.Validate.EmailRequired">Escribe una dirección de correo electrónico cuando haya un método de pago seleccionado.</Text>
   <Text key="OrderEdit.Validate.EmailInvalid">Escribe una dirección de correo electrónico válida.</Text>
   <Text key="OrderEdit.Validate.PhoneInvalid">Escribe un número de teléfono válido.</Text>
+  <!-- v4.0: one stage paid with several payment types. {0}/{1} are money, already formatted.
+       The tax follows each line's own method, so a split of cash and a card is taxed on the
+       card alone - which is the whole point and is what the summary line has to make visible. -->
+  <Text key="OrderEdit.Split.Off">Pago único</Text>
+  <Text key="OrderEdit.Split.On">Pago dividido</Text>
+  <Text key="OrderEdit.Split.DepositTitle">Dividir este depósito por método de pago</Text>
+  <Text key="OrderEdit.Split.RowTax">{0} impuesto {1}</Text>
+  <Text key="OrderEdit.Split.Summary">Asignado {0} de {1}  ·  impuesto {2}</Text>
+  <Text key="OrderEdit.Split.Remaining">Queda por asignar: {0}</Text>
+  <Text key="OrderEdit.Split.Over">Excedido en {0}</Text>
+  <Text key="OrderEdit.Validate.SplitUnbalanced">{0}: {1} no está asignado a ningún método de pago.</Text>
   <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
        phone-countries.json so editing that file cannot leave this sentence stale. -->
   <Text key="OrderEdit.Validate.PhoneDigits">Un número de teléfono en {0} tiene {1} dígitos.</Text>
@@ -677,7 +688,7 @@
   <Text key="PaymentMethod.DebitCard">Tarjeta de débito</Text>
   <Text key="PaymentMethod.CreditCard">Tarjeta de crédito</Text>
   <Text key="PaymentMethod.Cash">Efectivo</Text>
-  <Text key="PaymentMethod.None">Ninguno</Text>
+  <Text key="PaymentMethod.None">Sin depósito</Text>
   <Text key="Payment.Status.Cleared">Liquidado</Text>
   <Text key="Payment.Status.ClearedPickedUp">Liquidado (recogido)</Text>
   <Text key="Payment.Status.ClearedNotPickedUp">Liquidado (sin recoger)</Text>

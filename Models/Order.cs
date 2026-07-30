@@ -110,8 +110,32 @@ public class Order
     public decimal? CustomMadeTaxRate { get; set; }
     public decimal? CustomMadeFinalTaxRate { get; set; }
 
+    /// <summary>
+    /// How each section's stages were split across payment types, as JSON. Null on every order written
+    /// before v4.0, which reads back as "no section is split" — the single-method arithmetic, unchanged.
+    /// </summary>
+    /// <remarks>
+    /// One column for all three sections: see <see cref="OrderPaymentSplits"/>. Read through
+    /// <see cref="PaymentSplits"/> rather than parsed at each use.
+    /// </remarks>
+    public string? PaymentSplitsJson { get; set; }
+
     public string? Notes { get; set; }
     public List<OrderItem> Items { get; set; } = new();
+
+    /// <summary>
+    /// The parsed splits. Parsed on every read, like <see cref="CustomMadeRecords"/> beside it —
+    /// a cached copy on a tracked entity is a second source of truth for the same column, and this one
+    /// feeds the money calculation.
+    /// </summary>
+    [NotMapped]
+    public OrderPaymentSplits PaymentSplits => OrderPaymentSplits.FromJson(PaymentSplitsJson);
+
+    /// <summary>Writes the splits back, storing null when no section is split so the column stays empty.</summary>
+    public void SetPaymentSplits(OrderPaymentSplits? splits)
+        => PaymentSplitsJson = splits is null || !splits.Sections.Values.Any(s => s.Enabled)
+            ? null
+            : splits.ToJson();
 
     // Nominal deposits entered by the shop (pre-tax deposit amount), summed across sections.
     [NotMapped]
@@ -124,15 +148,17 @@ public class Order
     // is received as 339 at 13%, while the same deposit paid by cash is received as 300.
     [NotMapped]
     public SectionPayment AlterationMoney
-        => CalculateSectionPayment(AlterationSubtotal ?? 0m, AlterationDownpayment ?? 0m, AlterationTaxRate ?? 0m,
+        => CalculateSectionPayment(SectionInput(OrderPaymentSplits.AlterationKey,
+            AlterationSubtotal ?? 0m, AlterationDownpayment ?? 0m, AlterationTaxRate ?? 0m,
             AlterationFinalTaxRate ?? AlterationTaxRate ?? 0m,
-            AlterationDownpaymentMethod, AlterationFinalBalanceMethod, PricesIncludeTax);
+            AlterationDownpaymentMethod, AlterationFinalBalanceMethod));
 
     [NotMapped]
     public SectionPayment ClothingMoney
-        => CalculateSectionPayment(ClothingSubtotal ?? 0m, ClothingDownpayment ?? 0m, ClothingTaxRate ?? 0m,
+        => CalculateSectionPayment(SectionInput(OrderPaymentSplits.ClothingKey,
+            ClothingSubtotal ?? 0m, ClothingDownpayment ?? 0m, ClothingTaxRate ?? 0m,
             ClothingFinalTaxRate ?? ClothingTaxRate ?? 0m,
-            ClothingDownpaymentMethod, ClothingFinalBalanceMethod, PricesIncludeTax);
+            ClothingDownpaymentMethod, ClothingFinalBalanceMethod));
 
     // Custom-made pricing mirrors the other sections: the base charge is the sum of the
     // individual records' prices, and tax is applied per payment portion.
@@ -141,9 +167,37 @@ public class Order
 
     [NotMapped]
     public SectionPayment CustomMadeMoney
-        => CalculateSectionPayment(CustomMadeSubtotal, CustomMadeDownpayment ?? 0m, CustomMadeTaxRate ?? 0m,
+        => CalculateSectionPayment(SectionInput(OrderPaymentSplits.CustomMadeKey,
+            CustomMadeSubtotal, CustomMadeDownpayment ?? 0m, CustomMadeTaxRate ?? 0m,
             CustomMadeFinalTaxRate ?? CustomMadeTaxRate ?? 0m,
-            CustomMadeDownpaymentMethod, CustomMadeFinalBalanceMethod, PricesIncludeTax);
+            CustomMadeDownpaymentMethod, CustomMadeFinalBalanceMethod));
+
+    /// <summary>
+    /// Assembles one section's calculation input, attaching its split lines when that section's card
+    /// has the toggle on.
+    /// </summary>
+    /// <remarks>
+    /// The split is attached only where it can change anything: a section that is not split, and any
+    /// order in a tax-INCLUSIVE market, passes null and takes the arithmetic the application has always
+    /// had. Deciding that HERE rather than in the calculation keeps one answer to "is this section
+    /// split" for the model, the editor and the receipt.
+    /// </remarks>
+    private SectionPaymentInput SectionInput(
+        string sectionKey, decimal subtotal, decimal deposit, decimal depositRate, decimal finalRate,
+        PaymentMethod? depositMethod, PaymentMethod? finalMethod)
+    {
+        var split = PricesIncludeTax ? null : PaymentSplits.For(sectionKey);
+        // `is { Enabled: true }` rather than `?.Enabled == true`: comparing against a boolean literal
+        // is S1125, and the pattern says the same thing without one.
+        var enabled = split is { Enabled: true };
+
+        return new SectionPaymentInput(subtotal, deposit, depositRate, finalRate,
+            depositMethod, finalMethod, PricesIncludeTax)
+        {
+            DepositSplit = enabled ? split!.Charged(finalStage: false) : null,
+            FinalSplit = enabled ? split!.Charged(finalStage: true) : null,
+        };
+    }
 
     // Per-section totals (deposit charge + final-balance charge, each taxed by its own method).
     [NotMapped]
@@ -195,13 +249,8 @@ public class Order
             if (!PricesIncludeTax)
                 return 0m;
 
-            foreach (var rate in new[] { AlterationTaxRate, CustomMadeTaxRate, ClothingTaxRate })
-            {
-                if (rate is > 0m)
-                    return rate.Value;
-            }
-
-            return 0m;
+            return new[] { AlterationTaxRate, CustomMadeTaxRate, ClothingTaxRate }
+                .FirstOrDefault(rate => rate is > 0m) ?? 0m;
         }
     }
 
@@ -344,19 +393,16 @@ public class Order
     /// whole point of this being the one calculation is that every caller gets the SAME answer; an
     /// optional argument guarantees that whoever forgets it gets a different one.
     /// </param>
-    public static SectionPayment CalculateSectionPayment(
-        decimal subtotal, decimal deposit, decimal depositRatePercent, decimal finalRatePercent,
-        PaymentMethod? downpaymentMethod, PaymentMethod? finalBalanceMethod, bool pricesIncludeTax)
+    public static SectionPayment CalculateSectionPayment(in SectionPaymentInput input)
     {
-        var safeSubtotal = subtotal < 0m ? 0m : subtotal;
-        var safeDeposit = Math.Clamp(deposit, 0m, safeSubtotal);
+        var safeSubtotal = input.Subtotal < 0m ? 0m : input.Subtotal;
+        var safeDeposit = Math.Clamp(input.Deposit, 0m, safeSubtotal);
         var finalBase = safeSubtotal - safeDeposit;
 
-        if (pricesIncludeTax)
-            return IncludedTaxPayment(safeSubtotal, safeDeposit, finalBase, depositRatePercent, finalRatePercent);
+        if (input.PricesIncludeTax)
+            return IncludedTaxPayment(safeSubtotal, safeDeposit, finalBase, input.DepositRatePercent, input.FinalRatePercent);
 
-        return AddedTaxPayment(safeSubtotal, safeDeposit, finalBase, depositRatePercent, finalRatePercent,
-            downpaymentMethod, finalBalanceMethod);
+        return AddedTaxPayment(safeSubtotal, safeDeposit, finalBase, input);
     }
 
     /// <summary>
@@ -404,18 +450,17 @@ public class Order
     /// saved order print the same figures it was saved with, while the taxable/tax-free decision
     /// still follows the shop — a method the shop has since made tax free stops adding tax rather
     /// than silently keeping a rate nobody can see any more.
+    ///
+    /// A portion SPLIT across payment types is the same rule applied per line — see
+    /// <see cref="PortionTax"/>. This is the only mode where a split changes anything, which is why it
+    /// is offered nowhere else: where the price already contains the tax, how the money was tendered
+    /// cannot move it.
     /// </remarks>
     private static SectionPayment AddedTaxPayment(
-        decimal subtotal, decimal deposit, decimal finalBase,
-        decimal depositRatePercent, decimal finalRatePercent,
-        PaymentMethod? downpaymentMethod, PaymentMethod? finalBalanceMethod)
+        decimal subtotal, decimal deposit, decimal finalBase, in SectionPaymentInput input)
     {
-        var rules = PaymentTaxRules.Active;
-        var depositRate = rules.IsTaxable(downpaymentMethod) && depositRatePercent > 0m ? depositRatePercent : 0m;
-        var finalRate = rules.IsTaxable(finalBalanceMethod) && finalRatePercent > 0m ? finalRatePercent : 0m;
-
-        var depositTax = deposit * depositRate / 100m;
-        var finalTax = finalBase * finalRate / 100m;
+        var depositTax = PortionTax(deposit, input.DepositRatePercent, input.DepositMethod, input.DepositSplit);
+        var finalTax = PortionTax(finalBase, input.FinalRatePercent, input.FinalMethod, input.FinalSplit);
         var receivedDownpayment = deposit + depositTax;
         var finalCharge = finalBase + finalTax;
 
@@ -426,6 +471,39 @@ public class Order
             FinalTax = finalTax,
             PricesIncludeTax = false
         };
+    }
+
+    /// <summary>
+    /// The tax on one portion: the whole portion at its own rate, or — where the shop split it across
+    /// payment types — each line at the rate ITS method carries.
+    /// </summary>
+    /// <remarks>
+    /// A split of 400 cash + 200 card at 13% is taxed 26.00, not 78.00: the tax follows the tender,
+    /// which is the entire point of the feature and the thing a single per-portion rate cannot express.
+    ///
+    /// The unsplit path is deliberately NOT a one-line split. It is reachable with no method chosen at
+    /// all (a section still being filled in), and it charges on the portion's own base rather than on
+    /// what the lines add up to — so an allocation that does not yet balance shows the tax on what is
+    /// actually owed instead of on a half-typed number. The two paths agree exactly when one line
+    /// covers the portion, which is what the harness pins down.
+    ///
+    /// <c>PaymentTaxRules.Active</c> is consulted per line, so a shop that makes credit cards tax free
+    /// changes every order's split the same way it changes an unsplit one.
+    /// </remarks>
+    private static decimal PortionTax(
+        decimal portionBase, decimal ratePercent, PaymentMethod? method, IReadOnlyList<PaymentSplitLine>? split)
+    {
+        var rules = PaymentTaxRules.Active;
+
+        if (split is null || split.Count == 0)
+        {
+            var rate = rules.IsTaxable(method) && ratePercent > 0m ? ratePercent : 0m;
+            return portionBase * rate / 100m;
+        }
+
+        return split
+            .Where(line => line.Amount > 0m && rules.IsTaxable(line.Method) && line.RatePercent > 0m)
+            .Sum(line => line.Amount * line.RatePercent / 100m);
     }
 
     [NotMapped]
@@ -468,6 +546,37 @@ public enum CurrencyType
     CNY = 3,
     EUR = 4,
     JPY = 5
+}
+
+/// <summary>
+/// Everything one section's money split is computed from. Passed as a struct rather than as loose
+/// arguments so the split cannot be left off a call site.
+/// </summary>
+/// <remarks>
+/// The parameter list had reached seven — the S107 limit — before the split was even a field, so this
+/// is partly arithmetic. Mostly it is the lesson from the pricing-mode flag, which shipped as an
+/// OPTIONAL argument and turned "every unconverted call site fails to compile" into silence: a harness
+/// kept the shorter overload, kept the old arithmetic, and nothing failed to build while the numbers
+/// stopped agreeing. A required struct makes the compiler enumerate the call sites again, and adding
+/// the next input to it will do the same.
+///
+/// <see cref="DepositSplit"/> and <see cref="FinalSplit"/> are null for the unsplit case, which is
+/// every order written before v4.0 and every section whose card has the toggle off.
+/// </remarks>
+public readonly record struct SectionPaymentInput(
+    decimal Subtotal,
+    decimal Deposit,
+    decimal DepositRatePercent,
+    decimal FinalRatePercent,
+    PaymentMethod? DepositMethod,
+    PaymentMethod? FinalMethod,
+    bool PricesIncludeTax)
+{
+    /// <summary>The deposit stage's lines, or null when this section is not split.</summary>
+    public IReadOnlyList<PaymentSplitLine>? DepositSplit { get; init; }
+
+    /// <summary>The final stage's lines, or null when this section is not split.</summary>
+    public IReadOnlyList<PaymentSplitLine>? FinalSplit { get; init; }
 }
 
 // Immutable money split for one service section. See Order.CalculateSectionPayment.

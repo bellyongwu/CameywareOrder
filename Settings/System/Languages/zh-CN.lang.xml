@@ -491,6 +491,17 @@
   <Text key="OrderEdit.Validate.EmailRequired">选择付款方式时，请填写电子邮箱地址</Text>
   <Text key="OrderEdit.Validate.EmailInvalid">请输入有效的电子邮箱地址</Text>
   <Text key="OrderEdit.Validate.PhoneInvalid">请输入有效的电话号码</Text>
+  <!-- v4.0: one stage paid with several payment types. {0}/{1} are money, already formatted.
+       The tax follows each line's own method, so a split of cash and a card is taxed on the
+       card alone - which is the whole point and is what the summary line has to make visible. -->
+  <Text key="OrderEdit.Split.Off">不拆分付款</Text>
+  <Text key="OrderEdit.Split.On">拆分付款</Text>
+  <Text key="OrderEdit.Split.DepositTitle">按付款方式拆分定金</Text>
+  <Text key="OrderEdit.Split.RowTax">{0} 税 {1}</Text>
+  <Text key="OrderEdit.Split.Summary">已分配 {0} / {1}  ·  税 {2}</Text>
+  <Text key="OrderEdit.Split.Remaining">待分配：{0}</Text>
+  <Text key="OrderEdit.Split.Over">超出 {0}</Text>
+  <Text key="OrderEdit.Validate.SplitUnbalanced">{0}：还有 {1} 未分配到付款方式。</Text>
   <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
        phone-countries.json so editing that file cannot leave this sentence stale. -->
   <Text key="OrderEdit.Validate.PhoneDigits">{0}的电话号码为 {1} 位数字。</Text>
@@ -681,7 +692,7 @@
   <Text key="PaymentMethod.DebitCard">借记卡</Text>
   <Text key="PaymentMethod.CreditCard">信用卡</Text>
   <Text key="PaymentMethod.Cash">现金</Text>
-  <Text key="PaymentMethod.None">无</Text>
+  <Text key="PaymentMethod.None">不收定金</Text>
   <Text key="Payment.Status.Cleared">已结清</Text>
   <Text key="Payment.Status.ClearedPickedUp">已结清（已取货）</Text>
   <Text key="Payment.Status.ClearedNotPickedUp">已结清（未取货）</Text>

@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using CameywareOrder.Data;
 using CameywareOrder.Localization;
 using CameywareOrder.Models;
@@ -182,6 +183,32 @@ public partial class OrderEditWindow : Window
         public required TextBlock IncTaxLabel { get; init; }
         public required TextBlock IncTaxText { get; init; }
 
+        // ── Splitting one stage across payment types (v4.0) ──────────────────────────────────────
+        //
+        // The toggle is per SECTION and covers both of its stages, which is where every other payment
+        // setting on this form already lives. Where the price contains the tax the whole thing is
+        // hidden: a split cannot move a tax that is already inside the price.
+        public required StackPanel SplitToggle { get; init; }
+        public required RadioButton NoSplitRadio { get; init; }
+        public required RadioButton SplitRadio { get; init; }
+        // The single-method rows, hidden while split: choosing one method and several at once is a
+        // contradiction, not a choice.
+        public required StackPanel DownMethodRow { get; init; }
+        public required StackPanel FinalMethodRow { get; init; }
+        public required StackPanel DepositSplitPanel { get; init; }
+        public required StackPanel DepositSplitRows { get; init; }
+        public required TextBlock DepositSplitSummary { get; init; }
+        public required StackPanel FinalSplitPanel { get; init; }
+        public required StackPanel FinalSplitRows { get; init; }
+        public required TextBlock FinalSplitSummary { get; init; }
+
+        /// <summary>The amount boxes, built in code so a new payment method needs no markup.</summary>
+        public List<SplitRow> DepositRows { get; } = new();
+        public List<SplitRow> FinalRows { get; } = new();
+
+        /// <summary>Whether this section splits its stages across payment types.</summary>
+        public bool IsSplit => SplitRadio.IsChecked is true;
+
         // True when the section carries order items, which is what makes the service part of
         // this order at all. A section without items sits out the payment flow entirely; one
         // WITH items takes part even when it is priced at zero.
@@ -217,6 +244,19 @@ public partial class OrderEditWindow : Window
         // charging: either the deposit was marked received, or "None" means no deposit was
         // taken at all. This is the stage whose rate is displayed.
         public bool IsFinalStage => DownNone.IsChecked is true || DownCompletedCheck.IsChecked is true;
+    }
+
+    /// <summary>
+    /// One payment type's line inside a split: the amount taken by it, and the tax that amount carries.
+    /// </summary>
+    /// <remarks>
+    /// Built in code from <c>PaymentTaxRules.ConfigurableMethods</c> rather than written out in markup,
+    /// the same way the shop's tax matrix is: three sections times two stages times four methods is
+    /// twenty-four rows of XAML that would all have to be found and edited to add a fifth method.
+    /// </remarks>
+    private sealed record SplitRow(PaymentMethod Method, TextBox Amount, TextBlock Tax)
+    {
+        public decimal Value => ParseDecimalOrZero(Amount.Text);
     }
 
     public OrderEditWindow(IServiceScopeFactory scopeFactory, LocalizationService localization)
@@ -320,6 +360,7 @@ public partial class OrderEditWindow : Window
         SelectServiceType(existing.ServiceType);
 
         LoadPaymentFields(existing);
+        LoadPaymentSplits(existing);
         LoadStageTaxRates(existing);
 
         foreach (ComboBoxItem item in StatusBox.Items)
@@ -492,6 +533,7 @@ public partial class OrderEditWindow : Window
     private void InitializeCommonControls()
     {
         InitializePaymentSectionControls();
+        BuildSplitRows();
         RegisterDecimalTextBoxes();
         RegisterValidationClearing();
         InitializeCustomMadeRecordsList();
@@ -598,6 +640,17 @@ public partial class OrderEditWindow : Window
             IncReceivedBalanceText = AlterationIncReceivedBalanceText,
             IncTaxLabel = AlterationIncTaxLabel,
             IncTaxText = AlterationIncTaxText,
+            SplitToggle = AlterationSplitToggle,
+            NoSplitRadio = AlterationNoSplitRadio,
+            SplitRadio = AlterationSplitRadio,
+            DownMethodRow = AlterationDownMethodRow,
+            FinalMethodRow = AlterationFinalMethodRow,
+            DepositSplitPanel = AlterationDepositSplitPanel,
+            DepositSplitRows = AlterationDepositSplitRows,
+            DepositSplitSummary = AlterationDepositSplitSummary,
+            FinalSplitPanel = AlterationFinalSplitPanel,
+            FinalSplitRows = AlterationFinalSplitRows,
+            FinalSplitSummary = AlterationFinalSplitSummary,
             // Alterations has no item list of its own, so a typed price — even "0" — is what
             // marks the service as present on this order. Choosing the "None" category switches
             // the service off outright, so it stops counting whatever the price box holds.
@@ -648,6 +701,17 @@ public partial class OrderEditWindow : Window
             IncReceivedBalanceText = CustomMadeIncReceivedBalanceText,
             IncTaxLabel = CustomMadeIncTaxLabel,
             IncTaxText = CustomMadeIncTaxText,
+            SplitToggle = CustomMadeSplitToggle,
+            NoSplitRadio = CustomMadeNoSplitRadio,
+            SplitRadio = CustomMadeSplitRadio,
+            DownMethodRow = CustomMadeDownMethodRow,
+            FinalMethodRow = CustomMadeFinalMethodRow,
+            DepositSplitPanel = CustomMadeDepositSplitPanel,
+            DepositSplitRows = CustomMadeDepositSplitRows,
+            DepositSplitSummary = CustomMadeDepositSplitSummary,
+            FinalSplitPanel = CustomMadeFinalSplitPanel,
+            FinalSplitRows = CustomMadeFinalSplitRows,
+            FinalSplitSummary = CustomMadeFinalSplitSummary,
             HasItems = () => _customMadeRecords.Count > 0,
             SectionTotal = () => _customMadeSumTotal,
             SectionSubtotal = () => _customMadeSubtotal,
@@ -694,6 +758,17 @@ public partial class OrderEditWindow : Window
             IncReceivedBalanceText = ClothingIncReceivedBalanceText,
             IncTaxLabel = ClothingIncTaxLabel,
             IncTaxText = ClothingIncTaxText,
+            SplitToggle = ClothingSplitToggle,
+            NoSplitRadio = ClothingNoSplitRadio,
+            SplitRadio = ClothingSplitRadio,
+            DownMethodRow = ClothingDownMethodRow,
+            FinalMethodRow = ClothingFinalMethodRow,
+            DepositSplitPanel = ClothingDepositSplitPanel,
+            DepositSplitRows = ClothingDepositSplitRows,
+            DepositSplitSummary = ClothingDepositSplitSummary,
+            FinalSplitPanel = ClothingFinalSplitPanel,
+            FinalSplitRows = ClothingFinalSplitRows,
+            FinalSplitSummary = ClothingFinalSplitSummary,
             HasItems = () => _clothingItemRows.Count > 0,
             SectionTotal = () => _clothingSumTotal,
             SectionSubtotal = () => _clothingSubtotal,
@@ -786,6 +861,296 @@ public partial class OrderEditWindow : Window
     /// <summary>The three service sections, for the settings that apply to all of them alike.</summary>
     private PaymentSectionControls[] AllPaymentSections
         => new[] { _alterationControls, _customMadeControls, _clothingControls };
+
+    // ── Splitting a stage across payment types ───────────────────────────────────────────────────
+
+    /// <summary>
+    /// Builds one amount row per configurable payment method, for both stages of every section.
+    /// </summary>
+    /// <remarks>
+    /// Driven from <c>PaymentTaxRules.ConfigurableMethods</c>, so the rows are exactly the methods the
+    /// shop can configure and adding one needs no change here or in the markup. The legacy
+    /// <c>PaymentMethod.Card</c> is not among them, and "None" is the absence of a payment rather than
+    /// a way of paying — in a split it is expressed by leaving every box empty.
+    /// </remarks>
+    private void BuildSplitRows()
+    {
+        foreach (var section in AllPaymentSections)
+        {
+            Fill(section.DepositSplitRows, section.DepositRows);
+            Fill(section.FinalSplitRows, section.FinalRows);
+
+            // The default lives HERE rather than as IsChecked in the markup: set there it fires the
+            // Checked handler during InitializeComponent, against controls that do not exist yet.
+            section.NoSplitRadio.IsChecked = true;
+        }
+
+        // Everything the payment handlers touch now exists.
+        _sectionsReady = true;
+
+        void Fill(Panel host, List<SplitRow> rows)
+        {
+            host.Children.Clear();
+            rows.Clear();
+
+            foreach (var method in PaymentTaxRules.ConfigurableMethods)
+            {
+                var grid = new Grid { Margin = new Thickness(0, 0, 14, 6) };
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(150) });
+
+                var label = new TextBlock
+                {
+                    Text = _localization[$"PaymentMethod.{method}"],
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+
+                var amount = new TextBox { Padding = new Thickness(6, 4, 6, 4), Margin = new Thickness(0, 0, 12, 0) };
+                amount.PreviewTextInput += OnDecimalTextBoxPreviewTextInput;
+                amount.TextChanged += OnSplitAmountChanged;
+                Grid.SetColumn(amount, 1);
+
+                var tax = new TextBlock
+                {
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = SplitRowTaxBrush,
+                };
+                Grid.SetColumn(tax, 2);
+
+                grid.Children.Add(label);
+                grid.Children.Add(amount);
+                grid.Children.Add(tax);
+                host.Children.Add(grid);
+
+                rows.Add(new SplitRow(method, amount, tax));
+            }
+        }
+    }
+
+    /// <summary>The lines a stage is currently carrying, as the calculation wants them.</summary>
+    /// <remarks>
+    /// Only rows with money in them. A method the shop has since made tax free still appears with its
+    /// rate here; <c>Order.PortionTax</c> is what decides it charges nothing, so the editor and a
+    /// saved order agree about which rule zeroed it.
+    /// </remarks>
+    private static IReadOnlyList<PaymentSplitLine> ReadSplitLines(PaymentSectionControls c, bool finalStage)
+    {
+        var rows = finalStage ? c.FinalRows : c.DepositRows;
+        var rules = PaymentTaxRules.Active;
+
+        return rows
+            .Where(row => row.Value > 0m)
+            .Select(row => new PaymentSplitLine
+            {
+                Method = row.Method,
+                Amount = row.Value,
+                RatePercent = rules.RateFor(row.Method),
+            })
+            .ToList();
+    }
+
+    /// <summary>What a stage's split still has to account for: its target, less what is allocated.</summary>
+    private static decimal SplitShortfall(PaymentSectionControls c, bool finalStage, decimal target)
+        => target - (finalStage ? c.FinalRows : c.DepositRows).Sum(row => row.Value);
+
+    /// <summary>
+    /// Every split stage must account for exactly what that stage owes, or the order is refused.
+    /// </summary>
+    /// <remarks>
+    /// A shortfall is a PARTIAL payment, and there is no such state anywhere in this application — not
+    /// on the order, not on the receipt, not in the balance column — so accepting one would store a
+    /// number no screen could explain. An over-allocation is refused for the same reason from the other
+    /// side: money taken that the section does not owe.
+    ///
+    /// Only the stage that is CURRENTLY on screen is checked. The final stage's rows are not visible,
+    /// and cannot have been filled in, until the deposit is marked received — holding a shop to an
+    /// allocation of a balance it has not reached yet would make the deposit unsaveable.
+    /// </remarks>
+    private bool ValidateSplitAllocations()
+    {
+        foreach (var c in AllPaymentSections)
+        {
+            if (!c.IsSplit || PricesIncludeTax || c.IsServiceSwitchedOff)
+                continue;
+
+            var money = SectionMoney(c);
+            var finalStage = c.DownCompletedCheck.IsChecked is true;
+            var target = finalStage ? money.FinalBase : money.Deposit;
+            var shortfall = SplitShortfall(c, finalStage, target);
+
+            if (shortfall == 0m)
+                continue;
+
+            var message = _localization.Format("OrderEdit.Validate.SplitUnbalanced",
+                _localization[c.ServiceNameKey], FormatCurrency(Math.Abs(shortfall)));
+
+            RecordValidationFailure(new[] { message });
+            (finalStage ? c.FinalRows : c.DepositRows)[0].Amount.Focus();
+            return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>The money split a section is currently showing, for a check that runs outside a refresh.</summary>
+    private SectionPayment SectionMoney(PaymentSectionControls c)
+    {
+        if (ReferenceEquals(c, _alterationControls))
+            return _alterationMoney;
+
+        return ReferenceEquals(c, _customMadeControls) ? _customMadeMoney : _clothingMoney;
+    }
+
+    /// <summary>Freezes each section's split onto the order at save.</summary>
+    /// <remarks>
+    /// Written for EVERY section, including the ones with the toggle off — <c>SetPaymentSplits</c>
+    /// stores null when nothing is split, so an order that has never used the feature keeps an empty
+    /// column rather than carrying three empty objects around.
+    /// </remarks>
+    private void ApplyPaymentSplits(Order order)
+    {
+        var splits = new OrderPaymentSplits();
+
+        Capture(OrderPaymentSplits.AlterationKey, _alterationControls);
+        Capture(OrderPaymentSplits.CustomMadeKey, _customMadeControls);
+        Capture(OrderPaymentSplits.ClothingKey, _clothingControls);
+
+        order.SetPaymentSplits(splits);
+
+        void Capture(string key, PaymentSectionControls c)
+        {
+            var section = splits.For(key);
+            section.Enabled = c.IsSplit;
+            section.Deposit = ReadSplitLines(c, finalStage: false).ToList();
+            section.Final = ReadSplitLines(c, finalStage: true).ToList();
+        }
+    }
+
+    /// <summary>Puts a saved order's splits back on screen: the toggle, then each method's amount.</summary>
+    /// <remarks>
+    /// Under the payment guard, like every other control this window fills from a saved order: setting
+    /// a radio or a text box raises the handlers that recompute the totals, and doing that while the
+    /// rest of the form is still being populated reads half a form.
+    /// </remarks>
+    private void LoadPaymentSplits(Order order)
+    {
+        var splits = order.PaymentSplits;
+
+        Restore(OrderPaymentSplits.AlterationKey, _alterationControls);
+        Restore(OrderPaymentSplits.CustomMadeKey, _customMadeControls);
+        Restore(OrderPaymentSplits.ClothingKey, _clothingControls);
+
+        void Restore(string key, PaymentSectionControls c)
+        {
+            var section = splits.For(key);
+            c.SplitRadio.IsChecked = section.Enabled;
+            c.NoSplitRadio.IsChecked = !section.Enabled;
+
+            Fill(c.DepositRows, section.Deposit);
+            Fill(c.FinalRows, section.Final);
+        }
+
+        static void Fill(List<SplitRow> rows, List<PaymentSplitLine> lines)
+        {
+            foreach (var row in rows)
+            {
+                var line = lines.FirstOrDefault(l => l.Method == row.Method);
+                row.Amount.Text = line is { Amount: > 0m } ? line.Amount.ToString("0.##") : string.Empty;
+            }
+        }
+    }
+
+    /// <summary>Turning the split on or off re-shapes the card, so everything is recomputed.</summary>
+    /// <remarks>
+    /// Guarded on <see cref="_sectionsReady"/>, not only on the payment sync flag. A RadioButton whose
+    /// <c>IsChecked</c> is set in MARKUP raises Checked while <c>InitializeComponent</c> is still
+    /// running — before any of the section controls exist — so the first thing this handler did was
+    /// dereference a null and take the whole window down on open. The markup default was removed as
+    /// well; this guard is what stops the next one from doing it again.
+    /// </remarks>
+    private void OnSplitModeChanged(object sender, RoutedEventArgs e)
+    {
+        if (_syncingPayment || !_sectionsReady)
+            return;
+
+        RefreshComputedTotals();
+    }
+
+    /// <summary>False until the section controls are built, so parse-time events cannot reach them.</summary>
+    private bool _sectionsReady;
+
+    /// <summary>
+    /// A typed amount changes the tax, the totals and the allocation line, so it goes through the same
+    /// refresh every other payment input does — never a local update, which is how two figures on one
+    /// card come to disagree.
+    /// </summary>
+    private void OnSplitAmountChanged(object sender, TextChangedEventArgs e)
+    {
+        if (_syncingPayment)
+            return;
+
+        RefreshComputedTotals();
+    }
+
+    /// <summary>
+    /// Writes each row's tax and the stage's allocation line: what is allocated against what is owed,
+    /// and what is left.
+    /// </summary>
+    /// <remarks>
+    /// The per-row tax is computed the way the money calculation computes it — the shop's CURRENT rules
+    /// decide whether a method is taxed at all, its stored rate decides how much — so a row showing
+    /// "0.00" beside a card is telling the truth about a shop that has made cards tax free, rather than
+    /// disagreeing with the total underneath.
+    /// </remarks>
+    private void RefreshSplitStage(PaymentSectionControls c, bool finalStage, decimal target)
+    {
+        var rows = finalStage ? c.FinalRows : c.DepositRows;
+        var summary = finalStage ? c.FinalSplitSummary : c.DepositSplitSummary;
+        var rules = PaymentTaxRules.Active;
+
+        var allocated = 0m;
+        var tax = 0m;
+
+        foreach (var row in rows)
+        {
+            var amount = row.Value;
+            allocated += amount;
+
+            var rate = rules.IsTaxable(row.Method) ? rules.RateFor(row.Method) : 0m;
+            var rowTax = amount * rate / 100m;
+            tax += rowTax;
+
+            row.Tax.Text = amount > 0m
+                ? _localization.Format("OrderEdit.Split.RowTax", FormatTaxRate(rate), FormatCurrency(rowTax))
+                : string.Empty;
+        }
+
+        var left = target - allocated;
+        var state = left switch
+        {
+            > 0m => _localization.Format("OrderEdit.Split.Remaining", FormatCurrency(left)),
+            < 0m => _localization.Format("OrderEdit.Split.Over", FormatCurrency(-left)),
+            _ => string.Empty,
+        };
+
+        summary.Text = _localization.Format("OrderEdit.Split.Summary",
+            FormatCurrency(allocated), FormatCurrency(target), FormatCurrency(tax));
+
+        if (state.Length > 0)
+            summary.Text += Environment.NewLine + state;
+
+        summary.Foreground = left == 0m ? BalancedSplitBrush : UnbalancedSplitBrush;
+    }
+
+    // Green once a stage's allocation balances, amber while it does not. Through the file's OWN brush
+    // helper rather than a second one taking hex: two helpers doing one job is how they drift.
+    private static readonly Brush BalancedSplitBrush = CreateFrozenBrush(0x04, 0x78, 0x57);
+    private static readonly Brush UnbalancedSplitBrush = CreateFrozenBrush(0xB4, 0x53, 0x09);
+
+    // The label colour on a split row, shared rather than built per row: this method runs for every
+    // method, of both stages, of all three sections.
+    private static readonly Brush SplitRowTaxBrush = CreateFrozenBrush(0x4B, 0x55, 0x63);
 
     private void InitializeCustomMadeRecordsList()
     {
@@ -916,6 +1281,9 @@ public partial class OrderEditWindow : Window
 
         if (_totalAmount < 0)
             return Fail("OrderEdit.Validate.TotalAmount", null, null);
+
+        if (!ValidateSplitAllocations())
+            return false;
 
         if ((StatusBox.SelectedItem as ComboBoxItem)?.Tag is not OrderStatus selectedStatus)
             return Fail("OrderEdit.Validate.Status", null, StatusBox);
@@ -1156,6 +1524,7 @@ public partial class OrderEditWindow : Window
         order.CustomerName = CustomerNameBox.Text.Trim();
         // Stored with its dial code in front, in the same column it always used: "+1 905-401-6667".
         order.PhoneNumber = PhoneField.FullNumber;
+        ApplyPaymentSplits(order);
         order.Email = string.IsNullOrWhiteSpace(EmailBox.Text) ? null : EmailBox.Text.Trim();
         order.Address = string.IsNullOrWhiteSpace(AddressBox.Text) ? null : AddressBox.Text.Trim();
         ApplyStatusReasonFields(order, data.Status);
@@ -2052,7 +2421,29 @@ public partial class OrderEditWindow : Window
         // one pass, from one reading of the split, for every section — which is the only way the two
         // views of the same order stay in step.
         UpdateInclusiveBreakdown(c, money);
+
+        // Each stage's split allocation, against what that stage actually owes.
+        RefreshSplitStage(c, finalStage: false, money.Deposit);
+        RefreshSplitStage(c, finalStage: true, money.FinalBase);
     }
+
+    /// <summary>
+    /// One section's calculation input, carrying its split lines when that section's card is set to
+    /// split — read live off the amount boxes, so the figures move as they are typed.
+    /// </summary>
+    /// <remarks>
+    /// The lines are built from the CURRENT rate for each method rather than from anything stored,
+    /// because this is the editor: what the shop is about to charge is what its rules say today. They
+    /// are frozen onto the order at save (<c>PaymentSplitLine.RatePercent</c>), which is what keeps a
+    /// reprinted receipt honest afterwards.
+    /// </remarks>
+    private SectionPaymentInput SectionInput(PaymentSectionControls c, decimal subtotal, decimal deposit)
+        => new(subtotal, deposit, c.DepositTaxRate, c.FinalTaxRate,
+            GetSelectedDownMethod(c), EffectiveFinalMethod(c), PricesIncludeTax)
+        {
+            DepositSplit = c.IsSplit ? ReadSplitLines(c, finalStage: false) : null,
+            FinalSplit = c.IsSplit ? ReadSplitLines(c, finalStage: true) : null,
+        };
 
     /// <summary>
     /// What each portion costs, beside what has actually been taken for it.
@@ -2176,10 +2567,7 @@ public partial class OrderEditWindow : Window
         // what is actually charged.
         ApplyStageTaxRates(_alterationControls);
         var downpayment = ParseDecimalOrZero(AlterationDownpaymentBox.Text);
-        var money = Order.CalculateSectionPayment(price, downpayment,
-            _alterationControls.DepositTaxRate, _alterationControls.FinalTaxRate,
-            GetSelectedDownMethod(_alterationControls),
-            EffectiveFinalMethod(_alterationControls), PricesIncludeTax);
+        var money = Order.CalculateSectionPayment(SectionInput(_alterationControls, price, downpayment));
         // A cleared balance means nothing is still owed for this section.
         var residual = AlterationBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : money.FinalCharge;
 
@@ -2222,10 +2610,7 @@ public partial class OrderEditWindow : Window
         // See RefreshAlterationTotals: resolves both stage rates and retargets the tax box.
         ApplyStageTaxRates(_clothingControls);
         var downpayment = ParseDecimalOrZero(ClothingDownpaymentBox.Text);
-        var money = Order.CalculateSectionPayment(subtotal, downpayment,
-            _clothingControls.DepositTaxRate, _clothingControls.FinalTaxRate,
-            GetSelectedDownMethod(_clothingControls),
-            EffectiveFinalMethod(_clothingControls), PricesIncludeTax);
+        var money = Order.CalculateSectionPayment(SectionInput(_clothingControls, subtotal, downpayment));
         // A cleared balance means nothing is still owed for this section.
         var residual = ClothingBalanceClearedCheck.IsChecked.GetValueOrDefault() ? 0m : money.FinalCharge;
 
@@ -2254,10 +2639,7 @@ public partial class OrderEditWindow : Window
         // See RefreshAlterationTotals: resolves both stage rates and retargets the tax box.
         ApplyStageTaxRates(_customMadeControls);
         var downpayment = ParseDecimalOrZero(CustomMadeDownpaymentBox.Text);
-        var money = Order.CalculateSectionPayment(_customMadeSubtotal, downpayment,
-            _customMadeControls.DepositTaxRate, _customMadeControls.FinalTaxRate,
-            GetSelectedDownMethod(_customMadeControls),
-            EffectiveFinalMethod(_customMadeControls), PricesIncludeTax);
+        var money = Order.CalculateSectionPayment(SectionInput(_customMadeControls, _customMadeSubtotal, downpayment));
         _customMadeSumTotal = money.Total;
         _customMadeMoney = money;
 
@@ -2924,52 +3306,100 @@ public partial class OrderEditWindow : Window
     // ORDER's frozen mode, and a saved order must keep the layout it was saved with.
     private static void UpdateSectionVisibility(PaymentSectionControls c, bool pricesIncludeTax)
     {
-        var anyDownSelected = c.DownNone.IsChecked is true || c.DownEtransfer.IsChecked is true
+        var split = ApplySplitModeVisibility(c, pricesIncludeTax);
+        var stage = ApplyDepositStageState(c);
+
+        // In split mode the method radios are what USED to open this panel, so the split itself opens
+        // it — otherwise turning the toggle on would hide the deposit box the split is allocating.
+        c.PricingPanel.Visibility = Show(split || stage.AnyMethodChosen);
+        c.FinalBlock.Visibility = Show(stage.IsSkipped || stage.DepositReceived);
+
+        ApplyBreakdownVisibility(c, pricesIncludeTax, split, stage);
+    }
+
+    /// <summary>Visible or collapsed. A helper so a visibility rule reads as the CONDITION it is.</summary>
+    /// <remarks>
+    /// Eleven inline <c>? Visible : Collapsed</c> ternaries is what carried this method past the
+    /// cognitive-complexity limit — each one counts, and none of them said anything. As a call they
+    /// cost nothing and the rules line up where they can be compared.
+    /// </remarks>
+    private static Visibility Show(bool visible) => visible ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>Where the section has got to in its deposit: what is chosen, skipped, and received.</summary>
+    private readonly record struct DepositStage(bool AnyMethodChosen, bool IsSkipped, bool DepositReceived);
+
+    /// <summary>
+    /// Reads the deposit stage, and applies the one rule that CHANGES a control rather than showing
+    /// it: skipping the deposit forces the amount to zero and locks the box, because there is nothing
+    /// to type when no deposit is being taken.
+    /// </summary>
+    private static DepositStage ApplyDepositStageState(PaymentSectionControls c)
+    {
+        var anyMethodChosen = c.DownNone.IsChecked is true || c.DownEtransfer.IsChecked is true
             || c.DownDebit.IsChecked is true || c.DownCredit.IsChecked is true || c.DownCash.IsChecked is true;
-        c.PricingPanel.Visibility = anyDownSelected ? Visibility.Visible : Visibility.Collapsed;
 
-        var isNone = c.DownNone.IsChecked is true;
-        c.DownCompletedCheck.Visibility = isNone ? Visibility.Collapsed : Visibility.Visible;
+        var isSkipped = c.DownNone.IsChecked is true;
+        c.DownCompletedCheck.Visibility = Show(!isSkipped);
 
-        if (isNone)
-        {
-            if (c.DownpaymentBox.Text != "0")
-                c.DownpaymentBox.Text = "0";
-            c.DownpaymentBox.IsEnabled = false;
-        }
-        else
-        {
-            c.DownpaymentBox.IsEnabled = true;
-        }
+        if (isSkipped && c.DownpaymentBox.Text != "0")
+            c.DownpaymentBox.Text = "0";
 
-        var depositCompleted = c.DownCompletedCheck.IsChecked is true;
-        c.FinalBlock.Visibility = (isNone || depositCompleted)
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        c.DownpaymentBox.IsEnabled = !isSkipped;
 
-        // Deposit breakdown: visible whenever a payment method is chosen and deposit is not yet received.
-        // This covers both "normal" deposit flow and the DownNone case so tax/total are always visible.
-        //
-        // NEVER where the price already contains the tax. Every line it carries is then either the
-        // price restated (a "pre-tax" subtotal that is not pre-tax, a post-tax total equal to it) or a
-        // deposit tax nobody is being asked for — the deposit due IS the deposit typed in. Four rows
-        // of arithmetic that always cancels is not a breakdown, it is a puzzle.
-        c.DepositBreakdownPanel.Visibility = (!pricesIncludeTax && anyDownSelected && !depositCompleted)
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        return new DepositStage(anyMethodChosen, isSkipped, c.DownCompletedCheck.IsChecked is true);
+    }
 
-        // Final breakdown: visible only when deposit is explicitly marked received (inside FinalBlock).
-        c.FinalBreakdownPanel.Visibility = (!pricesIncludeTax && depositCompleted)
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+    /// <summary>
+    /// Which of the four breakdowns this section shows: the two that explain tax ADDED at settlement,
+    /// the one for a price that already contains it, and the split rows.
+    /// </summary>
+    /// <remarks>
+    /// The deposit breakdown is NEVER shown where the price already contains the tax. Every line it
+    /// carries is then either the price restated (a "pre-tax" subtotal that is not pre-tax, a post-tax
+    /// total equal to it) or a deposit tax nobody is being asked for — four rows of arithmetic that
+    /// always cancels is not a breakdown, it is a puzzle.
+    ///
+    /// The INCLUSIVE panel follows the final BLOCK rather than the deposit tick: with the deposit
+    /// skipped there is nothing to receive and the section goes straight to its balance, so keying it
+    /// to the tick would leave such an order showing no figures at all.
+    /// </remarks>
+    private static void ApplyBreakdownVisibility(
+        PaymentSectionControls c, bool pricesIncludeTax, bool split, DepositStage stage)
+    {
+        var addedAtSettlement = !pricesIncludeTax;
 
-        // Its inclusive counterpart follows the FINAL BLOCK, not the deposit tick: with "None" chosen
-        // there is no deposit to receive and the section goes straight to its balance, so keying this
-        // to depositCompleted would leave such an order showing no figures at all — the deposit panel
-        // that used to cover that case is gone in this mode.
-        c.FinalInclusivePanel.Visibility = (pricesIncludeTax && (isNone || depositCompleted))
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        c.DepositBreakdownPanel.Visibility =
+            Show(addedAtSettlement && stage.AnyMethodChosen && !stage.DepositReceived);
+        c.FinalBreakdownPanel.Visibility = Show(addedAtSettlement && stage.DepositReceived);
+        c.FinalInclusivePanel.Visibility =
+            Show(pricesIncludeTax && (stage.IsSkipped || stage.DepositReceived));
+
+        // The split rows follow their own stage: the deposit's until it is received, the balance's
+        // afterwards — the same two stages the rest of the card already moves through.
+        c.DepositSplitPanel.Visibility = Show(split && !stage.DepositReceived);
+        c.FinalSplitPanel.Visibility = Show(split && stage.DepositReceived);
+    }
+
+    /// <summary>
+    /// Shows or hides the split controls, and answers whether this section is splitting. Kept apart
+    /// from the stage visibility above it because they are two questions — WHICH shape the card is in,
+    /// and WHERE in the payment flow it has got to — and folding both into one method pushed it past
+    /// the complexity limit.
+    /// </summary>
+    private static bool ApplySplitModeVisibility(PaymentSectionControls c, bool pricesIncludeTax)
+    {
+        // Offered only where tax is ADDED at settlement. Where the price already contains it, splitting
+        // the tender cannot move a figure on the screen.
+        c.SplitToggle.Visibility = Show(!pricesIncludeTax);
+
+        var split = !pricesIncludeTax && c.IsSplit;
+
+        // One method or several, never both on screen: choosing "Cash" while also allocating money to
+        // three types is a contradiction rather than a choice.
+        c.DownMethodRow.Visibility = Show(!split);
+        c.FinalMethodRow.Visibility = Show(!split);
+
+        return split;
     }
 
     private decimal? GetSubtotalForServiceType(OrderServiceType serviceType)

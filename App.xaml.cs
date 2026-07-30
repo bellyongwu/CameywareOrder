@@ -508,6 +508,9 @@ public partial class App : Application
         ("ChestSize", "ALTER TABLE Orders ADD COLUMN ChestSize TEXT NULL; "),
         ("JacketLength", "ALTER TABLE Orders ADD COLUMN JacketLength TEXT NULL; "),
         ("CustomMadeRecordsJson", "ALTER TABLE Orders ADD COLUMN CustomMadeRecordsJson TEXT NULL; "),
+        // v4.0. NULL on every existing order, which reads back as "no section is split" — the
+        // single-method arithmetic those orders were saved with, unchanged.
+        ("PaymentSplitsJson", "ALTER TABLE Orders ADD COLUMN PaymentSplitsJson TEXT NULL; "),
         ("AlterationDownpayment", "ALTER TABLE Orders ADD COLUMN AlterationDownpayment TEXT NULL; "),
         ("AlterationDownpaymentMethod", "ALTER TABLE Orders ADD COLUMN AlterationDownpaymentMethod INTEGER NULL; "),
         ("AlterationDownpaymentCompleted", "ALTER TABLE Orders ADD COLUMN AlterationDownpaymentCompleted INTEGER NOT NULL DEFAULT 0; "),

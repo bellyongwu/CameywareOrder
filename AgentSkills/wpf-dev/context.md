@@ -2045,6 +2045,39 @@ contributes nothing whatever the price box holds. Same family as "harnesses must
 fixture": pick the charged category first, then type the price. The failure is quiet — the panel
 renders perfectly, with zeros.
 
+## `IsChecked="True"` in markup fires its handler DURING InitializeComponent (2026-07-30)
+
+The v4.0 split toggle shipped as `<RadioButton IsChecked="True" Checked="OnSplitModeChanged"/>`. Every
+order window then crashed on OPEN with a `NullReferenceException` deep inside `RefreshComputedTotals`:
+WPF raises `Checked` while the XAML is still being parsed, so the handler ran before
+`InitializePaymentSectionControls` had assigned a single field.
+
+The build was clean and the model harness was green — only a harness that OPENS the window caught it.
+Two fixes, and both are worth having:
+
+- **Put the default in code, after the controls exist**, not in markup. The other radios on this form
+  never had one, which is why the trap had not been sprung before.
+- **Guard the handler with a "controls are built" flag** (`_sectionsReady`), because the next person to
+  add a markup default should get a no-op rather than a crash. `_syncingPayment` does NOT cover this:
+  it is false at parse time.
+
+## Tax follows the TENDER, so a per-portion rate cannot express a split (2026-07-30)
+
+v4.0 lets one stage be paid several ways. The old model had one method and one rate per portion, so a
+600 deposit paid 400 cash + 200 card could only be recorded as *one* of those — and taxing the portion
+at the card's rate gives 78.00 where the right answer is 26.00.
+
+`Order.PortionTax` now takes the portion's base AND an optional line list: no lines means the rule the
+application always had, lines mean each is taxed at its own method's rate. Two things worth keeping:
+
+- **The unsplit path is deliberately not "a split with one line".** It is reachable with no method
+  chosen at all, and it charges on the portion's own base rather than on what the lines add up to — so
+  a half-typed allocation still shows the tax on what is actually owed. `splitcheck` pins down that the
+  two agree exactly where one line covers the portion, which is the property that matters.
+- **`PaymentTaxRules.Active` is consulted per line, not per stage.** A shop that makes credit cards tax
+  free changes a split the same way it changes an unsplit order, and the stored per-line rate is what
+  keeps a reprinted receipt honest.
+
 ## A harness whose assertion COUNT moves is telling you something (2026-07-30)
 
 `menucheck` reported 35 passed in one suite run and 33 in the next, both with zero failures. Nothing

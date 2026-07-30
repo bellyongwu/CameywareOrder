@@ -481,8 +481,16 @@
                                     </Border>
                                 </Grid>
 
+                                <!-- Split toggle. Hidden where the price already contains the tax: there,
+                                     how the money was tendered cannot move the tax, so a split would be
+                                     four boxes that change no figure on the screen. -->
+                                <StackPanel x:Name="AlterationSplitToggle" Orientation="Horizontal" Margin="0,0,0,12">
+                                    <RadioButton x:Name="AlterationNoSplitRadio" Style="{StaticResource MethodRadio}" GroupName="AlterationSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.Off], Mode=OneWay}" Checked="OnSplitModeChanged"/>
+                                    <RadioButton x:Name="AlterationSplitRadio" Style="{StaticResource MethodRadio}" GroupName="AlterationSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.On], Mode=OneWay}" Checked="OnSplitModeChanged"/>
+                                </StackPanel>
+
                                 <TextBlock x:Name="AlterationDownMethodLabel" Style="{StaticResource StepLabel}"/>
-                                <StackPanel Orientation="Horizontal">
+                                <StackPanel x:Name="AlterationDownMethodRow" Orientation="Horizontal">
                                     <RadioButton x:Name="AlterationDownCash" Style="{StaticResource MethodRadio}" GroupName="AlterationDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="AlterationDownDebit" Style="{StaticResource MethodRadio}" GroupName="AlterationDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="AlterationDownCredit" Style="{StaticResource MethodRadio}" GroupName="AlterationDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
@@ -503,6 +511,15 @@
                                         <TextBlock Grid.Column="0" x:Name="AlterationDepositLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
                                         <TextBox Grid.Column="1" x:Name="AlterationDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
                                     </Grid>
+
+                                    <!-- Deposit-stage split. Rows are BUILT in code from
+                                         PaymentTaxRules.ConfigurableMethods, like the shop's tax matrix,
+                                         so a new payment method needs no markup here. -->
+                                    <StackPanel x:Name="AlterationDepositSplitPanel" Visibility="Collapsed" Margin="0,4,0,0">
+                                        <TextBlock Style="{StaticResource StepLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.DepositTitle], Mode=OneWay}"/>
+                                        <StackPanel x:Name="AlterationDepositSplitRows" Margin="0,4,0,0"/>
+                                        <TextBlock x:Name="AlterationDepositSplitSummary" Margin="0,6,14,0" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                    </StackPanel>
 
                                     <!-- Deposit-stage price breakdown (hidden once deposit is marked received) -->
                                     <StackPanel x:Name="AlterationDepositBreakdownPanel" Margin="0,8,0,0">
@@ -540,7 +557,12 @@
                                     <StackPanel x:Name="AlterationFinalBlock" anim:PanelTransition.Mode="FadeSlide" Visibility="Collapsed">
                                         <Border Style="{StaticResource StepDivider}"/>
                                         <TextBlock x:Name="AlterationFinalMethodLabel" Style="{StaticResource StepLabel}" Margin="0,14,0,6"/>
-                                        <StackPanel Orientation="Horizontal">
+                                        <!-- Final-stage split, same rows, target fixed at the balance due. -->
+                                        <StackPanel x:Name="AlterationFinalSplitPanel" Visibility="Collapsed" Margin="0,0,0,6">
+                                            <StackPanel x:Name="AlterationFinalSplitRows"/>
+                                            <TextBlock x:Name="AlterationFinalSplitSummary" Margin="0,6,14,0" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                        <StackPanel x:Name="AlterationFinalMethodRow" Orientation="Horizontal">
                                             <RadioButton x:Name="AlterationFinalCash" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="AlterationFinalDebit" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="AlterationFinalCredit" Style="{StaticResource MethodRadio}" GroupName="AlterationFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
@@ -699,8 +721,14 @@
                                     </Border>
                                 </Grid>
 
+                                <!-- Split toggle; see AlterationSplitToggle. -->
+                                <StackPanel x:Name="CustomMadeSplitToggle" Orientation="Horizontal" Margin="0,0,0,12">
+                                    <RadioButton x:Name="CustomMadeNoSplitRadio" Style="{StaticResource MethodRadio}" GroupName="CustomMadeSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.Off], Mode=OneWay}" Checked="OnSplitModeChanged"/>
+                                    <RadioButton x:Name="CustomMadeSplitRadio" Style="{StaticResource MethodRadio}" GroupName="CustomMadeSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.On], Mode=OneWay}" Checked="OnSplitModeChanged"/>
+                                </StackPanel>
+
                                 <TextBlock x:Name="CustomMadeDownMethodLabel" Style="{StaticResource StepLabel}"/>
-                                <StackPanel Orientation="Horizontal">
+                                <StackPanel x:Name="CustomMadeDownMethodRow" Orientation="Horizontal">
                                     <RadioButton x:Name="CustomMadeDownCash" Style="{StaticResource MethodRadio}" GroupName="CustomMadeDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="CustomMadeDownDebit" Style="{StaticResource MethodRadio}" GroupName="CustomMadeDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="CustomMadeDownCredit" Style="{StaticResource MethodRadio}" GroupName="CustomMadeDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
@@ -719,6 +747,13 @@
                                         <TextBlock Grid.Column="0" x:Name="CustomMadeDepositLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
                                         <TextBox Grid.Column="1" x:Name="CustomMadeDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
                                     </Grid>
+
+                                    <!-- Deposit-stage split; see AlterationDepositSplitPanel. -->
+                                    <StackPanel x:Name="CustomMadeDepositSplitPanel" Visibility="Collapsed" Margin="0,4,0,0">
+                                        <TextBlock Style="{StaticResource StepLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.DepositTitle], Mode=OneWay}"/>
+                                        <StackPanel x:Name="CustomMadeDepositSplitRows" Margin="0,4,0,0"/>
+                                        <TextBlock x:Name="CustomMadeDepositSplitSummary" Margin="0,6,14,0" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                    </StackPanel>
 
                                     <!-- Deposit-stage price breakdown (hidden once deposit is marked received) -->
                                     <StackPanel x:Name="CustomMadeDepositBreakdownPanel" Margin="0,8,0,0">
@@ -756,7 +791,11 @@
                                     <StackPanel x:Name="CustomMadeFinalBlock" anim:PanelTransition.Mode="FadeSlide" Visibility="Collapsed">
                                         <Border Style="{StaticResource StepDivider}"/>
                                         <TextBlock x:Name="CustomMadeFinalMethodLabel" Style="{StaticResource StepLabel}" Margin="0,14,0,6"/>
-                                        <StackPanel Orientation="Horizontal">
+                                        <StackPanel x:Name="CustomMadeFinalSplitPanel" Visibility="Collapsed" Margin="0,0,0,6">
+                                            <StackPanel x:Name="CustomMadeFinalSplitRows"/>
+                                            <TextBlock x:Name="CustomMadeFinalSplitSummary" Margin="0,6,14,0" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                        <StackPanel x:Name="CustomMadeFinalMethodRow" Orientation="Horizontal">
                                             <RadioButton x:Name="CustomMadeFinalCash" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="CustomMadeFinalDebit" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="CustomMadeFinalCredit" Style="{StaticResource MethodRadio}" GroupName="CustomMadeFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
@@ -892,8 +931,14 @@
                                     </Border>
                                 </Grid>
 
+                                <!-- Split toggle; see AlterationSplitToggle. -->
+                                <StackPanel x:Name="ClothingSplitToggle" Orientation="Horizontal" Margin="0,0,0,12">
+                                    <RadioButton x:Name="ClothingNoSplitRadio" Style="{StaticResource MethodRadio}" GroupName="ClothingSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.Off], Mode=OneWay}" Checked="OnSplitModeChanged"/>
+                                    <RadioButton x:Name="ClothingSplitRadio" Style="{StaticResource MethodRadio}" GroupName="ClothingSplitMode" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.On], Mode=OneWay}" Checked="OnSplitModeChanged"/>
+                                </StackPanel>
+
                                 <TextBlock x:Name="ClothingDownMethodLabel" Style="{StaticResource StepLabel}"/>
-                                <StackPanel Orientation="Horizontal">
+                                <StackPanel x:Name="ClothingDownMethodRow" Orientation="Horizontal">
                                     <RadioButton x:Name="ClothingDownCash" Style="{StaticResource MethodRadio}" GroupName="ClothingDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="ClothingDownDebit" Style="{StaticResource MethodRadio}" GroupName="ClothingDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                     <RadioButton x:Name="ClothingDownCredit" Style="{StaticResource MethodRadio}" GroupName="ClothingDownMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
@@ -912,6 +957,13 @@
                                         <TextBlock Grid.Column="0" x:Name="ClothingDepositLabel" VerticalAlignment="Center" Margin="0,8" TextWrapping="Wrap"/>
                                         <TextBox Grid.Column="1" x:Name="ClothingDownpaymentBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnDownpaymentAmountChanged" PreviewTextInput="OnDecimalTextBoxPreviewTextInput"/>
                                     </Grid>
+
+                                    <!-- Deposit-stage split; see AlterationDepositSplitPanel. -->
+                                    <StackPanel x:Name="ClothingDepositSplitPanel" Visibility="Collapsed" Margin="0,4,0,0">
+                                        <TextBlock Style="{StaticResource StepLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Split.DepositTitle], Mode=OneWay}"/>
+                                        <StackPanel x:Name="ClothingDepositSplitRows" Margin="0,4,0,0"/>
+                                        <TextBlock x:Name="ClothingDepositSplitSummary" Margin="0,6,14,0" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                    </StackPanel>
 
                                     <!-- Deposit-stage price breakdown (hidden once deposit is marked received) -->
                                     <StackPanel x:Name="ClothingDepositBreakdownPanel" Margin="0,8,0,0">
@@ -949,7 +1001,11 @@
                                     <StackPanel x:Name="ClothingFinalBlock" anim:PanelTransition.Mode="FadeSlide" Visibility="Collapsed">
                                         <Border Style="{StaticResource StepDivider}"/>
                                         <TextBlock x:Name="ClothingFinalMethodLabel" Style="{StaticResource StepLabel}" Margin="0,14,0,6"/>
-                                        <StackPanel Orientation="Horizontal">
+                                        <StackPanel x:Name="ClothingFinalSplitPanel" Visibility="Collapsed" Margin="0,0,0,6">
+                                            <StackPanel x:Name="ClothingFinalSplitRows"/>
+                                            <TextBlock x:Name="ClothingFinalSplitSummary" Margin="0,6,14,0" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                                        </StackPanel>
+                                        <StackPanel x:Name="ClothingFinalMethodRow" Orientation="Horizontal">
                                             <RadioButton x:Name="ClothingFinalCash" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.Cash], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="ClothingFinalDebit" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.DebitCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
                                             <RadioButton x:Name="ClothingFinalCredit" Style="{StaticResource MethodRadio}" GroupName="ClothingFinalMethod" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[PaymentMethod.CreditCard], Mode=OneWay}" Checked="OnPaymentOptionChanged"/>
