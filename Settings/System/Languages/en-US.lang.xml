@@ -301,15 +301,20 @@
   <Text key="Shop.Tax.InclusiveRate">Tax included in prices: {0}%</Text>
   <Text key="Shop.Tax.InclusiveNote">Prices in this location include tax, so it is shown on the receipt rather than added at the till. It does not vary by payment method, so there is nothing to set per method.</Text>
   <Text key="Shop.Tax.ReseedConfirmTitle">Replace the tax rules?</Text>
-  <Text key="Shop.Tax.ReseedConfirm">Switching to {0} sets every payment method to that location's standard rate and discards the rules configured here. Continue?</Text>
-  <Text key="TaxJurisdiction.CA-ON">Canada — Ontario (HST {0}%)</Text>
-  <Text key="TaxJurisdiction.CA-AB">Canada — Alberta (GST {0}%)</Text>
-  <Text key="TaxJurisdiction.CA-BC">Canada — British Columbia (GST+PST {0}%)</Text>
+  <Text key="Shop.Tax.ReseedConfirm">Switching to {0} resets every payment method to that location's starting point and discards the rules configured here. A location that quotes no standard rate — Canada, the United States — starts tax free, so you will need to enter the rate this store collects. Continue?</Text>
+  <Text key="TaxJurisdiction.CA">Canada (sales tax added separately)</Text>
   <Text key="TaxJurisdiction.US">United States (sales tax added separately)</Text>
   <Text key="TaxJurisdiction.CN">China (VAT {0}%, tax-inclusive)</Text>
   <Text key="TaxJurisdiction.JP">Japan (consumption tax {0}%, tax-inclusive)</Text>
   <Text key="TaxJurisdiction.FR">France (VAT {0}%, tax-inclusive)</Text>
   <Text key="TaxJurisdiction.ES">Spain (VAT {0}%, tax-inclusive)</Text>
+  <!-- DORMANT: Canada ships as ONE country entry, so nothing selects these today. Kept because the
+       region machinery is intact — re-adding a province to tax-jurisdictions.json is then one line
+       of JSON with its label already translated in all five files, and a shop still stored as
+       CA-ON picks Ontario straight back up. Delete only if regions are dropped for good. -->
+  <Text key="TaxJurisdiction.CA-ON">Canada — Ontario (HST added separately)</Text>
+  <Text key="TaxJurisdiction.CA-AB">Canada — Alberta (GST added separately)</Text>
+  <Text key="TaxJurisdiction.CA-BC">Canada — British Columbia (GST+PST added separately)</Text>
 
   <Text key="Shop.Receipt.Section">Receipt Number Format</Text>
   <Text key="Shop.Receipt.SectionHint">How a new order (and therefore its receipt) is numbered. Orders that already exist keep their numbers.</Text>

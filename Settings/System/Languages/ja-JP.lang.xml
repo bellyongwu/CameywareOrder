@@ -301,15 +301,20 @@
   <Text key="Shop.Tax.InclusiveRate">価格に含まれる税率：{0}%</Text>
   <Text key="Shop.Tax.InclusiveNote">この地域の価格は税込みです。税額はレシートに表示され、会計時に追加されません。支払方法によって変わらないため、方法ごとの設定は不要です。</Text>
   <Text key="Shop.Tax.ReseedConfirmTitle">税設定を置き換えますか？</Text>
-  <Text key="Shop.Tax.ReseedConfirm">「{0}」に変更すると、すべての支払方法にこの地域の標準税率が適用され、ここで設定した内容は破棄されます。続行しますか？</Text>
-  <Text key="TaxJurisdiction.CA-ON">カナダ — オンタリオ州（HST {0}%）</Text>
-  <Text key="TaxJurisdiction.CA-AB">カナダ — アルバータ州（GST {0}%）</Text>
-  <Text key="TaxJurisdiction.CA-BC">カナダ — ブリティッシュコロンビア州（GST+PST {0}%）</Text>
+  <Text key="Shop.Tax.ReseedConfirm">「{0}」に変更すると、すべての支払方法がこの地域の初期状態に戻り、ここで設定した内容は破棄されます。標準税率を示さない地域（カナダ、アメリカ合衆国）では非課税から始まるため、この店舗が徴収する税率を入力する必要があります。続行しますか？</Text>
+  <Text key="TaxJurisdiction.CA">カナダ（売上税は別途加算）</Text>
   <Text key="TaxJurisdiction.US">アメリカ合衆国（売上税は別途加算）</Text>
   <Text key="TaxJurisdiction.CN">中国（増値税 {0}%、税込み）</Text>
   <Text key="TaxJurisdiction.JP">日本（消費税 {0}%、税込み）</Text>
   <Text key="TaxJurisdiction.FR">フランス（付加価値税 {0}%、税込み）</Text>
   <Text key="TaxJurisdiction.ES">スペイン（付加価値税 {0}%、税込み）</Text>
+  <!-- DORMANT: Canada ships as ONE country entry, so nothing selects these today. Kept because the
+       region machinery is intact — re-adding a province to tax-jurisdictions.json is then one line
+       of JSON with its label already translated in all five files, and a shop still stored as
+       CA-ON picks Ontario straight back up. Delete only if regions are dropped for good. -->
+  <Text key="TaxJurisdiction.CA-ON">カナダ — オンタリオ州（HSTは別途加算）</Text>
+  <Text key="TaxJurisdiction.CA-AB">カナダ — アルバータ州（GSTは別途加算）</Text>
+  <Text key="TaxJurisdiction.CA-BC">カナダ — ブリティッシュコロンビア州（GST+PSTは別途加算）</Text>
 
   <Text key="Shop.Receipt.Section">領収書番号の形式</Text>
   <Text key="Shop.Receipt.SectionHint">新しい注文（およびその領収書）の番号の付け方です。すでにある注文は元の番号のままです。</Text>

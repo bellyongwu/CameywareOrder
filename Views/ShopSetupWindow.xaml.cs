@@ -377,7 +377,10 @@ public partial class ShopSetupWindow : Window
     /// False for a NEW shop: there is nothing to lose, and the seed is the point of picking a
     /// location. False when the rows already match the seed, so the prompt only ever appears when it
     /// is genuinely about to discard something — which includes the sharpest case, a location with no
-    /// single rate to quote (the US, at 0%) zeroing a whole configured matrix.
+    /// single rate to quote (Canada and the US, both at 0%) zeroing a whole configured matrix. That
+    /// case is now the ORDINARY one rather than the exotic one: no tax-exclusive location quotes a
+    /// rate any more, so any shop that has typed in the rate it collects loses it the moment it picks
+    /// a different location, and this prompt is the only thing standing in front of that.
     /// </remarks>
     private bool WouldDiscardConfiguredRules(TaxJurisdiction jurisdiction)
     {

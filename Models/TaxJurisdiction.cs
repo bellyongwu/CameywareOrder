@@ -41,7 +41,16 @@ public sealed class TaxJurisdiction
         TaxNumberLabel = taxNumberLabel;
     }
 
-    /// <summary>Stable location code, e.g. "CA-ON", "CN", "JP". Stored on <see cref="Shop.LocationCode"/>.</summary>
+    /// <summary>
+    /// Stable location code, e.g. "CA", "CN", "JP". Stored on <see cref="Shop.LocationCode"/>.
+    /// </summary>
+    /// <remarks>
+    /// A country code as shipped, but the format is free: a REGION is written <c>&lt;country&gt;-&lt;region&gt;</c>
+    /// ("CA-ON"), which <c>TaxJurisdictions.For</c> understands well enough to fall back on the country
+    /// entry when the region itself is not shipped. Canada was three provincial entries and is now one
+    /// country entry; nothing in the code changed for that, and nothing would have to change to split
+    /// it again.
+    /// </remarks>
     public string Code { get; }
 
     /// <summary>
@@ -49,6 +58,14 @@ public sealed class TaxJurisdiction
     /// method is seeded with and the shop may then override per method. In a tax-INCLUSIVE one it is
     /// the rate outright: the per-method matrix is not consulted at all there.
     /// </summary>
+    /// <remarks>
+    /// ZERO where the location quotes no single rate — every tax-exclusive market, Canada and the US
+    /// alike. Sales tax is added separately at settlement in both, and what a given store collects
+    /// depends on where in the province or state it sits and on what it sells, so the rate is the
+    /// shop's to enter in Shop Settings and a zero seeds every payment method tax free. A zero here is
+    /// therefore "nothing to assert", not "no tax": it is only in an INCLUSIVE location that this
+    /// number is the tax in force, which is why one is never left unset there.
+    /// </remarks>
     public decimal StandardRatePercent { get; }
 
     /// <summary>
@@ -75,8 +92,9 @@ public sealed class TaxJurisdiction
     /// </summary>
     /// <remarks>
     /// Grouped by tax REGIME rather than by jurisdiction, because that is the real relationship:
-    /// Ontario, Alberta and British Columbia share one GST/HST number, France and Spain each issue an
-    /// EU VAT number. Naming it here rather than in five language files is the same rule as the rate —
+    /// France and Spain each issue an EU VAT number, and every Canadian region would carry the one
+    /// GST/HST number were the provinces split out again — which is exactly what makes splitting them
+    /// cheap. Naming it here rather than in five language files is the same rule as the rate —
     /// "GST/HST" used to be spelled into the label, the hint and the receipt line in every language,
     /// so a shop in Osaka read <c>GST/HST</c> on its own tax slip.
     ///
@@ -113,7 +131,9 @@ public sealed class TaxJurisdiction
     /// ("Canada — Ontario (HST {0}%)"), with the rate filled in from <see cref="StandardRatePercent"/>
     /// — the whole reason the presets are editable without a rebuild is defeated if the rate is also
     /// spelled out in five language files, where editing the JSON would leave it stale. A jurisdiction
-    /// with no single rate to quote (the US) simply omits the placeholder.
+    /// with no single rate to quote names how the tax is charged instead of a figure ("Canada (sales
+    /// tax added separately)"), simply omitting the placeholder — <see cref="LocalizationService.Format"/> ignores an unused argument, so the
+    /// rate is still passed and no per-jurisdiction branch is needed here.
     /// </remarks>
     public string DisplayName(LocalizationService localization)
     {

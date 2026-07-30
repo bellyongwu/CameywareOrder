@@ -289,17 +289,28 @@ components are added/renamed or the way pieces fit together changes.
   - `TaxJurisdiction` (`Models/TaxJurisdiction.cs`) + `TaxJurisdictions` (`Services/`) — one shipped
     tax PRESET per store location (`Code`, `StandardRatePercent`, `PricesIncludeTax`,
     `DefaultCurrency`), loaded once from `Settings/System/Defaults/tax-jurisdictions.json` with a
-    built-in home-market (`CA-ON`) fallback so a missing or corrupt file cannot leave the app unable
+    built-in home-market (`CA`) fallback so a missing or corrupt file cannot leave the app unable
     to price. Shaped after `ShopCurrencies`: a bounded shipped set the UI reads to seed a shop. The
     location is stored on `Shop.LocationCode` (null = never located → home market) and its pricing
     MODE is frozen onto `Order.PricesIncludeTax` at save, exactly as `CurrencyType` is.
     `PaymentTaxRules.CreateForStandardRate` is the seed a picked location applies.
+    The tax-EXCLUSIVE entries (`CA`, `US`) quote `standardRatePercent: 0` — sales tax is added
+    separately at settlement there and the rate is the shop's to enter, so picking one seeds every
+    method TAX FREE and its display name omits the `{0}` ("Canada (sales tax added separately)").
+    A zero is "nothing to assert", not "no tax"; the built-in fallback matches.
+    REGIONS are supported but not shipped: Canada is ONE entry, not one per province. A code is
+    free-form and a region is `<country>-<region>`, so re-adding `CA-ON` is a line of JSON plus a
+    language key — the `TaxJurisdiction.CA-*` keys are still in all five files, marked dormant, for
+    exactly that. `TaxJurisdictions.For` widens an unshipped regional code to its COUNTRY entry
+    (`CA-ON` → `CA`) before falling back to the home market, which is what keeps every shop stored
+    under the old provincial codes Canadian; `Find` stays strict, and the stored code is never
+    rewritten, so a re-added province takes effect on its own.
     In an INCLUSIVE location `StandardRatePercent` is the only rate in play:
     `TaxJurisdictions.IncludedTaxRatePercent(shop)` is what the order editor uses for both portions,
     the per-method matrix is not consulted at all (a value-added tax cannot vary by tender), and Shop
     Settings shows the rate in place of the matrix.
     A jurisdiction also names the TAX NUMBER its businesses are issued (`TaxNumberLabel` → a
-    `TaxNumber.<name>` key; `GstHst` shared by the three Canadian entries, `Vat` by FR/ES,
+    `TaxNumber.<name>` key; `GstHst` for Canada and any Canadian region, `Vat` by FR/ES,
     `ChinaTaxpayer`, `JapanInvoice`), or omits it where none is issued — the US. `CollectsTaxNumber`
     gates whether Shop Settings asks for one at all; `TaxNumberKey` / `TaxNumberName` name it on
     screen and on the receipt line, falling back to `TaxNumber.Generic` so a stored number is never

@@ -299,15 +299,20 @@
   <Text key="Shop.Tax.InclusiveRate">Impuesto incluido en los precios: {0} %</Text>
   <Text key="Shop.Tax.InclusiveNote">En esta región los precios incluyen impuestos: se muestran en el recibo en lugar de añadirse en caja. No varían según el método de pago, así que no hay nada que configurar por método.</Text>
   <Text key="Shop.Tax.ReseedConfirmTitle">¿Sustituir las reglas de impuestos?</Text>
-  <Text key="Shop.Tax.ReseedConfirm">Cambiar a «{0}» aplicará el tipo estándar de esa ubicación a todos los métodos de pago y descartará las reglas configuradas aquí. ¿Continuar?</Text>
-  <Text key="TaxJurisdiction.CA-ON">Canadá — Ontario (HST {0} %)</Text>
-  <Text key="TaxJurisdiction.CA-AB">Canadá — Alberta (GST {0} %)</Text>
-  <Text key="TaxJurisdiction.CA-BC">Canadá — Columbia Británica (GST+PST {0} %)</Text>
+  <Text key="Shop.Tax.ReseedConfirm">Cambiar a «{0}» restablecerá todos los métodos de pago al punto de partida de esa ubicación y descartará las reglas configuradas aquí. Una ubicación que no indica ningún tipo estándar — Canadá, Estados Unidos — empieza exenta, por lo que deberá introducir el tipo que cobra esta tienda. ¿Continuar?</Text>
+  <Text key="TaxJurisdiction.CA">Canadá (impuesto sobre ventas añadido aparte)</Text>
   <Text key="TaxJurisdiction.US">Estados Unidos (impuesto sobre ventas añadido aparte)</Text>
   <Text key="TaxJurisdiction.CN">China (IVA {0} %, impuestos incluidos)</Text>
   <Text key="TaxJurisdiction.JP">Japón (impuesto al consumo {0} %, impuestos incluidos)</Text>
   <Text key="TaxJurisdiction.FR">Francia (IVA {0} %, impuestos incluidos)</Text>
   <Text key="TaxJurisdiction.ES">España (IVA {0} %, impuestos incluidos)</Text>
+  <!-- DORMANT: Canada ships as ONE country entry, so nothing selects these today. Kept because the
+       region machinery is intact — re-adding a province to tax-jurisdictions.json is then one line
+       of JSON with its label already translated in all five files, and a shop still stored as
+       CA-ON picks Ontario straight back up. Delete only if regions are dropped for good. -->
+  <Text key="TaxJurisdiction.CA-ON">Canadá — Ontario (HST añadido aparte)</Text>
+  <Text key="TaxJurisdiction.CA-AB">Canadá — Alberta (GST añadido aparte)</Text>
+  <Text key="TaxJurisdiction.CA-BC">Canadá — Columbia Británica (GST+PST añadidos aparte)</Text>
 
   <Text key="Shop.Receipt.Section">Formato del número de recibo</Text>
   <Text key="Shop.Receipt.SectionHint">Cómo se numera un pedido nuevo (y, por tanto, su recibo). Los pedidos que ya existen conservan su número.</Text>

@@ -298,15 +298,20 @@
   <Text key="Shop.Tax.InclusiveRate">Taxe incluse dans les prix : {0} %</Text>
   <Text key="Shop.Tax.InclusiveNote">Dans cette région, les prix incluent la taxe : elle figure sur le reçu au lieu d'être ajoutée en caisse. Elle ne varie pas selon le moyen de paiement, il n'y a donc rien à définir par moyen.</Text>
   <Text key="Shop.Tax.ReseedConfirmTitle">Remplacer les règles de taxe ?</Text>
-  <Text key="Shop.Tax.ReseedConfirm">Passer à « {0} » appliquera le taux standard de cet emplacement à tous les moyens de paiement et supprimera les règles définies ici. Continuer ?</Text>
-  <Text key="TaxJurisdiction.CA-ON">Canada — Ontario (TVH {0} %)</Text>
-  <Text key="TaxJurisdiction.CA-AB">Canada — Alberta (TPS {0} %)</Text>
-  <Text key="TaxJurisdiction.CA-BC">Canada — Colombie-Britannique (TPS+TVP {0} %)</Text>
+  <Text key="Shop.Tax.ReseedConfirm">Passer à « {0} » réinitialisera tous les moyens de paiement au point de départ de cet emplacement et supprimera les règles définies ici. Un emplacement qui n'annonce aucun taux standard — le Canada, les États-Unis — démarre exonéré : vous devrez saisir le taux que ce magasin perçoit. Continuer ?</Text>
+  <Text key="TaxJurisdiction.CA">Canada (taxe de vente ajoutée séparément)</Text>
   <Text key="TaxJurisdiction.US">États-Unis (taxe de vente ajoutée séparément)</Text>
   <Text key="TaxJurisdiction.CN">Chine (TVA {0} %, taxe incluse)</Text>
   <Text key="TaxJurisdiction.JP">Japon (taxe à la consommation {0} %, taxe incluse)</Text>
   <Text key="TaxJurisdiction.FR">France (TVA {0} %, taxe incluse)</Text>
   <Text key="TaxJurisdiction.ES">Espagne (TVA {0} %, taxe incluse)</Text>
+  <!-- DORMANT: Canada ships as ONE country entry, so nothing selects these today. Kept because the
+       region machinery is intact — re-adding a province to tax-jurisdictions.json is then one line
+       of JSON with its label already translated in all five files, and a shop still stored as
+       CA-ON picks Ontario straight back up. Delete only if regions are dropped for good. -->
+  <Text key="TaxJurisdiction.CA-ON">Canada — Ontario (TVH ajoutée séparément)</Text>
+  <Text key="TaxJurisdiction.CA-AB">Canada — Alberta (TPS ajoutée séparément)</Text>
+  <Text key="TaxJurisdiction.CA-BC">Canada — Colombie-Britannique (TPS+TVP ajoutées séparément)</Text>
 
   <Text key="Shop.Receipt.Section">Format des numéros de reçu</Text>
   <Text key="Shop.Receipt.SectionHint">Comment une nouvelle commande (et donc son reçu) est numérotée. Les commandes existantes conservent leur numéro.</Text>

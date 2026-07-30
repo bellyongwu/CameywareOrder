@@ -25,7 +25,13 @@ namespace CameywareOrder.Services;
 public static class TaxJurisdictions
 {
     /// <summary>Home market: the location a fresh install and an un-located shop assume.</summary>
-    public const string DefaultCode = "CA-ON";
+    /// <remarks>
+    /// A COUNTRY code. Canada ships as one entry rather than one per province — see the shipped file's
+    /// <c>regionComment</c> — but nothing here requires that: a code is free-form, so re-adding
+    /// <c>CA-ON</c> is a line of JSON and a language key, and <see cref="For"/> keeps a shop already
+    /// stored under a regional code resolving to its country in the meantime.
+    /// </remarks>
+    public const string DefaultCode = "CA";
 
     private static readonly JsonSerializerOptions ReadOptions = new() { PropertyNameCaseInsensitive = true };
 
@@ -58,6 +64,8 @@ public static class TaxJurisdictions
     /// <summary>
     /// The jurisdiction for a stored location code, or null when the code is blank or no longer
     /// shipped. Null is a legitimate "never located" state, exactly like an unset language code.
+    /// Strict on purpose: <see cref="For"/> is the one place a regional code is widened to its
+    /// country.
     /// </summary>
     public static TaxJurisdiction? Find(string? code)
     {
@@ -67,9 +75,40 @@ public static class TaxJurisdictions
         return All.FirstOrDefault(j => string.Equals(j.Code, code.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>The jurisdiction a shop sits in, falling back to the home market when unset/unknown.</summary>
+    /// <summary>
+    /// The jurisdiction a shop sits in: its own code, else the COUNTRY that code names, else the home
+    /// market.
+    /// </summary>
+    /// <remarks>
+    /// The country step is what lets the shipped list change shape without stranding anybody. Canada
+    /// was three provincial entries and is now one country entry, so every shop already stored as
+    /// <c>CA-ON</c>, <c>CA-AB</c> or <c>CA-BC</c> holds a code this build no longer ships; matching it
+    /// to <c>CA</c> keeps it explicitly Canadian instead of leaving it to land on the home market by
+    /// luck — which is the same answer today only because the home market IS Canada, and would quietly
+    /// become a wrong answer the moment that changed. It runs the other way too: a shop stored as
+    /// <c>CA-ON</c> resolves straight back to Ontario the day an Ontario row is added again, so the
+    /// province it recorded is preserved rather than rewritten.
+    ///
+    /// Deliberately NOT folded into <see cref="Find"/>, whose null answer means "not shipped" and is
+    /// what the settings screen relies on to tell a live code from a dead one.
+    /// </remarks>
     public static TaxJurisdiction For(Shop? shop)
-        => (shop is null ? null : Find(shop.LocationCode)) ?? Default;
+        => Find(shop?.LocationCode) ?? FindCountry(shop?.LocationCode) ?? Default;
+
+    /// <summary>
+    /// The country entry a regional code sits in — <c>CA-ON</c> → <c>CA</c> — or null when the code
+    /// names no region or its country is not shipped either.
+    /// </summary>
+    private static TaxJurisdiction? FindCountry(string? code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+            return null;
+
+        var trimmed = code.Trim();
+        var separator = trimmed.IndexOf('-');
+
+        return separator > 0 ? Find(trimmed[..separator]) : null;
+    }
 
     /// <summary>
     /// Whether a shop's prices are quoted tax-inclusive. Drives both the money split and whether the
@@ -146,9 +185,16 @@ public static class TaxJurisdictions
     }
 
     /// <summary>Built-in home market, used only when the shipped file is missing or unreadable.</summary>
+    /// <remarks>
+    /// Quotes NO standard rate, matching the shipped Canadian entries: sales tax is added separately at
+    /// settlement here, so the rate is the shop's to enter rather than something this build asserts. It
+    /// must agree with the file it stands in for — a fallback carrying 13% would have a corrupt presets
+    /// file seed a matrix the intact one leaves tax free, which is the one situation nobody would think
+    /// to check.
+    /// </remarks>
     private static IReadOnlyList<TaxJurisdiction> Fallback { get; } = new[]
     {
-        new TaxJurisdiction(DefaultCode, PaymentTaxRules.DefaultCardRatePercent, pricesIncludeTax: false,
+        new TaxJurisdiction(DefaultCode, standardRatePercent: 0m, pricesIncludeTax: false,
             CurrencyType.CAD, taxNumberLabel: "GstHst")
     };
 

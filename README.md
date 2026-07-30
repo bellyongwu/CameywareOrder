@@ -84,8 +84,9 @@ this is a major version — whether its prices are quoted **tax-inclusive**. Bot
 database: a new column on the shop, a new column frozen onto every order.
 
 - **A shop has a location, chosen from a shipped table of tax jurisdictions.** Picking one seeds the
-  payment/tax matrix from that jurisdiction's standard rate, so the *lawful* configuration is the
-  starting point rather than something to remember to set — and a shop created and saved straight
+  payment/tax matrix from that jurisdiction's standard rate where it quotes one, so the *lawful*
+  configuration is the starting point rather than something to remember to set — and a shop created
+  and saved straight
   through is seeded too, not only one whose owner re-picks a location by hand. Tax is a function of
   where the store is, not of the language it runs in or of how a customer pays, so it is its own
   setting — not inferred from the installed languages the way currency is.
@@ -99,11 +100,21 @@ database: a new column on the shop, a new column frozen onto every order.
   property of the sale, not of how it was settled — a cash sale in Tokyo carries the same consumption
   tax as a card one — so Shop Settings replaces its per-method matrix with that single rate and
   states it on screen. Both portions of an order, deposit and final balance, use it.
-- **The standard rate is now the default, at every rate a jurisdiction charges.** Ontario seeds 13%,
-  Alberta 5%, Japan 10%, France 20%, and so on — every payment method taxable at that rate out of
-  the box. Making a method tax free (a cash discount, say) is now a deliberate opt-out a shop
-  chooses, not the default it inherits, and changing location asks first if it would discard rules
-  somebody had configured.
+- **Where a jurisdiction quotes a standard rate, that rate is the default.** Japan seeds 10%, France
+  20%, and so on — every payment method taxable at that rate out of the box, so making one tax free
+  (a cash discount, say) is a deliberate opt-out a shop chooses rather than the default it inherits.
+- **The tax-exclusive markets quote none, and that now includes Canada.** Canada and the United
+  States both add sales tax separately at settlement, and what a store actually collects turns on
+  where in the province or state it sits and on what it sells — so no rate is shipped for either.
+  Picking Canada or the US seeds every payment method **tax free** and the shop enters the rate it is
+  registered to collect. Changing location asks first if it would discard rules somebody had
+  configured, which matters more now that a shop's rate is its own to keep.
+- **Canada is one entry, not one per province — but regions still work.** Three provincial rows that
+  no longer quote a rate differ in nothing but their name, so the picker offers *Canada*. The region
+  machinery is untouched: a code is free-form, a region is written `CA-ON`, and re-adding one is a
+  line of JSON plus a label that is already translated in all five language files. Shops saved under
+  the old provincial codes are not rewritten — they resolve to their **country** entry and would snap
+  back to their province the day it returns.
 - **Presets are shipped data, editable without a rebuild.** They live in
   `Settings/System/Defaults/tax-jurisdictions.json` alongside the language tables, so a rate a
   government changes is a one-line file edit, not a code release — including the rate quoted in the
@@ -112,8 +123,8 @@ database: a new column on the shop, a new column frozen onto every order.
 - **The tax number is called what the shop's location calls it, and is only asked for where one
   exists.** "GST/HST" used to be written into the field label, the branding editor and the receipt line
   in all five languages, so a shop in Osaka read *GST/HST* on its own tax slip. A jurisdiction now
-  declares which number its businesses are issued — one GST/HST number across the Canadian provinces,
-  an EU VAT number for France and Spain, a taxpayer ID in China, a qualified-invoice number in Japan —
+  declares which number its businesses are issued — a GST/HST number in Canada, wherever in it a shop
+  sits, an EU VAT number for France and Spain, a taxpayer ID in China, a qualified-invoice number in Japan —
   and the United States, which issues no federal equivalent, is not asked at all. A number already
   stored keeps printing under a generic label rather than disappearing if a shop relocates.
 - **The pricing mode is frozen onto each order**, exactly as its currency already is. A receipt

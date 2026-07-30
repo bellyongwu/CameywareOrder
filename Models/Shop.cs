@@ -85,7 +85,7 @@ public class Shop
     public string? PreferredLanguageCode { get; set; }
 
     /// <summary>
-    /// Where this shop is, as a tax-jurisdiction code (e.g. "CA-ON", "CN", "JP"). It decides the
+    /// Where this shop is, as a tax-jurisdiction code (e.g. "CA", "CN", "JP"). It decides the
     /// standard tax rate the shop seeds its payment rules from and whether its prices are quoted
     /// tax-inclusive — see <c>TaxJurisdictions</c>.
     /// </summary>
@@ -94,8 +94,12 @@ public class Shop
     /// field rather than being inferred from the installed languages. Null means "never located",
     /// which <c>TaxJurisdictions.For</c> reads back as the home market — exactly how the app behaved
     /// before a shop could say where it is, so no existing branch changes until one is set. A code
-    /// whose preset has since been removed from the shipped file resolves back to the home market
-    /// rather than throwing.
+    /// whose preset has since been removed from the shipped file resolves to the COUNTRY it names if
+    /// that is still shipped ("CA-ON" → "CA", which is what every Canadian shop stored before the
+    /// provinces were collapsed into one entry holds), and to the home market otherwise — never a
+    /// throw. No migration rewrites the stored code behind the shop's back, so a region that is
+    /// shipped again takes effect by itself; saving Shop Settings does persist whatever the picker
+    /// shows, which for an unshipped region is the country it resolved to.
     /// </remarks>
     public string? LocationCode { get; set; }
 

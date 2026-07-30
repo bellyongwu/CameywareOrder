@@ -33,7 +33,15 @@ public sealed class PaymentTaxRule
 /// </summary>
 public sealed class PaymentTaxRules
 {
-    /// <summary>Standard Ontario HST rate, the default for both card types.</summary>
+    /// <summary>
+    /// Standard Ontario HST rate, the default for both card types in <see cref="CreateDefault"/>.
+    /// </summary>
+    /// <remarks>
+    /// A LEGACY in-code default, kept so a shop that has never opened the settings screen keeps
+    /// behaving as it always did. It is no longer what a Canadian location seeds: the shipped Canadian
+    /// preset quotes no rate at all now (see <c>TaxJurisdiction.StandardRatePercent</c>), so a shop
+    /// picking it enters the rate it collects. Do not reach for this constant as "the Canadian rate".
+    /// </remarks>
     public const decimal DefaultCardRatePercent = 13m;
 
     /// <summary>
@@ -84,9 +92,16 @@ public sealed class PaymentTaxRules
     /// location. Unlike <see cref="CreateDefault"/>, which leaves cash and e-transfer tax free, this
     /// makes the LAWFUL configuration the starting point: a jurisdiction taxes a sale regardless of
     /// how it is paid for, so "cash is untaxed" has to be a deliberate opt-out the shop chooses, not
-    /// the default it inherits. A rate of zero (e.g. a US location with no single rate) leaves every
-    /// method tax free, which is the right starting point there too.
+    /// the default it inherits. A rate of zero leaves every method tax free — which is now every
+    /// tax-EXCLUSIVE location, Canada and the US alike, since neither quotes a standard rate.
     /// </summary>
+    /// <remarks>
+    /// So the lawful-configuration argument above only bites where a jurisdiction actually quotes a
+    /// rate. Where it does not, seeding tax free is this build declining to invent a figure it cannot
+    /// know — what a store collects turns on where in the province or state it sits and on what it
+    /// sells — and NOT a claim that the sale is untaxed: a Canadian shop still has to set the rate it
+    /// is registered to collect before its orders carry any tax at all.
+    /// </remarks>
     public static PaymentTaxRules CreateForStandardRate(decimal ratePercent)
     {
         var taxable = ratePercent > 0m;

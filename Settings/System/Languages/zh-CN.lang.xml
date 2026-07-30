@@ -306,15 +306,20 @@
   <Text key="Shop.Tax.InclusiveRate">价格已含税：{0}%</Text>
   <Text key="Shop.Tax.InclusiveNote">该地区价格为含税价，税额在收据上列示，不在收银时另加；税额不因支付方式而异，无需按支付方式单独设置。</Text>
   <Text key="Shop.Tax.ReseedConfirmTitle">是否替换税费规则？</Text>
-  <Text key="Shop.Tax.ReseedConfirm">切换到「{0}」将把所有支付方式设为该地区的标准税率，并丢弃此处已配置的规则。是否继续？</Text>
-  <Text key="TaxJurisdiction.CA-ON">加拿大 — 安大略省（HST {0}%）</Text>
-  <Text key="TaxJurisdiction.CA-AB">加拿大 — 阿尔伯塔省（GST {0}%）</Text>
-  <Text key="TaxJurisdiction.CA-BC">加拿大 — 不列颠哥伦比亚省（GST+PST {0}%）</Text>
+  <Text key="Shop.Tax.ReseedConfirm">切换到「{0}」将把所有支付方式重置为该地区的初始状态，并丢弃此处已配置的规则。不提供标准税率的地区（加拿大、美国）将以免税开始，您需要自行输入本店实际征收的税率。是否继续？</Text>
+  <Text key="TaxJurisdiction.CA">加拿大（销售税另加）</Text>
   <Text key="TaxJurisdiction.US">美国（销售税另加）</Text>
   <Text key="TaxJurisdiction.CN">中国（增值税 {0}%，含税价）</Text>
   <Text key="TaxJurisdiction.JP">日本（消费税 {0}%，含税价）</Text>
   <Text key="TaxJurisdiction.FR">法国（增值税 {0}%，含税价）</Text>
   <Text key="TaxJurisdiction.ES">西班牙（增值税 {0}%，含税价）</Text>
+  <!-- DORMANT: Canada ships as ONE country entry, so nothing selects these today. Kept because the
+       region machinery is intact — re-adding a province to tax-jurisdictions.json is then one line
+       of JSON with its label already translated in all five files, and a shop still stored as
+       CA-ON picks Ontario straight back up. Delete only if regions are dropped for good. -->
+  <Text key="TaxJurisdiction.CA-ON">加拿大 — 安大略省（HST 另加）</Text>
+  <Text key="TaxJurisdiction.CA-AB">加拿大 — 阿尔伯塔省（GST 另加）</Text>
+  <Text key="TaxJurisdiction.CA-BC">加拿大 — 不列颠哥伦比亚省（GST+PST 另加）</Text>
 
   <Text key="Shop.Receipt.Section">小票编号规则</Text>
   <Text key="Shop.Receipt.SectionHint">新订单的订单号（即小票号）的生成方式。已有订单的编号不会改变。</Text>
