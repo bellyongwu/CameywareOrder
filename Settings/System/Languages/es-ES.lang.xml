@@ -90,6 +90,66 @@
   <Text key="Shop.Picker.Prompt">Tiendas que puedes abrir</Text>
   <Text key="Shop.Picker.SignedInAs">Sesión iniciada como {0} ({1})</Text>
   <Text key="Shop.Picker.Open">Abrir</Text>
+
+  <Text key="Store.Demo.Create">Crear tienda de demostración</Text>
+  <Text key="Store.Demo.Name">Tienda de demostración</Text>
+
+  <Text key="Store.Manage.Title">Gestión de tiendas</Text>
+  <Text key="Store.Manage.Subtitle">Retirar una tienda del servicio, descargar sus datos, restaurar una desde un archivo o eliminarla. Ctrl+clic para seleccionar varias; Mayús+clic para un rango.</Text>
+  <Text key="Store.Manage.Close">Cerrar</Text>
+  <Text key="Store.Manage.Empty">Todavía no hay tiendas. Cree una desde la pantalla de selección.</Text>
+  <Text key="Store.Manage.SelectAll">Seleccionar todo</Text>
+  <Text key="Store.Manage.ClearSelection">Quitar la selección</Text>
+  <Text key="Store.Manage.NothingSelected">Ninguna tienda seleccionada.</Text>
+  <Text key="Store.Manage.SelectedCount">{0} tienda(s) seleccionada(s), con {1} pedido(s).</Text>
+  <Text key="Store.Manage.OrderCount">{0} pedido(s)</Text>
+  <Text key="Store.Manage.Delisted.Badge">Fuera de servicio</Text>
+  <Text key="Store.Manage.DelistedOn">Fuera de servicio desde el {0}</Text>
+
+  <Text key="Store.Manage.InService">En servicio</Text>
+  <Text key="Store.Manage.Delist">Retirar del servicio</Text>
+  <Text key="Store.Manage.Activate">Volver a poner en servicio</Text>
+  <Text key="Store.Manage.DelistHint">Una tienda fuera de servicio conserva todos sus datos y solo deja de aparecer en la selección. Reversible en cualquier momento.</Text>
+  <Text key="Store.Manage.Delisted">{0} tienda(s) retirada(s) del servicio.</Text>
+  <Text key="Store.Manage.Activated">{0} tienda(s) de nuevo en servicio.</Text>
+
+  <Text key="Store.Manage.DataSection">Datos</Text>
+  <Text key="Store.Manage.Download">Descargar los datos seleccionados</Text>
+  <Text key="Store.Manage.Restore">Restaurar desde un archivo…</Text>
+  <Text key="Store.Manage.RestoreHint">Una descarga contiene las tiendas elegidas, sus pedidos y sus ajustes. La restauración las añade; una tienda ya presente se deja intacta.</Text>
+  <Text key="Store.Manage.FileFilter">Archivo de tienda (*.zip)|*.zip</Text>
+  <Text key="Store.Manage.Downloaded">Se han guardado {0} tienda(s) y {1} pedido(s) en {2}</Text>
+  <Text key="Store.Manage.Restored">Se han restaurado {0} tienda(s) y {1} pedido(s).</Text>
+  <Text key="Store.Manage.RestoredWithSkips">Se han restaurado {0} tienda(s) y {1} pedido(s). {2} ya estaban aquí y se han dejado tal cual.</Text>
+  <Text key="Store.Manage.NotAnArchive">Ese archivo no es un archivo de tienda.</Text>
+
+  <Text key="Store.Manage.DangerSection">Irreversible</Text>
+  <Text key="Store.Manage.Delete">Eliminar las tiendas seleccionadas</Text>
+  <Text key="Store.Manage.Reinitialize">Reinicializar la aplicación</Text>
+  <Text key="Store.Manage.DangerHint">Estas acciones no se pueden deshacer. Se le pedirá escribir una frase para confirmar y podrá guardar antes los datos.</Text>
+  <Text key="Store.Manage.DeleteHeadline">¿Eliminar {0} tienda(s) de forma permanente?</Text>
+  <Text key="Store.Manage.ReinitializeHeadline">¿Reinicializar esta instalación?</Text>
+  <Text key="Store.Manage.ImpactLine">{0} — {1} pedido(s)</Text>
+  <Text key="Store.Manage.ImpactAllStores">Las {0} tienda(s), con {1} pedido(s)</Text>
+  <Text key="Store.Manage.ImpactPerShopFiles">Las medidas y el diseño de recibos de cada tienda</Text>
+  <Text key="Store.Manage.ImpactAccountsKept">Las cuentas, el idioma y los ajustes globales se CONSERVAN</Text>
+  <Text key="Store.Manage.Deleted">Se han eliminado {0} tienda(s) y {1} pedido(s).</Text>
+  <Text key="Store.Manage.NothingToReinitialize">No hay tiendas que eliminar.</Text>
+  <Text key="Store.Manage.SaveFailedNoDelete">No se ha eliminado nada: no se pudieron guardar los datos ({0}).</Text>
+  <Text key="Store.Manage.Failed">No ha funcionado: {0}</Text>
+
+  <Text key="Store.Confirm.Title">Confirmar</Text>
+  <Text key="Store.Confirm.Subhead">Esto no se puede deshacer. Lea lo siguiente antes de continuar.</Text>
+  <Text key="Store.Confirm.ImpactHeading">Se va a eliminar</Text>
+  <Text key="Store.Confirm.Prompt">Escriba los {0} caracteres de abajo, exactamente igual, para activar los botones.</Text>
+  <Text key="Store.Confirm.Matched">Coincide. Ambos botones están activados.</Text>
+  <Text key="Store.Confirm.NotMatched">Todavía no coincide.</Text>
+  <Text key="Store.Confirm.Copy">Copiar</Text>
+  <Text key="Store.Confirm.Copied">Copiado</Text>
+  <Text key="Store.Confirm.CopyFailed">No se pudo copiar</Text>
+  <Text key="Store.Confirm.SaveRecords">Guardar los datos de la tienda</Text>
+  <Text key="Store.Confirm.RemoveNow">Eliminar la tienda ahora</Text>
+  <Text key="Store.Confirm.ReinitializeNow">Reinicializar ahora</Text>
   <Text key="Shop.Picker.CreateNew">Crear una tienda nueva</Text>
   <Text key="Shop.Picker.Cancel">Cancelar</Text>
   <Text key="Shop.Picker.Empty">Todavía no se ha creado ninguna tienda.</Text>

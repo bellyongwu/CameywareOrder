@@ -112,6 +112,17 @@ public static class ReceiptBrandingStore
     private static string SettingsFilePath => Path.Combine(BrandingDirectory, FileName);
 
     /// <summary>
+    /// The branding folder belonging to a NAMED shop rather than to the open one. Public so deleting a
+    /// shop can remove it without repeating the PublicId naming rule this class owns — a folder that
+    /// outlives its shop is what later hands a new shop an old one's logo and header.
+    /// </summary>
+    public static string DirectoryFor(Shop shop)
+    {
+        ArgumentNullException.ThrowIfNull(shop);
+        return Path.Combine(BrandingRoot, shop.PublicId.ToString("N"));
+    }
+
+    /// <summary>
     /// One-time migration: gives the first shop the header, footer and logo this machine already
     /// had. Copies the files sitting directly in the shared Branding root into the shop's own
     /// folder — top level only, so other shops' folders are never swept in — and leaves the

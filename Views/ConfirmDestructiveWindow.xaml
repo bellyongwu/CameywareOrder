@@ -1,0 +1,154 @@
+<Window x:Class="CameywareOrder.Views.ConfirmDestructiveWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:CameywareOrder.Localization"
+        Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Confirm.Title], Mode=OneWay}"
+        Height="520" Width="620"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Icon="/Assets/ICONS/app-icon.ico"
+        Background="{StaticResource PageBackgroundBrush}">
+    <!-- The gate in front of every irreversible action in Store Management. Typing a phrase that is
+         generated fresh each time is the point: an OK button can be clicked by muscle memory, and a
+         fixed word ("DELETE") can be typed by it too once you have done it twice. A random string has
+         to be READ off this window, which forces the eye past the summary of what is about to go.
+
+         Both actions live behind the SAME gate rather than one being the "safe" one, because keeping
+         the records is not the same as keeping the shop — either button still deletes it. -->
+    <Window.Resources>
+        <Style x:Key="BodyText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#374151"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <!-- The phrase box gets its OWN template rather than deriving from ThemedTextBox.
+             ThemedTextBox has an IsReadOnly trigger that repaints Chrome.Background to the disabled
+             grey via TargetName, and a TargetName setter beats the TemplateBinding a local
+             Background="Transparent" feeds — so the dark panel behind it was covered by light grey and
+             the near-white phrase became near-white ON light grey. That is not a colour choice to
+             tune; it is the wrong control style. Owning the template makes the contrast ours:
+             #F9FAFB on #111827 is about 17:1, well past WCAG AAA.
+
+             Still a TextBox and not a TextBlock, because a TextBlock cannot be selected in WPF and the
+             phrase has to be selectable to be copied by hand. -->
+        <Style x:Key="ChallengeBox" TargetType="TextBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#F9FAFB"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="23"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <!-- Selection has to be VISIBLE against the dark panel: the theme's indigo selection on
+                 #111827 is nearly invisible, which is half of why the phrase read as uncopyable. -->
+            <Setter Property="SelectionBrush" Value="#4F46E5"/>
+            <Setter Property="SelectionOpacity" Value="0.85"/>
+            <Setter Property="CaretBrush" Value="#F9FAFB"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
+                                      HorizontalScrollBarVisibility="Hidden"
+                                      VerticalScrollBarVisibility="Hidden"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Red rather than the usual gradient: this window is not part of the flow, it interrupts it. -->
+        <Border Grid.Row="0" Background="#B91C1C" Padding="24,18">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE7BA;" FontFamily="Segoe MDL2 Assets" FontSize="22" Foreground="White"
+                           Margin="0,0,14,0" VerticalAlignment="Center"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="HeadlineText" FontSize="17" FontWeight="Bold" Foreground="White"/>
+                    <!-- #FEE2E2 on #B91C1C is ~5.4:1; the #FECACA it replaced was ~4.5:1, which only
+                         just cleared AA at this size. -->
+                    <TextBlock x:Name="SubheadText" FontSize="12" Foreground="#FEE2E2"
+                               TextWrapping="Wrap" Margin="0,4,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="24,18">
+            <StackPanel>
+                <!-- What is about to happen, named. A confirmation that does not say WHICH shops and HOW
+                     MANY orders is asking the user to trust their own memory of what they selected. -->
+                <Border Background="White" CornerRadius="10" BorderBrush="#E5E7EB" BorderThickness="1"
+                        Padding="16" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock x:Name="ImpactHeading" FontSize="12" FontWeight="SemiBold"
+                                   Foreground="#B91C1C" Margin="0,0,0,8"/>
+                        <ItemsControl x:Name="ImpactItems">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Style="{StaticResource BodyText}" Margin="0,0,0,3"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock x:Name="ChallengePrompt" Style="{StaticResource BodyText}" Margin="0,0,0,10"/>
+
+                <!-- Read-only but selectable, with an explicit Copy button beside it. Copying is
+                     allowed on purpose: the deliberateness this gate buys comes from having to act on
+                     a phrase that is different every time, not from making the phrase tedious to
+                     reproduce. Forcing 10 characters to be retyped by hand only adds typos. -->
+                <Border Background="#111827" CornerRadius="8" Padding="14,11" Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox x:Name="ChallengeText" Grid.Column="0" Style="{StaticResource ChallengeBox}"
+                                 IsReadOnly="True" VerticalAlignment="Center"/>
+
+                        <Button x:Name="CopyButton" Grid.Column="1" Click="OnCopyClick"
+                                Padding="12,6" Margin="12,0,0,0" FontSize="12" MinWidth="86"
+                                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Confirm.Copy], Mode=OneWay}"/>
+                    </Grid>
+                </Border>
+
+                <TextBox x:Name="EntryBox" FontFamily="Consolas" FontSize="16" Padding="10,8"
+                         TextAlignment="Center" TextChanged="OnEntryChanged"/>
+
+                <!-- 12px, not 11: this line is the only feedback on whether the phrase is right, and
+                     both of its colours (#047857 ~5.1:1, #B91C1C ~6.0:1 on the page) are set in code. -->
+                <TextBlock x:Name="MatchText" FontSize="12" Margin="0,7,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <Button x:Name="CancelButton" HorizontalAlignment="Left" MinWidth="96" Padding="16,7"
+                        Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Cancel], Mode=OneWay}"
+                        Click="OnCancelClick" IsCancel="True"/>
+
+                <!-- Both disabled until the phrase matches. The SAVE button leads, because if somebody
+                     is going to click without reading, the recoverable one should be under the cursor. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="SaveFirstButton" IsEnabled="False" MinWidth="150" Padding="16,7" Margin="0,0,10,0"
+                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Confirm.SaveRecords], Mode=OneWay}"
+                            Click="OnSaveFirstClick"/>
+                    <Button x:Name="ProceedButton" IsEnabled="False" Style="{StaticResource DangerButton}"
+                            MinWidth="150" Padding="16,7"
+                            Click="OnProceedClick"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

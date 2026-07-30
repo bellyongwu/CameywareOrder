@@ -1,0 +1,223 @@
+<Window x:Class="CameywareOrder.Views.StoreManagementWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:CameywareOrder.Localization"
+        Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Title], Mode=OneWay}"
+        Height="760" Width="1020"
+        MinHeight="620" MinWidth="900"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Icon="/Assets/ICONS/app-icon.ico"
+        Background="{StaticResource PageBackgroundBrush}">
+    <!-- Administrator-only. Reached from the Select Shop footer, which is the one screen where "which
+         shops exist" is already the subject.
+
+         The list is SelectionMode="Extended", so ctrl+click adds one and shift+click takes a run — the
+         action bar then acts on the whole selection. Every destructive button routes through
+         ConfirmDestructiveWindow; the reversible ones (delist / put back) do not, which is the
+         distinction the two groups of buttons are arranged to make visible. -->
+    <Window.Resources>
+        <ResourceDictionary>
+            <!-- Same card geometry as the shop picker's rows, so the two screens read as one family. -->
+            <Style x:Key="StoreCardContainer" TargetType="ListBoxItem" BasedOn="{StaticResource RosterCardContainer}">
+                <Setter Property="Margin" Value="0,0,0,9"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ListBoxItem">
+                            <Border x:Name="Card" CornerRadius="10" Background="White"
+                                    BorderBrush="#E5E7EB" BorderThickness="1"
+                                    Padding="16,13" SnapsToDevicePixels="True">
+                                <ContentPresenter/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Card" Property="BorderBrush" Value="#A5B4FC"/>
+                                </Trigger>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter TargetName="Card" Property="BorderBrush" Value="#4F46E5"/>
+                                    <Setter TargetName="Card" Property="BorderThickness" Value="2"/>
+                                    <Setter TargetName="Card" Property="Background" Value="#EEF2FF"/>
+                                    <Setter TargetName="Card" Property="Padding" Value="15,12"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="ActionCaption" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="11"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Foreground" Value="#6B7280"/>
+                <Setter Property="Margin" Value="0,0,0,7"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource HeaderGradientBrush}" Padding="28,20">
+            <StackPanel>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Title], Mode=OneWay}"
+                           FontSize="20" FontWeight="Bold" Foreground="White"/>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Subtitle], Mode=OneWay}"
+                           FontSize="12" Foreground="#DDD6FE" TextWrapping="Wrap" Margin="0,5,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="24,18,24,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="18"/>
+                <ColumnDefinition Width="270"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ── The stores ───────────────────────────────────────────────── -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,10">
+                    <TextBlock x:Name="SelectionSummary" FontSize="12" Foreground="#374151"
+                               VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button x:Name="SelectAllButton" Padding="12,5" Margin="0,0,8,0" FontSize="12"
+                                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.SelectAll], Mode=OneWay}"
+                                Click="OnSelectAllClick"/>
+                        <Button x:Name="ClearSelectionButton" Padding="12,5" FontSize="12"
+                                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.ClearSelection], Mode=OneWay}"
+                                Click="OnClearSelectionClick"/>
+                    </StackPanel>
+                </Grid>
+
+                <Border Grid.Row="1" Background="White" CornerRadius="10" BorderBrush="#E5E7EB"
+                        BorderThickness="1" Padding="14">
+                    <Grid>
+                        <ListBox x:Name="StoreList" SelectionMode="Extended"
+                                 BorderThickness="0" Background="Transparent"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                 ItemContainerStyle="{StaticResource StoreCardContainer}"
+                                 SelectionChanged="OnSelectionChanged">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+
+                                        <Border Grid.Column="0" Width="40" Height="40" CornerRadius="10"
+                                                Background="{Binding AvatarBrush}" Margin="0,0,13,0"
+                                                VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Initial}" FontSize="17" FontWeight="Bold"
+                                                       Foreground="White" HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
+                                                       Foreground="#111827" TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="#6B7280"
+                                                       Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+
+                                        <!-- Delisted is a state worth seeing at a glance, and it carries the
+                                             date: "closed" and "closed in March" are different answers. -->
+                                        <Border Grid.Column="2" CornerRadius="11" Padding="11,4"
+                                                Background="#FEF3C7" VerticalAlignment="Center"
+                                                Visibility="{Binding DelistedVisibility}">
+                                            <TextBlock Text="{Binding DelistedText}" FontSize="11"
+                                                       FontWeight="SemiBold" Foreground="#92400E"/>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+
+                        <TextBlock x:Name="EmptyText" Visibility="Collapsed"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Empty], Mode=OneWay}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Foreground="#9CA3AF" FontSize="13" TextWrapping="Wrap" MaxWidth="340"
+                                   TextAlignment="Center" IsHitTestVisible="False"/>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- ── What you can do to them ──────────────────────────────────── -->
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <!-- Reversible actions first and on their own card. An administrator taking a branch
+                         out of service should not have to walk past the delete button to do it. -->
+                    <Border Background="White" CornerRadius="10" BorderBrush="#E5E7EB" BorderThickness="1"
+                            Padding="16" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource ActionCaption}"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.InService], Mode=OneWay}"/>
+                            <Button x:Name="DelistButton" Margin="0,0,0,8" Padding="12,8" IsEnabled="False"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Delist], Mode=OneWay}"
+                                    Click="OnDelistClick"/>
+                            <Button x:Name="ActivateButton" Padding="12,8" IsEnabled="False"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Activate], Mode=OneWay}"
+                                    Click="OnActivateClick"/>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.DelistHint], Mode=OneWay}"
+                                       FontSize="11" Foreground="#9CA3AF" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Background="White" CornerRadius="10" BorderBrush="#E5E7EB" BorderThickness="1"
+                            Padding="16" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource ActionCaption}"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.DataSection], Mode=OneWay}"/>
+                            <Button x:Name="DownloadButton" Margin="0,0,0,8" Padding="12,8" IsEnabled="False"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Download], Mode=OneWay}"
+                                    Click="OnDownloadClick"/>
+                            <Button x:Name="RestoreButton" Padding="12,8"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Restore], Mode=OneWay}"
+                                    Click="OnRestoreClick"/>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.RestoreHint], Mode=OneWay}"
+                                       FontSize="11" Foreground="#9CA3AF" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Red border, bottom of the column, its own heading. Everything in here is gated. -->
+                    <Border Background="#FEF2F2" CornerRadius="10" BorderBrush="#FECACA" BorderThickness="1"
+                            Padding="16">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource ActionCaption}" Foreground="#B91C1C"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.DangerSection], Mode=OneWay}"/>
+                            <Button x:Name="DeleteButton" Style="{StaticResource DangerButton}" Margin="0,0,0,8"
+                                    Padding="12,8" IsEnabled="False"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Delete], Mode=OneWay}"
+                                    Click="OnDeleteClick"/>
+                            <Button x:Name="ReinitializeButton" Style="{StaticResource DangerButton}" Padding="12,8"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Reinitialize], Mode=OneWay}"
+                                    Click="OnReinitializeClick"/>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.DangerHint], Mode=OneWay}"
+                                       FontSize="11" Foreground="#B91C1C" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <Border Grid.Row="2" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,1,0,0" Padding="24,14">
+            <Grid>
+                <TextBlock x:Name="StatusText" HorizontalAlignment="Left" VerticalAlignment="Center"
+                           FontSize="12" TextWrapping="Wrap" MaxWidth="640"/>
+                <Button x:Name="CloseButton" HorizontalAlignment="Right" Style="{StaticResource PrimaryButton}"
+                        MinWidth="96" Padding="16,7" IsCancel="True"
+                        Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Close], Mode=OneWay}"
+                        Click="OnCloseClick"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

@@ -58,6 +58,32 @@ Nothing in flight. v3.0.0 (store location / tax jurisdictions) is **committed to
 
 ## Recent work (2026-07-30)
 
+### Store Management — delist, delete, download, restore, reinitialize
+Administrator-only panel off an enlarged Select Shop (820×640 → 1000×740), with ctrl/shift multi-select.
+`ShopAdministration` owns the rules, `ShopArchive` the file format, `ConfirmDestructiveWindow` the gate: a
+10-character phrase generated per dialog, typed exactly, before either of its two buttons (save the records
+first / remove now) enables. Restore is from a user-picked file — the user chose that over an in-app
+archive — and reinitialize keeps accounts, so nobody can lock themselves out. Plus a one-click demo store
+built from the shipped presets.
+
+Four findings, each a wrong first move worth not repeating:
+
+- **`Shop.IsArchived` already existed and already meant "delisted"**, honoured in three places, with no UI
+  to set it. I designed a parallel flag before grepping for prior art. The bool stays authoritative;
+  `IsDelisted` delegates; the new timestamp is an audit stamp, not a second opinion.
+- **`StampNewOrdersWithShop` would have re-parented every restored order** — it overwrites `ShopId`,
+  currency and pricing mode from the OPEN shop, which is right everywhere except an importer that already
+  knows all three. Hence `SuppressShopStamping()`, one explicit scope.
+- **Deletion reaches outside the database**: per-shop files are named after `PublicId`, so one outliving
+  its shop later hands a NEW shop an old one's branding.
+- **It shipped with no harness and the first export threw** a JSON object-cycle: EF's fix-up populates
+  `OrderItem.Order`, and nothing had ever serialized an order. `[JsonIgnore]` at the source, and
+  `storecheck` (50 assertions) now covers the round trip, additive restore, bad input, delist, deletion
+  isolation and the challenge generator.
+
+The delete phrase was also uncopyable and low-contrast — `ThemedTextBox`'s `IsReadOnly` trigger repaints
+the chrome through `TargetName`, which beats a local `Background`. All four lessons are in `context.md`.
+
 ### One path for a refused save: banner + inline message + one dialog
 `OrderEditWindow` had eleven validation checks and no rule behind how they reported — five raised a
 dialog, two wrote a message under their field, and every one set an `ErrorText` sitting at the FOOT of a
@@ -145,7 +171,7 @@ names in every language, the upgrade path and the settings screen.
 ## Recent work (2026-07-27 → 07-28)
 
 ### The orders list is one line per cell, every row the same height
-A single wrapping `TextBlock` was doing all the damage: the 定制服务 column stacked the
+A single wrapping `TextBlock` was doing all the damage: the Custom Service column stacked the
 garment names under the flag, so a row listing several garments was taller than its
 neighbours — the one thing a list read by scanning down a column cannot afford, and
 invisible in source until somebody's order has enough garments.
@@ -372,7 +398,7 @@ keeping:
 > label the developer had just been looking at, and read perfectly at the time. It is only
 > visible in aggregate, so review never catches it and a periodic grep does.
 
-Rewritten rather than deleted — a comment saying "drives the 定制服务 list flag" carries
+Rewritten rather than deleted — a comment saying "drives the Custom Service list flag" carries
 real information. Naming the thing by its **key** (`Order.Fields.CustomMadeFlag`) is
 strictly better than either label, since keys are greppable and survive a re-wording;
 navigation paths took English menu labels instead, which read better than a pair of keys.
@@ -551,7 +577,7 @@ in, and a screen reader has nothing to read.
 membership**: one person working at two branches has one phone and one mailbox.
 Nullable, so existing credential files are already valid; no migration.
 
-Editable in two places on purpose. 店铺成员 reaches people who belong to a shop;
+Editable in two places on purpose. Store Members reaches people who belong to a shop;
 `CreateAccount` deliberately makes accounts that belong to none, which the roster
 cannot reach at all, so User Management has a matching card over
 `UpdateAccountContact`. That call touches no membership, so unlike a role change it
@@ -636,7 +662,7 @@ orders empty in inches.
 ### Product catalogue + receipt letterhead — DONE
 Ready-made categories were a `static readonly string[]`, so every shop sold the
 same five things. Now `ProductCatalogService`, per shop, modelled on
-`MeasurementTermsService`; managed at 本地配置 → 商品类别, seeded from shipped
+`MeasurementTermsService`; managed at Local Configuration → Product Categories, seeded from shipped
 defaults, with add / rename / remove / reorder / restore.
 
 The shipped ids (`Jackets`, `TiesBowtie`, …) are a **compatibility surface** — every
@@ -694,7 +720,7 @@ fallback matched the file.
 Shop address under the header title; login no longer pre-fills `admin` (the sign-in
 error deliberately refuses to distinguish unknown user from wrong password, and
 pre-filling handed that away); login language field stacked over its box; nav bar
-order settled as greeting · 本地配置 · 语言 · 店铺成员 · 退出; right-click menu themed;
+order settled as greeting · Local Configuration · Language · Store Members · Sign Out; right-click menu themed;
 theme, typography and panel transitions modularised.
 
 Measurement-term gender picker: three radios → a drop-down. Radios need the width
@@ -703,8 +729,8 @@ of **every** label at once — measured at ~291 px in Chinese (fits a 420 px dia
 characters the terms list already badges with, via the shared
 `MeasurementGenderPresentation`.
 
-> A right-anchored 本地配置 menu was built and then reverted — the caret and content
-> flipped sides and it read worse. 本地配置 and 店铺成员 were swapped instead. Do not
+> A right-anchored Local Configuration menu was built and then reverted — the caret and content
+> flipped sides and it read worse. Local Configuration and Store Members were swapped instead. Do not
 > re-attempt the mirrored menu.
 
 ---
@@ -731,7 +757,7 @@ measurement printing · cancelled/returned refund state · import/export menu.
 
 **2026-07-24** — records list → ListView/GridView · document upload for custom-made
 records · payment section locking when a balance is cleared · currency per-order →
-global · 本地配置 menu · per-portion payment tax split · app icon and welcome header.
+global · Local Configuration menu · per-portion payment tax split · app icon and welcome header.
 
 **2026-07-23** — alteration category dropdown · cm/inch toggle and localized
 measurement download · order locking and status filter · detail-panel pricing ·

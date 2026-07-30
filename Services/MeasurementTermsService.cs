@@ -28,6 +28,17 @@ public sealed class MeasurementTermsService
     // up an unrelated local shop's terms.
     private static string ShopFileName(Shop shop) => $"measurement-terms-{shop.PublicId:N}.json";
 
+    /// <summary>
+    /// Where a given shop's terms file lives. Public so deleting a shop can remove it without a second
+    /// copy of the naming rule — <see cref="ShopAdministration"/> owns the deletion, this owns the name,
+    /// and a shop's file surviving its shop is what eventually hands a NEW shop an old one's terms.
+    /// </summary>
+    public static string FilePathFor(Shop shop)
+    {
+        ArgumentNullException.ThrowIfNull(shop);
+        return Path.Combine(SettingDirectory, ShopFileName(shop));
+    }
+
     private readonly MeasurementTermsConfig _config;
     private Shop? _shop;
 

@@ -96,6 +96,66 @@
   <Text key="Shop.Picker.Prompt">可进入的店铺</Text>
   <Text key="Shop.Picker.SignedInAs">当前用户：{0}（{1}）</Text>
   <Text key="Shop.Picker.Open">打开</Text>
+
+  <Text key="Store.Demo.Create">创建演示店铺</Text>
+  <Text key="Store.Demo.Name">演示店铺</Text>
+
+  <Text key="Store.Manage.Title">店铺管理</Text>
+  <Text key="Store.Manage.Subtitle">可将店铺停用、下载其数据、从文件恢复，或将其删除。按住 Ctrl 单击可多选，按住 Shift 单击可选中连续多项。</Text>
+  <Text key="Store.Manage.Close">关闭</Text>
+  <Text key="Store.Manage.Empty">尚无店铺。请在「选择店铺」界面创建。</Text>
+  <Text key="Store.Manage.SelectAll">全选</Text>
+  <Text key="Store.Manage.ClearSelection">取消选择</Text>
+  <Text key="Store.Manage.NothingSelected">未选择任何店铺。</Text>
+  <Text key="Store.Manage.SelectedCount">已选择 {0} 家店铺，共 {1} 笔订单。</Text>
+  <Text key="Store.Manage.OrderCount">{0} 笔订单</Text>
+  <Text key="Store.Manage.Delisted.Badge">已停用</Text>
+  <Text key="Store.Manage.DelistedOn">自 {0} 起停用</Text>
+
+  <Text key="Store.Manage.InService">启用状态</Text>
+  <Text key="Store.Manage.Delist">停用店铺</Text>
+  <Text key="Store.Manage.Activate">重新启用</Text>
+  <Text key="Store.Manage.DelistHint">停用的店铺会保留全部数据，只是不再出现在「选择店铺」中。可随时恢复。</Text>
+  <Text key="Store.Manage.Delisted">已停用 {0} 家店铺。</Text>
+  <Text key="Store.Manage.Activated">已重新启用 {0} 家店铺。</Text>
+
+  <Text key="Store.Manage.DataSection">数据</Text>
+  <Text key="Store.Manage.Download">下载所选店铺数据</Text>
+  <Text key="Store.Manage.Restore">从文件恢复…</Text>
+  <Text key="Store.Manage.RestoreHint">下载的文件包含所选店铺及其订单和设置。恢复为追加操作；已存在的店铺不会被改动。</Text>
+  <Text key="Store.Manage.FileFilter">店铺存档 (*.zip)|*.zip</Text>
+  <Text key="Store.Manage.Downloaded">已将 {0} 家店铺、{1} 笔订单保存至 {2}</Text>
+  <Text key="Store.Manage.Restored">已恢复 {0} 家店铺、{1} 笔订单。</Text>
+  <Text key="Store.Manage.RestoredWithSkips">已恢复 {0} 家店铺、{1} 笔订单。其中 {2} 家已存在，未做改动。</Text>
+  <Text key="Store.Manage.NotAnArchive">该文件不是店铺存档。</Text>
+
+  <Text key="Store.Manage.DangerSection">不可撤销</Text>
+  <Text key="Store.Manage.Delete">删除所选店铺</Text>
+  <Text key="Store.Manage.Reinitialize">重新初始化应用</Text>
+  <Text key="Store.Manage.DangerHint">以下操作无法撤销。系统会要求您输入一段验证字符，并可先保存店铺记录。</Text>
+  <Text key="Store.Manage.DeleteHeadline">确定永久删除 {0} 家店铺？</Text>
+  <Text key="Store.Manage.ReinitializeHeadline">确定重新初始化本安装？</Text>
+  <Text key="Store.Manage.ImpactLine">{0} —— {1} 笔订单</Text>
+  <Text key="Store.Manage.ImpactAllStores">全部 {0} 家店铺，共 {1} 笔订单</Text>
+  <Text key="Store.Manage.ImpactPerShopFiles">各店铺的量身项目与小票页眉页脚设置</Text>
+  <Text key="Store.Manage.ImpactAccountsKept">登录账户、语言与全局设置将保留</Text>
+  <Text key="Store.Manage.Deleted">已删除 {0} 家店铺、{1} 笔订单。</Text>
+  <Text key="Store.Manage.NothingToReinitialize">当前没有可删除的店铺。</Text>
+  <Text key="Store.Manage.SaveFailedNoDelete">未执行删除：店铺记录保存失败（{0}）。</Text>
+  <Text key="Store.Manage.Failed">操作未成功：{0}</Text>
+
+  <Text key="Store.Confirm.Title">确认操作</Text>
+  <Text key="Store.Confirm.Subhead">此操作无法撤销。请先阅读下方内容。</Text>
+  <Text key="Store.Confirm.ImpactHeading">即将被删除</Text>
+  <Text key="Store.Confirm.Prompt">请照原样输入下方 {0} 位字符，以启用按钮。</Text>
+  <Text key="Store.Confirm.Matched">输入正确，按钮已启用。</Text>
+  <Text key="Store.Confirm.NotMatched">输入尚不匹配。</Text>
+  <Text key="Store.Confirm.Copy">复制</Text>
+  <Text key="Store.Confirm.Copied">已复制</Text>
+  <Text key="Store.Confirm.CopyFailed">复制失败</Text>
+  <Text key="Store.Confirm.SaveRecords">保存店铺记录</Text>
+  <Text key="Store.Confirm.RemoveNow">立即删除店铺</Text>
+  <Text key="Store.Confirm.ReinitializeNow">立即重新初始化</Text>
   <Text key="Shop.Picker.CreateNew">新建店铺</Text>
   <Text key="Shop.Picker.Cancel">取消</Text>
   <Text key="Shop.Picker.Empty">尚未创建任何店铺。</Text>

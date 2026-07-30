@@ -92,6 +92,66 @@
   <Text key="Shop.Picker.Prompt">Shops you can open</Text>
   <Text key="Shop.Picker.SignedInAs">Signed in as {0} ({1})</Text>
   <Text key="Shop.Picker.Open">Open</Text>
+
+  <Text key="Store.Demo.Create">Create demo store</Text>
+  <Text key="Store.Demo.Name">Demo Store</Text>
+
+  <Text key="Store.Manage.Title">Store Management</Text>
+  <Text key="Store.Manage.Subtitle">Take a store out of service, download its data, restore one from a file, or remove it. Ctrl+click to select several; shift+click to select a run.</Text>
+  <Text key="Store.Manage.Close">Close</Text>
+  <Text key="Store.Manage.Empty">No stores exist yet. Create one from the Select Shop screen.</Text>
+  <Text key="Store.Manage.SelectAll">Select all</Text>
+  <Text key="Store.Manage.ClearSelection">Clear selection</Text>
+  <Text key="Store.Manage.NothingSelected">No store selected.</Text>
+  <Text key="Store.Manage.SelectedCount">{0} store(s) selected, holding {1} order(s).</Text>
+  <Text key="Store.Manage.OrderCount">{0} order(s)</Text>
+  <Text key="Store.Manage.Delisted.Badge">Out of service</Text>
+  <Text key="Store.Manage.DelistedOn">Out of service since {0}</Text>
+
+  <Text key="Store.Manage.InService">In service</Text>
+  <Text key="Store.Manage.Delist">Take out of service</Text>
+  <Text key="Store.Manage.Activate">Put back in service</Text>
+  <Text key="Store.Manage.DelistHint">A store out of service keeps all of its data and simply stops appearing in Select Shop. Reversible at any time.</Text>
+  <Text key="Store.Manage.Delisted">{0} store(s) taken out of service.</Text>
+  <Text key="Store.Manage.Activated">{0} store(s) put back in service.</Text>
+
+  <Text key="Store.Manage.DataSection">Data</Text>
+  <Text key="Store.Manage.Download">Download data for selected</Text>
+  <Text key="Store.Manage.Restore">Restore from file…</Text>
+  <Text key="Store.Manage.RestoreHint">A download holds the selected stores, their orders and their settings. Restoring adds them back; a store already present is left untouched.</Text>
+  <Text key="Store.Manage.FileFilter">Store archive (*.zip)|*.zip</Text>
+  <Text key="Store.Manage.Downloaded">Saved {0} store(s) and {1} order(s) to {2}</Text>
+  <Text key="Store.Manage.Restored">Restored {0} store(s) and {1} order(s).</Text>
+  <Text key="Store.Manage.RestoredWithSkips">Restored {0} store(s) and {1} order(s). {2} were already here and were left as they are.</Text>
+  <Text key="Store.Manage.NotAnArchive">That file is not a store archive.</Text>
+
+  <Text key="Store.Manage.DangerSection">Irreversible</Text>
+  <Text key="Store.Manage.Delete">Delete selected stores</Text>
+  <Text key="Store.Manage.Reinitialize">Reinitialize application</Text>
+  <Text key="Store.Manage.DangerHint">These cannot be undone. You will be asked to type a phrase to confirm, and offered the chance to save the records first.</Text>
+  <Text key="Store.Manage.DeleteHeadline">Delete {0} store(s) permanently?</Text>
+  <Text key="Store.Manage.ReinitializeHeadline">Reinitialize this installation?</Text>
+  <Text key="Store.Manage.ImpactLine">{0} — {1} order(s)</Text>
+  <Text key="Store.Manage.ImpactAllStores">All {0} store(s), holding {1} order(s)</Text>
+  <Text key="Store.Manage.ImpactPerShopFiles">Every store's measurement terms and receipt branding</Text>
+  <Text key="Store.Manage.ImpactAccountsKept">Login accounts, language and global settings are KEPT</Text>
+  <Text key="Store.Manage.Deleted">Deleted {0} store(s) and {1} order(s).</Text>
+  <Text key="Store.Manage.NothingToReinitialize">There are no stores to remove.</Text>
+  <Text key="Store.Manage.SaveFailedNoDelete">Nothing was deleted: the records could not be saved ({0}).</Text>
+  <Text key="Store.Manage.Failed">That did not work: {0}</Text>
+
+  <Text key="Store.Confirm.Title">Confirm</Text>
+  <Text key="Store.Confirm.Subhead">This cannot be undone. Read what is listed below before continuing.</Text>
+  <Text key="Store.Confirm.ImpactHeading">About to be removed</Text>
+  <Text key="Store.Confirm.Prompt">Type the {0} characters below, exactly as shown, to enable the buttons.</Text>
+  <Text key="Store.Confirm.Matched">Matches. Both buttons are now enabled.</Text>
+  <Text key="Store.Confirm.NotMatched">Does not match yet.</Text>
+  <Text key="Store.Confirm.Copy">Copy</Text>
+  <Text key="Store.Confirm.Copied">Copied</Text>
+  <Text key="Store.Confirm.CopyFailed">Copy failed</Text>
+  <Text key="Store.Confirm.SaveRecords">Save the store records</Text>
+  <Text key="Store.Confirm.RemoveNow">Remove the store now</Text>
+  <Text key="Store.Confirm.ReinitializeNow">Reinitialize now</Text>
   <Text key="Shop.Picker.CreateNew">Create New Shop</Text>
   <Text key="Shop.Picker.Cancel">Cancel</Text>
   <Text key="Shop.Picker.Empty">No shops have been created yet.</Text>

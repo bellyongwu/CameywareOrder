@@ -567,6 +567,9 @@ public partial class App : Application
         // "never located", which TaxJurisdictions.For reads back as the home market — the behaviour
         // every existing branch already had. Backfilled once from the shop's currency on arrival.
         ("LocationCode", "ALTER TABLE Shops ADD COLUMN LocationCode TEXT NULL; "),
+        // When the shop was taken out of service. NULL is meaningful and is the common case: it means
+        // in service, which is what every shop that predates Store Management was.
+        ("DelistedOnUtc", "ALTER TABLE Shops ADD COLUMN DelistedOnUtc TEXT NULL; "),
     };
 
     /// <summary>
@@ -821,7 +824,8 @@ public partial class App : Application
                 TaxRegistrationNumber TEXT NULL,
                 InstalledLanguagesJson TEXT NULL,
                 SupportedCurrenciesJson TEXT NULL,
-                LocationCode TEXT NULL
+                LocationCode TEXT NULL,
+                DelistedOnUtc TEXT NULL
             );");
 
         // A database created by an earlier build already HAS the table, so CREATE TABLE IF NOT

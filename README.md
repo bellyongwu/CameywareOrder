@@ -11,6 +11,32 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v3.2.0 — 2026-07-30
+
+**Store Management** — a new administrator-only panel, reached from an enlarged Select Shop screen.
+
+- **Take a store out of service, or put it back.** Reversible and non-destructive: the store keeps every
+  order and simply stops appearing in Select Shop. This is deliberately *not* behind the confirmation
+  gate — an administrator closing a branch for the season should not have to reach for the dangerous
+  tool to do it.
+- **Select one store, several, or all** — ctrl+click adds one, shift+click takes a run — and act on the
+  whole selection.
+- **Download the selected stores' data** to a single file: their orders, their measurement terms and
+  their receipt branding. **Restore** reads one back; the file is validated and its contents reported
+  before anything is written, and a store already present is left untouched rather than merged or
+  duplicated.
+- **Delete stores, or reinitialize the installation.** Both are gated behind a phrase generated fresh
+  each time that has to be typed exactly — an OK button gets clicked from muscle memory and a fixed word
+  gets typed from it, whereas a phrase that must be *read off the screen* forces the eye past the list of
+  what is about to go. Both buttons stay disabled until it matches, and either one can save the records
+  to a file first. Reinitializing keeps login accounts, the language and global settings, so nobody is
+  locked out of their own installation.
+- **One-click demo store** on Select Shop, built from the shipped defaults — somewhere to start without
+  filling in the setup form. No sample orders are invented.
+
+Quality gates: build **0 warnings / 0 errors**, no SonarLint issue on a changed file, and **1377
+assertions across 23 harnesses**, all passing.
+
 ### v3.1.0 — 2026-07-30
 
 **A refused save now tells you what is wrong, where, and at the moment it refuses.** The order editor

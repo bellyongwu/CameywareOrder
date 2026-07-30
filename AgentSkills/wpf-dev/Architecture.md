@@ -52,7 +52,7 @@ components are added/renamed or the way pieces fit together changes.
     tooling; also writes a legacy migrations-history baseline.
   - `DatabasePathProvider` — resolves DB file path / connection string, ensures
     the folder exists; also owns the database **export/import** used by the
-    导入/导出 menu: `ExportDatabaseTo` writes a **zip package** (`orders.db` +
+    Import/Export menu: `ExportDatabaseTo` writes a **zip package** (`orders.db` +
     `-wal`/`-shm` sidecars + the whole `Documents/` tree, so attached images
     migrate with the data), and `ImportDatabaseFrom` restores it (zip-slip
     guarded via `ExtractPackageSafely`, falls back to the legacy raw-`.db` copy
@@ -73,9 +73,25 @@ components are added/renamed or the way pieces fit together changes.
     unless the garment has `EnableCustomMeasurements`, undone by
     `RestoreDefaultMeasurements`); `LoadOrSeed`+`MergePredefined` seed/upgrade;
     `ExportConfigJson` / `TryParseConfigJson` / `ImportConfig` back the
-    量身项目设置 import/export; `ConfigChanged` event.
+    Measurement Terms import/export; `ConfigChanged` event.
+  - `ShopAdministration` (static) — the one place the shop-level destructive rules live: `Delist` /
+    `Activate` (sets the EXISTING `Shop.IsArchived`, which the startup load, the picker and the
+    name-uniqueness check already honour, plus a `DelistedOnUtc` audit stamp), `Delete` (orders, items,
+    the shop row, and the per-shop FILES named after its `PublicId`), `Reinitialize` (every shop —
+    accounts, language and global settings deliberately kept, so nobody is locked out), `CountOrders`,
+    `AllShops`, and `CreateDemoShop` (one click, built from the shipped presets, no fabricated orders).
+    Every read of `Orders` here says `IgnoreQueryFilters()`: the context confines Orders to the OPEN
+    shop, so a cross-shop delete through a normal query silently matches nothing.
+  - `ShopArchive` (static) — SELECTED shops in and out of one zip: the "download all data" export and
+    the file a restore reads. Deliberately not `DatabasePathProvider.ExportDatabaseTo`, which packages
+    the whole database file and whose import REPLACES it — restoring one deleted shop would take every
+    other shop with it. Works in rows, so an export is a subset and an import is additive: a shop whose
+    `PublicId` is already present is SKIPPED (not merged, not duplicated — duplicating would leave two
+    shops sharing one per-shop file name) and the count is reported so the panel can say so. `TryRead`
+    validates with no side effects, like `GlobalSettingsPackage.TryRead`. Wraps the restore in
+    `AppDbContext.SuppressShopStamping()`.
   - `AuthenticationService` — singleton `Instance`; sign-in **and** authorization. Accounts live in
-    `credentials.json` under LocalAppData (outside the database on purpose: a 导入 → 数据库 replaces the
+    `credentials.json` under LocalAppData (outside the database on purpose: an Import → Database restore replaces the
     whole database file and must not wipe the accounts). An account is either an administrator
     (`IsAdministrator` — everything, everywhere, never a shop membership) or holds `ShopMembership`s:
     **one record per shop**, carrying the role(s) held there, `IsActive`, `JoinedOn`, `DeactivatedOn`
@@ -90,8 +106,8 @@ components are added/renamed or the way pieces fit together changes.
     strongest-first. `Authenticate` returns a `SignInResult` whose `SignInFailure` distinguishes bad
     credentials from an account deactivated in EVERY shop it belongs to. Roster CRUD
     (`ListMembers` / `AddMember` / `UpdateMember` / `CanSetPasswordFor` → `AccountOperationResult`)
-    backs 店铺成员; installation-wide CRUD (`CreateAccount` / `DeleteAccount` / `SetPassword` /
-    `SetShopRoles` / `UpdateAccountContact`) backs 用户管理.
+    backs Store Members; installation-wide CRUD (`CreateAccount` / `DeleteAccount` / `SetPassword` /
+    `SetShopRoles` / `UpdateAccountContact`) backs User Management.
     A person's name is **`FirstName` + `LastName`** (schema 4; the old single `DisplayName` is
     split on load — see context.md for the rule and why it is conservative). `PersonName` composes
     them: `Full`, `Label` (name, or the login when there is none — never blank) and `Greeting` (the
@@ -143,15 +159,15 @@ components are added/renamed or the way pieces fit together changes.
     receipt and the measurements PDF both print it, and two copies of an override
     rule drift apart.
     `ExportConfigJson` / `TryParseConfigJson` / `ImportConfig` (+ `BrandingExport`
-    DTO) make the 页眉页脚 export **self-contained** — the logo travels as base64
+    DTO) make the Header & Footer export **self-contained** — the logo travels as base64
     inside the JSON.
   - `GlobalSettingsPackage` — static one-file backup of everything held locally: a zip
     with `settings.json` (currency, language code, `MeasurementTermsConfig`,
     `BrandingExport`, version + timestamp) plus a **nested** `database.zip` produced by
     `DatabasePathProvider.ExportDatabaseTo`. `ExportTo` / `TryRead` (validates with no
     side effects) / `Import` (applies only the sections present; database first, since it
-    is the one destructive step and the one that self-backs-up). Backs the 全局设置
-    entry in the 导入/导出 menu.
+    is the one destructive step and the one that self-backs-up). Backs the Global Settings
+    entry in the Import/Export menu.
   - `BrandingRenderer` — static renderer that round-trips branding content
     between a `RichTextBox` FlowDocument and its XAML string
     (`XamlWriter.Save` / `XamlReader.Parse`), appends it to a printed receipt
@@ -172,7 +188,7 @@ components are added/renamed or the way pieces fit together changes.
     `BuildSections` (per garment: name + term/value rows in the requested unit,
     ordered by the garment's configured term order; per-garment work factored
     into `BuildGarmentSection`). Resolves names via `MeasurementTermsService`;
-    used by the 定制服务 list column and the measurement print paths.
+    used by the Custom Service list column and the measurement print paths.
   - `ShopLanguages` — static; the one answer to **which languages this session may pick
     from**. `Installed(shop)` is the set a branch runs in (never empty: a shop with
     nothing installed falls back to its `PreferredLanguageCode`, which reproduces the
@@ -247,13 +263,15 @@ components are added/renamed or the way pieces fit together changes.
     derived through the static `Order.CalculateSectionPayment(...)` → `SectionPayment`
     record struct (per-**portion** tax: a portion is taxed only when its own
     method is Card, at its own rate; deposit is pre-tax and clamped to subtotal). Per-section
-    `XxxMoney` accessors feed `XxxTotal`/`XxxTax`, `ReceivedDownpayment` (实收定金),
-    `TotalTax`, `FinalBalance` (剩余尾款), `ReceivedFinalBalance` (实收尾款), and
+    `XxxMoney` accessors feed `XxxTotal`/`XxxTax`, `ReceivedDownpayment`
+    (`Order.Fields.ReceivedDownpayment`), `TotalTax`, `FinalBalance`
+    (`Order.Fields.FinalBalance`), `ReceivedFinalBalance`
+    (`Order.Fields.ReceivedFinalBalance`), and
     the `IsSectionCleared`/`SectionResidual`/`SectionReceivedFinal` helpers.
     Per-section `XxxAddedToReceipt` gates (`total > 0 && deposit method selected`)
     are shared by the receipt and detail panel; `Items` collection. The
     `HasCustomMadeService` `[NotMapped]` gate (any custom-made record with a
-    garment carrying a cm/inch value) drives the 定制服务 list flag and gates the
+    garment carrying a cm/inch value) drives the Custom Service list flag and gates the
     measurement print actions. `IsRefunded` (Status Cancelled/Returned) +
     `PaymentStatusKind` (`BalanceStatusKind` enum: Outstanding / ClearedPickedUp /
     ClearedNotPickedUp / Refunded) are the single source of truth for the
@@ -334,7 +352,8 @@ components are added/renamed or the way pieces fit together changes.
   `TaxLabelConverter` (binds `Order.PricesIncludeTax`; picks between
   `Order.Fields.TaxAmount` and `Order.Fields.IncludedTax`, because subtotal + tax = total only holds
   in one of the two pricing modes), `CustomMadeServiceFlagConverter`
-  (binds the whole `Order` row; ConverterParameter `Flag` → localized 有/无,
+  (binds the whole `Order` row; ConverterParameter `Flag` → localized
+  `CustomMade.Flag.Yes`/`.No`,
   `Names` → bracketed garment names with a zh 、 / en ", " separator,
   `NamesVisibility` → Visible/Collapsed), `BalanceStatusColorConverter`
   (`Order.PaymentStatusKind` → brush: green #2E7D32 / light green #66BB6A /
@@ -356,8 +375,8 @@ components are added/renamed or the way pieces fit together changes.
     instance).
   - `RelayCommand` — `ICommand` helper.
 - **Views/**
-  - `MainWindow` — split into a SYSTEM bar (本地配置 on the left; greeting, language, 店铺成员 and
-    退出登录 on the right) and a RECORDS panel that owns its own action bar (新增/编辑/删除/刷新 plus a
+  - `MainWindow` — split into a SYSTEM bar (Local Configuration on the left; greeting, language, Store Members and
+    Sign Out on the right) and a RECORDS panel that owns its own action bar (Add / Edit / Delete / Refresh plus a
     count badge bound to `MainViewModel.FilteredCount`). The greeting block carries a second line
     naming the languages the open shop installs (`ShopLanguages.InstalledSummary`); the language
     toggle beside it is scoped by `ShopLanguages.Selectable` and HIDDEN when that leaves one
@@ -370,12 +389,12 @@ components are added/renamed or the way pieces fit together changes.
     command), and **clickable column headers that sort** (asc/desc toggle + ▲/▼
     glyph) via the `GridViewColumnHeader.Click` handler and the
     `OrderColumnSort` attached properties. The Edit toolbar button + context-menu
-    item relabel to "查看订单 / View Order" for read-only orders
+    item relabel to "Toolbar.ViewOrder" for read-only orders
     (`RefreshToolbarLabels`). **Every column is ONE LINE:** cells derive from the theme's
     `ListCellText` (`NoWrap` + `CharacterEllipsis`), full values sit in tooltips, and both
     scrollbars are `Auto` — so no row can end up taller than another, which is the whole point of a
-    list read by scanning down a column. The **定制服务** column (via
-    `CustomMadeServiceFlagConverter`: 有/无 + bracketed garment names) is a `Grid` with an
+    list read by scanning down a column. The **Custom Service** column (via
+    `CustomMadeServiceFlagConverter`: `CustomMade.Flag.Yes`/`.No` + bracketed garment names) is a `Grid` with an
     `Auto` + `*` pair rather than a stack: a horizontal StackPanel measures its children with
     infinite width, so the names would never learn they had overflowed and the ellipsis would never
     appear;
@@ -384,18 +403,19 @@ components are added/renamed or the way pieces fit together changes.
     status: **Cancelled/Returned** (`IsRefunded`) are the lightest gray,
     **Completed/Shipped** (`IsPickedUp`) a bit darker. When
     `SelectedOrder.HasCustomMadeService` is true, the Print toolbar submenu and the
-    row context menu expose **打印量身尺寸** (measurements only) and
-    **打印小票和所有尺寸** (receipt + measurements); both open
+    row context menu expose **Print Measurements** (measurements only) and
+    **Print Receipt & All Measurements** (receipt + measurements); both open
     `MeasurementPrintOptionsWindow` then print via `PrintDialog` + `FlowDocument`
     (`PrintMeasurements`/`BuildMeasurementDocument`/`AddMeasurementSections`, the
     latter starting on a fresh page when appended after a receipt). Measurement
     language/unit come from the dialog; the receipt portion stays in the UI
     language. Detail-panel service sections are shown/hidden via
-    the `Order.XxxAddedToReceipt` gates, and show the 定金/实收定金 and
-    剩余尾款/实收尾款 pairs.
-    The toolbar carries a `本地配置` (`Toolbar.LocalConfig`) `Menu` holding
-    添加或更改页眉页脚, 货币设置, 测量术语, a `本地数据库` submenu (copy path / reveal
-    file / open folder) and a **导入/导出** (`Toolbar.ImportExport`) submenu with
+    the `Order.XxxAddedToReceipt` gates, and show the
+    `Order.Fields.Downpayment`/`.ReceivedDownpayment` and
+    `Order.Fields.FinalBalance`/`.ReceivedFinalBalance` pairs.
+    The toolbar carries a `Local Configuration` (`Toolbar.LocalConfig`) `Menu` holding
+    Add or Change Header & Footer, Currency Setup, Measurement Terms, a `Local Database` submenu (copy path / reveal
+    file / open folder) and a **Import/Export** (`Toolbar.ImportExport`) submenu with
     Export+Import pairs, in order: `Toolbar.HeaderFooter` (JSON + base64 logo via
     `ReceiptBrandingStore`), `Toolbar.MeasurementTerms` (JSON via
     `MeasurementTermsService`), `Toolbar.LocalDatabase` (zip package via
@@ -413,13 +433,13 @@ components are added/renamed or the way pieces fit together changes.
     rates plus `ShowingFinalRate`/`IsFinalStage`, resolved by `ApplyStageTaxRates` /
     `ResolveStageRate` and seeded by `LoadStageTaxRates`), computed summary,
     "clear all balances" master checkbox, and the
-    "已取货 / Picked up" quick-complete checkbox that locks the status dropdown.
-    Switching the status to 已取消/已退货 puts the editor in a **refund lock**
-    state (`_isRefunded`): every service/payment control (incl. 当前服务尾款已结清)
+    "OrderEdit.PickedUp" quick-complete checkbox that locks the status dropdown.
+    Switching the status to Status.Cancelled/Status.Returned puts the editor in a **refund lock**
+    state (`_isRefunded`): every service/payment control (incl. OrderEdit.BalanceCleared)
     is disabled via `SetServiceControlsEnabled(false)`, all checkboxes (incl.
-    已取货) get the `NotApplicableCheckBox` style (red box + red strikethrough
-    label + red line across the whole control), and 余额状态 shows
-    已退款或部分退款; customer fields + the custom-made records list stay usable so
+    OrderEdit.PickedUp) get the `NotApplicableCheckBox` style (red box + red strikethrough
+    label + red line across the whole control), and Order.Fields.BalanceStatus shows
+    Payment.Status.Refunded; customer fields + the custom-made records list stay usable so
     measurements remain viewable. Reverting the status unlocks and re-runs
     `RefreshComputedTotals`. `_isRefunded` also feeds `RefreshPricingLocks`,
     `UpdateBalanceStatusDisplay` and the PickedUp enable rule.
@@ -442,41 +462,41 @@ components are added/renamed or the way pieces fit together changes.
     Add Garment; center = assigned-terms drop zone; right = all terms as draggable
     chips + Add Measurement). Modern card styling + Segoe MDL2 icons; predefined
     term/garment names locked; custom items support inline edit/save/delete +
-    alt-language remap. Launched from the 本地配置 menu.
+    alt-language remap. Launched from the Local Configuration menu.
   - `MeasurementTermLanguageWindow` — alt-language name editor popup (one name row
     per `LocalizationService.AvailableLanguages`); returns a langCode→name dict.
   - `MeasurementPrintOptionsWindow` — small pre-print dialog asking for the
     measurement **language** (radios from `ShopLanguages.Selectable()`, default =
     current, prompt and radios collapsed together when the shop runs in one language)
     and **unit** (cm default / inch); exposes
-    `SelectedLanguageCode` + `IsInch` (set on Print). Feeds the 打印量身尺寸 /
-    打印小票和所有尺寸 print paths (a print method, not save-to-PDF).
-  - `ReceiptBrandingWindow` — the 页眉页脚 rich-text editor: a logo card
+    `SelectedLanguageCode` + `IsInch` (set on Print). Feeds the Print Measurements /
+    Print Receipt & All Measurements print paths (a print method, not save-to-PDF).
+  - `ReceiptBrandingWindow` — the Header & Footer rich-text editor: a logo card
     (choose/remove + Left/Center/Right placement radios), a formatting ribbon
     (B/I/U, font size, align, colour swatches), and one tab per language each
     holding a header + footer `RichTextBox`. Persists via `ReceiptBrandingStore`;
     content is injected into the printed receipt and the measurements PDF by
     `BrandingRenderer`.
-  - `CurrencySettingWindow` — small 货币设置 dialog (currency ComboBox +
+  - `CurrencySettingWindow` — small Currency Setup dialog (currency ComboBox +
     Save/Cancel) writing through `CurrencySettingService`.
   - `DocumentPreviewWindow` — in-app image viewer (loads via `BitmapImage`
     `OnLoad` so the file is not locked).
   - `LanguageSelectionWindow` — first-run language picker.
   - `ShopPickerWindow` — chooses the shop to work in, at startup after sign-in and again for
-    切换店铺. Redesigned as a gradient header (title + signed-in chip) over shop **cards** — avatar
+    Switch Shop. Redesigned as a gradient header (title + signed-in chip) over shop **cards** — avatar
     tile, name, a currency / **installed languages** / order-count strip (`BuildDetails`, joining
     the languages as prose with `JoinList` inside a `JoinFragments` strip; the INSTALLED set, not
     the preferred language, because that is what the branch's people will be able to switch
     between), and the user's role in that shop as a badge —
-    with a footer carrying 新建店铺 / 用户管理 (administrators only), 取消 and 打开. The list is
+    with a footer carrying Create Shop / User Management (administrators only), Cancel and Open. The list is
     filtered by `AuthenticationService.FilterAccessibleShops`, and the empty state distinguishes
     "no shops exist" from "none is assigned to you". Row/badge presentation comes from the shared
     `UserPresentation` helper; `ShopPickerRow` is a top-level `internal` type so its `{Binding}`-only
     members do not each need an S1144 suppression.
   - `UserManagementWindow` — administrator-only accounts screen, reached from the shop picker and from
-    本地配置 → 用户管理. Left: searchable account list — each row reads **`Tina Zhang (Manager, Staff)`**
+    Local Configuration → User Management. Left: searchable account list — each row reads **`Tina Zhang (Manager, Staff)`**
     (`Users.AccountLabel`, whose whole shape including the brackets is translated), with the shop
-    count under it, an avatar and a 已锁定 badge on the administrator; search matches the name as well
+    count under it, an avatar and a Locked badge on the administrator; search matches the name as well
     as the login. Right: identity card showing the name over the **login** plus a **Sign in as**
     button (vector icon drawn as `Path` geometry; hidden for your own account and for one delisted
     everywhere — it REPORTS the choice as `SignInAsUserName` and the caller performs the switch), a Person card editing
@@ -489,17 +509,17 @@ components are added/renamed or the way pieces fit together changes.
     and so discarded name edits. A rename asks for confirmation, but only after availability is
     settled — the shape that makes "manager AND staff in the same shop"
     expressible. Archived shops are still listed, or saving would silently strip an assignment to one.
-    Writes on 保存修改 rather than per tick, so a re-assignment cannot revoke access halfway through.
+    Writes on Save Changes rather than per tick, so a re-assignment cannot revoke access halfway through.
   - `StoreMembersWindow` — the OPEN shop's roster, opened from the main toolbar by a manager or an
     administrator. Header carries the head-count tiles (total / active / deactivated); the list shows
     each member's role and shift with an Active/Deactivated badge (delisted members stay, dimmed); the
     editor covers person (first name, last name, birthday), role in THIS shop (manager and/or staff), activation, start
-    date, a read-only delisting stamp and a 15-minute shift picker. 添加成员 creates the account and its
-    membership together. 删除账户 is administrator-only — deletion reaches every shop, whereas a
+    date, a read-only delisting stamp and a 15-minute shift picker. Add Member creates the account and its
+    membership together. Delete Account is administrator-only — deletion reaches every shop, whereas a
     manager's tool for "they left" is deactivation, which records when. Needs no database: members come
     from `AuthenticationService` and the shop is passed in.
-  - `ManagementStyles.xaml` (`Views/`) — the shared `ResourceDictionary` behind 选择店铺 / 用户管理 /
-    店铺成员: `RoundedButton` / `PrimaryButton` / `DangerButton`, `CardBorder` / `CardHeading` /
+  - `ManagementStyles.xaml` (`Views/`) — the shared `ResourceDictionary` behind Select Shop / User Management /
+    Store Members: `RoundedButton` / `PrimaryButton` / `DangerButton`, `CardBorder` / `CardHeading` /
     `FieldLabel` / `InputBox`, and `RosterCardContainer`. Merged rather than copied so the three
     screens cannot drift apart silently.
   - `UserPresentation` (static, `Views/`) — localized role name (including "no role") and the stable
@@ -513,6 +533,20 @@ components are added/renamed or the way pieces fit together changes.
     the banner and the dialog both read. `TryValidateForSave` owns the dialog and delegates the marking
     to `ValidateForSave`, which is what a harness drives — a `MessageBox` inside a check blocks the
     thread. `ErrorText` at the foot of the window keeps a separate job: a save that THREW.
+  - `StoreManagementWindow` — administrator-only shop administration, reached from the Select Shop
+    footer. `SelectionMode="Extended"` (ctrl/shift click), and every action reads the whole selection.
+    Reversible actions (take out of service / put back) sit in a separate card from the destructive ones
+    (delete selected / reinitialize), and only the second group goes through `ConfirmDestructiveWindow` —
+    keeping them apart is what stops an administrator reaching for delete because it is the button they
+    recognise. Performs nothing itself: `ShopAdministration` owns the rules, `ShopArchive` owns the file
+    format. `ShopsChanged` tells the picker whether to reload, so cancelling out costs no refresh.
+  - `ConfirmDestructiveWindow` — the gate in front of every irreversible action: a 10-character phrase
+    generated per dialog from `RandomNumberGenerator` over an alphabet with **no lookalike pairs**
+    (neither half of O/0, I/1/L, S/5, Z/2, B/8, G/6, Q/O), typed case-sensitively before either button
+    enables. Returns `ConfirmedAction.SaveThenProceed` or `.ProceedNow` and performs nothing — the caller
+    owns what "proceed" means and is the only thing that can describe the impact. Its phrase box carries
+    its OWN template rather than deriving from `ThemedTextBox`; see `context.md`, "a theme trigger with
+    TargetName beats your local value".
   - `ShopLocalizationWindow` — the languages a shop runs in and the currencies it takes, in one
     panel because they are one decision: a language brings the currencies of its market. Languages
     left, a card per ticked language on the right listing what it brings. Opened from a link card in
@@ -547,7 +581,7 @@ components are added/renamed or the way pieces fit together changes.
     would double-print for any shop that typed its details there by hand.
 - **Product catalogue** — `Models/ProductCatalog` + `Services/ProductCatalogService`, the ready-made
   categories an order's clothing rows offer. Per shop, one JSON file keyed on `PublicId`, seeded from
-  `ProductCatalogDefaults` and edited in `Views/ProductCatalogWindow` (本地配置 → 商品类别).
+  `ProductCatalogDefaults` and edited in `Views/ProductCatalogWindow` (Local Configuration → Product Categories).
   Modelled on `MeasurementTermsService`, down to the copy-between-shops path.
   - The five shipped ids are a COMPATIBILITY SURFACE — see context.md before touching them.
     Predefined names come from the string table (`ClothingItem.<id>`); user-added ones carry their
@@ -679,9 +713,9 @@ components are added/renamed or the way pieces fit together changes.
 - Control-sync handlers use reentrancy guard flags (`_syncingPayment`,
   `_syncingStatus`) to avoid event loops.
 - Order "picked up" state is represented purely by `OrderStatus.Completed`
-  (no separate column); the "已取货" checkbox is only enabled once the order has a
+  (no separate column); the "OrderEdit.PickedUp" checkbox is only enabled once the order has a
   charge and every final balance is cleared, and read-only statuses relabel the
-  open action to "查看订单 / View Order". **Read-only statuses are
+  open action to "Toolbar.ViewOrder". **Read-only statuses are
   Completed / Shipped / Cancelled / Returned** — kept in sync across three
   `IsReadOnlyStatus`-style predicates (`MainWindow.xaml.cs` label,
   `OrderEditWindow.xaml.cs` `_isReadOnly`, and `MainViewModel.IsClosedStatus`
@@ -699,9 +733,9 @@ components are added/renamed or the way pieces fit together changes.
   (list column, detail panel, receipt, editor) maps that to its own label +
   colour (green / light green / orange / red, via `BalanceStatusColorConverter` /
   `BalanceStatusBrush`). Cancelled/returned orders are "refunded": they show
-  已退款或部分退款, and on both the receipt and the detail panel the
-  **收款明细 / payment-method breakdown is replaced by the 取消原因/退货原因**
-  (`ReturnReasonSummaryConverter`) — the charge lines, totals and 剩余尾款 still
+  `Payment.Status.Refunded`, and on both the receipt and the detail panel the
+  **`Order.Fields.PaymentBreakdown` is replaced by `Order.Fields.CancelReason`/`.ReturnReason`**
+  (`ReturnReasonSummaryConverter`) — the charge lines, totals and `Order.Fields.FinalBalance` still
   print, so a refunded receipt keeps full parity with a normal one.
 - Destructive actions (delete) own their confirm dialog inside the command, so
   toolbar, context menu, and the `Delete` key share one prompt.

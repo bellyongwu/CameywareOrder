@@ -51,6 +51,8 @@ public partial class ShopPickerWindow : Window
             : Visibility.Collapsed;
         CreateButton.Visibility = adminVisibility;
         ManageUsersButton.Visibility = adminVisibility;
+        StoreManagementButton.Visibility = adminVisibility;
+        DemoStoreButton.Visibility = adminVisibility;
 
         ApplySignedInHeader();
 
@@ -282,6 +284,43 @@ public partial class ShopPickerWindow : Window
         // Reloaded because an administrator can revoke their OWN access to a shop here. Keeping the
         // stale list would offer a shop that the next click is no longer allowed to open.
         LoadShops((ShopList.SelectedItem as ShopPickerRow)?.Shop.Id);
+    }
+
+    /// <summary>
+    /// Store Management: delist, delete, download, restore, reinitialise. Administrator only, and gated
+    /// again in the service — the button being hidden is presentation, not authorisation.
+    /// </summary>
+    private void OnStoreManagementClick(object sender, RoutedEventArgs e)
+    {
+        if (!AuthenticationService.Instance.IsAdministrator)
+            return;
+
+        var management = new StoreManagementWindow(_localization, _scopeFactory) { Owner = this };
+        management.ShowDialog();
+
+        // Only when something actually happened. A shop may have been deleted, restored or delisted, and
+        // this list would otherwise offer one that no longer exists or has been taken out of service.
+        if (management.ShopsChanged)
+            LoadShops((ShopList.SelectedItem as ShopPickerRow)?.Shop.Id);
+    }
+
+    /// <summary>
+    /// One click to a working shop, built from the shipped defaults. Selected on return, so the next
+    /// click is Open.
+    /// </summary>
+    private void OnCreateDemoClick(object sender, RoutedEventArgs e)
+    {
+        if (!AuthenticationService.Instance.CanCreateShops)
+            return;
+
+        Shop demo;
+        using (var scope = _scopeFactory.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            demo = ShopAdministration.CreateDemoShop(db, _localization);
+        }
+
+        LoadShops(demo.Id);
     }
 
     private void OnCancelClick(object sender, RoutedEventArgs e) => DialogResult = false;

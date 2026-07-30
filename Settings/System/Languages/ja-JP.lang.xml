@@ -92,6 +92,66 @@
   <Text key="Shop.Picker.Prompt">開くことができる店舗</Text>
   <Text key="Shop.Picker.SignedInAs">{0}（{1}）としてログイン中</Text>
   <Text key="Shop.Picker.Open">開く</Text>
+
+  <Text key="Store.Demo.Create">デモ店舗を作成</Text>
+  <Text key="Store.Demo.Name">デモ店舗</Text>
+
+  <Text key="Store.Manage.Title">店舗管理</Text>
+  <Text key="Store.Manage.Subtitle">店舗の停止、データのダウンロード、ファイルからの復元、削除を行えます。Ctrl+クリックで複数選択、Shift+クリックで範囲選択。</Text>
+  <Text key="Store.Manage.Close">閉じる</Text>
+  <Text key="Store.Manage.Empty">店舗がまだありません。「店舗の選択」画面から作成してください。</Text>
+  <Text key="Store.Manage.SelectAll">すべて選択</Text>
+  <Text key="Store.Manage.ClearSelection">選択を解除</Text>
+  <Text key="Store.Manage.NothingSelected">店舗が選択されていません。</Text>
+  <Text key="Store.Manage.SelectedCount">{0} 店舗を選択中（注文 {1} 件）。</Text>
+  <Text key="Store.Manage.OrderCount">注文 {0} 件</Text>
+  <Text key="Store.Manage.Delisted.Badge">停止中</Text>
+  <Text key="Store.Manage.DelistedOn">{0} から停止中</Text>
+
+  <Text key="Store.Manage.InService">稼働状態</Text>
+  <Text key="Store.Manage.Delist">店舗を停止する</Text>
+  <Text key="Store.Manage.Activate">店舗を再開する</Text>
+  <Text key="Store.Manage.DelistHint">停止した店舗はデータをすべて保持したまま、「店舗の選択」に表示されなくなります。いつでも元に戻せます。</Text>
+  <Text key="Store.Manage.Delisted">{0} 店舗を停止しました。</Text>
+  <Text key="Store.Manage.Activated">{0} 店舗を再開しました。</Text>
+
+  <Text key="Store.Manage.DataSection">データ</Text>
+  <Text key="Store.Manage.Download">選択した店舗のデータをダウンロード</Text>
+  <Text key="Store.Manage.Restore">ファイルから復元…</Text>
+  <Text key="Store.Manage.RestoreHint">ダウンロードしたファイルには、選択した店舗とその注文・設定が含まれます。復元は追加処理で、既にある店舗はそのまま残ります。</Text>
+  <Text key="Store.Manage.FileFilter">店舗アーカイブ (*.zip)|*.zip</Text>
+  <Text key="Store.Manage.Downloaded">{0} 店舗・注文 {1} 件を {2} に保存しました</Text>
+  <Text key="Store.Manage.Restored">{0} 店舗・注文 {1} 件を復元しました。</Text>
+  <Text key="Store.Manage.RestoredWithSkips">{0} 店舗・注文 {1} 件を復元しました。{2} 店舗は既に存在したため変更していません。</Text>
+  <Text key="Store.Manage.NotAnArchive">このファイルは店舗アーカイブではありません。</Text>
+
+  <Text key="Store.Manage.DangerSection">取り消せない操作</Text>
+  <Text key="Store.Manage.Delete">選択した店舗を削除</Text>
+  <Text key="Store.Manage.Reinitialize">アプリを初期化</Text>
+  <Text key="Store.Manage.DangerHint">これらの操作は取り消せません。確認のため文字列の入力を求められ、先にデータを保存することもできます。</Text>
+  <Text key="Store.Manage.DeleteHeadline">{0} 店舗を完全に削除しますか？</Text>
+  <Text key="Store.Manage.ReinitializeHeadline">このインストールを初期化しますか？</Text>
+  <Text key="Store.Manage.ImpactLine">{0} —— 注文 {1} 件</Text>
+  <Text key="Store.Manage.ImpactAllStores">全 {0} 店舗（注文 {1} 件）</Text>
+  <Text key="Store.Manage.ImpactPerShopFiles">各店舗の採寸項目とレシートのヘッダー・フッター設定</Text>
+  <Text key="Store.Manage.ImpactAccountsKept">ログインアカウント・言語・全体設定は保持されます</Text>
+  <Text key="Store.Manage.Deleted">{0} 店舗・注文 {1} 件を削除しました。</Text>
+  <Text key="Store.Manage.NothingToReinitialize">削除できる店舗がありません。</Text>
+  <Text key="Store.Manage.SaveFailedNoDelete">削除は行われていません。データを保存できませんでした（{0}）。</Text>
+  <Text key="Store.Manage.Failed">実行できませんでした：{0}</Text>
+
+  <Text key="Store.Confirm.Title">確認</Text>
+  <Text key="Store.Confirm.Subhead">この操作は取り消せません。続ける前に以下をお読みください。</Text>
+  <Text key="Store.Confirm.ImpactHeading">削除される対象</Text>
+  <Text key="Store.Confirm.Prompt">ボタンを有効にするには、下の {0} 文字をそのまま入力してください。</Text>
+  <Text key="Store.Confirm.Matched">一致しました。両方のボタンが有効になりました。</Text>
+  <Text key="Store.Confirm.NotMatched">まだ一致していません。</Text>
+  <Text key="Store.Confirm.Copy">コピー</Text>
+  <Text key="Store.Confirm.Copied">コピーしました</Text>
+  <Text key="Store.Confirm.CopyFailed">コピーできません</Text>
+  <Text key="Store.Confirm.SaveRecords">店舗データを保存する</Text>
+  <Text key="Store.Confirm.RemoveNow">今すぐ店舗を削除する</Text>
+  <Text key="Store.Confirm.ReinitializeNow">今すぐ初期化する</Text>
   <Text key="Shop.Picker.CreateNew">新しい店舗を作成</Text>
   <Text key="Shop.Picker.Cancel">キャンセル</Text>
   <Text key="Shop.Picker.Empty">店舗はまだ作成されていません。</Text>

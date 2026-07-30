@@ -128,7 +128,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 - **"Add an SVG icon" in WPF means `Path` geometry (2026-07-28).** `Path.Data` IS SVG path syntax,
   rendered natively and crisp at every DPI. An actual `.svg` file cannot be shown at runtime — no
   rasterizer is installed on this machine, which is why `Assets/ICONS/app-icon.svg` exists only as
-  the design source for the `.ico`. Follow the 店铺成员 button in `MainWindow`: a `Canvas` with
+  the design source for the `.ico`. Follow the Store Members button in `MainWindow`: a `Canvas` with
   `Ellipse` + `Path` children, stroked from theme brushes so the icon follows the palette.
 - **Disable, do not make read-only, when a field cannot be edited (2026-07-28).** A read-only
   `TextBox` looks exactly like an editable one and silently swallows typing; the report that came
@@ -224,14 +224,14 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     re-templated with a `Common.SelectDate` watermark; the calendar's month/day names come from
     `FrameworkElement.Language`, which each window carrying a picker sets from the current UI language
     (it is inherited, so setting it on the Window is enough).
-  - 货币设置 is gone from 本地配置 — the currency is a property of a shop and is edited in 店铺设置.
+  - Currency Setup is gone from Local Configuration — the currency is a property of a shop and is edited in Shop Settings.
     `CurrencySettingWindow` was deleted; `Toolbar.CurrencySetting` is still LIVE because the
     global-settings package description names it.
 - **Put a menu where its drop-down can open, rather than mirroring the drop-down (2026-07-27).** A
   menu at the extreme right of a bar fights the window edge, because a drop-down opens down-and-LEFT
   from its item. A mirrored `MenuItem` template (labels right-aligned, caret pointing left, submenus
   `Placement="Left"`) was built for exactly this and then **reverted — it looked wrong.** Moving
-  本地配置 one slot left, so 店铺成员 sits to its right, solved it with no template at all. Reach for
+  Local Configuration one slot left, so Store Members sits to its right, solved it with no template at all. Reach for
   ordering before reaching for a mirrored control.
   - If a mirrored menu is ever genuinely needed: it must be opt-in per menu (the orders row's context
     menu opens at the pointer and must stay normal), and it propagates with
@@ -531,10 +531,10 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     dispatcher turn AFTER completion so the property reverting to its real value is suppressed too.
   - The `!element.IsLoaded` test is what stops every window playing its whole set of panels on first
     show.
-- **Navigation is split by WHAT the control acts on (2026-07-27).** Order actions (新增/编辑/删除/刷新)
+- **Navigation is split by WHAT the control acts on (2026-07-27).** Order actions (Add / Edit / Delete / Refresh)
   live in the records panel's own action bar, beside the records they operate on; the top bar is
-  SYSTEM only — 本地配置 on the left, and on the right the identity block in a fixed order: greeting →
-  language → 店铺成员 → 退出登录. The greeting (`Main.Greeting`) uses the account's DISPLAY NAME when it
+  SYSTEM only — Local Configuration on the left, and on the right the identity block in a fixed order: greeting →
+  language → Store Members → Sign Out. The greeting (`Main.Greeting`) uses the account's DISPLAY NAME when it
   has one; a user name is what you sign in with, not what anybody calls you.
   - The top bar is a `Border` + `Grid`, **not a `ToolBar`** — a ToolBar cannot right-align part of its
     content and adds an overflow chevron nobody asked for.
@@ -544,7 +544,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   `Order.HasCustomMadeService` and `CustomMadeMeasurementReader.GetGarmentNames` both read
   `record.Garments`; the flat `JacketLengthCm` / `ShirtChestCm` fields only migrate into it when a
   record is re-saved through the editor. The first mock-data run filled only the legacy fields, so
-  every seeded custom-made order reported 无 in the 定制服务 column. Anything that writes
+  every seeded custom-made order reported `CustomMade.Flag.No` in the Custom Service column. Anything that writes
   `CustomMadeServiceRecord` outside the editor has to build `Garments` with real predefined garment and
   term ids (`jacket`/`shirt`/`dress`/`qipao`… × `length`/`chest`/`sleeve`…).
 - **The printed receipt is panels, not a column (2026-07-27).** `ReceiptCard(background, topBorder)`
@@ -587,7 +587,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     database and whole databases move between machines, where the local autoincrement ids collide.
   - Capabilities are named, not role comparisons: `CanCreateShops` / `CanManageUsers` / `CanUseDataTools`
     are administrator-only because they act on the whole installation; `CanConfigureShop` is administrator
-    **or the open shop's manager** and gates 店铺设置 / 货币设置 / 测量术语 / 页眉页脚. The old single
+    **or the open shop's manager** and gates Shop Settings / Currency Setup / Measurement Terms / Header & Footer. The old single
     `CanManageShops` is gone — it conflated "may create a branch" with "may configure this one".
   - `AuthenticationService.BindShop` supplies the shop the capabilities resolve against and is called from
     `App.ApplyActiveShop` **BEFORE** `ShopContext.SetActive`. Order matters: `SetActive` raises
@@ -595,7 +595,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     repaints with the previous shop's permissions.
   - **`MainWindow.ApplyRolePermissions` MUST stay subscribed to `ShopChanged`.** It used to run only in
     the constructor, which is correct exactly until someone who is a manager in one branch and staff in
-    another uses 切换店铺. Same reason it re-runs after 用户管理 closes.
+    another uses Switch Shop. Same reason it re-runs after User Management closes.
   - The database path in the status bar is hidden with the data tools it describes — it is the same
     information those menus act on, printed rather than clicked.
 - **`credentials.json` is schema version 2, and the upgrade is deliberately in TWO halves.** The service is
@@ -613,7 +613,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     assignment screen has something to exercise.
 - **Tax is a STORE rule, not a per-order figure (2026-07-27).** `PaymentTaxRules` (in **Models**, not
   Services) holds one `PaymentTaxRule` — taxable + rate — per payment method, persisted on
-  `Shops.PaymentTaxRulesJson` and edited in 本地配置 → 店铺设置. Its static `Active` is assigned in
+  `Shops.PaymentTaxRulesJson` and edited in Local Configuration → Shop Settings. Its static `Active` is assigned in
   `App.ApplyActiveShop` alongside the currency/terms binds.
   - It lives in Models because `Order.CalculateSectionPayment` must consult it; a model reaching into a
     service would be worse than a model owning the rule type. Defaults (cash + e-transfer free, both card
@@ -624,12 +624,12 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   - `OrderEditWindow` is the other half: it resolves rates live from `Active` for an editable order, and
     keeps the stored rates for a **read-only** one (completed/shipped/cancelled/returned) whose receipt is
     already printed. That is the whole answer to "does a rate change affect existing orders".
-  - The three 税率 `TextBox`es are gone — they are bold read-only value blocks (`LockedRateBox` /
+  - The three tax-rate `TextBox`es are gone — they are bold read-only value blocks (`LockedRateBox` /
     `LockedRateText`). Deliberately not a disabled TextBox: a greyed box invites clicking and reads as broken.
 - **`PaymentMethod.Card` is legacy and must never be deleted.** Debit and credit are now separate values
   (`DebitCard = 5`, `CreditCard = 6`); orders saved before the split still hold `Card = 2`. Everything that
   DISPLAYS a method runs it through `PaymentTaxRules.Normalize` (→ `DebitCard`, which is what the old label
-  银行卡 (Visa/借记卡) / "Card (Visa/Debit)" actually named): `SetSelectedDownMethod`/`SetSelectedFinalMethod`,
+  the debit-card option actually named): `SetSelectedDownMethod`/`SetSelectedFinalMethod`,
   `OrderEditWindow.PaymentMethodName`, `OrderPaymentSummaryConverter.MethodText`. Without the normalization in
   the setters, a legacy order comes back with **no deposit radio checked**, and `UpdateSectionVisibility`
   collapses the section's whole pricing panel — the failure mode already recorded twice in this file.
@@ -652,7 +652,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   table, so every column added later needs its own ALTER. Keep the two lists in step — a column added to one
   and not the other works on exactly one kind of installation.
 - **The shop's GST/HST number lives in the branding settings**, not on the Shop row:
-  `ReceiptBrandingSettings.TaxRegistrationNumber`, edited directly under the Header card in 页眉页脚 and
+  `ReceiptBrandingSettings.TaxRegistrationNumber`, edited directly under the Header card in Header & Footer and
   printed under the header by `InjectReceiptBranding` (inserted BEFORE the header is prepended, so the header
   lands above it) and by the QuestPDF measurement export. It is NOT per language — a registration number is
   the same string in both; only its label is translated (`Receipt.TaxNumberLine` carries the whole line shape).
@@ -697,7 +697,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 - **NEVER round-trip a project file through `Get-Content -Raw` / `Set-Content` in Windows PowerShell 5.1
   (2026-07-27).** `Get-Content` decodes with the ANSI codepage (1252 here), so every UTF-8 byte becomes a
-  mojibake char, and `Set-Content -Encoding utf8` then writes that back double-encoded — 本地配置 came back
+  mojibake char, and `Set-Content -Encoding utf8` then writes that back double-encoded — Local Configuration came back
   as `æœ¬åœ°é…ç½®` in two XAML files. It also adds a BOM. Recovery is byte-level: read the file, decode
   UTF-8, re-encode with codepage 1252, write the raw bytes (verify the result contains a known string
   first). Use the Edit/Write tools for file content; keep PowerShell for running commands.
@@ -857,7 +857,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   present, so an older/partial package never blanks out what it does not know about.
   `ReceiptBrandingStore.BuildExport()` was extracted so the package embeds the export OBJECT
   rather than nesting a JSON string inside its own JSON.
-  - 导入/导出 submenu order is now HeaderFooter → MeasurementTerms → LocalDatabase →
+  - Import/Export submenu order is now HeaderFooter → MeasurementTerms → LocalDatabase →
     (separator) → GlobalSettings.
 
 - **"Cleared" is not the same as "settled" — always pair it with a charge**: a section with
@@ -902,8 +902,8 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 - **"Order items", not money, decide whether a service takes part**: `PaymentSectionControls`
   carries `HasItems()` (custom-made records exist / clothing rows exist / for Alterations a
   non-empty price box, since it has no item list), `SectionTotal()` and `HasMissingPrice`
-  (has items but total ≤ 0). Used by BOTH `ApplyClearAllToSection` and the 全部服务总金额
-  breakdown, so the two agree. 结清所有尾款 now ticks **已收定金 as well as 尾款结清** on every
+  (has items but total ≤ 0). Used by BOTH `ApplyClearAllToSection` and the Order.Fields.AllServicesTotalAmount
+  breakdown, so the two agree. OrderEdit.ClearAllBalances now ticks **the deposit-received box as well as the balance-cleared box** on every
   participating section, defaults a null deposit method to Cash, skips item-less sections,
   and treats an explicit "None" deposit as nothing-to-confirm. A zero-priced service still
   participates: it is flagged amber （价格有误） in the breakdown and named in a
@@ -916,9 +916,9 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     `ApplyPaymentFields` persists a zero-total section as absent (`XxxSubtotal = null`), so an
     order whose services are ALL zero-priced reads Outstanding once saved. Aligning that
     reaches into `XxxAddedToReceipt` and the printed receipt.
-- **实收定金 / 实收尾款 only count after their checkbox**: `Order.ReceivedDownpayment` sums
+- **`Order.Fields.ReceivedDownpayment` / `.ReceivedFinalBalance` only count after their checkbox**: `Order.ReceivedDownpayment` sums
   through `SectionReceivedDeposit(money, XxxDownpaymentCompleted)` and the editor mirrors it —
-  a typed deposit is what the shop EXPECTS, not what it holds. 实收尾款 was already gated on
+  a typed deposit is what the shop EXPECTS, not what it holds. `ReceivedFinalBalance` was already gated on
   `BalanceCleared`. Both model and editor were changed together so a saved order reports the
   same figures the editor showed.
 
@@ -938,11 +938,11 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
     (实收尾款, taxed and collected).
 
 - **Small-print breakdowns in the order editor**: two code-filled panels now explain the
-  headline figures. `ServicesTotalBreakdownPanel` (under 全部服务总金额) lists one line per
+  headline figures. `ServicesTotalBreakdownPanel` (under Order.Fields.AllServicesTotalAmount) lists one line per
   charged section with a parenthetical — Alterations → service category, CustomMade →
   measured garment names, ReadyMade → the item categories actually priced — built by
   `RefreshServicesTotalBreakdown`/`AddServiceTotalDetail`. In each section's final
-  breakdown, `*DepositTaxLineText`/`*FinalTaxLineText` split 此服务总计税 into
+  breakdown, `*DepositTaxLineText`/`*FinalTaxLineText` split Order.Fields.ServiceTotalTax into
   定金（现金）税收 / 尾款（银行卡）税收 via `UpdateTaxBreakdownLines`.
   - RULE: put the **whole line shape** in `Languages.xml`, not just the words. Chinese uses
     fullwidth `（）：` and English ASCII `(): ` — concatenating punctuation in C# produces
@@ -964,7 +964,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   `Order.CalculateSectionPayment` now takes `depositRatePercent` + `finalRatePercent`;
   each `XxxMoney` passes `XxxFinalTaxRate ?? XxxTaxRate ?? 0m`, so legacy single-rate
   orders compute exactly as before (no data fix-up, 3 runtime column guards only).
-  - UI: ONE 税率 box per section (user's choice over two side-by-side boxes). It edits the
+  - UI: ONE tax-rate box per section (user's choice over two side-by-side boxes). It edits the
     deposit rate until the deposit is received, the final rate afterwards, and its **label**
     says which (`Order.Fields.DepositTaxRate` 定金税率 / `Order.Fields.FinalTaxRate` 尾款税率).
     `PaymentSectionControls` holds `DepositTaxRate`/`FinalTaxRate`/`ShowingFinalRate`/
@@ -1007,10 +1007,10 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   amounts stay identical. WHY: `CardUsed` (= deposit card OR final card) drives the tax-rate
   display, but `Order.CalculateSectionPayment` taxes each portion by *its own* method — so
   picking Card for the deposit advertised 13% while the untouched (null) final method left
-  the whole outstanding balance untaxed (entering a 124 price showed 税后总价 124 instead of
+  the whole outstanding balance untaxed (entering a 124 price showed a post-tax total of 124 instead of
   140.12). The calculation engine itself was NOT changed.
-  - The 当前计税 row (`*DepositTaxText`) now shows the section's whole tax (`money.Tax`),
-    not just the deposit's tax, so it pairs with the 税后总价 line under it. English value of
+  - The current-tax row (`*DepositTaxText`) now shows the section's whole tax (`money.Tax`),
+    not just the deposit's tax, so it pairs with the post-tax-total line under it. English value of
     `Order.Fields.DepositTax` reworded "Tax on Deposit" → "Current Tax".
   - The final-method **label** deliberately still reads the raw radio selection:
     `FinalBlock` only becomes visible once the deposit is marked received, and by then
@@ -1027,14 +1027,14 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   ClearedPickedUp / ClearedNotPickedUp / Refunded) are the single source of truth for
   the balance-status indicator. `OrderPaymentSummaryConverter` "Status" mode maps the
   kind to a label, so the list column, detail panel and receipt all show
-  已退款或部分退款 (`Payment.Status.Refunded`) for cancelled/returned orders. Main list:
+  Payment.Status.Refunded (`Payment.Status.Refunded`) for cancelled/returned orders. Main list:
   `IsRefunded` rows are the lightest gray (#C3C9CF / opacity 0.5); `IsPickedUp`
   (completed/shipped) rows stay a bit darker (#9AA3AB / 0.7). Receipt totals colour the
   balance status (green / light green / orange / red via `ReceiptStatusLine` +
-  `BalanceStatusBrush`) and OMIT the 剩余尾款 line when `IsRefunded`. In OrderEditWindow,
-  switching the status to 已取消/已退货 dynamically locks every service/payment control
-  (incl. 当前服务尾款已结清) via `SetServiceControlsEnabled(false)`, marks all
-  checkboxes (incl. 已取货) with the `NotApplicableCheckBox` style (red box + red
+  `BalanceStatusBrush`) and OMIT the `Order.Fields.FinalBalance` line when `IsRefunded`. In OrderEditWindow,
+  switching the status to Status.Cancelled/Status.Returned dynamically locks every service/payment control
+  (incl. OrderEdit.BalanceCleared) via `SetServiceControlsEnabled(false)`, marks all
+  checkboxes (incl. OrderEdit.PickedUp) with the `NotApplicableCheckBox` style (red box + red
   strikethrough label + red line across the whole control), and shows the refunded
   balance status; customer fields + the custom-made records list stay usable so
   measurements remain viewable. Reverting the status unlocks and re-runs
@@ -1043,18 +1043,18 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   - Gotcha: keep `RefreshPaymentSummary` cognitive complexity ≤15 — the balance-status
     text/colour block was extracted into `UpdateBalanceStatusDisplay`.
 
-- **Custom-service (定制服务) list flag + measurement printing**: the main list
+- **Custom-service (Custom Service) list flag + measurement printing**: the main list
   dropped the Last Modified column (moved into the detail panel; ordering still
   defaults to LastModifiedDate desc in `LoadOrdersAsync`) and gained a
-  **left-aligned** (as of 2026-07-27; originally centered), wrappable **定制服务**
+  **left-aligned** (as of 2026-07-27; originally centered), wrappable **Custom Service**
   column driven by `Converters/CustomMadeServiceFlagConverter`
-  (binds the whole `Order`; ConverterParameter `Flag`→有/无, `Names`→bracketed
+  (binds the whole `Order`; ConverterParameter `Flag`→`CustomMade.Flag.Yes`/`.No`, `Names`→bracketed
   garment names with a zh 、 / en ", " separator, `NamesVisibility`). Order/Number
   and Balance-Status columns were widened (150→200, 140→180). `Order.
   HasCustomMadeService` `[NotMapped]` (any custom-made record with a garment
   carrying a cm/inch value) gates two new print actions on both the Print toolbar
-  submenu and the row context menu: **打印量身尺寸** (measurements only) and
-  **打印小票和所有尺寸** (receipt + measurements). Both open `Views/
+  submenu and the row context menu: **Print Measurements** (measurements only) and
+  **Print Receipt & All Measurements** (receipt + measurements). Both open `Views/
   MeasurementPrintOptionsWindow` (language radios from `AvailableLanguages`
   default=current + unit cm/inch), then print via **PrintDialog + FlowDocument**
   (NOT QuestPDF — this is a print path). `Services/CustomMadeMeasurementReader`
@@ -1079,7 +1079,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   names resolve from the `Measure.Term.*` / `Measure.Garment.*` string table;
   custom names from a per-language `Names` dict. Mapping UI = `Views/
   MeasurementTermsWindow` (3-column drag-drop: garments / assigned / all props)
-  launched from 本地配置 → 测量术语; alt-language popup = `Views/
+  launched from Local Configuration → Measurement Terms; alt-language popup = `Views/
   MeasurementTermLanguageWindow`. The custom-made window's old static Jacket/Shirt
   grid was replaced by a garment `ToggleButton` selector that renders only the
   related terms as dynamic per-garment cards, backed by a cm/in dual-unit cache
@@ -1092,22 +1092,22 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   defines `SectionCard` / `SummaryCard` / `SectionHeading` / `PaymentCard` /
   `PaymentTitle` / `StepLabel` / `MethodRadio` / `StepDivider` / `AccentBar`. Each
   service payment sub-card shows an accent-bar header, styled deposit/final method
-  labels + radios, and a divider at the top of the `FinalBlock` so deposit (定金) and
-  final (尾款) read as two steps. All `x:Name`/handlers were preserved — restyle only.
+  labels + radios, and a divider at the top of the `FinalBlock` so the deposit and
+  the final balance read as two steps. All `x:Name`/handlers were preserved — restyle only.
 - **Currency is a global app setting (not per-order)**: `Services/CurrencySettingService.cs`
   (singleton `Instance`, INotifyPropertyChanged) owns the chosen `CurrencyType` and its
   `Symbol` (￥ for CNY else $), persisted to `currency-setting.json` under LocalAppData.
-  Edited via `Views/CurrencySettingWindow` launched from a `货币设置` item under 本地配置.
+  Edited via `Views/CurrencySettingWindow` launched from a `Currency Setup` item under Local Configuration.
   `CurrencyAmountConverter` / `OrderPaymentSummaryConverter` / receipt / `OrderEditWindow`
   all read `CurrencySettingService.Instance.Symbol`. The per-order `Orders.CurrencyType`
   column is retained but unused (no migration); the old currency ComboBox + detail row
   were removed. Views refresh on next order load after a currency change.
-- **Toolbar → 本地配置 menu**: the standalone 页眉页脚 button and the three database
+- **Toolbar → Local Configuration menu**: the standalone Header & Footer button and the three database
   buttons were consolidated into a WPF `Menu` on the `MainWindow` toolbar. Top-level
-  `本地配置` (`Toolbar.LocalConfig`) auto-expands to `添加或更改页眉页脚`
+  `Local Configuration` (`Toolbar.LocalConfig`) auto-expands to `Add or Change Header & Footer`
   (reworded `Toolbar.HeaderFooter`, still → `OnEditBrandingClick`) and a nested
-  `本地数据库` (`Toolbar.LocalDatabase`) submenu holding 复制数据库路径 / 定位数据库文件 /
-  打开数据目录 (reused `OnCopyDataPathClick` / `OnRevealDataFileClick` /
+  `Local Database` (`Toolbar.LocalDatabase`) submenu holding Copy Database Path / Reveal Database File /
+  Open Data Folder (reused `OnCopyDataPathClick` / `OnRevealDataFileClick` /
   `OnOpenDataFolderClick`). XAML + string-table only; no code-behind changes.
 - **Per-portion payment tax (定金/实收定金, 尾款/实收尾款)**: tax now attaches to each
   payment portion only when THAT portion is paid by card (generalizes the old "any card
@@ -1116,7 +1116,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   (Subtotal, Deposit, FinalBase=subtotal−deposit, ReceivedDownpayment, FinalCharge,
   Total, Tax); deposit is PRE-TAX and clamped to subtotal. Model section props delegate
   to `AlterationMoney`/`ClothingMoney`/`CustomMadeMoney`; new `Order.ReceivedDownpayment`
-  (实收定金); `FinalBalance`/`ReceivedFinalBalance` use the taxed `FinalCharge`; section
+  (`Order.Fields.ReceivedDownpayment`); `FinalBalance`/`ReceivedFinalBalance` use the taxed `FinalCharge`; section
   "cleared" = `FinalBase<=0 || manual clear`. `OrderEditWindow` mirrors this via the same
   static calculator (`_alterationMoney` etc.), and its fully-paid / cleared checks compare
   the deposit against the pre-tax subtotal base (NOT the taxed total). Persisted
@@ -1186,7 +1186,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   header banner (dark bottom gradient scrim + `LanguageSelection.Welcome` /
   `.WelcomeMessage` text), language options rendered as **radio buttons generated in
   code-behind** from `LocalizationService.AvailableLanguages` (was a ComboBox), and a
-  styled full-width "进入系统 / Enter System" button (`LanguageSelection.Enter`).
+  styled full-width "LanguageSelection.Enter" button (`LanguageSelection.Enter`).
   Selecting a radio calls `SetLanguage` immediately so the panel text previews the
   chosen language live.
 ## Recent decisions / state
@@ -1197,7 +1197,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   (the same condition `RefreshPricingLocks` uses to lock the section's pricing).
   When true, `CustomMadeServiceWindow` is opened with `isReadOnly: true`, so its
   existing `ApplyReadOnlyMode` retitles to `OrderEdit.ViewCustomMade`
-  ("查看定制记录"), makes every box/radio read-only, hides Save, and — via
+  ("OrderEdit.ViewCustomMade"), makes every box/radio read-only, hides Save, and — via
   `CanEditDocuments => !_isReadOnly` bound in XAML — disables the document
   upload/replace/delete buttons (the image upload area). The Add-record button is
   already disabled for a cleared section by `RefreshPricingLocks`
@@ -1233,7 +1233,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   `Id`), assigns a new `ORD-{yyyyMMdd-HHmmss}` number + `OrderDate=UtcNow`,
   deep-copies `Items` as new rows, and **resets a closed status**
   (`Completed`/`Cancelled`/`Returned`) → `Processing` (`IsClosedStatus` helper).
-  Because the "已取货 / picked up" tick is derived from `Status == Completed`
+  Because the "OrderEdit.PickedUp" tick is derived from `Status == Completed`
   (no own column), resetting the status clears the tick automatically. Saves,
   reloads, re-selects the copy; localized status via `Status.CopySucceeded`.
 - **Receipt/detail section gating**: a service section is "added" only when
@@ -1254,7 +1254,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 ## Recent decisions / state
 
 - **Custom-made mode rename/reorder + section-level tax + input validation**:
-  - Modes: 只量身 / 定制量身 (Measure Only / Full Custom); **Full Custom is the
+  - Modes: Measure Only / Full Custom (Measure Only / Full Custom); **Full Custom is the
     default** (`CustomMadeServiceRecord.ServiceMode` default + editor
     `InitializeMode(... ?? CustomFromScratch)`; radios reordered Full-Custom-first
     with `IsChecked="True"`, container `StackPanel` + radios `VerticalAlignment=Center`).
@@ -1293,7 +1293,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   - `MainViewModel.DatabaseFilePath` (WPF-bound; `[SuppressMessage]`).
 - GraphQL server URL composed from `ServerScheme`/`ServerHost`/`ServerPort`
   constants in `App.xaml.cs` (single-const extraction does NOT clear S1075).
-- **"已取货 / Picked up" quick-complete** added to `OrderEditWindow`:
+- **"OrderEdit.PickedUp" quick-complete** added to `OrderEditWindow`:
   ticking sets status → `Completed` and disables the status dropdown; unticking
   re-enables it; manually selecting `Completed` ticks the box. Guarded by
   `_syncingStatus`. No new DB column (state == `OrderStatus.Completed`).
@@ -1334,7 +1334,7 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   name via `LocalizationLookupConverter` / `LocalizeWithFallback` with prefix
   `Alteration.Category`; legacy free-text values fall back to the raw string.
   Load/save is inlined (not a helper) to dodge the S2325 XAML-field false positive.
-  The dropdown **defaults to the first option** (服装修改/Garment Adjustments):
+  The dropdown **defaults to the first option** (Garment Adjustments/Garment Adjustments):
   `SelectedIndex = 0` on the new-order path, and edit-load falls back to the
   first item when the stored value matches none (per SKILL.md §5).
 - **Order detail panel shows per-section tax**: `Order` has `[NotMapped]`
@@ -1546,6 +1546,13 @@ standing in for "the card surcharge". It now derives both the mode and the rate 
 (`TaxJurisdictions.For(...)`, `PaymentTaxRules.Active.RateFor(...)`). Currency was the first thing
 this happened with, tax treatment the second — assume any shop-level setting is next.
 
+A FIFTH form, and the one that let a bug reach the user: **a test must be able to tell a value in USE
+from a value being discussed.** A `storecheck` assertion checked that the abandoned low-contrast colour was
+gone by searching the XAML for `#FECACA` — and failed on the COMMENT explaining why it had been abandoned.
+Matched as `Foreground="#FECACA"` it says what it means. The general shape: when asserting the ABSENCE of
+something in source text, match it as the syntax that would make it live, never as a bare substring, or the
+documentation gets reported as the defect.
+
 And a FOURTH, the same day: **searching live data for a fixture is assuming, not establishing.**
 `currencycheck` proved its currency backfill against `SELECT Id FROM Shops WHERE CurrencyType <> 1`
 and found a real JPY shop for weeks. The moment that shop was switched to CAD in the application,
@@ -1658,6 +1665,93 @@ per-method rules entirely, and STATE the rate on screen where the matrix used to
 preset that is never read is indistinguishable from a wrong one**: grep every field of a new data
 file for a real consumer before believing the file is wired up — one guarded call site that the
 guard's own condition excludes reads, in a diff, exactly like a wired-up field.
+
+## Grep for the concept before adding the column (2026-07-30)
+
+Store Management needed "delist a shop". I designed `Shop.DelistedOnUtc`, wrote the migration guard, the
+CREATE TABLE entry and the service methods — and only found `Shop.IsArchived` when I opened the picker to
+filter delisted shops out and saw it was **already filtering on exactly that**. It had shipped with the
+comment "hidden from the shop picker without deleting its orders", was honoured in three places, and had
+no UI anywhere to set it. What the feature was missing was not the concept; it was the screen.
+
+Two ways this bites, and the second is the expensive one:
+
+- **A duplicate flag means two answers to one question and no rule about which wins.** Corrected so
+  `IsArchived` stays authoritative, `IsDelisted` delegates to it, and the new timestamp is an audit stamp
+  beside it — not a second opinion. Delisting then took effect in all three existing call sites for free.
+- **A column nothing writes reads exactly like a column that does not exist.** `IsArchived` had been a
+  landmine in the sense this file already records; the fix for that class of thing is a UI or a deletion,
+  never a second column that means the same.
+
+Cheap habit that would have caught it: before adding a persisted property, grep the MODEL for the
+concept's synonyms (`archive`, `delist`, `disable`, `active`, `hidden`, `retired`), not just for the name
+you have in mind.
+
+## A central SaveChanges stamper is a trap for importers (2026-07-30)
+
+`AppDbContext.StampNewOrdersWithShop` sets `ShopId`, `CurrencyType` and `PricesIncludeTax` on every ADDED
+order from the OPEN shop. That is right for every call site that creates an order — it exists precisely so
+none of them can forget — and silently catastrophic for one that restores orders from an archive, where all
+three are facts recorded when the order was taken, possibly on another machine. Unguarded, a restore
+re-parents every order to whatever shop happens to be open and re-denominates its money; nothing fails,
+and the damage surfaces the next time somebody reprints a receipt.
+
+`SuppressShopStamping()` is an explicit `using` scope, made deliberately awkward to reach: a constructor
+flag or a setter would invite the next caller to switch off the invariant for convenience. The rule
+generalises — **any centrally-enforced "you cannot forget this" stamp needs one documented escape for the
+caller who is more authoritative than the ambient state, and exactly one.**
+
+## A theme trigger with TargetName beats your local value (2026-07-30)
+
+The delete-confirmation phrase was near-white on a near-black panel — about 17:1 — and rendered as
+near-white on light grey. Cause: the box derived from `ThemedTextBox`, whose `IsReadOnly` trigger repaints
+`Chrome.Background` to the disabled grey **through `TargetName`**. A `TargetName` setter writes the
+template child's property directly, so it beats the `TemplateBinding` that a local
+`Background="Transparent"` on the control feeds. The local value is not ignored — it simply is not what
+paints that pixel.
+
+So a control whose *state* the theme styles opinionatedly (read-only, disabled) cannot be recoloured by
+setting its own Background; it needs its own template. Two related notes from the same fix:
+
+- **A read-only `TextBox`, not a `TextBlock`,** wherever text must be selectable — WPF `TextBlock` cannot
+  be selected at all.
+- **Selection has to be visible against the background you chose.** The theme's indigo selection on
+  near-black is invisible, so the phrase read as uncopyable even though selection worked. "Reads as
+  uncopyable" and "is uncopyable" are the same defect from where the user sits — set `SelectionBrush`
+  explicitly, and give it a Copy button.
+- **Assert contrast as a NUMBER.** Contrast is invisible in a diff and nobody re-checks it. `storecheck`
+  computes real WCAG ratios from the colours *read out of the shipped XAML*, so editing the window moves
+  the test; a copied constant would keep passing after the screen changed.
+
+## A check narrower than the rule it checks is worse than no check (2026-07-30)
+
+The English-only rule covers source **and Markdown** — it says so explicitly. The verification grep
+added to enforce it globbed `*.cs,*.xaml`. So for weeks the command reported *clean* while the
+companions eroded to roughly **310 lines** of Chinese UI labels across `Architecture.md`, `context.md`,
+`TODO.md` and `RefinedTODO.md`. Every run of the check made the situation look better than it was:
+"unchecked" is honest, "checked and clean" is a false negative that stops anyone looking. **Scope the
+verification to the rule, not to the files you were thinking about when you wrote it.**
+
+Three things learned doing the sweep, all of which cost a wrong attempt first:
+
+- **It has to be a whitelist of known labels, never a CJK strip.** A bare-token pass produced
+  half-English wreckage — `Order.Fields.FinalBalanceShort结清` — because short tokens (`定金`, `尾款`,
+  `税率`) are substrings of compounds the list did not enumerate. Longest-first ordering is necessary
+  but not sufficient; the map must be *complete* over its own tokens.
+- **Most of the hits were sanctioned, and a regex cannot tell.** Sort every hit by what the Chinese is
+  DOING: naming a UI surface (violation → use the key), naming a string-table VALUE (the
+  `` `Key` (value) `` form, a rename record like `已付定金→已收定金`, a line of rendered output → keep,
+  it *is* the data), or quoting the user verbatim (keep). Preview the transformation on real lines
+  before applying it — that is what surfaced the value-rename records, which a blind pass would have
+  destroyed, taking the meaning with them.
+- **Verbatim quotes are not only on `- Ask:` lines.** They turn up mid-Notes and in `- Why:` too, so
+  protect by looking for the quote character rather than by line prefix. And a region-based guard needs
+  a terminator that cannot fail to arrive: an unclosed quote left mine protecting the rest of the file.
+
+Mechanics worth reusing: the mapping lives in a **UTF-8 JSON side-file** read with an explicit
+encoding, because PowerShell 5.1 decodes a BOM-less `.ps1` as ANSI and would mojibake any non-ASCII
+literal typed into the script (see the encoding note earlier in this file). Back the docs up first —
+this rewrites files the project reads every session.
 
 ## A refused save needs three surfaces, and one code path (2026-07-30)
 

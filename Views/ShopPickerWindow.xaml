@@ -4,7 +4,7 @@
         xmlns:loc="clr-namespace:CameywareOrder.Localization"
         xmlns:anim="clr-namespace:CameywareOrder.Animations"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Title], Mode=OneWay}"
-        Height="640" Width="820"
+        Height="740" Width="1000"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
@@ -164,11 +164,22 @@
                 Padding="28,14" Margin="0,20,0,0">
             <Grid>
                 <!-- Administrator work sits on the left, away from the confirm button, so the
-                     rightmost control is always "open the shop I picked". -->
-                <Button x:Name="ManageUsersButton" HorizontalAlignment="Left"
-                       
-                        Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.UserManagement], Mode=OneWay}"
-                        Click="OnManageUsersClick"/>
+                     rightmost control is always "open the shop I picked". The window was widened to
+                     1000px to hold this group without it crowding the confirm buttons. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <Button x:Name="ManageUsersButton" Margin="0,0,10,0"
+                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.UserManagement], Mode=OneWay}"
+                            Click="OnManageUsersClick"/>
+                    <Button x:Name="StoreManagementButton" Margin="0,0,10,0"
+                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Title], Mode=OneWay}"
+                            Click="OnStoreManagementClick"/>
+                    <!-- One click, no form: somewhere to start working immediately. Beside the admin
+                         tools rather than beside "Create shop", because it is a shortcut past the
+                         setup form rather than another way into it. -->
+                    <Button x:Name="DemoStoreButton"
+                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Demo.Create], Mode=OneWay}"
+                            Click="OnCreateDemoClick"/>
+                </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button x:Name="CreateButton" Margin="0,0,10,0"

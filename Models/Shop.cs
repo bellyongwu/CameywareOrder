@@ -100,6 +100,32 @@ public class Shop
     public string? LocationCode { get; set; }
 
     /// <summary>
+    /// When this shop was delisted. Purely a record of WHEN — <see cref="IsArchived"/> is what decides
+    /// whether it is in service, and null here is expected on any shop delisted before this column
+    /// existed.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately NOT a second flag. <see cref="IsArchived"/> already means "hidden from the picker
+    /// without deleting its orders" and is already honoured by the startup shop load, the picker and the
+    /// shop-name uniqueness check; adding a parallel <c>DelistedOnUtc is not null</c> test would create
+    /// two answers to one question and no rule about which wins. So the bool stays authoritative and
+    /// this is the audit stamp beside it, in the spirit of <c>ShopMembership.DeactivatedOn</c>: "closed"
+    /// and "closed in March" are different answers and only the second survives being asked next year.
+    ///
+    /// What Store Management added was not the concept — it was the UI. `IsArchived` had shipped with no
+    /// way to set it, which is the "a column nothing ever writes is a landmine" case this project has
+    /// hit before.
+    /// </remarks>
+    public DateTime? DelistedOnUtc { get; set; }
+
+    /// <summary>
+    /// Whether this shop is out of service. Delegates to <see cref="IsArchived"/> so there is exactly
+    /// one authority; the timestamp beside it is a record, not a second opinion.
+    /// </summary>
+    [NotMapped]
+    public bool IsDelisted => IsArchived;
+
+    /// <summary>
     /// The language codes this shop has installed, as a JSON array — the set its managers and staff
     /// may switch between. A branch serving a bilingual neighbourhood installs two; one that does
     /// not installs one and its people never see a language toggle at all.

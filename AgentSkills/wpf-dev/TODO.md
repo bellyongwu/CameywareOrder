@@ -17,6 +17,97 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-30 03:10 — Store Management: delete / delist / download / restore / reinitialize  [DONE]
+- Ask: "UI Improve: Enlarge Select Shop panel. Make sure it has enough room for more buttons listed
+  below for admin rights. Add new feature for admin right called Store Management, it will requires a
+  new panel: admin user is now able to perform the following operations in Store Management stage: 1.
+  In the list of shops, can perform Delete the shop action. 2. admin user can perform reinitalize the
+  whole application. Since both actions are really sensitive, only admin can do the operations. to
+  prevent unawared flaw action, you need to pop up another panel. in the panel, pops up a message to
+  ask user type a random created text length of 10, if the user type them all correctly, it means a
+  dedicated action. But still, the pop up can provide two buttons, save the store records and remove
+  the store now. buttons will be disable if you don't type the above text correctly. in the Store
+  Management you will have the right to restore a single store or multiple stores or even whole stores.
+  ctrl+left click can select multiple stores. Use the main theme UI to do this. -In selected stores,
+  you can try delete all or download all data -panel provides the restore options for stores.
+  -deletion on stores will have validations prevent user unnoticed action."
+- Follow-up ask: "Also add a feature to delist/activate the stores for admin to perform"
+- Decisions taken from the user before building, because both change the design materially:
+  - **Restore source = user-picked files.** "Save the store records" opens Save-As; Restore opens a
+    file dialog. Nothing is archived inside the app, so the panel does not list restorable stores.
+  - **Reinitialize keeps accounts.** Shops, orders and per-shop files go; `credentials.json`, the
+    language preference and global settings survive, so nobody is locked out and the admin lands on
+    the create-first-shop path.
+- Plan:
+  - [ ] `Shop.DelistedOnUtc` (+ `IsDelisted`), mapped, with a runtime column guard and CREATE TABLE
+        entry. Records WHEN, like `ShopMembership.DeactivatedOn` already does
+  - [ ] `Services/ShopArchive` — export selected shops (rows + per-shop files + attached documents) to
+        one zip; `TryRead` validates with no side effects; `Import` restores, keyed on `PublicId`
+  - [ ] `Services/ShopAdministration` — the one place the destructive rules live: delete, delist,
+        activate, reinitialize. Cross-shop, so it must `IgnoreQueryFilters`
+  - [ ] `Views/ConfirmDestructiveWindow` — random 10-character challenge; the two buttons stay
+        disabled until it matches exactly
+  - [ ] `Views/StoreManagementWindow` — `SelectionMode="Extended"` (ctrl/shift click), on the shared
+        `ManagementStyles` so it matches Select Shop / User Management / Store Members
+  - [x] `ShopPickerWindow` enlarged (820×640 → 1000×740) + Store Management and Create-demo-store
+        buttons. Delisted shops needed NO picker change — see the first note below
+  - [x] Localization ×5 (616 keys, exact parity); `scratchpad/storecheck` (50 assertions); docs
+- Later ask, same turn: "one click on the Select store panel, to create a demo store … saved in the
+  default" → `ShopAdministration.CreateDemoShop`, built from the shipped presets (home jurisdiction,
+  its currency, tax rules seeded from its standard rate, names in every installed language). No orders
+  fabricated: inventing customer records inside a real installation is a different thing from giving
+  somebody somewhere to start.
+- Notes — four findings, each of which cost a wrong first move:
+  1. **`Shop.IsArchived` already existed and already meant "delisted"** ("hidden from the shop picker
+     without deleting its orders"), already honoured by the startup shop load, the picker and the
+     shop-name uniqueness check — with no UI anywhere to set it. I designed a parallel `DelistedOnUtc`
+     flag before grepping for prior art. Corrected: the bool stays authoritative, `IsDelisted`
+     delegates to it, and `DelistedOnUtc` is the audit stamp beside it. Delisting therefore works
+     everywhere without touching those three call sites.
+  2. **A restore would have silently re-parented every order.** `AppDbContext.StampNewOrdersWithShop`
+     overwrites `ShopId`, `CurrencyType` and `PricesIncludeTax` on every ADDED order from whichever
+     shop is open — right for every other call site, catastrophic for an importer that already knows
+     all three. Added `SuppressShopStamping()`, an explicit `using` scope, deliberately awkward.
+  3. **Deletion had to reach outside the database.** Per-shop files are named after `PublicId`, so a
+     file outliving its shop eventually hands a NEW shop an old one's terms or branding.
+     `MeasurementTermsService.FilePathFor` / `ReceiptBrandingStore.DirectoryFor` were exposed from the
+     services that own those naming rules rather than the rules being copied.
+  4. **The harness gap I flagged is exactly where the bug landed.** Shipped with no coverage; the first
+     export threw `System.Text.Json.JsonException: a possible object cycle was detected`, because EF's
+     relationship fix-up populates `OrderItem.Order` and nothing had ever serialized an order before.
+- Follow-up bugs reported by the user and fixed:
+  - JSON cycle → `[JsonIgnore]` on `OrderItem.Order`, at the source rather than
+    `ReferenceHandler.IgnoreCycles` at the one call site that hit it.
+  - Challenge phrase uncopyable and low-contrast → own template (the theme's `IsReadOnly` trigger was
+    repainting the chrome; see `context.md`), explicit Copy button, visible selection brush.
+- Final: build 0 warnings / 0 errors, no Sonar findings, suite **1377 passed / 0 failed across 23
+  harnesses**, 616 keys × 5 exact parity. Live DB backed up to `orders.db.bak-preStoreManagement`.
+
+### 2026-07-30 02:40 — Chinese-comment sweep: the check was narrower than the rule  [DONE]
+- Ask: "Checking if there is Chinese comments inside the project. if yes, just replace with Chinese
+  comments" — then "Just replace with english" / "this is a typo".
+- Finding: `.cs`/`.xaml` were clean. The **companions were not** — ~310 lines of Chinese UI labels
+  across `Architecture.md`, `context.md`, `TODO.md`, `RefinedTODO.md`. Root cause: the rule covers
+  Markdown explicitly, but the verification grep in `SKILL.md` globbed only `*.cs,*.xaml`, so it
+  reported clean on every run. See `context.md`, "a check narrower than the rule it checks".
+- Plan:
+  - [x] Widen the sweep to `*.md,*.json,*.csproj,*.ps1`; make the character class explicit (a first
+        attempt including curly quotes matched every fr-FR line, since French `l’` is U+2019)
+  - [x] Resolve each Chinese label to its key + English value FROM the language files rather than by
+        hand, and drive the rewrite from a UTF-8 JSON side-file (PowerShell 5.1 mojibakes non-ASCII
+        literals in a BOM-less `.ps1`)
+  - [x] Preview before applying — which is what exposed that a bare-token pass mangles compounds, and
+        that many hits are value-RENAME records, i.e. the sanctioned case
+  - [x] Three passes: label map (132 lines), then context-qualified phrases for `context.md` (16) and
+        `TODO.md` (24); the rest hand-edited
+  - [x] `SKILL.md` grep widened + a paragraph on how to triage hits; `SkillUpdates.md` entry
+- Notes: docs backed up to `scratchpad/cjksweep/backup` first. Remaining CJK is all **sanctioned** by
+  `SKILL.md`'s three exceptions, verified rather than assumed: every one of the 29 UI labels still in
+  `TODO.md` sits inside a verbatim `- Ask:` quote (checked by looking for the quote character, not the
+  line prefix); the rest is punctuation being described, the `` `Key` (value) `` form, rename records,
+  rendered-output examples, shop-name values, and the name-split example. Source: 0. No code touched,
+  so no build or suite impact.
+
 ### 2026-07-30 01:20 — One validation path: banner + inline message + popup  [DONE]
 - Ask: ">Improve user experience. When new order / modify existing user, the missing of customer name
   and mobile number should flag red error message on the top section. - Now modualrize the error
@@ -271,7 +362,7 @@ Entry format:
     Left untouched when nobody is signed in, so a save can never blank a real name.
   - Printed via `AddReceiptInfoLineIfHasValue`, so an order from before the column simply omits
     the line — a label with nothing beside it reads as a printing fault, not as an absence.
-  - Label `Order.Fields.LastModifiedBy` in all five languages ("Served by" / 经手人 / Servi par /
+  - Label `Order.Fields.LastModifiedBy` in all five languages ("Served by" / Order.Fields.LastModifiedBy / Servi par /
     Atendido por / 担当者).
   - Follow-up in the same turn ("app的订单详情里也要显示出来"): shown in the **order detail
     panel** too, directly under `LastModifiedDate` — the two answer one question together.
@@ -490,7 +581,7 @@ Entry format:
   looking at — perfectly clear while writing, unreadable to half the people who will
   maintain the file. It only becomes visible in aggregate, which is why it needed a sweep
   rather than review.
-- Rewritten, not deleted. A comment saying "drives the 定制服务 list flag" carries real
+- Rewritten, not deleted. A comment saying "drives the Custom Service list flag" carries real
   information; the fix is to name the thing by its **key** (`Order.Fields.CustomMadeFlag`),
   which is what the skill asked for all along and is strictly better than either label —
   keys are greppable and survive a re-wording. Navigation paths took the English labels
@@ -657,7 +748,7 @@ Entry format:
 - **The bound shop is cleared** on the switch. Capabilities would otherwise go on
   resolving against the shop the ADMINISTRATOR had open, which the new user may hold no
   role in. The picker binds one again immediately after.
-- Two routes, because 用户管理 opens from two places:
+- Two routes, because User Management opens from two places:
   - `MainWindow` → `App.SignInAsAsync`, structurally a sign-out that skips the login
     window: main window down first (a capability swap under a live window leaves the
     previous person's chrome on screen), then the shop picker again.
@@ -673,7 +764,7 @@ Entry format:
 - **On "add svg icon":** drawn as WPF `Path` geometry, which IS SVG path syntax. An
   `.svg` file cannot be rendered at runtime — no rasterizer is installed on this machine
   (context.md), which is why `app-icon.svg` exists only as a design source for the `.ico`
-  — and a bitmap would not stay crisp at every DPI. Same technique as the 店铺成员 glyph
+  — and a bitmap would not stay crisp at every DPI. Same technique as the Store Members glyph
   in `MainWindow`.
 - Notes: build 0/0, Sonar 0, suite **731 passed / 0 failed across 17 harnesses**
   (`namecheck` 102, up 15). New: the button's availability (offered / your own account /
@@ -734,7 +825,7 @@ Entry format:
   each column. if the screen cannot hold as much content(overflowed) you can have a
   scroll bar to the right. each record keeps the same height. >if the text is over the
   column width defined. use \"...\""
-- One wrapping `TextBlock` was doing all the damage: the 定制服务 column stacked the
+- One wrapping `TextBlock` was doing all the damage: the Custom Service column stacked the
   garment names under the flag with `TextWrapping="Wrap"`, so a row listing several
   garments was TALLER than its neighbours. That is the one thing a list read by
   scanning down a column cannot afford, and it is invisible in source — the list looks
@@ -1033,7 +1124,7 @@ Entry format:
   who works at two branches has one phone and one mailbox, and per-membership
   storage would let the two disagree. Both nullable, so an existing
   `credentials.json` is already valid — no schema bump, no migration.
-- Editable in TWO places on purpose. 店铺成员 covers people who belong to a shop;
+- Editable in TWO places on purpose. Store Members covers people who belong to a shop;
   `CreateAccount` deliberately makes accounts that belong to none (`test1`,
   `test2` show "No shops assigned"), and the roster cannot reach those at all. So
   User Management gained a matching card backed by a new `UpdateAccountContact`,
@@ -1213,7 +1304,7 @@ Entry format:
   a rebuild. Now `Models/ProductCatalog` + `Services/ProductCatalogService`, modelled on
   `MeasurementTermsService` — one JSON file per shop keyed on `PublicId`, seeded from the shipped
   defaults, with add / rename / remove / reorder / restore-defaults, copied by the new-shop wizard's
-  "copy from an existing shop", and edited through a new `ProductCatalogWindow` (本地配置 → 商品类别,
+  "copy from an existing shop", and edited through a new `ProductCatalogWindow` (Local Configuration → Product Categories,
   gated on `CanConfigureShop`).
   - **The shipped ids are a COMPATIBILITY SURFACE, and that drove the design.** Every order ever
     saved holds one in `OrderItem.ProductName` and every language file has a matching
@@ -1587,7 +1678,7 @@ Entry format:
     codebase: shop names are per language because they are printed and shown on screen, while
     `ReceiptBrandingSettings.TaxRegistrationNumber` is deliberately single-valued because "a
     registration number is the same string whoever is reading it". An address reads differently in
-    中文 and English; a phone number does not.
+    Chinese and English; a phone number does not.
   - NOT auto-injected into the printed receipt. The receipt header/footer is already free rich text
     per language, so a shop that wants its address printed has typed it there — injecting would
     double-print. Left as a follow-up for the user to direct.
@@ -1597,8 +1688,8 @@ Entry format:
 - Ask: "Switch the language toggle section with Local configuration. on the nav bar" /
   "根据当前的主题，再去优化一下主界面右键唤出的tooltip ui"
 - Done:
-  - [x] System bar columns swapped: 本地配置 3→1, language label 1→2, language box 2→3. Order is now
-        greeting · 本地配置 · 语言 · 店铺成员 · 退出. Right margin 14→18 on the menu, because its
+  - [x] System bar columns swapped: Local Configuration 3→1, language label 1→2, language box 2→3. Order is now
+        greeting · Local Configuration · Language · Store Members · Sign Out. Right margin 14→18 on the menu, because its
         neighbour changed from a padded button to a bare text label and 14 read as cramped.
   - [x] **The right-click menu was running on stock Windows chrome — same missing-`BasedOn` fault as
         the login inputs, third occurrence.** `OrderContextMenuStyle` and `OrderMenuItemStyle` in
@@ -1651,25 +1742,25 @@ Entry format:
     `Controls/CalendarSizing.cs` sets it on Loaded/SizeChanged instead, which is before the first
     open, so there is no wrong-width frame. The user's right-align fallback was not needed.
 
-### 2026-07-27 21:55 — Reverted the mirrored menu; swapped 本地配置 and 店铺成员 instead  [DONE]
+### 2026-07-27 21:55 — Reverted the mirrored menu; swapped Local Configuration and Store Members instead  [DONE]
 - Ask: "It doesn't look good. now, lets roll back the original version of the caret right and content
   left. but switching the position for store members and local configuration. that will be better"
 - Done:
-  - [x] `RightAlignedMenuItem` deleted; the 本地配置 menu is back on the shared `ThemedMenuItem` —
+  - [x] `RightAlignedMenuItem` deleted; the Local Configuration menu is back on the shared `ThemedMenuItem` —
         content left, caret right, submenus opening rightward.
-  - [x] 本地配置 moved to column 3 and 店铺成员 to column 4, so the bar reads
-        greeting → 语言 → 本地配置 → 店铺成员 → 退出登录.
+  - [x] Local Configuration moved to column 3 and Store Members to column 4, so the bar reads
+        greeting → Language → Local Configuration → Store Members → Sign Out.
 - Notes: the swap is the better fix and makes the mirrored style unnecessary. A drop-down opens
   down-and-LEFT from its item, so a menu at the extreme right edge fights the window boundary;
   keeping a button to its right gives it room to open normally. Position solved what a mirrored
   template was compensating for.
 
-### 2026-07-27 21:45 — Right-anchored 本地配置 menu  [REVERTED — see the entry above]
+### 2026-07-27 21:45 — Right-anchored Local Configuration menu  [REVERTED — see the entry above]
 - Ask: "UI的一个小问题：现在local configuration 靠右，那么需要把所有选项右对齐，然后expandable icon 要caret left"
 - Done:
   - [x] `RightAlignedMenuItem` in the theme — the mirror of `ThemedMenuItem`: labels right-aligned,
         icon column on the right, expander caret on the LEFT pointing left, submenus opening leftward
-        (`Placement="Left"`). Applied to the 本地配置 item only.
+        (`Placement="Left"`). Applied to the Local Configuration item only.
   - [x] It hands itself down the tree via `ItemContainerStyle="{DynamicResource RightAlignedMenuItem}"`
         — a self-referencing style needs Dynamic, since a StaticResource cannot name the style being
         declared. Without it only the first level of items would mirror.
@@ -1714,16 +1805,16 @@ Entry format:
 ### 2026-07-27 20:55 — System-bar order, records width, balance column, list font  [DONE]
 - Ask: "整体做的很好，有个小问题，balance status改成原有的两倍长最好，然后Hi admin, you are login....这个应该放在最左边，替换local configuration 的位置，然后local configuration 放置再store members button 和signout button 之间。然后整体的records section 把界面宽度提升到70%， balance status改成1.5倍宽度，然后字体改成18号字体。"
 - Done:
-  - [x] System bar reordered: greeting far left, then 语言 → 店铺成员 → 本地配置 → 退出登录. Laid out in
+  - [x] System bar reordered: greeting far left, then Language → Store Members → Local Configuration → Sign Out. Laid out in
         GRID COLUMNS rather than two aligned stacks, so `Grid.Column` sets the visual order and the
-        ~90-line 本地配置 menu block stays where it is in the file instead of being moved.
+        ~90-line Local Configuration menu block stays where it is in the file instead of being moved.
   - [x] Records column 65* → **70***, detail 35* → 30*.
   - [x] Balance-status column 180 → **270 (1.5×)**; record list font 20 → **18**.
 - Notes: the ask names the balance column twice — "两倍长" first, "1.5倍宽度" later. Took the later,
   more specific figure (1.5×) and said so; changing it is one number.
   - The 1600-wide harness screenshot still clipped that column, which reads as "too narrow" but is
     the VIEWPORT, not the column — re-rendered at 2200 (the user runs maximized at 2560) and both
-    余额状态 and 定制服务 render in full. Worth remembering before "fixing" a width from a screenshot
+    Order.Fields.BalanceStatus and Custom Service render in full. Worth remembering before "fixing" a width from a screenshot
     taken at the wrong size.
 
 ### 2026-07-27 20:10 — Seeded garments bug, dropdown/menu theme, navigation split  [DONE]
@@ -1732,21 +1823,21 @@ Entry format:
   `CustomMadeMeasurementReader.GetGarmentNames` both read `record.Garments` — the garment-driven model.
   The seeder only filled the LEGACY `JacketLengthCm` / `ShirtChestCm` fields, which migrate into
   `Garments` only when the record is re-saved through the editor. So every seeded custom-made order
-  reports 无. My bug, in the mock data, not in the flag.
+  reports `CustomMade.Flag.No`. My bug, in the mock data, not in the flag.
 - Plan:
   - [ ] Repair pass over every seeded record: build `Garments` (jacket / shirt / dress / qipao by age
         type) with real term ids, so the flag and the bracketed names resolve.
   - [ ] ComboBox: full themed template this time, handling BOTH `IsEditable` and `DisplayMemberPath`
         (the earlier attempt was reverted for exactly those two — RelativeSource instead of
         TemplateBinding is the fix for the face).
-  - [ ] Theme the 本地配置 `Menu` / `MenuItem` / `ContextMenu` / `Separator`.
-  - [ ] Split the navigation: order actions (新增/编辑/删除/刷新) move into the orders panel's own
-        action bar; the toolbar keeps 本地配置 plus the system block, reordered to
-        greeting → language → 店铺成员 → 退出登录, with the `admin（管理员）` chip replaced by
+  - [ ] Theme the Local Configuration `Menu` / `MenuItem` / `ContextMenu` / `Separator`.
+  - [ ] Split the navigation: order actions (Add / Edit / Delete / Refresh) move into the orders panel's own
+        action bar; the toolbar keeps Local Configuration plus the system block, reordered to
+        greeting → language → Store Members → Sign Out, with the `admin（管理员）` chip replaced by
         "Hi, {name}, you are logged in as {role}".
 - Done:
   - [x] Every seeded custom-made record repaired in place — `Garments` built from the predefined
-        garment/term ids (menswear vs womenswear by age type). 13 + 17 + 7 orders fixed; the 定制服务
+        garment/term ids (menswear vs womenswear by age type). 13 + 17 + 7 orders fixed; the Custom Service
         column now renders **有（外套、衬衫）/ YES (Jacket, Shirt)** as designed, verified by resolving
         the names through `CustomMadeMeasurementReader` with the string table loaded.
   - [x] ComboBox fully themed at last. **The bit that had defeated two attempts:** a ComboBox does
@@ -1759,11 +1850,11 @@ Entry format:
   - [x] `Menu` / `MenuItem` / `ContextMenu` / `Separator` themed: one MenuItem template covering all
         four roles, with the submenu arrow and popup placement driven by `Role` triggers.
   - [x] Navigation split. The ToolBar is gone — it cannot right-align content and adds an overflow
-        chevron. A `Border` + `Grid` now holds 本地配置 on the left and, on the right in the order asked
-        for: greeting → language → 店铺成员 → 退出登录. The `admin（管理员）` chip is replaced by
+        chevron. A `Border` + `Grid` now holds Local Configuration on the left and, on the right in the order asked
+        for: greeting → language → Store Members → Sign Out. The `admin（管理员）` chip is replaced by
         `Main.Greeting` ("你好 {0}，您当前的身份是{1}。"), which greets by DISPLAY NAME where the account
         has one — an account name is what you sign in with, not what anybody calls you.
-  - [x] 新增/编辑/删除/刷新 moved into a new records-panel action bar (white card, 16,13 padding, count
+  - [x] Add / Edit / Delete / Refresh moved into a new records-panel action bar (white card, 16,13 padding, count
         badge bound to a new `MainViewModel.FilteredCount`). Order-column rows renumbered 0-3 in the
         same edit as the new `RowDefinition` — per the SKILL gotcha, an out-of-range `Grid.Row` is
         clamped silently rather than reported.
@@ -1778,7 +1869,7 @@ Entry format:
 ### 2026-07-27 19:05 — App-wide theme, receipt layout, mock data  [DONE]
 - Ask: "目前来说改动很不错。下一步: >Redesign 所有的 Theme, 根据之前所用的比如，theme颜色， button那些，需要重新设计 -main application UI -Order (edit/view) -店铺设置UI（这个还可以，但是主色没有添加）-量身项目设置的theme也同步一下 -货币设置可以从navigation去掉了，现在已经在店铺设置里有了，多余了 >订单打印的PDF 文件结构和UI也优化一下，注意留好spacing和padding 和margin。>最后给当前的db添加一些mockingdata，再添加一个店，并且给 每个店添加30 到50个records不等。"
 - Reading of the ask:
-  - The management screens built earlier (选择店铺 / 用户管理 / 店铺成员) already carry the target design
+  - The management screens built earlier (Select Shop / User Management / Store Members) already carry the target design
     language — indigo #4F46E5 → violet #7C3AED, white cards on #F4F5F9, rounded buttons. "Redesign 所有的
     Theme" means bringing the REST of the app onto it, not inventing a third look.
   - The legacy palette is dominated by #2980B9 / #2C3E50 (27 + 11 uses) plus a spread of near-identical
@@ -1789,8 +1880,8 @@ Entry format:
         window inherits. Fold `Views/ManagementStyles.xaml` into it.
   - [ ] Map the legacy chrome colours onto the palette across MainWindow / OrderEditWindow /
         ShopSetupWindow / MeasurementTermsWindow / CustomMadeServiceWindow / ReceiptBrandingWindow.
-  - [ ] 店铺设置 gains the gradient header the other screens have.
-  - [ ] Drop 货币设置 from the 本地配置 menu (superseded by 店铺设置) and prune what it orphans.
+  - [ ] Shop Settings gains the gradient header the other screens have.
+  - [ ] Drop Currency Setup from the Local Configuration menu (superseded by Shop Settings) and prune what it orphans.
   - [ ] Rework the printed receipt's structure and spacing.
   - [ ] Seed one more shop and 30–50 orders per shop into the live database (back it up first).
   - [ ] Both gates green; build clean; every window opened and screenshotted.
@@ -1806,7 +1897,7 @@ Entry format:
         CJK). #2980B9/#2C3E50 → the indigo primary, the six near-identical greys → three, the eight
         near-identical borders → one.
   - [x] MainWindow: gradient header band, indigo list headers with a readable sort glyph, primary-tinted
-        row selection, white toolbar and status bar. 店铺设置 gained the same gradient header.
+        row selection, white toolbar and status bar. Shop Settings gained the same gradient header.
   - [x] **DatePicker localized**: the stock "Select a date" watermark comes from PresentationFramework
         and stays English whatever the app language is, so `DatePickerTextBox` is re-templated with a
         `Common.SelectDate` watermark; each window carrying a picker sets `FrameworkElement.Language`
@@ -1814,7 +1905,7 @@ Entry format:
   - [x] **Time picker redesigned**: `TimePickerComboBox` — clock glyph, primary tint, primary drop-down
         with a coloured shadow. `TimeOption.ToString()` was needed because a custom ComboBox face
         renders the ITEM rather than resolving `DisplayMemberPath`.
-  - [x] 货币设置 removed from 本地配置 (it is part of 店铺设置 now); `CurrencySettingWindow` deleted and
+  - [x] Currency Setup removed from Local Configuration (it is part of Shop Settings now); `CurrencySettingWindow` deleted and
         its two orphaned keys pruned. `Toolbar.CurrencySetting` KEPT — the global-settings package
         description still names it.
   - [x] Receipt restructured: customer block and totals block are now padded panels (the totals one
@@ -1850,7 +1941,7 @@ Entry format:
   - [ ] `AuthenticationService`: active-only role resolution, a sign-in failure reason for a fully
         deactivated account, member CRUD scoped to one shop, `CanManageStoreMembers`.
   - [ ] `LoginWindow` reports "account deactivated" distinctly from bad credentials.
-  - [ ] New `Views/StoreMembersWindow` in the same visual language as 用户管理.
+  - [ ] New `Views/StoreMembersWindow` in the same visual language as User Management.
   - [ ] Toolbar icon button on `MainWindow`, gated to manager + administrator.
   - [ ] `UserManagementWindow` updated to the membership model, preserving per-shop metadata on save.
   - [ ] Localization keys in both blocks; both gates green; build clean; verify by execution.
@@ -1872,7 +1963,7 @@ Entry format:
         with role + shift and an Active/Deactivated badge, and an editor for person (name, birthday),
         role in THIS shop (manager and/or staff), activation, start date, read-only delisting stamp
         and a 15-minute shift picker. Add-member creates the account and its membership together.
-        删除账户 is administrator-only; a manager's tool for "they left" is deactivation, which records
+        Delete Account is administrator-only; a manager's tool for "they left" is deactivation, which records
         when.
   - [x] `Views/ManagementStyles.xaml` (NEW): the shared card/button/input language, merged by all
         three management windows. Extracted the moment a third window needed it.
@@ -1889,7 +1980,7 @@ Entry format:
     (manager cannot deactivate themselves in the open shop, cannot delete accounts, cannot reset the
     password of someone who also works in a shop they do not run). Live file restored byte-identical.
   - `uicheck`: 16 window opens across both languages, **0 binding errors**, screenshots reviewed.
-    Two real bugs were found from the screenshots and fixed: the footer 保存修改/删除 stayed enabled
+    Two real bugs were found from the screenshots and fixed: the footer Save Changes / Delete stayed enabled
     while the add form was open (they still pointed at the previously selected row — in BOTH windows).
 - Notes: build **0 warnings / 0 errors**; full Sonar pass **zero findings**, no suppressions added.
   - **The live `credentials.json` was already at version 2** when this work started — the app had been
@@ -1916,8 +2007,8 @@ Entry format:
   - [ ] `AuthenticationService` v2: per-shop assignments keyed on `Shop.PublicId`, `IsAdministrator`, account
         CRUD, a seeded-account marker so a deleted account stays deleted, legacy-role migration.
   - [ ] Capability API resolved against the ACTIVE shop, bound in `App.ApplyActiveShop`.
-  - [ ] Shop lists filtered by assignment (startup path + picker + 切换店铺).
-  - [ ] `ShopPickerWindow` redesigned; 用户管理 launches from it (admin only).
+  - [ ] Shop lists filtered by assignment (startup path + picker + Switch Shop).
+  - [ ] `ShopPickerWindow` redesigned; User Management launches from it (admin only).
   - [ ] New `Views/UserManagementWindow` — user list, add/delete, password reset, shop×role matrix.
   - [ ] `MainWindow` chrome gated by role and RE-APPLIED on every shop switch; status-bar database path hidden
         for non-administrators.
@@ -1941,14 +2032,14 @@ Entry format:
         new delete button useless. `admin` is exempt — an installation with no administrator can never
         be administered again.
   - [x] `ShopPickerWindow` redesigned: gradient header with the signed-in chip, shop CARDS with an
-        avatar tile, per-shop role badge and hover/selected accent, and a footer carrying 用户管理
+        avatar tile, per-shop role badge and hover/selected accent, and a footer carrying User Management
         (administrators only). Two distinct empty states — "no shops exist" vs "none is yours".
-  - [x] NEW `Views/UserManagementWindow`: account list (search + avatar + role summary + 已锁定 badge),
+  - [x] NEW `Views/UserManagementWindow`: account list (search + avatar + role summary + Locked badge),
         create panel, password reset, and a **shop × role matrix of checkboxes** — which is what makes
         "manager AND staff in the same shop" expressible rather than an either/or dropdown.
         Archived shops still appear, or saving an account would silently strip an assignment to one.
   - [x] `MainWindow.ApplyRolePermissions` extended and, critically, **re-run on `ShopContext.ShopChanged`**
-        (and after 用户管理 closes). It was construction-only, so a manager who switched into a shop where
+        (and after User Management closes). It was construction-only, so a manager who switched into a shop where
         they are staff kept the manager menus.
   - [x] Defence-in-depth guards on all 14 gated handlers; status-bar database path hidden with the
         data tools it describes.
@@ -1978,13 +2069,13 @@ Entry format:
 ### 2026-07-27 16:40 — Store-scoped payment/tax rules, split card types, receipt number format, GST/HST  [DONE]
 - Ask: "Implement new features: 1.Apply new rules for Stores > List all types of payment types for the charging tax. basic diagrams like below / TAX free / Tax Rate / CASH (Check mark) / Card / Debit Card (Check mark) (inputfield - a changable field) / Credit Card (Check mark) (inputfield - a changable field) / Etransfer (Check mark) / You can save this settings in the global setting for the shop respectively. 2. Beautify the above UI, make it morden look. easy to access. 3. Divide Card type into two separate groups, Debit and credit card. 4. Apply the rules for the payment areas, and locking the tax percentage area - Making the inputbox in text lable, bolded. > the change on the global tax percentage charging rules will reflect globally in store's scope > By default Cash + Etransfer are 0%, any card type is 13% 5. Add Rules for Store's Receipt format. start with Prefix, start with number or something you can think the most commonly used for your self. 6. add a configuration field for printing store's GST/HST input for tracking receipt's tax slip. In any printing field, place it within [Header & footer editor], just under the Header Area."
 - Decisions taken with the user before starting (both affect existing financial data):
-  - **Legacy `PaymentMethod.Card` displays as Debit Card.** The old label was literally 银行卡 (Visa/借记卡) / "Card (Visa/Debit)", so Debit is what the shop was recording. The enum value is KEPT so un-re-saved rows still resolve a name everywhere.
+  - **Legacy `PaymentMethod.Card` displays as Debit Card.** The old label was literally the debit-card one, so Debit is what the shop was recording. The enum value is KEPT so un-re-saved rows still resolve a name everywhere.
   - **A store rate change re-prices editable orders only.** An order that can still be edited picks up the current store rate when opened; a read-only one (Completed/Shipped/Cancelled/Returned) keeps the rate it was actually charged, so a printed receipt can never disagree with the screen.
 - Plan:
   - [ ] `PaymentMethod`: add DebitCard/CreditCard; keep Card as the legacy value.
   - [ ] Per-shop `PaymentTaxRules` (taxable + rate per method) and receipt-number format on `Shop`, with runtime column guards.
   - [ ] `PaymentTaxRuleService` + `OrderNumberFormatter`, bound to the active shop like `CurrencySettingService`.
-  - [ ] New `ShopSettingsWindow` (payment/tax matrix + receipt format) off the 本地配置 menu.
+  - [ ] New `ShopSettingsWindow` (payment/tax matrix + receipt format) off the Local Configuration menu.
   - [ ] `OrderEditWindow`: Debit/Credit radios everywhere, tax rate becomes a locked bold label driven by the rules.
   - [ ] GST/HST number in the header/footer editor, printed under the receipt header.
   - [ ] Localization keys in both blocks; build clean.
@@ -2093,7 +2184,7 @@ Entry format:
 
 ### 2026-07-26 20:30 — Multi-shop + login (scalability)  [IN PROGRESS — Phase 0 of 6 DONE]
 - Ask: "Lets scalable the Whole application" — add a login screen (roles Admin/Manager/Staff later, admin/admin for now, no complexity rules); after login the admin picks an existing shop or creates one; the current data becomes "Shanghai LeeYonge Bespoke"; a new shop collects name, preferred language, currency and measurement-terms setup; bilingual for now, multi-language later; role-gated behaviour left blank.
-- Approved plan: `C:\Users\123\.claude\plans\crispy-wandering-moler.md`. Decisions taken with the user: ONE SHARED DATABASE with a `ShopId` column (not per-shop folders); orders always filtered to the open shop, no cross-shop view yet; switch shops via a 本地配置 menu item without re-login; global language for login, per-shop language once open; wizard seeds defaults or copies another shop; the standalone language picker is dropped so startup is login → shop picker; `credentials.json` holds a LIST of accounts from day one.
+- Approved plan: `C:\Users\123\.claude\plans\crispy-wandering-moler.md`. Decisions taken with the user: ONE SHARED DATABASE with a `ShopId` column (not per-shop folders); orders always filtered to the open shop, no cross-shop view yet; switch shops via a Local Configuration menu item without re-login; global language for login, per-shop language once open; wizard seeds defaults or copies another shop; the standalone language picker is dropped so startup is login → shop picker; `credentials.json` holds a LIST of accounts from day one.
 - A design review found five defects in the approved plan before any feature code was written. Folded in: the shop name must be LOCALIZED (`Main.HeaderTitle` is both 上海丽扬高级定制 and "Shanghai LeeYonge Bespoke" — a single string regresses the zh header and printed receipts); applying a shop's language would overwrite the global preference via the `LanguageChanged` handler; `ShopId` must be stamped centrally in `SaveChangesAsync` because `CopyOrderAsync` uses an explicit property list and would silently drop it; login/picker cancel would leave an invisible process under `OnExplicitShutdown`; and a zero-shops install needs its own path.
 
 #### Phase 0 — foundation fix  [DONE]
@@ -2165,7 +2256,7 @@ Entry format:
 3. `ShopContext` + shop-scoped `CurrencySettingService` / `MeasurementTermsService` / `ReceiptBrandingStore`, each with the `Reload()` they lack; localized shop-name resolver into the header and receipt title.
 4. Filtering: EF global query filter + central `SaveChangesAsync` stamping, `MainViewModel`, Copy Order, and the six unguarded GraphQL primitives (`[GraphQLIgnore]` on `Order.ShopId`).
 5. Auth: `UserRole`, `AuthenticationService` (PBKDF2, list of accounts), `LoginWindow` replacing the language picker; cancel paths must `Shutdown()`.
-6. Shop UI: picker, new-shop wizard (creates the row BEFORE "Configure now" so the terms editor targets the new shop), 切换店铺 menu item + in-place reload.
+6. Shop UI: picker, new-shop wizard (creates the row BEFORE "Configure now" so the terms editor targets the new shop), Switch Shop menu item + in-place reload.
 7. Localization keys, orphan sweep for the removed `LanguageSelection.*`, docs.
 
 ## Completed
@@ -2237,10 +2328,10 @@ Entry format:
   one shared database and in-app shop switching, two instances is plausibly something the user
   wants; refusing the second launch is a bigger behaviour change than moving a port nobody reads.
 
-### 2026-07-27 11:36 — Left-align the 定制服务 column content  [DONE]
+### 2026-07-27 11:36 — Left-align the Custom Service column content  [DONE]
 - Ask: "go over the project, and do a minor update on 定制服务 on the main application, make the content left aligned."
 - Done:
-  - [x] `MainWindow.xaml`, the `Order.Fields.CustomMadeFlag` column cell template: the 有/无 flag `TextBlock` and the bracketed garment-names `TextBlock` both moved from `HorizontalAlignment="Center" TextAlignment="Center"` to `Left`.
+  - [x] `MainWindow.xaml`, the `Order.Fields.CustomMadeFlag` column cell template: the `CustomMade.Flag.Yes`/`.No` flag `TextBlock` and the bracketed garment-names `TextBlock` both moved from `HorizontalAlignment="Center" TextAlignment="Center"` to `Left`.
   - [x] The wrapping `StackPanel` went `HorizontalAlignment="Center"` → `"Stretch"`. Needed, not incidental: a centered panel measures to its content, so left-aligning the children inside it would left-align them against the *text block*, not the column, and the whole group would still sit centered in the cell. Stretch makes the panel fill the column width, which also keeps `TextWrapping="Wrap"` breaking the garment names at the full 170px column rather than at the widest line.
 - Notes: presentation-only — no converter, model, schema or string-table change; the column header stays as it was. Build succeeded, 0 warnings / 0 errors.
 
@@ -2348,36 +2439,36 @@ Entry format:
   - `Order.Subtotal` / `TaxRate` / `Downpayment` / `DownpaymentMethod` / `FinalBalanceMethod` — legacy aggregates that DO still participate, as fallbacks for pre-per-section orders (`AlterationTaxRate ?? TaxRate`). Keep.
 - Notes: build succeeded 0 warnings / 0 errors. Skill-side changes from the same request are logged in `SkillUpdates.md`, not here.
 
-### 2026-07-26 16:30 — 全部服务总金额: confirmed-receipts only, item-driven clear-all, aligned breakdown  [DONE]
+### 2026-07-26 16:30 — Order.Fields.AllServicesTotalAmount: confirmed-receipts only, item-driven clear-all, aligned breakdown  [DONE]
 - Ask: "1. 实收定金和实收尾款一定要等相应的checkbox点击完毕之后才能执行计算。2. 当结清所有尾款的时候，对每个服务都要执行定金已收和尾款结清（没有 order item 不参与运算；有 item 但没选支付方式则默认现金；有 item 但价格为 0 仍参与运算，标注价格有误并提示用户）。3. 以上 order item 规则也要体现在 breakdown。4. breakdown 左对齐，label 与 全部服务总金额 同列，价钱在价钱列。"
 - Done:
   - [x] **(1)** `Models/Order.cs` `ReceivedDownpayment` now sums through `SectionReceivedDeposit(money, XxxDownpaymentCompleted)` — a deposit only counts once its checkbox is ticked. `OrderEditWindow.RefreshPaymentSummary` mirrors it via its own `SectionReceivedDeposit(money, controls)`. 实收尾款 was already gated on `BalanceClearedCheck`, left as-is. Changed the MODEL too, not just the editor, so the saved order reports the same figure (SKILL §4).
   - [x] **(2)** `PaymentSectionControls` gained `HasItems` / `SectionTotal` / `ServiceNameKey` (Funcs + key set in `InitializePaymentSectionControls`) and a derived `HasMissingPrice`. "Has items" = custom-made records exist / clothing rows exist / **for Alterations, a non-empty price box** (it has no item list of its own — assumption stated to the user). `ApplyClearAllToSection` rewritten to take the control group: skips item-less sections, defaults a null deposit method to Cash, ticks **`DownCompletedCheck` as well as** `BalanceClearedCheck`, and treats an explicit "None" deposit as "nothing to confirm" (final method falls back to Cash). `WarnAboutUnpricedServices` shows one non-blocking `MessageBox` listing services with items but no charge.
   - [x] **(3)** `AddServiceTotalDetail` now gates on `HasItems()` instead of `total > 0`, so a zero-priced service is listed rather than dropped — flagged with `Order.Fields.ServiceTotalUnpriced` (（价格有误）) and drawn in amber (`UnpricedLineBrush`).
-  - [x] **(4)** Summary `Grid` got `Grid.IsSharedSizeScope="True"` and its label column `SharedSizeGroup="SummaryLabel"`; the breakdown panel now spans columns 0–1 and each line is built by `BuildBreakdownRow` as its own 2-column `Grid` joining that shared-size group. Labels line up under 全部服务总金额, amounts under its figure.
+  - [x] **(4)** Summary `Grid` got `Grid.IsSharedSizeScope="True"` and its label column `SharedSizeGroup="SummaryLabel"`; the breakdown panel now spans columns 0–1 and each line is built by `BuildBreakdownRow` as its own 2-column `Grid` joining that shared-size group. Labels line up under Order.Fields.AllServicesTotalAmount, amounts under its figure.
   - [x] Knock-on fix: `IsOrderBalanceCleared` gated on `_totalAmount <= 0m`, so an order made only of zero-priced items could never be cleared — `RefreshPaymentSummary`'s `ClearAllBalancesCheck.IsChecked = cleared` would have sprung the tick straight back off, defeating rule 2's third bullet. Now gated on "no section has items".
   - [x] `Languages.xml` (zh-CN + en-US): `Order.Fields.ServiceTotalUnpriced`, `OrderEdit.Warn.UnpricedServices`; `Order.Fields.ServiceTotalLine`/`LineNoDetail` reshaped to label-only ({2} amount placeholder dropped) now that the amount is its own column.
-- Notes: build succeeded 0 warnings / 0 errors. Deliberate decisions reported to the user: (a) unticking 结清所有尾款 clears the balance ticks but leaves 已收定金 set — a received deposit is a fact, and `ClearAllBalancesCheck` is also driven by derived state, so reverting it would silently wipe manual ticks; (b) **known limitation** — `Order.IsBalanceCleared` still gates on `TotalAmount <= 0m` and `ApplyPaymentFields` persists a zero-total section as absent, so an order whose services are ALL zero-priced still reads Outstanding once saved. Fixing that reaches into `XxxAddedToReceipt` and the printed receipt, well beyond this ask.
+- Notes: build succeeded 0 warnings / 0 errors. Deliberate decisions reported to the user: (a) unticking OrderEdit.ClearAllBalances clears the balance ticks but leaves 已收定金 set — a received deposit is a fact, and `ClearAllBalancesCheck` is also driven by derived state, so reverting it would silently wipe manual ticks; (b) **known limitation** — `Order.IsBalanceCleared` still gates on `TotalAmount <= 0m` and `ApplyPaymentFields` persists a zero-total section as absent, so an order whose services are ALL zero-priced still reads Outstanding once saved. Fixing that reaches into `XxxAddedToReceipt` and the printed receipt, well beyond this ask.
 
-### 2026-07-26 16:00 — Small-print service breakdown under 全部服务总金额  [DONE]
+### 2026-07-26 16:00 — Small-print service breakdown under Order.Fields.AllServicesTotalAmount  [DONE]
 - Ask: "在订单中，全部服务总金额下方用小字给出breakdown，比如 修改衣服（服装修改）：$123 / 定制服务 (衬衫、西装)：$1234"
 - Done:
-  - [x] `Views/OrderEditWindow.xaml`: summary card gained a row — `ServicesTotalBreakdownPanel` sits in column 1 directly under `TotalAmountText`; the 实收定金 / 剩余尾款 / 余额状态 rows and `FinalBalanceBreakdownPanel` shifted down one (rows 2/3/4).
+  - [x] `Views/OrderEditWindow.xaml`: summary card gained a row — `ServicesTotalBreakdownPanel` sits in column 1 directly under `TotalAmountText`; the 实收定金 / 剩余尾款 / Order.Fields.BalanceStatus rows and `FinalBalanceBreakdownPanel` shifted down one (rows 2/3/4).
   - [x] `Views/OrderEditWindow.xaml.cs`: `RefreshServicesTotalBreakdown()` (called from `RefreshAllServicesTotalAmount`, right after the total) emits one small grey line per section whose total > 0, via `AddServiceTotalDetail`. Parenthetical detail per section: Alterations → its localized service category (`AlterationDetailText`), CustomMade → the measured garment names (`CustomMadeDetailText`), ReadyMade → the distinct item categories actually priced (`ClothingDetailText`). Shared `ListSeparator` (zh 、 / en ", ") matches `CustomMadeServiceFlagConverter`; `LocalizeWithFallback` keeps legacy free-text category values readable.
   - [x] `Services/CustomMadeMeasurementReader`: new `GetGarmentNames(IEnumerable<CustomMadeServiceRecord>, languageCode)` overload; the existing `Order` overload delegates to it. The editor holds unsaved records rather than an `Order`, and this avoids a second copy of the garment-name extraction.
   - [x] **Refresh gap closed**: neither `AlterationCategoryBox` nor the clothing rows' `categoryBox` had any change handler, so both parentheticals would have gone stale on edit. Added `OnServiceCategoryChanged` (XAML `SelectionChanged`) and a `categoryBox.SelectionChanged` subscription in `AddClothingItemRow`; both call `RefreshServicesTotalBreakdown()` only — a category carries no money, so a full `RefreshComputedTotals` would be wrong-altitude.
   - [x] `Languages.xml` (zh-CN + en-US): `Order.Fields.ServiceTotalLine` (`·  {0}（{1}）：{2}` / `·  {0} ({1}): {2}`) and `Order.Fields.ServiceTotalLineNoDetail`. The **whole line shape** lives in the string table because the parentheses and colon are fullwidth in Chinese and ASCII in English — concatenating them in C# would have produced `Alterations（Garment Adjustments）：$123` in English.
 - Notes: build succeeded 0 warnings / 0 errors. Presentation only — no model, schema or calculation change; the lines are the same three section totals the grand total is summed from. GOTCHA recorded: a new brush had to be `System.Windows.Media`-qualified (ImplicitUsings makes bare `Color`/`SolidColorBrush` ambiguous against QuestPDF/HotChocolate) and is created once via `CreateFrozenBrush` rather than per line.
 
-### 2026-07-26 15:40 — Final breakdown: per-portion tax split under 此服务总计税  [DONE]
+### 2026-07-26 15:40 — Final breakdown: per-portion tax split under Order.Fields.ServiceTotalTax  [DONE]
 - Ask: "Ok, in the final breakdown on the calculation in 尾款支付方式 > breakdown 此服务总计税 having little fonts under it. -定金（现金）税收： $0 / -尾款（银行卡）税收：$XXX"
 - Done:
-  - [x] `Views/OrderEditWindow.xaml`: new `TaxBreakdownLine` style (FontSize 11, #7A8698, wrapping). All 3 `*FinalBreakdownPanel` grids gained a 6th row: a `StackPanel` in column 1 directly under the 此服务总计税 amount holding `*DepositTaxLineText` + `*FinalTaxLineText`; 税后总价 and 剩余尾款 shifted to rows 4/5.
+  - [x] `Views/OrderEditWindow.xaml`: new `TaxBreakdownLine` style (FontSize 11, #7A8698, wrapping). All 3 `*FinalBreakdownPanel` grids gained a 6th row: a `StackPanel` in column 1 directly under the Order.Fields.ServiceTotalTax amount holding `*DepositTaxLineText` + `*FinalTaxLineText`; 税后总价 and 剩余尾款 shifted to rows 4/5.
   - [x] `Views/OrderEditWindow.xaml.cs`: `PaymentSectionControls` gained `DepositTaxLine`/`FinalTaxLine`; new `UpdateTaxBreakdownLines(c, money)` (called from all 3 `Refresh*Totals` right after the total-tax line) fills them from `money.ReceivedDownpayment - money.Deposit` and `money.FinalCharge - money.FinalBase`; `PaymentMethodName` resolves the method label (null → `PaymentMethod.None`). The final line uses `EffectiveFinalMethod`, so the named method always matches the one the tax was actually computed with.
   - [x] `Languages.xml` (zh-CN + en-US): `Order.Fields.DepositTaxLine` (定金（{0}）税收：{1} / "Deposit ({0}) tax: {1}") and `Order.Fields.FinalTaxLine` (尾款（{0}）税收：{1} / "Final balance ({0}) tax: {1}"). Both formatted via `LocalizationService.Format`, so the separator/punctuation stays per-language.
-- Notes: build succeeded 0 warnings / 0 errors. Presentation only — no model, schema or calculation change; the two lines always sum to the 此服务总计税 figure above them. Applied to all 3 sections, not just Alterations, since they share the panel shape.
+- Notes: build succeeded 0 warnings / 0 errors. Presentation only — no model, schema or calculation change; the two lines always sum to the Order.Fields.ServiceTotalTax figure above them. Applied to all 3 sections, not just Alterations, since they share the panel shape.
 
-### 2026-07-26 15:15 — Per-stage tax rate: one shared 税率 box that follows the deposit / final stage  [DONE]
+### 2026-07-26 15:15 — Per-stage tax rate: one shared tax-rate box that follows the deposit / final stage  [DONE]
 - Ask: "we had Order.Fields.DepositTax, now it is labeling as Current Tax, what we want is to have this become a shared input field for both deposit and final balance staging payment. For instance, when I'm in deposit stage and change to card, I can modify the current tax rate to 5%. But when I am in Final balance stage, I can change the tax rate to 7% on the card. So this field shouldn't always be bound on the deposit stage, it is used for calculation based on which stage you are currently in."
 - Clarified via question: (1) ONE shared box that swaps by stage, not two side-by-side boxes; (2) entering the final stage carries over the deposit's rate (falling back to the standard 13% when the deposit portion wasn't card).
 - Done:
@@ -2394,7 +2485,7 @@ Entry format:
 - Root cause (NOT a missing refresh — the TextChanged automation does fire): `Order.CalculateSectionPayment` taxes each portion only when **that portion's** method is Card. Selecting Card for the **deposit** makes `PaymentSectionControls.CardUsed` true, so `ApplyTaxRateRule` displays 13% — but the **final** method is still null, so `finalRate = 0` and the whole 124 final base goes untaxed. The tax box therefore advertises a rate that the totals never apply.
 - Done:
   - [x] `Views/OrderEditWindow.xaml.cs`: new `static EffectiveFinalMethod(PaymentSectionControls)` — the final balance inherits the deposit's method until the user explicitly picks one (`None` never inherits; an explicit selection always wins). Same convention `AutoCompleteSection` / `ApplyClearAllToSection` already use. Wired into all 3 `Refresh*Totals` **and** `ApplyPaymentFields`, so the saved order recomputes to exactly the amounts the editor displayed (SKILL §4).
-  - [x] 当前计税 now shows the section's whole tax (`money.Tax`) in all 3 sections instead of only the deposit's tax (`ReceivedDownpayment - Deposit`), so it pairs with the 税后总价 line beneath it. `Languages.xml` en value `Order.Fields.DepositTax` "Tax on Deposit" → "Current Tax" (zh 当前计税 already correct; value change, not a new key).
+  - [x] The current-tax row now shows the section's whole tax (`money.Tax`) in all 3 sections instead of only the deposit's tax (`ReceivedDownpayment - Deposit`), so it pairs with the post-tax-total line beneath it. `Languages.xml` en value `Order.Fields.DepositTax` "Tax on Deposit" → "Current Tax" (zh 当前计税 already correct; value change, not a new key).
   - [x] Rule 2 gap: clothing item rows (add button, unit-price/promo-price TextChanged, remove button) called only `RefreshClothingTotals()`, so editing a ready-made line item left the order grand total + payment summary stale. All 4 now call `RefreshComputedTotals(runAutoComplete: false)` — full refresh, but never moves a payment-method selection (same rule as the price/tax boxes).
   - [x] Rules 1 & 3 verified as already holding: `ParseDecimalOrZero` maps empty/invalid → 0, and `DecimalInputPattern` `^\d*(\.\d{0,2})?$` is on `PreviewTextInput` + the paste handler for every money box incl. the dynamically-created clothing rows.
 - Traced result for the reported case (124, Card deposit, no deposit entered): 税前小计 $124.00 / 当前计税 $16.12 / 税后总价 $140.12.
@@ -2410,8 +2501,8 @@ Entry format:
   - [x] **Converters/**: added the 4 undocumented ones — `BalanceStatusColorConverter`, `OrderServicesSummaryConverter`, `ReturnReasonSummaryConverter`, `DocumentThumbnailConverter` (and named `LastItemBorderThicknessConverter`).
   - [x] **Views/**: added `ReceiptBrandingWindow` and `CurrencySettingWindow`.
   - [x] **Migrations/**: was "InitialCreate + snapshot"; there are two (`AddOrderPaymentFields`), with later columns arriving via the runtime guards.
-  - [x] **MainWindow**: documented the 本地配置 menu incl. the 导入/导出 submenu (3 export/import pairs, confirm dialogs, dated file names).
-  - [x] **Cross-cutting**: corrected the refunded-receipt rule (it no longer omits 剩余尾款 — only the 收款明细 breakdown is swapped for the reason); recorded that read-only status = Completed/Shipped/Cancelled/Returned across the three predicates that must change together; added the self-contained Import/Export rule.
+  - [x] **MainWindow**: documented the Local Configuration menu incl. the Import/Export submenu (3 export/import pairs, confirm dialogs, dated file names).
+  - [x] **Cross-cutting**: corrected the refunded-receipt rule (it no longer omits `Order.Fields.FinalBalance` — only the `Order.Fields.PaymentBreakdown` breakdown is swapped for the reason); recorded that read-only status = Completed/Shipped/Cancelled/Returned across the three predicates that must change together; added the self-contained Import/Export rule.
 - Done (`AgentSkills/wpf-dev/context.md`): workspace path corrected `c:\` → `d:\Projects\LeeYongeOrdering`.
 - Notes: docs only — no source files touched, so no build/Sonar run applies.
 
@@ -2425,7 +2516,7 @@ Entry format:
 
 ### 2026-07-26 13:00 — UI fix: red strikethrough on payment checkboxes spanned the full row  [DONE]
 - Ask: "查看订单或者修改订单 > 订单在已取消/已退货的情况下我们有 red stroke 会划掉 checkbox。但是修改衣服付款的component里: checkbox 应该是 inline block 的，此 stroke 横贯了整个 row。看一下什么原因。只需要横贯当前所占的checkbox长度就行了。"
-- Root cause: the 6 payment "已收定金"/"当前服务尾款已结清" checkboxes (Alterations/CustomMade/Clothing × deposit-completed + balance-cleared) sit directly inside **vertical** `StackPanel`s, where children default to `HorizontalAlignment="Stretch"` (fill the row width) — unlike the working `已取货`/`结清所有尾款` checkboxes, which sit in a **horizontal** `StackPanel` (children auto-sized, not stretched). The shared `NotApplicableCheckBox` style's strikethrough `Line` (`Stretch="Fill"`) then filled the checkbox's full stretched render width instead of just its content.
+- Root cause: the 6 payment "已收定金"/"OrderEdit.BalanceCleared" checkboxes (Alterations/CustomMade/Clothing × deposit-completed + balance-cleared) sit directly inside **vertical** `StackPanel`s, where children default to `HorizontalAlignment="Stretch"` (fill the row width) — unlike the working `OrderEdit.PickedUp`/`OrderEdit.ClearAllBalances` checkboxes, which sit in a **horizontal** `StackPanel` (children auto-sized, not stretched). The shared `NotApplicableCheckBox` style's strikethrough `Line` (`Stretch="Fill"`) then filled the checkbox's full stretched render width instead of just its content.
 - Done:
   - [x] `Views/OrderEditWindow.xaml`: added `HorizontalAlignment="Left"` to `AlterationDownCompletedCheck`, `AlterationBalanceClearedCheck`, `CustomMadeDownCompletedCheck`, `CustomMadeBalanceClearedCheck`, `ClothingDownCompletedCheck`, `ClothingBalanceClearedCheck` — content-sized ("inline-block") like the other checkboxes, so the red strikethrough now only spans the checkbox + label.
 - Notes: build succeeded 0 warnings/errors. XAML-only fix; no code-behind/Sonar-relevant changes (style itself unchanged).
@@ -2433,7 +2524,7 @@ Entry format:
 ### 2026-07-26 12:30 — Bug fix: Shipped orders are now read-only (view-only)  [DONE]
 - Ask: "bug fix: If the order is shipped, the order record is considered as completed, shouldnot be modifed anymore but can view."
 - Done:
-  - [x] `MainWindow.xaml.cs` `IsReadOnlyStatus` (drives the toolbar/context-menu 编辑/查看 label): added `OrderStatus.Shipped` alongside Completed/Cancelled/Returned.
+  - [x] `MainWindow.xaml.cs` `IsReadOnlyStatus` (drives the toolbar/context-menu Edit/View label): added `OrderStatus.Shipped` alongside Completed/Cancelled/Returned.
   - [x] `Views/OrderEditWindow.xaml.cs` `IsReadOnlyStatus` (drives `_isReadOnly` → `ApplyReadOnlyMode()`): same addition, so opening a Shipped order now locks every field/control and hides Save, same as Completed/Cancelled/Returned.
   - [x] `ViewModels/MainViewModel.cs` `IsClosedStatus` (used by Copy Order to reset the new copy's status back to Processing): added `OrderStatus.Shipped` too — otherwise copying a Shipped order would have produced an immediately-locked duplicate, a new bug flowing directly from the same change.
 - Notes: build succeeded 0 warnings/errors; SonarQube clean on all 3 changed files. No DB/schema change — purely status-classification logic. `Order.IsPickedUp` already treated Shipped same as Completed for list styling/balance semantics, so this aligns the edit-lock with that existing convention.
@@ -2447,22 +2538,22 @@ Entry format:
   - [x] `Converters/ReturnReasonSummaryConverter.cs` (NEW): `IMultiValueConverter` + public static `Resolve(category, freeText)` — non-Other category → localized `ReturnReason.{category}` label; Other/blank → the free text (or "-").
   - [x] `Views/OrderEditWindow.xaml`: row 4 replaced the freetext-only box with `StatusReasonCategoryBox` (5 presets: CustomerDoesNotWant/ServiceUnsatisfactory/ProductIssue/PriceTooHigh/Other); new row 5 holds the existing freetext `StatusReasonBox`+placeholder-hint, now gated on category=="Other" (not just refunded status).
   - [x] `Views/OrderEditWindow.xaml.cs`: `UpdateStatusReasonVisibility` defaults the category to index 0 when first shown (per the "always pre-select first option" convention); new `UpdateOtherReasonRowVisibility`/`OnStatusReasonCategoryChanged`/`LoadStatusReasonCategory` (legacy fallback to "Other" for pre-existing records saved before this picker existed); `ValidateStatusReason` (category required, freetext required when Other) wired into `TryValidateForSave`; `ApplyStatusReasonFields` persists category+freetext together (both cleared when status isn't Cancelled/Returned); `ApplyReadOnlyMode` disables the new combo too.
-  - [x] `MainWindow.xaml` (detail panel bug fix): wrapped the 收款明细/PaymentBreakdown label+value in a `StackPanel` that collapses via `DataTrigger` when `SelectedOrder.IsRefunded`; added a new label+value block (MultiBinding → `ReturnReasonSummaryConverter`) shown only when `IsRefunded`, in the same slot.
-  - [x] `MainWindow.xaml.cs` (`AddReceiptTotals`): full charge/payment breakdown (item sections, totals, downpayment, final balance) now always renders regardless of refund status (reverted the earlier "hide everything" approach); only the payment-method-breakdown paragraph is swapped for a 取消原因/退货原因 section (via `ReturnReasonSummaryConverter.Resolve`) when `order.IsRefunded`.
+  - [x] `MainWindow.xaml` (detail panel bug fix): wrapped the `Order.Fields.PaymentBreakdown` label+value in a `StackPanel` that collapses via `DataTrigger` when `SelectedOrder.IsRefunded`; added a new label+value block (MultiBinding → `ReturnReasonSummaryConverter`) shown only when `IsRefunded`, in the same slot.
+  - [x] `MainWindow.xaml.cs` (`AddReceiptTotals`): full charge/payment breakdown (item sections, totals, downpayment, final balance) now always renders regardless of refund status (reverted the earlier "hide everything" approach); only the payment-method-breakdown paragraph is swapped for a Order.Fields.CancelReason/Order.Fields.ReturnReason section (via `ReturnReasonSummaryConverter.Resolve`) when `order.IsRefunded`.
   - [x] `Languages.xml` (zh-CN + en-US): `ReturnReason.CustomerDoesNotWant/ServiceUnsatisfactory/ProductIssue/PriceTooHigh/Other`, `OrderEdit.Validate.StatusReasonRequired`, `OrderEdit.Validate.StatusReasonOtherRequired`.
 - Notes: build succeeded 0 warnings/errors; SonarQube clean on all changed files. No further DB migration beyond the new column. Receipt printing and the PDF share the exact same `BuildReceiptDocument`/`AddReceiptTotals` code path, so the fix covers both automatically.
 
 ### 2026-07-26 11:30 — Receipt: hide charge breakdown for cancelled/returned orders, show reason instead  [DONE]
 - Ask: "小票页面内容优化 1. 如果已退货或者取消，那么不需要展示收费明细，但是需要标出退货或者取消原因。->这应该也要在打印PDF中体现出来"
 - Done:
-  - [x] `MainWindow.xaml.cs` `BuildReceiptDocument`: when `order.IsRefunded`, skips `AddAlterationReceiptSection`/`AddClothingReceiptSection`/`AddCustomMadeReceiptSection`/`AddReceiptTotals` (the whole charge/payment breakdown) and calls new `AddRefundedReceiptSummary` instead — shows only the coloured 余额状态 line + a 取消原因/退货原因 section (label picked by `order.Status`) with `order.StatusReason` (falls back to "-" when blank), then Notes if present. Removed the now-dead `!order.IsRefunded` guard inside `AddReceiptTotals` (that method is only ever called for non-refunded orders now).
-  - [x] `Languages.xml` (zh-CN + en-US): `Order.Fields.CancelReason` (取消原因/Cancellation Reason), `Order.Fields.ReturnReason` (退货原因/Return Reason).
+  - [x] `MainWindow.xaml.cs` `BuildReceiptDocument`: when `order.IsRefunded`, skips `AddAlterationReceiptSection`/`AddClothingReceiptSection`/`AddCustomMadeReceiptSection`/`AddReceiptTotals` (the whole charge/payment breakdown) and calls new `AddRefundedReceiptSummary` instead — shows only the coloured Order.Fields.BalanceStatus line + a Order.Fields.CancelReason/Order.Fields.ReturnReason section (label picked by `order.Status`) with `order.StatusReason` (falls back to "-" when blank), then Notes if present. Removed the now-dead `!order.IsRefunded` guard inside `AddReceiptTotals` (that method is only ever called for non-refunded orders now).
+  - [x] `Languages.xml` (zh-CN + en-US): `Order.Fields.CancelReason` (Order.Fields.CancelReason/Cancellation Reason), `Order.Fields.ReturnReason` (Order.Fields.ReturnReason/Return Reason).
 - Notes: build succeeded 0 warnings/errors; SonarQube clean on `MainWindow.xaml.cs`. Receipt printing (`OnPrintReceiptClick`) and the "print receipt + measurements" flow both reuse `BuildReceiptDocument`, and printing to PDF goes through the same `PrintDialog`/FlowDocument path (via a PDF printer driver) — so this single change covers both the on-screen print and the PDF output, per the ask. No DB/schema change (reuses `StatusReason` added in the previous session).
 
 ### 2026-07-26 11:00 — Cancel/return reason box, address-required-on-Shipped validation, basic-info beautify  [DONE]
 - Ask: "TODO: 如果订单状态为已取消或者已退货, 1. 在订单界面地址栏下方生成一个textbox写退货理由 如果取消那就变成取消理由，里面有placeholder让用户输入退货/取消理由 2. 如果状态改为已发货，更改/保存时地址一栏不能为空，要有validation 3. 优化编辑菜单的整体页面，现在inputbox, radio button还有textbox太单调。美化页面同时增加一些icon让页面更加美感。"
 - Done:
-  - [x] `Models/Order.cs`: new nullable `StatusReason` string property (backs both 取消理由/退货理由, same field).
+  - [x] `Models/Order.cs`: new nullable `StatusReason` string property (backs both `Order.Fields.CancelReason`/`.ReturnReason`, same field).
   - [x] `App.xaml.cs`: `ALTER TABLE Orders ADD COLUMN StatusReason TEXT NULL;` runtime guard.
   - [x] `Views/OrderEditWindow.xaml`: wrapped the basic-info fields (order#, status, name, phone, email, address) in a `SectionCard` with a "基本信息"/"Basic Information" heading; added a `FieldIcon`+`FieldLabel` style pair and a Segoe MDL2 Assets glyph before each label (Tag E8EC, Flag E7C1, Contact E77B, Phone E717, Mail E715, MapPin E707 — verified against Microsoft's official icon list, see repo memory). Added a new row 4: `StatusReasonLabelPanel` + `StatusReasonContainer` (TextBox + placeholder-hint TextBlock overlay, same pattern as `MeasurementTermsWindow`'s search box), collapsed by default.
   - [x] `Views/OrderEditWindow.xaml.cs`: `UpdateStatusReasonVisibility()` shows/hides the row and swaps the placeholder between `OrderEdit.Placeholder.CancelReason`/`ReturnReason` based on selected status; called from both constructors, `OnStatusChanged`, and `RefreshLocalizedLabels` (language switch). `OnStatusReasonTextChanged` toggles the hint like the measurement-terms search box. `TryValidateForSave` now rejects Save when status is Shipped and Address is blank (warning dialog + focus, mirrors the Phone/Email required checks). `ApplyEditableFields` persists `StatusReason`; `ApplyReadOnlyMode` marks the box read-only for finalized orders.
@@ -2477,26 +2568,26 @@ Entry format:
 
 ### 2026-07-26 09:30 — Audit: media assets in Import/Export must migrate cleanly  [DONE]
 - Ask: "Analyze all Import/export feature. Make sure any records or configs which has media resources related and have Import/export, the media assets(images), should be base64 saving to DB or if you have already implemented differently, its fine. The purpose is that we could migrate the whole application easily to another PC. Please verify if it follows the same business rules."
-- Findings: 3 Import/Export features exist (量身项目设置 JSON, 本地数据库, 页眉页脚 JSON). Measurement terms has no media. Branding logo was already self-contained (base64 in JSON, from the prior session). **Gap found:** custom-made document images (`CustomMadeDocument`/`DocumentStorageService`) live as files under `LocalAppData/LeeYongeOrdering/Documents/CustomMade`, referenced only by `StoredFileName` inside `Order.CustomMadeRecordsJson` — the DB export/import only copied `orders.db` (+wal/shm), so migrating the DB to another PC left every attached image reference dangling.
+- Findings: 3 Import/Export features exist (Measurement Terms JSON, Local Database, Header & Footer JSON). Measurement terms has no media. Branding logo was already self-contained (base64 in JSON, from the prior session). **Gap found:** custom-made document images (`CustomMadeDocument`/`DocumentStorageService`) live as files under `LocalAppData/LeeYongeOrdering/Documents/CustomMade`, referenced only by `StoredFileName` inside `Order.CustomMadeRecordsJson` — the DB export/import only copied `orders.db` (+wal/shm), so migrating the DB to another PC left every attached image reference dangling.
 - Done:
   - [x] `Data/DatabasePathProvider.cs`: `ExportDatabaseTo` now writes a zip package (`orders.db` + wal/shm sidecars + the entire `Documents/` folder tree) instead of a raw `.db` copy. `ImportDatabaseFrom` tries the zip package first (validates it contains an `orders.db` entry, extracts with zip-slip path-containment guarding via `ExtractPackageSafely`), and falls back to the legacy raw-`.db`-copy path (catches `InvalidDataException` from `ZipFile.OpenRead`) for backward compatibility with previously-exported plain `.db` files. Both the current db AND the current `Documents/` folder are backed up (`orders.db.bak-<ts>`, `Documents.bak-<ts>`) before being overwritten.
   - [x] `MainWindow.xaml.cs`: export/import dialogs now default to `.zip` (`orders-backup.zip`, filter "Backup Package (*.zip)"), import dialog also still accepts legacy `.db`/`*.*`.
   - [x] `Languages.xml` (zh-CN + en-US): reworded `ImportExport.DatabaseConfirm` to mention attached images are included/backed up too.
 - Notes: build succeeded 0 warnings / 0 errors; SonarQube clean on `DatabasePathProvider.cs` and `MainWindow.xaml.cs`. No DB schema change (images stay file-based, not blobbed into SQLite — bundling via zip achieves the same "self-contained migration" goal without an invasive schema/perf tradeoff). See `/memories/repo/startup.md` for the durable rule going forward: any future Import/Export of a record/config with attached media must keep the export self-contained (base64-in-JSON for small single assets like the logo, or a bundled zip package for larger/many files like custom-made document images).
 
-### 2026-07-26 09:00 — Import/Export for 页眉页脚 (header/footer branding)  [DONE]
+### 2026-07-26 09:00 — Import/Export for Header & Footer (header/footer branding)  [DONE]
 - Ask: "agent skill: wpf-dev, Previous features: Add a new tab on navigation called Import/Export under the local configuration... TODO: Add Import/export for 添加或更改页眉页脚. Make 页眉页脚 -> 导入导出"
 - Done:
   - [x] `Services/ReceiptBrandingStore.cs`: `ExportConfigJson()` / `TryParseConfigJson(json)` / `ImportConfig(export)` + new `BrandingExport` DTO — self-contained JSON export includes the settings (header/footer XAML per language, logo placement) plus the logo image as base64, so import restores the logo file too (writes to `logo.<ext>`, clears any stale logo file first).
-  - [x] `MainWindow.xaml`: added a third nested submenu under `Toolbar.ImportExport`, reusing `Toolbar.HeaderFooter` as the label, with Export/Import entries (mirrors 量身项目设置/本地数据库).
+  - [x] `MainWindow.xaml`: added a third nested submenu under `Toolbar.ImportExport`, reusing `Toolbar.HeaderFooter` as the label, with Export/Import entries (mirrors Measurement Terms/Local Database).
   - [x] `MainWindow.xaml.cs`: `OnExportBrandingClick`/`OnImportBrandingClick` — SaveFileDialog/OpenFileDialog, invalid-JSON warning dialog, Yes/No overwrite confirmation before import (mirrors measurement-terms handlers), status bar reporting.
   - [x] `Languages.xml` (zh-CN + en-US): `Status.Export/ImportBrandingSucceeded/Failed`, `Status.ImportBrandingInvalid`, `ImportExport.BrandingConfirm`.
 - Notes: build succeeded 0 warnings / 0 errors; SonarQube clean on both changed files. No DB/schema change.
 
-### 2026-07-25 — Import/Export menu (量身项目设置 JSON + local database)  [DONE]
+### 2026-07-25 — Import/Export menu (Measurement Terms JSON + local database)  [DONE]
 - Ask: "Add a new tab on navigation called Import/Export under the local configuration. hover on the option, we have 量身项目设置, hover on it, it expand two options Export or Import. Clicking on Export, it will export 量身项目设置 as json, while I import, it can be recover the configuration from it. we have 本地数据库, also have export and Import feature. Analyze the whole project and implement both features."
 - Done:
-  - [x] `MainWindow.xaml`: new top-level `本地配置` submenu **导入/导出** (`Toolbar.ImportExport`), containing two nested menus mirroring the existing entries — **量身项目设置** (reuses `Toolbar.MeasurementTerms`) → 导出/导入, and **本地数据库** (reuses `Toolbar.LocalDatabase`) → 导出/导入.
+  - [x] `MainWindow.xaml`: new top-level `Local Configuration` submenu **Import/Export** (`Toolbar.ImportExport`), containing two nested menus mirroring the existing entries — **Measurement Terms** (reuses `Toolbar.MeasurementTerms`) → Export/Import, and **Local Database** (reuses `Toolbar.LocalDatabase`) → Export/Import.
   - [x] `Services/MeasurementTermsService.cs`: `ExportConfigJson()` (indented JSON of the current config), `TryParseConfigJson(json)` (static, returns null on invalid/corrupt JSON instead of throwing), `ImportConfig(config)` (replaces `Terms`/`Garments`, re-runs `MergePredefined` so an export from an older app version still gets today's predefined ids/gender classifications, then persists + raises `ConfigChanged`).
   - [x] `Data/DatabasePathProvider.cs`: `ExportDatabaseTo(targetPath)` and `ImportDatabaseFrom(sourcePath)` (both call `SqliteConnection.ClearAllPools()` first to release any pooled file handles before copying). Import auto-backs-up the current `orders.db` to `orders.db.bak-<timestamp>` alongside it before overwriting, and syncs the `-wal`/`-shm` sidecar files (deletes stale ones, copies matching ones from the source).
   - [x] `MainWindow.xaml.cs`: 4 new handlers (`OnExportMeasurementTermsClick`/`OnImportMeasurementTermsClick`/`OnExportDatabaseClick`/`OnImportDatabaseClick`) using `Microsoft.Win32.SaveFileDialog`/`OpenFileDialog` (matching the existing `CustomMadeServiceWindow`/`ReceiptBrandingWindow` pattern). Both imports show an explicit Yes/No confirmation (`MessageBoxImage.Warning`) before overwriting, since both are destructive; DB import also reloads the order grid (`_viewModel.LoadOrdersCommand.Execute(null)`) afterward. All failures/successes report through the existing `_viewModel.StatusMessage` status-bar pattern.
@@ -2507,10 +2598,10 @@ Entry format:
 - Ask: "UI: gray out Cancelled/Returned records (lightest gray) and Completed records (a bit darker). Receipt: colour the balance status (已结清（已取货）green / 已结清（未取货）light green / 未结清 orange / 已退款或部分退款 red). Business logic for 已取消/已退货: in edit order, changing status to 已取消/已退货 sets 余额状态 to 已退款或部分退款, locks all services incl. 当前服务尾款已结清, marks all checkboxes (incl. 已取货) red with a stroke across the whole checkbox (not applicable) — but service details (e.g. custom measurement records) stay viewable. In the receipt, remove 剩余尾款 and show 余额状态 = 已退款或部分退款."
 - Done:
   - [x] `Order.IsRefunded` (Cancelled/Returned) + `BalanceStatusKind` enum + `Order.PaymentStatusKind` (single source of truth: Refunded / Outstanding / ClearedPickedUp / ClearedNotPickedUp).
-  - [x] Languages.xml (both blocks): `Payment.Status.Refunded` = 已退款或部分退款 / "Refunded or Partially Refunded".
-  - [x] `OrderPaymentSummaryConverter` Status mode now maps `PaymentStatusKind` → label (so list, detail panel and receipt all show 已退款或部分退款 for cancelled/returned).
+  - [x] Languages.xml (both blocks): `Payment.Status.Refunded` = Payment.Status.Refunded / "Refunded or Partially Refunded".
+  - [x] `OrderPaymentSummaryConverter` Status mode now maps `PaymentStatusKind` → label (so list, detail panel and receipt all show Payment.Status.Refunded for cancelled/returned).
   - [x] MainWindow list: added `IsRefunded` DataTrigger (lightest gray #C3C9CF / opacity 0.5); kept `IsPickedUp` trigger (darker #9AA3AB / 0.7) for completed.
-  - [x] Receipt (`AddReceiptTotals`): omit 剩余尾款 line when `IsRefunded`; colour balance status via new `ReceiptStatusLine` + `BalanceStatusBrush` (green/light green/orange/red).
+  - [x] Receipt (`AddReceiptTotals`): omit the `Order.Fields.FinalBalance` line when `IsRefunded`; colour balance status via new `ReceiptStatusLine` + `BalanceStatusBrush` (green/light green/orange/red).
   - [x] OrderEditWindow.xaml: `NotApplicableCheckBox` style (red box + red strikethrough label + red line across the whole control).
   - [x] OrderEditWindow.xaml.cs: `_isRefunded` field; `OnStatusChanged` toggles refund lock; `SetServiceControlsEnabled`/`ApplyRefundLockState`/`ApplyNotApplicableCheckboxStyle`; `RefreshPricingLocks` + `UpdateBalanceStatusDisplay` + PickedUp enabling respect `_isRefunded`; refunded style also applied when opening an already-cancelled/returned order (read-only). Customer fields + custom-made records list stay usable so measurements remain viewable.
 - Notes: build succeeded 0 warnings / 0 errors. Balance status is computed (no DB change). Extracted `UpdateBalanceStatusDisplay` to keep `RefreshPaymentSummary` cognitive complexity ≤15. Source English-only; non-English only in Languages.xml.
@@ -2521,8 +2612,8 @@ Entry format:
   - [x] Languages.xml (zh-CN + en-US): `Order.Fields.CustomMadeFlag`, `CustomMade.Flag.Yes/No`, `Toolbar.PrintMeasurements`, `Toolbar.PrintReceiptAndMeasurements`, `MeasurePrint.Title/LanguagePrompt/UnitPrompt/Print/Cancel`.
   - [x] `Order.HasCustomMadeService` [NotMapped] — true when any custom-made record has a garment with a cm/inch measurement value.
   - [x] `Services/CustomMadeMeasurementReader` — `GetGarmentNames` (distinct, order-preserving) + `BuildSections` (per-garment term/value rows, unit-aware; per-garment extracted to `BuildGarmentSection` to keep cognitive complexity ≤15).
-  - [x] `Converters/CustomMadeServiceFlagConverter` — ConverterParameter `Flag` (有/无) / `Names` (bracketed garment names, zh sep 、 / en sep ", ") / `NamesVisibility`.
-  - [x] MainWindow.xaml: removed LastModified column; added centered wrappable 定制服务 CellTemplate column; widened OrderNumber 150→200 and BalanceStatus 140→180; added LastModified to detail panel (between OrderDate and Status); added print menu items (toolbar Print submenu + context menu) gated `Visibility` on `SelectedOrder.HasCustomMadeService` via BoolToVisibility.
+  - [x] `Converters/CustomMadeServiceFlagConverter` — ConverterParameter `Flag` (`CustomMade.Flag.Yes`/`.No`) / `Names` (bracketed garment names, zh sep 、 / en sep ", ") / `NamesVisibility`.
+  - [x] MainWindow.xaml: removed LastModified column; added centered wrappable Custom Service CellTemplate column; widened OrderNumber 150→200 and BalanceStatus 140→180; added LastModified to detail panel (between OrderDate and Status); added print menu items (toolbar Print submenu + context menu) gated `Visibility` on `SelectedOrder.HasCustomMadeService` via BoolToVisibility.
   - [x] `Views/MeasurementPrintOptionsWindow` — language radios (from `AvailableLanguages`, default = current) + unit radios (cm default / inch); exposes `SelectedLanguageCode` + `IsInch` (auto-props set on Print to dodge x:Name S2325 false positive).
   - [x] MainWindow.xaml.cs — `OnPrintMeasurementsClick`/`OnPrintReceiptAndMeasurementsClick` (+ context variants) → `PrintMeasurements(includeReceipt)`; `BuildMeasurementDocument` (measurements-only + branding) and `AddMeasurementSections` (page-break-before when appended to receipt). Uses PrintDialog + FlowDocument (not QuestPDF); measurement language/unit from dialog, receipt stays UI language.
 - Notes: build succeeded 0 warnings / 0 errors. Ordering unchanged (LoadOrdersAsync still defaults to LastModifiedDate desc). No DB migration. Source English-only; non-English only in Languages.xml.
@@ -2534,11 +2625,11 @@ Entry format:
   - New `Models/MeasurementTerm.cs`: `MeasurementTerm`, `GarmentType`, `MeasurementTermsConfig`, `MeasurementTermDefaults` (21 predefined term ids, 7 predefined garment ids + default garment→term maps, `CreateDefaultConfig`, `IsTermLockedInGarment`).
   - New `Services/MeasurementTermsService.cs`: singleton, persists `measurement-terms.json`; resolve/add/edit/delete custom terms & garments, add/remove term↔garment mapping (blocks locked), `LoadOrSeed`+`MergePredefined` version upgrade, `ConfigChanged`.
   - New `Views/MeasurementTermLanguageWindow.xaml(.cs)`: alt-language name editor popup (one row per available language).
-  - New `Views/MeasurementTermsWindow.xaml(.cs)`: 3-column drag-drop mapping window (left garments / center assigned / right all props), modern styles + Segoe MDL2 icons, inline edit + lock + alt-language + delete + Add Garment/Measurement. Launched from 本地配置 menu.
+  - New `Views/MeasurementTermsWindow.xaml(.cs)`: 3-column drag-drop mapping window (left garments / center assigned / right all props), modern styles + Segoe MDL2 icons, inline edit + lock + alt-language + delete + Add Garment/Measurement. Launched from Local Configuration menu.
   - `Models/CustomMadeServiceRecord.cs`: added `List<GarmentMeasurement> Garments` (+ `GarmentMeasurement`, `MeasurementValue`), kept legacy Jacket*/Shirt* fields.
   - `Views/CustomMadeServiceWindow.xaml(.cs)`: replaced static Jacket/Shirt grid with garment ToggleButton selector + dynamically generated per-garment measurement cards; cache-based cm/in dual-unit source of truth (`_valueCache`, `_termEditors`); unit switch persists+reapplies; language change rebuilds selector/cards; seeds from legacy fields for old records; `BuildGarmentsIntoRecord` writes Garments on save; PDF export iterates all selected garments/props (`BuildPdfGarmentSections`).
   - `Converters/CustomMadeRecordSummaryConverter.cs`: summary lists selected garment names from `Garments` (resolved via service), falls back to legacy fields.
-  - `MainWindow.xaml(.cs)`: 测量术语 (Measurement Terms) MenuItem under 本地配置 → opens MeasurementTermsWindow.
+  - `MainWindow.xaml(.cs)`: Measurement Terms (Measurement Terms) MenuItem under Local Configuration → opens MeasurementTermsWindow.
   - `Languages.xml` (zh-CN + en-US): `Measure.Term.*` (21), `Measure.Garment.*` (7), `Toolbar.MeasurementTerms`, `MeasureTerms.*`, `TermLanguage.*`, `Measure.SelectGarments`, `Measure.NoGarmentSelected`.
 - Notes: build succeeded 0 errors / 0 warnings. Source code English-only; non-English strings only in Languages.xml. No DB migration (Garments serialized into existing `Order.CustomMadeRecordsJson`).
 
@@ -2548,28 +2639,28 @@ Entry format:
 - Done (XAML only, `Views/OrderEditWindow.xaml`):
   - Added reusable `Window.Resources` styles: `SectionCard`, `SummaryCard`, `SectionHeading`, `PaymentCard`, `PaymentTitle`, `StepLabel`, `MethodRadio`, `StepDivider`, `AccentBar`.
   - Converted all top-level section borders (service-type selector, Alterations / CustomMade / ReadyMade panels, Notes) to the white rounded `SectionCard`; totals summary uses `SummaryCard`; headings use `SectionHeading`.
-  - Rebuilt the 3 payment sub-cards with a colored accent bar + title header, `StepLabel`-styled deposit/final method labels, `MethodRadio`-styled radios, and a `StepDivider` at the top of each `FinalBlock` so 定金 (deposit) and 尾款 (final) read as two clear steps.
+  - Rebuilt the 3 payment sub-cards with a colored accent bar + title header, `StepLabel`-styled deposit/final method labels, `MethodRadio`-styled radios, and a `StepDivider` at the top of each `FinalBlock` so the deposit and the final balance read as two clear steps.
   - Preserved every `x:Name` and event handler (no code-behind changes) — the divider lives inside FinalBlock so it only shows with the final step.
 - Notes: build succeeded 0 warnings / 0 errors.
 
 ### 2026-07-24 — Currency: per-order → global app setting  [DONE]
 - Ask: "Moving the currency setup from record base into global base... small business should rely on the setup globally, no complicated logic. Currency setup moving to local configurations menu bar."
-- Decisions (confirmed with user): keep the `Orders.CurrencyType` DB column but ignore it (no migration); offer CAD/USD/CNY; currency entry lives directly under 本地配置 (sibling of 添加或更改页眉页脚).
+- Decisions (confirmed with user): keep the `Orders.CurrencyType` DB column but ignore it (no migration); offer CAD/USD/CNY; currency entry lives directly under Local Configuration (sibling of Add or Change Header & Footer).
 - Done:
   - New `Services/CurrencySettingService.cs`: singleton `Instance` (INotifyPropertyChanged) with `Current` (CurrencyType), `Symbol` (￥ for CNY else $), `SetCurrency` + `CurrencyChanged`; persists to `currency-setting.json` under LocalAppData (mirrors LanguagePreferenceStore).
-  - New `Views/CurrencySettingWindow.xaml(.cs)`: small dialog (currency ComboBox + Save/Cancel) launched from 本地配置.
-  - `MainWindow.xaml`: added `货币设置` MenuItem under 本地配置 (Click=OnCurrencySettingClick); removed the per-order 货币 detail row.
+  - New `Views/CurrencySettingWindow.xaml(.cs)`: small dialog (currency ComboBox + Save/Cancel) launched from Local Configuration.
+  - `MainWindow.xaml`: added `Currency Setup` MenuItem under Local Configuration (Click=OnCurrencySettingClick); removed the per-order currency detail row.
   - `MainWindow.xaml.cs`: `OnCurrencySettingClick` opens dialog and reloads orders on change; receipt symbol + currency line now use `CurrencySettingService.Instance`.
   - Converters `CurrencyAmountConverter` (dropped 2nd currency value/`ParseCurrency`) and `OrderPaymentSummaryConverter` now read the global symbol.
   - `OrderEditWindow.xaml(.cs)`: removed the currency panel/`CurrencyBox` and all its wiring (Initialize/Refresh/CreateCurrencyItem/GetSelectedCurrencyType), dropped `CurrencyType` from `OrderSaveData`/`ApplyEditableFields`; `FormatCurrency` now static using global symbol.
-  - `Languages.xml`: added `Toolbar.CurrencySetting` (货币设置 / Currency Setup) and `Currency.Title` / `Currency.Prompt` to both blocks.
+  - `Languages.xml`: added `Toolbar.CurrencySetting` (Currency Setup / Currency Setup) and `Currency.Title` / `Currency.Prompt` to both blocks.
 - Notes: build succeeded 0 warnings / 0 errors. Per-order CurrencyType column retained but unused; global money bindings refresh on next order load.
 
-### 2026-07-24 — Application Menu: 本地配置 dropdown  [DONE]
+### 2026-07-24 — Application Menu: Local Configuration dropdown  [DONE]
 - Ask: "Application Menu update — 1. Add 本地配置 auto-dropdown on the navigation. Move 页眉页脚 to the item, update wording to 添加或更改页眉页脚. Add 本地数据库 as another auto expansion. Move 复制数据库路径, 定位数据库文件 and 打开数据库目录 into it."
 - Done:
-  - `MainWindow.xaml`: replaced the standalone 页眉页脚 button and the three data buttons (CopyDataPath / RevealDataFile / OpenDataFolder) with a `Menu` → top-level `本地配置` MenuItem containing `添加或更改页眉页脚` (Click=OnEditBrandingClick) and a nested `本地数据库` submenu (auto-expand) holding the three DB items (reused OnCopyDataPathClick / OnRevealDataFileClick / OnOpenDataFolderClick — no code-behind change).
-  - `Languages.xml`: reworded `Toolbar.HeaderFooter` 页眉页脚→添加或更改页眉页脚 / "Header & Footer"→"Add or Change Header & Footer"; added `Toolbar.LocalConfig` (本地配置 / Local Configuration) and `Toolbar.LocalDatabase` (本地数据库 / Local Database) to both blocks.
+  - `MainWindow.xaml`: replaced the standalone Header & Footer button and the three data buttons (CopyDataPath / RevealDataFile / OpenDataFolder) with a `Menu` → top-level `Local Configuration` MenuItem containing `Add or Change Header & Footer` (Click=OnEditBrandingClick) and a nested `Local Database` submenu (auto-expand) holding the three DB items (reused OnCopyDataPathClick / OnRevealDataFileClick / OnOpenDataFolderClick — no code-behind change).
+  - `Languages.xml`: reworded `Toolbar.HeaderFooter` Header & Footer→Add or Change Header & Footer / "Header & Footer"→"Add or Change Header & Footer"; added `Toolbar.LocalConfig` (Local Configuration / Local Configuration) and `Toolbar.LocalDatabase` (Local Database / Local Database) to both blocks.
 - Notes: XAML-only + string table; existing click handlers reused. Build succeeded 0 errors.
 
 
@@ -2666,7 +2757,7 @@ Entry format:
     record button to View vs. Edit key using
     `_isReadOnly || CustomMadeBalanceClearedCheck.IsChecked is true`. Called from
     `RefreshLocalizedLabels` AND `RefreshPricingLocks`, so toggling the section
-    cleared checkbox live relabels 修改定制记录 → 查看定制记录 (prev only reacted to
+    cleared checkbox live relabels 修改定制记录 → OrderEdit.ViewCustomMade (prev only reacted to
     whole-order read-only).
   - `CustomMadeServiceWindow.xaml`: added the implicit `TextBox` read-only style
     (copied from `OrderEditWindow.xaml`) — `IsReadOnly=True` → Background `#F0F0F0`,
@@ -2675,14 +2766,14 @@ Entry format:
 - Notes: `dotnet build` → 0 errors; SonarLint clean. Files: `OrderEditWindow.xaml.cs`,
   `CustomMadeServiceWindow.xaml`.
 
-### 2026-07-24 — Custom-made record: open read-only (查看定制记录) when section balance cleared  [DONE]
+### 2026-07-24 — Custom-made record: open read-only (OrderEdit.ViewCustomMade) when section balance cleared  [DONE]
 - Ask: "BUG Fix — For Custom made service, if the current payment final balance is cleared, then 1. 修改定制记录 -> 查看定制记录; 2. all records fields should be locked, including the upload image area."
 - Done: `OrderEditWindow.OnEditCustomMadeRecordClick` now computes
   `recordReadOnly = _isReadOnly || CustomMadeBalanceClearedCheck.IsChecked is true`
   (same gate as `RefreshPricingLocks`) and passes it as `isReadOnly` to
   `CustomMadeServiceWindow`, and uses it for the open-validation skip + view-only
   ShowDialog path. Reuses the window's existing `ApplyReadOnlyMode`
-  (title → `OrderEdit.ViewCustomMade` "查看定制记录", all boxes/radios read-only,
+  (title → `OrderEdit.ViewCustomMade` "OrderEdit.ViewCustomMade", all boxes/radios read-only,
   Save hidden, ReadOnlyNotice shown) and `CanEditDocuments => !_isReadOnly` which
   already gates the upload/replace/delete document buttons — so the image upload
   area locks too. No new keys, no model change.
@@ -2787,7 +2878,7 @@ Entry format:
   - `LanguageSelectionWindow` redesigned: gradient welcome banner (icon + Welcome +
     subtitle), ComboBox replaced by radio buttons generated in code-behind from
     `AvailableLanguages` (GroupName `LanguageGroup`), selecting a language switches
-    the UI live; styled full-width "进入系统 / Enter System" button confirms.
+    the UI live; styled full-width "LanguageSelection.Enter" button confirms.
   - New localization keys (both blocks): `LanguageSelection.Welcome`,
     `LanguageSelection.WelcomeMessage`, `LanguageSelection.Enter`.
 - Gotcha: WPF exe icons must be `.ico` (SVG can't be used directly); ICO built with
@@ -2835,7 +2926,7 @@ Entry format:
   - [x] Detail panel + receipt: map token → localized text
   - [x] SonarLint before build, then build
 - Notes: Category stored in the existing `Order.ServiceDetails` column as a stable token (`GarmentAdjustments`/`Others`) — no new DB column. `OrderEditWindow.xaml` swaps the TextBox for a ComboBox; load/save inlined in `SetupForEdit`/`ApplyEditableFields` (avoids S2325 false positive on XAML-field-only helpers). Detail panel (`MainWindow.xaml`) and receipt (`BuildReceiptDocument`) render the localized name via the existing `LocalizationLookupConverter` / `LocalizeWithFallback` with prefix `Alteration.Category` (legacy free-text falls back to the raw stored string). SonarLint clean; build succeeded 0 errors.
-- Follow-up (2026-07-23): per new skill rule (§5 dropdown default), the category dropdown now defaults to the **first** option 服装修改/Garment Adjustments — `SelectedIndex = 0` on the new-order path and a fallback to the first item on edit-load when the stored value matches no option.
+- Follow-up (2026-07-23): per new skill rule (§5 dropdown default), the category dropdown now defaults to the **first** option Garment Adjustments/Garment Adjustments — `SelectedIndex = 0` on the new-order path and a fallback to the first item on edit-load when the stored value matches no option.
 
 ### 2026-07-23 — Show tax in order detail panel  [DONE]
 - Ask: "1. 订单明细中， 如果有税收，要把税收给写上去。" (Order detail panel: if a section has tax, show the tax amount.)
@@ -2861,7 +2952,7 @@ Entry format:
 - Decisions: English labels Measure Only / Full Custom (Full Custom default); phone = loose 7-15 digits allowing + and separators; custom-made tax defaults to 13% at section level, per-record tax dropped.
 - Plan:
   - [x] T1 rename+reorder modes (Languages.xml both blocks, CustomMadeServiceWindow.xaml order, default CustomFromScratch in record model/editor)
-  - [x] T2 vertical-center 定制方式 radios
+  - [x] T2 vertical-center custom-made-mode radios
   - [x] T3 move tax to custom-made SECTION level (Order.CustomMadeTaxRate + column guard, editable CustomMadeTaxBox, drop record tax)
   - [x] T4a Enter opens editor (custom-made list + main orders grid)
   - [x] T4b ESC closes popups (IsCancel on Cancel buttons)
@@ -2871,7 +2962,7 @@ Entry format:
   - [x] T5c phone validation + red message beneath PhoneNumberBox
   - [x] T5d measurements regex (start digit, one dot, optional trailing +/-)
   - [x] SonarLint before build, then build; update context.md
-- Notes: **T1** Languages.xml both blocks (只量身/定制量身, Measure Only/Full Custom); `CustomMadeServiceWindow.xaml` radios reordered (Full Custom first, `IsChecked="True"`); `CustomMadeServiceRecord.ServiceMode` default + editor `InitializeMode(... ?? CustomFromScratch)`. **T2** mode `StackPanel` + both radios `VerticalAlignment="Center"`. **T3** `Order.CustomMadeTaxRate` (+ `App.xaml.cs` column guard `CustomMadeTaxRate TEXT NULL`), `CustomMadeSubtotal`/`CustomMadeTotal` now mirror Alteration/Clothing section-tax pattern; `OrderEditWindow` `CustomMadeTaxText`→editable `CustomMadeTaxBox` (13% default, card-driven enable via `RefreshCustomMadeTotals`), persisted in `ApplyPaymentFields`; per-record Tax/SumTotal UI removed from `CustomMadeServiceWindow` (record `TaxRate` left null for back-compat). Legacy orders show no custom-made tax until re-saved (accepted, consistent w/ other sections). **T4a** `OnCustomMadeRecordsKeyDown` + `MainWindow.OnOrderRowKeyDown` (Enter → edit). **T4b** `IsCancel="True"` on both Cancel buttons. **T4c** `RegisterDepositBox` + `OnDepositBoxGotFocus`/`LostFocus` (clears leading 0 on focus w/ `_syncingPayment` guard, restores "0" on blur). **T5a** `DecimalInputPattern` → `^\d*(\.\d{0,2})?$`; money `PreviewTextInput`+paste filters. **T5b/5c** `EmailPattern`, `IsValidPhone` (regex `^\+?[\d\s\-().]+$` + 7-15 digit count), `PhoneErrorText`/`EmailErrorText` red inline blocks, `LostFocus` validation + block in `TryValidateForSave`; keys `OrderEdit.Validate.EmailInvalid`/`PhoneInvalid` both blocks. **T5d** `MeasurementInputPattern` `^(\d+(\.\d*)?[+-]?)?$` on all 8 measurement boxes (`PreviewTextInput`+paste). SonarLint clean (reworded 2 comments to dodge S125 false positives); build succeeded 0 errors.
+- Notes: **T1** Languages.xml both blocks (Measure Only/Full Custom, Measure Only/Full Custom); `CustomMadeServiceWindow.xaml` radios reordered (Full Custom first, `IsChecked="True"`); `CustomMadeServiceRecord.ServiceMode` default + editor `InitializeMode(... ?? CustomFromScratch)`. **T2** mode `StackPanel` + both radios `VerticalAlignment="Center"`. **T3** `Order.CustomMadeTaxRate` (+ `App.xaml.cs` column guard `CustomMadeTaxRate TEXT NULL`), `CustomMadeSubtotal`/`CustomMadeTotal` now mirror Alteration/Clothing section-tax pattern; `OrderEditWindow` `CustomMadeTaxText`→editable `CustomMadeTaxBox` (13% default, card-driven enable via `RefreshCustomMadeTotals`), persisted in `ApplyPaymentFields`; per-record Tax/SumTotal UI removed from `CustomMadeServiceWindow` (record `TaxRate` left null for back-compat). Legacy orders show no custom-made tax until re-saved (accepted, consistent w/ other sections). **T4a** `OnCustomMadeRecordsKeyDown` + `MainWindow.OnOrderRowKeyDown` (Enter → edit). **T4b** `IsCancel="True"` on both Cancel buttons. **T4c** `RegisterDepositBox` + `OnDepositBoxGotFocus`/`LostFocus` (clears leading 0 on focus w/ `_syncingPayment` guard, restores "0" on blur). **T5a** `DecimalInputPattern` → `^\d*(\.\d{0,2})?$`; money `PreviewTextInput`+paste filters. **T5b/5c** `EmailPattern`, `IsValidPhone` (regex `^\+?[\d\s\-().]+$` + 7-15 digit count), `PhoneErrorText`/`EmailErrorText` red inline blocks, `LostFocus` validation + block in `TryValidateForSave`; keys `OrderEdit.Validate.EmailInvalid`/`PhoneInvalid` both blocks. **T5d** `MeasurementInputPattern` `^(\d+(\.\d*)?[+-]?)?$` on all 8 measurement boxes (`PreviewTextInput`+paste). SonarLint clean (reworded 2 comments to dodge S125 false positives); build succeeded 0 errors.
 
 ### 2026-07-23 — Simplify custom-made record summary  [DONE]
 - Ask: "定制记录那一块，精简一下，不需要把所有测量的数据写出来，只需要大致的项目就行。" (Custom-made records: simplify — don't spell out all measurement numbers, just the rough items.)
@@ -2898,7 +2989,7 @@ Entry format:
   - [x] Build + SonarLint clean; update context.md
 - Notes: (1) `OrderEditWindow.xaml` named `FormRoot`/`SaveButton` + added `ReadOnlyNotice`; edit ctor inlines read-only when `existing.Status` is Completed/Cancelled/Returned (disable `FormRoot`, hide Save, show notice). Inlined instead of a helper to avoid S2325 false positive (SonarLint can't see XAML-generated fields in standalone analysis). (2) `MainViewModel` added `StatusFilter` (OrderStatus?) + `StatusFilterOptions` (null=All); `RebuildOrdersView` filters by status; `MainWindow.xaml` filter Border got a status ComboBox using `OrderStatusToLocalizedTextConverter` (converter now returns `Filter.Status.All` for null). (3) `BuildReceiptDocument` now prints per-item unit price + line total, plus per-service Subtotal + Total (`Receipt.SectionTotal`) for Alterations/Ready-made/Custom-made. New Languages.xml keys (both blocks): `Receipt.SectionTotal`, `Filter.Status.Label`, `Filter.Status.All`, `OrderEdit.ReadOnlyNotice`. Build succeeded 0 errors, SonarLint clean.
 
-### 2026-07-23 — "已取货 / Picked up" quick-complete checkbox  [DONE]
+### 2026-07-23 — "OrderEdit.PickedUp" quick-complete checkbox  [DONE]
 - Ask: "add a new checkbox beside \"结清所有尾款\" called \"已取货\"，once the checkbox is selected，the order status should be completed automatically，for the above status dropdown, it becomes unchangeable, unless you untick the checkbox. meanwhile, in the dropdown, if you manually changed it to completed, then the checkbox should be ticked as well."
 - Plan:
   - [x] Add `OrderEdit.PickedUp` label to both `Languages.xml` blocks

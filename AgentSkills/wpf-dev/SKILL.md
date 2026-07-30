@@ -72,12 +72,34 @@ outside the language files — one command, and it is the only thing that keeps
 this section true:
 
 ```powershell
-$re = [regex]'[㐀-鿿！-～、。「」]'
-Get-ChildItem -Recurse -File -Include *.cs,*.xaml |
-    Where-Object { $_.FullName -notmatch '\\(bin|obj|publish)\\' } |
+# The character class is deliberately explicit: Han + Kana + fullwidth forms + CJK punctuation.
+# Do NOT widen it to curly quotes — French writes l’ with U+2019 and every fr-FR line would match.
+$re = [regex]'[\u3040-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uFF01-\uFF60\u3001\u3002\u300A-\u3011]'
+Get-ChildItem -Recurse -File -Include *.cs,*.xaml,*.md,*.json,*.csproj,*.ps1 |
+    Where-Object { $_.FullName -notmatch '\\(bin|obj|publish|\.git)\\' -and $_.Name -notlike '*.lang.xml' } |
     ForEach-Object { $f=$_; [System.IO.File]::ReadAllLines($f.FullName,[Text.Encoding]::UTF8) |
         Where-Object { $re.IsMatch($_) } | ForEach-Object { "$($f.Name): $_" } }
 ```
+
+**The `*.md` in that list is the correction that matters.** This grep checked only `.cs` and `.xaml`
+for weeks while the rule above explicitly covered Markdown too — so the companions eroded to roughly
+**310 lines** across `Architecture.md`, `context.md`, `TODO.md` and `RefinedTODO.md` while the check
+stayed green every single time it was run. A verification narrower than the rule it verifies is worse
+than none: it converts "unchecked" into "checked and clean".
+
+Expect hits in the Markdown, and **do not blanket-strip them** — the three sanctioned uses all look
+like violations to a regex. Sort each hit into:
+
+- **naming a UI SURFACE** (menu, window, button, column, checkbox) → a violation; use the key, or the
+  English label for a navigation path;
+- **naming a string-table VALUE** — the `` `Key` (value) `` form, a rename record (`已付定金→已收定金`),
+  or a line of rendered output — → sanctioned, it *is* the data;
+- **a verbatim quote of the user** → sanctioned, and note these are not only on `- Ask:` lines; they
+  turn up mid-Notes too, so a script that protects only Ask lines will eat them.
+
+That sort is why the sweep is a **whitelist of known labels**, not a strip: a bare-token pass over the
+same files produced half-English wreckage (`Order.Fields.FinalBalanceShort结清`) because the short
+tokens are substrings of compounds it did not enumerate.
 
 ## 0. Session continuity & checkpoints (do this first)
 

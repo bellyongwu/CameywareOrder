@@ -13,6 +13,21 @@ Entry format:
 - Why: <reason / triggering request>
 ```
 
+### 2026-07-30 — The CJK verification grep now covers Markdown, and says how to sort the hits
+- Changed: `SKILL.md` "Who this skill is" — the grep's `-Include` widened to `*.md,*.json,*.csproj,*.ps1`
+  alongside `*.cs,*.xaml`, its character class made explicit, and a new paragraph on triaging hits.
+- Why: user asked whether any Chinese comments remained in the project. Source was clean; the
+  **companions were not** — roughly 310 lines. The rule has always covered Markdown explicitly, but the
+  grep added to enforce it globbed only `*.cs,*.xaml`, so it reported clean every time it ran. A
+  verification narrower than its rule does not merely miss things, it certifies them.
+- Also recorded, because each was a wrong first attempt: the sweep must be a **whitelist of known
+  labels** (a bare-token pass left a key spliced onto a trailing Chinese fragment, since short tokens
+  are substrings of compounds); most hits are **sanctioned** and a regex cannot tell, so sort by
+  what the Chinese is doing — naming a UI surface (violation) vs naming a string-table value or quoting
+  the user (keep); and verbatim quotes appear outside `- Ask:` lines, so protect on the quote character.
+- The character class must NOT be widened to curly quotes: French `l’` is U+2019 and every fr-FR line
+  would match.
+
 ### 2026-07-30 — §4b: reporting a refused save
 - Changed: `SKILL.md` — new §4b between the money model and the reentrancy section.
 - Why: a request to "modularize the error message box" exposed a form with eleven validation checks and
@@ -244,11 +259,11 @@ Entry format:
   `SortKey`/`SortGlyph`, bubbled header-click handler, data-driven
   `GetSortSelector`, RelativeSource arrow indicator); added §14 (read-only status
   relabels the open action via one `RefreshToolbarLabels`, and gating the
-  "已取货" checkbox on `cleared || IsChecked`); frontmatter USE-WHEN now lists
+  "OrderEdit.PickedUp" checkbox on `cleared || IsChecked`); frontmatter USE-WHEN now lists
   column-header sorting.
 - Why: this session implemented the deposit/final split with per-portion card
   tax, clickable column-header sorting on the order list, the completed-order
-  "查看订单" context-menu relabel, and the picked-up-checkbox gating — captured as
+  "Toolbar.ViewOrder" context-menu relabel, and the picked-up-checkbox gating — captured as
   reusable conventions.
 
 ### 2026-07-24 — Proactive Sonar-clean coding restrictions
@@ -295,7 +310,7 @@ Entry format:
   first option (SelectedIndex = 0 on new/setup, fall back to first on edit-load)
   instead of leaving it blank.
 - Why: user asked to standardize dropdown defaults and apply it to the
-  alteration-category dropdown (default 服装修改 / Garment Adjustments).
+  alteration-category dropdown (default Garment Adjustments / Garment Adjustments).
 
 ### 2026-07-23 — SonarQube runs before the build
 - Changed: SKILL.md §9 (Workflow discipline) and §10 (SonarQube cleanup) —

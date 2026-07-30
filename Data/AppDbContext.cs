@@ -54,8 +54,43 @@ public class AppDbContext : DbContext
     /// RequireCurrent throws when no shop is open. Refusing to write is the point: a silent write
     /// to a nonexistent shop loses the order.
     /// </summary>
+    private bool _stampingSuppressed;
+
+    /// <summary>
+    /// Turns the stamping above off for the lifetime of the returned scope. The ONE legitimate caller
+    /// is restoring a shop from an archive.
+    /// </summary>
+    /// <remarks>
+    /// An import already knows which shop each order belongs to, which currency it was priced in and
+    /// which pricing mode it was quoted under — those are facts recorded when the order was taken,
+    /// possibly on another machine. Stamping would overwrite all three with the shop that happens to be
+    /// OPEN, quietly re-parenting every restored order and re-denominating its money. The bug would not
+    /// surface until somebody reprinted a receipt.
+    ///
+    /// Deliberately awkward to reach: an explicit `using` around the save, not a constructor flag or a
+    /// setter. The stamping exists precisely so a call site cannot forget `ShopId`, and this is the only
+    /// place where the caller is more authoritative than the open shop.
+    /// </remarks>
+    public IDisposable SuppressShopStamping()
+    {
+        _stampingSuppressed = true;
+        return new StampingSuppression(this);
+    }
+
+    private sealed class StampingSuppression : IDisposable
+    {
+        private readonly AppDbContext _context;
+
+        public StampingSuppression(AppDbContext context) => _context = context;
+
+        public void Dispose() => _context._stampingSuppressed = false;
+    }
+
     private void StampNewOrdersWithShop()
     {
+        if (_stampingSuppressed)
+            return;
+
         var addedOrders = ChangeTracker.Entries<Order>()
             .Where(entry => entry.State == EntityState.Added)
             .Select(entry => entry.Entity)
