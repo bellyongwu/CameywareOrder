@@ -14,12 +14,18 @@
         ShowInTaskbar="False">
     <Window.Resources>
         <conv:DocumentThumbnailConverter x:Key="DocumentThumbnailConverter"/>
-        <!-- Locked inputs (IsReadOnly) look grayed out like a disabled box. -->
-        <Style TargetType="TextBox">
+        <!-- Locked inputs (IsReadOnly) look grayed out like a disabled box.
+
+             BasedOn is what was missing, and it is why every input in this window looked wrong: an
+             implicit style declared here REPLACES the theme's implicit TextBox style outright rather
+             than extending it, so all of these boxes fell back to the stock WPF control — different
+             height, padding, border and focus behaviour from every other screen — while carrying only
+             this one trigger. The colours come from the palette for the same reason. -->
+        <Style TargetType="TextBox" BasedOn="{StaticResource ThemedTextBox}">
             <Style.Triggers>
                 <Trigger Property="IsReadOnly" Value="True">
-                    <Setter Property="Background" Value="#F3F4F6"/>
-                    <Setter Property="Foreground" Value="#9CA3AF"/>
+                    <Setter Property="Background" Value="{StaticResource DisabledBackgroundBrush}"/>
+                    <Setter Property="Foreground" Value="{StaticResource DisabledForegroundBrush}"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -27,9 +33,9 @@
             <Setter Property="Margin" Value="0,0,10,0"/>
             <Setter Property="Padding" Value="12,5"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#B8C2CC"/>
-            <Setter Property="Background" Value="#F9FAFB"/>
-            <Setter Property="Foreground" Value="#4F46E5"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+            <Setter Property="Background" Value="{StaticResource SurfaceMutedBrush}"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -39,11 +45,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="#EEF3F7"/>
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="#4F46E5"/>
-                                <Setter TargetName="Border" Property="BorderBrush" Value="#4F46E5"/>
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter TargetName="Border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -57,7 +63,7 @@
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Foreground" Value="#4F46E5"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -70,34 +76,34 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Foreground" Value="#1F5F8B"/>
+                    <Setter Property="Foreground" Value="{StaticResource PrimaryDarkBrush}"/>
                     <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="#B8C2CC"/>
+                    <Setter Property="Foreground" Value="{StaticResource BorderStrongBrush}"/>
                     <Setter Property="Cursor" Value="Arrow"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <Style x:Key="LinkDangerButtonStyle" TargetType="Button" BasedOn="{StaticResource LinkButtonStyle}">
-            <Setter Property="Foreground" Value="#B91C1C"/>
+            <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Foreground" Value="#96281B"/>
+                    <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
                     <Setter Property="TextBlock.TextDecorations" Value="Underline"/>
                 </Trigger>
                 <Trigger Property="IsEnabled" Value="False">
-                    <Setter Property="Foreground" Value="#B8C2CC"/>
+                    <Setter Property="Foreground" Value="{StaticResource BorderStrongBrush}"/>
                     <Setter Property="Cursor" Value="Arrow"/>
                 </Trigger>
             </Style.Triggers>
         </Style>
         <DataTemplate x:Key="DocumentItemTemplate">
-            <Border BorderBrush="#EEEEEE" BorderThickness="0,0,0,1" Padding="0,8">
+            <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1" Padding="0,8">
                 <DockPanel LastChildFill="True">
                     <!-- Square thumbnail: center-cropped via UniformToFill + rounded clip; click to view -->
                     <Border DockPanel.Dock="Left" Width="60" Height="60" Margin="0,0,12,0"
-                            Background="#F0F2F5" BorderBrush="#E5E7EB" BorderThickness="1"
+                            Background="{StaticResource SurfaceMutedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
                             CornerRadius="8" ClipToBounds="True" Cursor="Hand"
                             ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[CustomMade.Documents.View], Mode=OneWay}"
                             MouseLeftButtonUp="OnViewDocumentClick">
@@ -154,7 +160,7 @@
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="FormRoot">
-                <Border Padding="14" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
+                <Border Padding="14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Customer.Measurements.Title], Mode=OneWay}" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,12"/>
 
@@ -172,13 +178,13 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="CustomerNameBox" Margin="0,8,14,8" Padding="6,4"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="CustomerNameBox" Margin="0,8,14,8"/>
 
                             <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
                             <ctrl:PhoneNumberField Grid.Row="0" Grid.Column="3" x:Name="PhoneField" Margin="0,8"/>
 
                             <TextBlock Grid.Row="1" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Email], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="EmailBox" Margin="0,8,14,8" Padding="6,4"/>
+                            <TextBox Grid.Row="1" Grid.Column="1" x:Name="EmailBox" Margin="0,8,14,8"/>
 
                             <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.MeasurementMode], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
                             <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,8,0,8">
@@ -200,7 +206,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
                     <StackPanel>
                         <DockPanel Margin="0,0,0,12">
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
@@ -210,18 +216,18 @@
                             </StackPanel>
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.Measures], Mode=OneWay}" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         </DockPanel>
-                        <TextBlock x:Name="MeasurementContextText" Foreground="#4F46E5" FontWeight="SemiBold" Margin="0,0,0,12"/>
+                        <TextBlock x:Name="MeasurementContextText" Foreground="{StaticResource PrimaryBrush}" FontWeight="SemiBold" Margin="0,0,0,12"/>
                         <StackPanel>
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.SelectGarments], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,8"/>
                             <WrapPanel x:Name="GarmentSelectorPanel"/>
-                            <TextBlock x:Name="NoGarmentText" Foreground="#9AA6B2" FontStyle="Italic" Margin="0,10,0,0"
+                            <TextBlock x:Name="NoGarmentText" Foreground="{StaticResource TextMutedBrush}" FontStyle="Italic" Margin="0,10,0,0"
                                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Measure.NoGarmentSelected], Mode=OneWay}"/>
                             <StackPanel x:Name="GarmentMeasurementsPanel" Margin="0,10,0,0"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.CustomPrice], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
                         <Grid>
@@ -236,7 +242,7 @@
                             </Grid.RowDefinitions>
 
                             <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Price], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
-                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="CustomPriceBox" Margin="0,8,14,8" Padding="6,4" TextChanged="OnPriceValuesChanged" PreviewTextInput="OnMoneyPreviewTextInput"/>
+                            <TextBox Grid.Row="0" Grid.Column="1" x:Name="CustomPriceBox" Margin="0,8,14,8" TextChanged="OnPriceValuesChanged" PreviewTextInput="OnMoneyPreviewTextInput"/>
 
                             <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Subtotal], Mode=OneWay}" VerticalAlignment="Center" Margin="0,8"/>
                             <TextBlock Grid.Row="0" Grid.Column="3" x:Name="CustomSubtotalText" Margin="0,8" VerticalAlignment="Center" FontWeight="SemiBold"/>
@@ -244,11 +250,11 @@
                     </StackPanel>
                 </Border>
 
-                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[CustomMade.Documents.Title], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,12"/>
 
-                        <Border Margin="0,0,0,12" Padding="12" Background="#FAFBFC" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
+                        <Border Margin="0,0,0,12" Padding="12" Background="{StaticResource SurfaceMutedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,6">
                                     <Button x:Name="HandwritingUploadButton" DockPanel.Dock="Right"
@@ -266,7 +272,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Margin="0,0,0,12" Padding="12" Background="#FAFBFC" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
+                        <Border Margin="0,0,0,12" Padding="12" Background="{StaticResource SurfaceMutedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,6">
                                     <Button x:Name="FabricUploadButton" DockPanel.Dock="Right"
@@ -284,7 +290,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Margin="0,0,0,12" Padding="12" Background="#FAFBFC" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
+                        <Border Margin="0,0,0,12" Padding="12" Background="{StaticResource SurfaceMutedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,6">
                                     <Button x:Name="PhotoUploadButton" DockPanel.Dock="Right"
@@ -302,7 +308,7 @@
                             </StackPanel>
                         </Border>
 
-                        <Border Padding="12" Background="#FAFBFC" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
+                        <Border Padding="12" Background="{StaticResource SurfaceMutedBrush}" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
                             <StackPanel>
                                 <DockPanel Margin="0,0,0,6">
                                     <Button x:Name="OtherUploadButton" DockPanel.Dock="Right"
@@ -322,7 +328,7 @@
                     </StackPanel>
                 </Border>
 
-                <Border Margin="0,14,0,0" Padding="14" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="6">
+                <Border Margin="0,14,0,0" Padding="14" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" CornerRadius="6">
                     <StackPanel>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.DownloadMeasurement], Mode=OneWay}" FontWeight="SemiBold" Margin="0,0,0,10"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -338,22 +344,22 @@
                                     </ItemsPanelTemplate>
                                 </ItemsControl.ItemsPanel>
                             </ItemsControl>
-                            <Button x:Name="DownloadSubmitButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownloadSubmit], Mode=OneWay}" Width="110" Height="30" Padding="12,5" Click="OnDownloadSubmitClick" Background="#4F46E5" Foreground="White"/>
+                            <Button x:Name="DownloadSubmitButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.DownloadSubmit], Mode=OneWay}" Width="110" Height="30" Padding="12,5" Click="OnDownloadSubmitClick" Background="{StaticResource PrimaryBrush}" Foreground="White"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <TextBlock x:Name="ErrorText" Foreground="#DC2626" TextWrapping="Wrap" Margin="0,12,0,0"/>
+                <TextBlock x:Name="ErrorText" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" Margin="0,12,0,0"/>
             </StackPanel>
         </ScrollViewer>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
             <TextBlock x:Name="ReadOnlyNotice" HorizontalAlignment="Left" VerticalAlignment="Center"
-                       Foreground="#E67E22" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="Collapsed"
+                       Foreground="{StaticResource WarningBrush}" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="Collapsed"
                        Margin="0,0,10,0"
                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.ReadOnlyNotice], Mode=OneWay}"/>
             <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Cancel], Mode=OneWay}" Width="82" Height="32" Margin="0,0,10,0" IsCancel="True" Click="OnCancelClick"/>
-            <Button x:Name="SaveButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Save], Mode=OneWay}" Width="82" Height="32" IsDefault="True" Click="OnSaveClick" Background="#4F46E5" Foreground="White"/>
+            <Button x:Name="SaveButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Save], Mode=OneWay}" Width="82" Height="32" IsDefault="True" Click="OnSaveClick" Background="{StaticResource PrimaryBrush}" Foreground="White"/>
         </StackPanel>
     </Grid>
 </Window>

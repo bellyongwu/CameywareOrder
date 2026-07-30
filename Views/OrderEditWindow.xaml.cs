@@ -3558,6 +3558,34 @@ public partial class OrderEditWindow : Window
         // how a control gets stranded. "None" means no deposit is taken, so there is nothing to
         // type either way.
         c.DownpaymentBox.IsEnabled = !sectionLocked && c.DownNone.IsChecked is not true;
+
+        // The split follows the SAME locks as the single-method controls it replaces, which it was
+        // not doing at all: a settled section, a read-only order and a received deposit all left their
+        // allocation rows and their toggle fully editable. A stage whose money is confirmed must not be
+        // re-apportioned behind the confirmation — the tick is the shop saying this is what happened.
+        //
+        // Per stage, matching the radios above: the DEPOSIT's composition freezes when the deposit is
+        // received, the BALANCE's when the section is settled.
+        SetSplitStageEnabled(c, finalStage: false, enabled: !depositMethodLocked);
+        SetSplitStageEnabled(c, finalStage: true, enabled: !sectionLocked);
+    }
+
+    /// <summary>Locks or releases one stage's split: its toggle and every amount in it.</summary>
+    private static void SetSplitStageEnabled(PaymentSectionControls c, bool finalStage, bool enabled)
+    {
+        if (finalStage)
+        {
+            c.FinalNoSplitRadio.IsEnabled = enabled;
+            c.FinalSplitRadio.IsEnabled = enabled;
+        }
+        else
+        {
+            c.NoSplitRadio.IsEnabled = enabled;
+            c.SplitRadio.IsEnabled = enabled;
+        }
+
+        foreach (var row in finalStage ? c.FinalRows : c.DepositRows)
+            row.Amount.IsEnabled = enabled;
     }
 
     // The pricing mode arrives as an argument rather than being read off the window, so this stays a

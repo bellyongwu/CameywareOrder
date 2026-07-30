@@ -745,12 +745,99 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
-    <Style TargetType="RadioButton">
+    <!-- ══ Radios ═══════════════════════════════════════════════════════════════════════════
+         The stock WPF radio is a small grey ring with a black dot and no hover state at all, which
+         made a row of payment methods read as static text until one was clicked. This one is drawn:
+         a ring that answers the pointer, a brand-coloured dot on selection, and a disabled state that
+         says "locked" rather than "faded".
+
+         Keyed AND implicit, like ThemedTextBox below it. That is not decoration: a keyed style with a
+         TargetType does NOT inherit the implicit one, so every keyed variant in the application (the
+         payment-method rows, the split toggles) must say BasedOn — and would silently keep the stock
+         template if it did not. -->
+    <Style x:Key="ThemedRadioButton" TargetType="RadioButton">
         <Setter Property="Foreground" Value="{StaticResource TextBodyBrush}"/>
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderStrongBrush}"/>
+        <Setter Property="Padding" Value="9,0,0,0"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RadioButton">
+                    <!-- Transparent background on the root so the whole row is a hit target, not just
+                         the 18px ring — a radio you have to hit precisely is the commonest complaint
+                         about this control. -->
+                    <Grid Background="Transparent">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid Width="18" Height="18" VerticalAlignment="Center">
+                            <!-- A soft halo behind the ring, revealed on hover and focus. It sits
+                                 OUTSIDE the ring rather than tinting its fill, so the control never
+                                 looks half-selected while the pointer is merely passing over. -->
+                            <Ellipse x:Name="Halo" Width="26" Height="26" Fill="{StaticResource PrimarySoftBrush}"
+                                     Opacity="0"/>
+                            <Ellipse x:Name="Ring" Stroke="{TemplateBinding BorderBrush}" StrokeThickness="1.5"
+                                     Fill="{TemplateBinding Background}"/>
+                            <Ellipse x:Name="Dot" Width="8" Height="8" Fill="{StaticResource PrimaryBrush}"
+                                     Opacity="0"/>
+                        </Grid>
+
+                        <ContentPresenter Grid.Column="1" Margin="{TemplateBinding Padding}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                          RecognizesAccessKey="True"/>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Ring" Property="Stroke" Value="{StaticResource PrimaryHoverBorderBrush}"/>
+                            <Setter TargetName="Halo" Property="Opacity" Value="1"/>
+                        </Trigger>
+
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Ring" Property="Stroke" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Ring" Property="StrokeThickness" Value="2"/>
+                            <Setter TargetName="Dot" Property="Opacity" Value="1"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsChecked" Value="True"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Ring" Property="Stroke" Value="{StaticResource PrimaryDarkBrush}"/>
+                            <Setter TargetName="Dot" Property="Fill" Value="{StaticResource PrimaryDarkBrush}"/>
+                        </MultiTrigger>
+
+                        <!-- Keyboard focus only. A mouse click would otherwise leave a ring behind on
+                             every radio the user merely clicked, which reads as a second selection. -->
+                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                            <Setter TargetName="Halo" Property="Opacity" Value="1"/>
+                            <Setter TargetName="Halo" Property="Fill" Value="{StaticResource PrimaryMutedBrush}"/>
+                        </Trigger>
+
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Ring" Property="Stroke" Value="{StaticResource BorderBrush}"/>
+                            <Setter TargetName="Ring" Property="Fill" Value="{StaticResource DisabledBackgroundBrush}"/>
+                            <Setter TargetName="Dot" Property="Fill" Value="{StaticResource TextMutedBrush}"/>
+                            <Setter TargetName="Halo" Property="Opacity" Value="0"/>
+                            <Setter Property="Foreground" Value="{StaticResource DisabledForegroundBrush}"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
+
+    <Style TargetType="RadioButton" BasedOn="{StaticResource ThemedRadioButton}"/>
 
     <!-- ══ Menus ════════════════════════════════════════════════════════════════════════════
          ONE template for every MenuItem role. The stock style swaps between four templates by Role,

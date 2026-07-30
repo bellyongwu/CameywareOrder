@@ -92,9 +92,9 @@
             </Grid>
         </DataTemplate>
 
-        <Style x:Key="ModeRadioStyle" TargetType="RadioButton">
+        <!-- BasedOn, or this keyed style silently keeps the stock radio template. -->
+        <Style x:Key="ModeRadioStyle" TargetType="RadioButton" BasedOn="{StaticResource ThemedRadioButton}">
             <Setter Property="Margin" Value="0,0,0,10"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
         <Style x:Key="PrimaryButtonStyle" TargetType="Button">

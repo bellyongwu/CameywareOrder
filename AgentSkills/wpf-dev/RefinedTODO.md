@@ -45,10 +45,11 @@ Nothing in flight. v3.0.0 (store location / tax jurisdictions) is **committed to
 the Canada collapse, the tax-inclusive wording and the phone-country field are on top of it,
 uncommitted.
 
-**Known red, not a regression:** `langcheck` fails two assertions because no shop in the live database
-installs ja-JP — Japanese shipped as a language and the existing shops were never told they install it.
-That is user DATA, so it is reported rather than edited. Fixing it means either seeding a shop that
-installs every language in the harness's own fixture, or ticking Japanese on a real shop.
+**Fixed 2026-07-30:** `langcheck`'s "installs every shipped language" pair was FLAPPING — red, then
+green for several runs, then red — because it asserted on live shop data that `storecheck` rewrites
+(delete/restore moved Montreal Atelier from `#4` to `#14`). It now seeds its own fixture copy. See
+`context.md`: a flapping gate devalues every result it has produced, and this suite is what every change
+in this session was verified against.
 
 **Known odd, not a regression:** shop #10 "Shanghai LeeYonge Bespoke" is located `CA-BC`, so it prices
 tax-exclusive and dials +1. Reported to the user rather than corrected: a location change moves the tax

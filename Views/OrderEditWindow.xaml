@@ -134,11 +134,12 @@
         </Style>
 
         <!-- Payment method radio button. -->
-        <Style x:Key="MethodRadio" TargetType="RadioButton">
+        <!-- Spacing only. BasedOn is load-bearing: a keyed style with a TargetType does not inherit
+             the implicit one, so without it these 42 radios would keep the stock WPF template while
+             every other radio in the application had the themed one. The gap between ring and label
+             comes from the theme too, so the rows line up with radios on other screens. -->
+        <Style x:Key="MethodRadio" TargetType="RadioButton" BasedOn="{StaticResource ThemedRadioButton}">
             <Setter Property="Margin" Value="0,0,20,0"/>
-            <Setter Property="Padding" Value="4,0,0,0"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Cursor" Value="Hand"/>
         </Style>
 
         <!-- The tax rate is a store-wide rule, not a per-order figure, so it is shown as a fixed

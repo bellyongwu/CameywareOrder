@@ -45,6 +45,11 @@ Fixes and sharpening for the payment split, all in the order editor.
   keystroke, which would rewrite "900" at the first digit and never let a second one be typed.
 - **Each row states its own tax and what is receivable for it** — `13% tax $39.00 · due $339.00` — so
   the amount actually asked for at the till is on screen per payment type, not only as a section total.
+- **A confirmed stage locks its allocation.** The split rows and their toggle now follow exactly the
+  locks the single-method controls already had: the deposit's freeze when the deposit is marked
+  received, the balance's when the section is settled, and both when the order is read-only. They had
+  been left editable, so a stage whose money was confirmed could still be re-apportioned — with the
+  deposit rows off screen by then, nothing on the card would have shown it.
 
 ### v4.0.0 — 2026-07-30
 

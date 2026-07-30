@@ -2045,6 +2045,46 @@ contributes nothing whatever the price box holds. Same family as "harnesses must
 fixture": pick the charged category first, then type the price. The failure is quiet — the panel
 renders perfectly, with zeros.
 
+## An implicit style in a window REPLACES the theme's; a keyed one never inherits it (2026-07-30)
+
+Two halves of one WPF rule, and both were live in this codebase at once.
+
+- **`<Style TargetType="TextBox">` in a Window's resources does not extend the theme's implicit style —
+  it replaces it.** `CustomMadeServiceWindow` declared one to add a read-only trigger, and thereby
+  dropped every input in that window to the stock control: different height, padding, border and focus
+  behaviour from every other screen, for years, while compiling and behaving perfectly. `BasedOn` is
+  the whole fix.
+- **A KEYED style with a TargetType does not pick up the implicit one either.** So when the radio
+  template was themed, `MethodRadio` (42 radios in the order editor) and `ShopSetupWindow`'s
+  `ModeRadioStyle` would have silently kept the stock look while every unkeyed radio changed — the
+  worst outcome, since a half-restyled application reads as a rendering bug rather than a missed edit.
+
+**Before restyling a control type, grep for every `<Style … TargetType="ThatType">` in the tree** and
+sort them: needs `BasedOn`, or is deliberately bespoke (`FilterChip` and `ChallengeBox` carry their own
+full templates and should be left alone).
+
+## A harness that FLAPS is reporting another harness, not the code (2026-07-30)
+
+`langcheck`'s "at least one shop installs every shipped language" went red, then green for several
+runs, then red again, while nothing about language resolution changed in between. Chasing it by the
+assertion text leads nowhere; the tell was in its own dump — **Montreal Atelier was `#4` in one run and
+`#14` in a later one**. A shop had been deleted and re-created in the LIVE database.
+
+The culprit is `storecheck`, which exercises delete and restore. Both harnesses copy the live file, but
+one of them changes what the live file CONTAINS between suite runs, and `langcheck` asserted on whatever
+happened to be there. Ordering makes it worse: `langcheck` runs before `storecheck` alphabetically, so
+it sees the PREVIOUS run's leftovers.
+
+Fixed by the rule already in this file — a harness must ESTABLISH the state it asserts on.
+`SeedEveryLanguageShop` gives the fixture COPY a shop installing every language when the live data has
+none. What is under test is `ShopLanguages.Installed` resolving a full set, not whether this machine
+happens to own such a shop; the old version reported the difference between those two as a regression
+in the first.
+
+**And the wider point: a flapping gate silently devalues every result it has ever produced.** This suite
+is what each change in this session was verified against. Two green runs either side of a red one are
+not evidence the red was noise.
+
 ## Filling a field on the user's behalf STATES something (2026-07-30)
 
 The split's auto-fill was first built to "settle the other rows at zero" when one was clicked into —

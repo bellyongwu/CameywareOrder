@@ -17,6 +17,24 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-30 17:20 — A drawn radio, and the custom-made window on the theme  [DONE]
+- Ask: "UI improvements: >Redsign the radio group themem globally. make a new look and feel for radios.
+  >Apply the main theme to Custom made record view(especially the input fields). the styles is not
+  matching the global theme"
+- Notes: `ThemedRadioButton` in `AppTheme.xaml` — a drawn template replacing the stock grey ring: an
+  18px ring that answers the pointer (soft halo OUTSIDE the ring, so hover never reads as half-selected),
+  a brand dot and a bolded label on selection, a real disabled state, and a transparent root so the whole
+  row is the hit target rather than the ring alone. Keyed AND implicit, matching `ThemedTextBox`.
+  **The keyed variants had to be found and rebased or they would have kept the stock look while
+  everything else changed** — `MethodRadio` (42 radios) and `ShopSetupWindow.ModeRadioStyle` now say
+  `BasedOn`; `FilterChip` and `ChallengeBox` carry their own templates and were left alone.
+  `CustomMadeServiceWindow` declared a local implicit `<Style TargetType="TextBox">` with no `BasedOn`,
+  which REPLACES the theme's rather than extending it — that one line is why every input in that window
+  looked wrong. Fixed, plus three inline `Padding="6,4"` overrides removed and all 16 hard-coded hex
+  values mapped to the palette. Both lessons in `context.md`.
+  Verified by RENDERING both — a template is the one thing an assertion cannot judge; the window
+  compiled and behaved correctly the entire time it looked wrong.
+
 ### 2026-07-30 15:10 — v4.0.1 hotfix: the split allocates itself  [DONE]
 - Ask: "Hotfix for v 4.0 > Bug Fix - the Skip deposit will be the same as Pre-tax deposit as $0 -
   Issue: Missing break down for final balance stage. - The toggle on the split and non split payment
@@ -74,6 +92,14 @@ Entry format:
   gone. Mirroring them meant choosing to split a BALANCE re-shaped a deposit already taken. JSON shape
   changed with it — safe only because no order has been saved with a split outside this uncommitted
   work. `splitcheck` at 60 assertions.
+- Follow-up ask: "The lock of split paymanet is missing while the checkbox for each pricing section
+  stage is ticked." — correct: `ApplySectionLock` never touched the split rows or their toggles, so a
+  received deposit, a settled section and a READ-ONLY order all left the allocation editable. New
+  `SetSplitStageEnabled(c, stage, enabled)` applies the locks the single-method controls already had,
+  per stage: the deposit's composition freezes on `depositMethodLocked`, the balance's on
+  `sectionLocked`. Asserted both ways in `splitcheck` — including that re-opening the section RELEASES
+  them, since a lock that can only lock strands the control (the comment two lines above it in that
+  method says exactly this about `DownpaymentBox`). 68 assertions.
 - Sonar follow-up: `OnSplitAmountFocused` tripped S3776 (~17). The cause was SEARCHING and ACTING
   interleaved — two nested loops looking for the row that owns the focused box, with the guards and the
   fill inside them. Split into `FindSplitSlot` (returns a `SplitSlot` record struct) plus a flat
