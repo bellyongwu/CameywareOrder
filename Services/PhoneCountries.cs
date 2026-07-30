@@ -153,7 +153,8 @@ public static class PhoneCountries
                             && !string.IsNullOrWhiteSpace(e.DialCode)
                             && e.NationalDigits is { Count: > 0 })
                 .Select(e => new PhoneCountry(e.Code!.Trim(), e.DialCode!.Trim(),
-                    e.NationalDigits!.Where(d => d > 0).ToList()))
+                    e.NationalDigits!.Where(d => d > 0).ToList(),
+                    ParseFormats(e.NationalFormat)))
                 .Where(c => c.NationalDigits.Count > 0)
                 .ToList();
 
@@ -174,13 +175,53 @@ public static class PhoneCountries
         }
     }
 
+    /// <summary>
+    /// Reads the grouping patterns, whose JSON keys are digit counts written as strings. Parsed by hand
+    /// rather than deserialized into a <c>Dictionary&lt;int, string&gt;</c> so that one unparsable key
+    /// costs that one entry instead of the whole country: a file edited by hand is the point of shipping
+    /// it as JSON, and a typo there must not take a dial code down with it.
+    /// </summary>
+    private static IReadOnlyDictionary<int, string> ParseFormats(Dictionary<string, string>? entries)
+    {
+        var formats = new Dictionary<int, string>();
+        if (entries is null)
+            return formats;
+
+        foreach (var (key, pattern) in entries)
+        {
+            if (string.IsNullOrWhiteSpace(pattern))
+                continue;
+
+            if (!int.TryParse(key, System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out var digits) || digits <= 0)
+            {
+                continue;
+            }
+
+            // A pattern with fewer slots than its key claims would silently drop digits off the end.
+            if (pattern.Count(c => c == '#') != digits)
+                continue;
+
+            formats[digits] = pattern;
+        }
+
+        return formats;
+    }
+
     /// <summary>Built-in home market, used only when the shipped file is missing or unreadable.</summary>
+    /// <remarks>
+    /// Carries the NANP grouping rather than an empty map: this is the fallback a shop actually runs on
+    /// when the file cannot be read, and a build that quietly stops punctuating numbers is the kind of
+    /// difference nobody reports as a bug.
+    /// </remarks>
     private static IReadOnlyList<PhoneCountry> Fallback { get; } = new[]
     {
-        new PhoneCountry(DefaultCode, "+1", new[] { 10 })
+        new PhoneCountry(DefaultCode, "+1", new[] { 10 },
+            new Dictionary<int, string> { [10] = "###-###-####" })
     };
 
     private sealed record CountriesPayload(string? DefaultCountryCode, List<CountryEntry>? Countries);
 
-    private sealed record CountryEntry(string? Code, string? DialCode, List<int>? NationalDigits);
+    private sealed record CountryEntry(string? Code, string? DialCode, List<int>? NationalDigits,
+        Dictionary<string, string>? NationalFormat);
 }

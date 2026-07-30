@@ -578,24 +578,31 @@
                             <GridViewColumn Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomMadeFlag], Mode=OneWay}" Width="195">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <!-- One line, not two stacked. The garment names used to wrap
-                                             under the flag, which made a row with several garments
-                                             taller than its neighbours — the one thing a list read by
-                                             scanning down a column cannot afford.
+                                        <!-- Two lines: the flag, and the garments under it. Rows stay
+                                             level because the second line is one line ALWAYS — its row
+                                             is a fixed height that stands whether the names show or
+                                             not, and the names themselves are trimmed rather than
+                                             wrapped. An earlier version let them wrap freely, which
+                                             made a row with several garments taller than its
+                                             neighbours; that is what the fixed row height prevents,
+                                             and both lines fit inside the row's existing MinHeight of
+                                             54 so no row grew.
 
-                                             A Grid, not a horizontal StackPanel: a StackPanel gives
-                                             its children infinite width, so the names would never
-                                             know they had overflowed and TextTrimming would never
-                                             fire. The star column is what makes the ellipsis work. -->
+                                             The star COLUMN is what makes the ellipsis work: without a
+                                             width imposed from outside, the names would never know
+                                             they had overflowed and TextTrimming would never fire. -->
                                         <Grid HorizontalAlignment="Stretch" VerticalAlignment="Center">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="Auto"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Style="{StaticResource ListCellText}"
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="15"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock Grid.Row="0" Style="{StaticResource ListCellText}"
                                                        Text="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Flag}"
                                                        FontWeight="SemiBold"/>
-                                            <TextBlock Grid.Column="1" Style="{StaticResource ListCellText}" Margin="4,0,0,0"
+                                            <TextBlock Grid.Row="1" Style="{StaticResource ListCellText}"
                                                        Text="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Names}"
                                                        ToolTip="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=Names}"
                                                        Visibility="{Binding Converter={StaticResource CustomMadeServiceFlagConverter}, ConverterParameter=NamesVisibility}"

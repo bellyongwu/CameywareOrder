@@ -11,6 +11,21 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.0.3 — 2026-07-30 (hotfix)
+
+- **A phone number punctuates itself as it is typed**, the way the country it belongs to writes one:
+  `905-401-6667` in Canada and the US, `138 0013 8000` in China, `6 12 34 56 78` in France,
+  `612 345 678` in Spain, `090-1234-5678` for a Japanese mobile. The grouping follows the country
+  picked for **that number**, so a Toronto shop taking a Shanghai mobile sees it grouped the Chinese
+  way. Where a country has no single correct grouping the number is left exactly as typed — Japan's
+  ten-digit landlines are written both `03-1234-5678` and `045-123-4567`, and nothing in the digits
+  says which. A number already saved is re-punctuated only when that is unambiguous: one carrying an
+  extension or a note is shown exactly as it was stored.
+- **The Cancellation / Return Reason section wraps** instead of running off the end of its column.
+  The label, the reason list and the placeholder all wrap; the label was being cut mid-word.
+- **The custom-made column in the order list reads over two lines** — the *Yes* on one, the garments
+  underneath. Every row stays exactly the height it was.
+
 ### v4.0.2 — 2026-07-30 (hotfix)
 
 Appearance and legibility, across every window.

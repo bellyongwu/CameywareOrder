@@ -1229,10 +1229,15 @@
         <Setter Property="Margin" Value="0,0,0,12"/>
     </Style>
 
+    <!-- Wraps, because a field label is translated: "Cancellation / Return Reason" is one word in
+         Chinese and three lines in French, and a label column sized for the short reading clips the
+         long one. Wrapping only bites where the PARENT imposes a width — see the DockPanel note in
+         context.md — so the label blocks that use this dock their icon rather than stacking it. -->
     <Style x:Key="FieldLabel" TargetType="TextBlock">
         <Setter Property="FontSize" Value="12"/>
         <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
         <Setter Property="Margin" Value="0,0,0,5"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
 
     <Style x:Key="HintText" TargetType="TextBlock">

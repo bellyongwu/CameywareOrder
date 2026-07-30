@@ -32,6 +32,7 @@
             </ComboBox.ItemTemplate>
         </ComboBox>
 
-        <TextBox x:Name="NumberBox" Grid.Column="1" TextChanged="OnNumberChanged" LostFocus="OnNumberLostFocus"/>
+        <TextBox x:Name="NumberBox" Grid.Column="1" TextChanged="OnNumberChanged" LostFocus="OnNumberLostFocus"
+                 PreviewKeyDown="OnNumberPreviewKeyDown"/>
     </Grid>
 </UserControl>

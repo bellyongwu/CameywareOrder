@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using CameywareOrder.Localization;
 using CameywareOrder.Models;
@@ -31,8 +32,12 @@ namespace CameywareOrder.Controls;
                     "API and are bound per instance, so static is not available as a fix.")]
 public partial class PhoneNumberField : UserControl
 {
+    /// <summary>Punctuation a stored number may already carry and still be safe to re-group.</summary>
+    private const string KnownSeparators = " -().";
+
     private readonly LocalizationService _localization = LocalizationService.Instance;
     private bool _populating;
+    private bool _formatting;
 
     public PhoneNumberField()
     {
@@ -115,12 +120,38 @@ public partial class PhoneNumberField : UserControl
         try
         {
             SelectCountry(country);
-            NumberBox.Text = national;
+            NumberBox.Text = RegroupStored(country, national);
         }
         finally
         {
             _populating = false;
         }
+    }
+
+    /// <summary>
+    /// Re-groups a stored number for display, but only when doing so is unambiguous.
+    /// </summary>
+    /// <remarks>
+    /// A number already in the database is a fact about a customer, so it is re-punctuated only when it
+    /// is plainly just a number: nothing but digits and ordinary separators, and a length this country
+    /// has an exact grouping for. Anything else — an extension, a note, a number that never fitted the
+    /// country in the first place — comes back exactly as it was stored, because re-grouping a value
+    /// this control does not understand is how a shop ends up printing a wrong number on a receipt.
+    /// </remarks>
+    private static string RegroupStored(PhoneCountry country, string national)
+    {
+        if (national.Length == 0)
+            return national;
+
+        if (national.Any(c => !char.IsDigit(c) && !KnownSeparators.Contains(c, StringComparison.Ordinal)))
+            return national;
+
+        // An EXACT pattern for that many digits, not merely a length the country accepts. Japan's
+        // ten-digit numbers have no pattern, and a stored "03-1234-5678" is a person's own grouping —
+        // correct, and not this control's to strip.
+        return country.NationalFormats.ContainsKey(national.Count(char.IsDigit))
+            ? country.FormatNational(national)
+            : national;
     }
 
     /// <summary>Points a blank field at the country a shop's numbers usually come from.</summary>
@@ -218,15 +249,121 @@ public partial class PhoneNumberField : UserControl
         if (_populating)
             return;
 
+        // The same digits are written differently in different countries, so switching the picker
+        // re-groups what is already typed rather than leaving a Canadian grouping on a Chinese number.
+        WriteGrouped(NumberBox.Text, DigitsBefore(NumberBox.Text, NumberBox.Text.Length));
         PhoneChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnNumberChanged(object sender, TextChangedEventArgs e)
     {
-        if (_populating)
+        // _formatting: WriteGrouped assigns Text, which lands back here. Without the guard the
+        // control would re-enter its own formatter on every keystroke.
+        if (_populating || _formatting)
             return;
 
+        WriteGrouped(NumberBox.Text, DigitsBefore(NumberBox.Text, CaretAfterEdit(e)));
         PhoneChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Where the caret sits after the edit that raised <paramref name="e"/>.</summary>
+    /// <remarks>
+    /// Taken from the CHANGE rather than from <c>SelectionStart</c>. Whether the box has already moved
+    /// its caret past the inserted text by the time this event fires depends on how the text arrived —
+    /// a keystroke, a paste and an assignment to <c>Text</c> do not agree — and reading the selection
+    /// makes the control's correctness depend on which of those it was. The offset and the length added
+    /// say it exactly, for all three.
+    /// </remarks>
+    private static int CaretAfterEdit(TextChangedEventArgs e)
+    {
+        var caret = 0;
+        foreach (var change in e.Changes)
+            caret = Math.Max(caret, change.Offset + change.AddedLength);
+
+        return caret;
+    }
+
+    /// <summary>
+    /// Backspace onto punctuation deletes the digit in FRONT of it, not the punctuation.
+    /// </summary>
+    /// <remarks>
+    /// The separators belong to the format, not to the user: deleting one alone would be put straight
+    /// back by the re-group that follows, so the key would read as doing nothing and the caret would
+    /// sit in the same place. What the user is reaching for is the digit behind the dash.
+    /// </remarks>
+    private void OnNumberPreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+
+        if (e.Key != Key.Back || NumberBox.SelectionLength > 0 || NumberBox.IsReadOnly)
+            return;
+
+        var caret = NumberBox.SelectionStart;
+        var text = NumberBox.Text;
+        if (caret == 0 || caret > text.Length || char.IsDigit(text[caret - 1]))
+            return;
+
+        var cut = caret;
+        while (cut > 0 && !char.IsDigit(text[cut - 1]))
+            cut--;
+
+        // Only punctuation behind the caret and nothing else — there is no digit to take.
+        if (cut == 0)
+            return;
+
+        WriteGrouped(string.Concat(text.AsSpan(0, cut - 1), text.AsSpan(caret)), DigitsBefore(text, cut - 1));
+        PhoneChanged?.Invoke(this, EventArgs.Empty);
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Puts <paramref name="raw"/> in the box, grouped, with the caret
+    /// <paramref name="digitsBeforeCaret"/> digits in.
+    /// </summary>
+    /// <remarks>
+    /// The caret is restored by DIGIT position rather than character position because the re-group
+    /// inserts and removes separators on both sides of it: "four digits in" is the only landmark that
+    /// survives the rewrite, and a caret restored by character index jumps a place every time a dash
+    /// appears.
+    /// </remarks>
+    private void WriteGrouped(string raw, int digitsBeforeCaret)
+    {
+        var grouped = SelectedCountry?.FormatNational(raw) ?? raw;
+
+        _formatting = true;
+        try
+        {
+            NumberBox.Text = grouped;
+            NumberBox.SelectionStart = OffsetAfterDigits(grouped, digitsBeforeCaret);
+            NumberBox.SelectionLength = 0;
+        }
+        finally
+        {
+            _formatting = false;
+        }
+    }
+
+    /// <summary>How many digits sit in the first <paramref name="length"/> characters.</summary>
+    private static int DigitsBefore(string text, int length)
+        => text.Take(Math.Clamp(length, 0, text.Length)).Count(char.IsDigit);
+
+    /// <summary>The offset just past the <paramref name="count"/>-th digit; the end when there are fewer.</summary>
+    private static int OffsetAfterDigits(string text, int count)
+    {
+        if (count <= 0)
+            return 0;
+
+        var seen = 0;
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (!char.IsDigit(text[i]))
+                continue;
+
+            if (++seen == count)
+                return i + 1;
+        }
+
+        return text.Length;
     }
 
     private void OnNumberLostFocus(object sender, RoutedEventArgs e)

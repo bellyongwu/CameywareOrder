@@ -20,11 +20,19 @@ namespace CameywareOrder.Models;
 /// </remarks>
 public sealed class PhoneCountry
 {
-    public PhoneCountry(string code, string dialCode, IReadOnlyList<int> nationalDigits)
+    /// <param name="nationalFormats">
+    /// Grouping patterns keyed by digit count; empty for a country this build has no rule for.
+    /// Required rather than optional ON PURPOSE — an optional parameter would let every existing
+    /// call site keep compiling while silently declaring "this country has no format", which is
+    /// indistinguishable from a country that genuinely has none.
+    /// </param>
+    public PhoneCountry(string code, string dialCode, IReadOnlyList<int> nationalDigits,
+        IReadOnlyDictionary<int, string> nationalFormats)
     {
         Code = code;
         DialCode = dialCode;
         NationalDigits = nationalDigits;
+        NationalFormats = nationalFormats;
     }
 
     /// <summary>ISO country code — "CA", "CN", "JP". Matches a tax jurisdiction's code where one exists.</summary>
@@ -39,6 +47,84 @@ public sealed class PhoneCountry
     /// of them refuses half the country.
     /// </summary>
     public IReadOnlyList<int> NationalDigits { get; }
+
+    /// <summary>
+    /// How a number of a given digit count is grouped — <c>10</c> to <c>"###-###-####"</c>. A count
+    /// with no entry, and a country with no entries at all, is not grouped.
+    /// </summary>
+    public IReadOnlyDictionary<int, string> NationalFormats { get; }
+
+    /// <summary>
+    /// Groups a national number the way this country writes it — "9054016667" becomes
+    /// "905-401-6667" — and does so PROGRESSIVELY, so it can run on every keystroke.
+    /// </summary>
+    /// <remarks>
+    /// Punctuation is emitted only when a digit still follows it. That is what makes the field usable
+    /// while typing: a trailing separator appears the moment the next digit does, never before, so the
+    /// caret never sits behind a dash the user did not ask for and backspace never fights the format.
+    ///
+    /// The pattern is chosen as the SHORTEST declared length that can still hold what has been typed,
+    /// because a half-typed number has no length yet — with Japan's 10- and 11-digit forms, four digits
+    /// have to be grouped under some assumption, and the shorter one is the one that stays right for
+    /// longest. Typing past every declared length returns the text UNCHANGED rather than regrouping it:
+    /// at that point the number is not one this country writes, and inventing punctuation for it would
+    /// disguise a number the validator is about to refuse.
+    /// </remarks>
+    public string FormatNational(string? national)
+    {
+        var raw = national ?? string.Empty;
+        if (NationalFormats.Count == 0 || raw.Length == 0)
+            return raw;
+
+        var digits = new string(raw.Where(char.IsDigit).ToArray());
+        if (digits.Length == 0)
+            return raw;
+
+        // A COMPLETE number of a length this country accepts but has no pattern for is shown as bare
+        // digits. Japan is the case: ten digits is a real Japanese number, but 03-1234-5678 and
+        // 045-123-4567 are both correct and the digits do not say which, so it must not be borrowed
+        // into the eleven-digit mobile grouping merely because that pattern is long enough to hold it.
+        // Shorter counts DO borrow it, because a half-typed number is not yet any length at all — and
+        // that borrowed punctuation is exactly what has to be taken back off on reaching ten, or a
+        // Japanese landline would keep the dashes it collected on the way there.
+        if (!NationalFormats.ContainsKey(digits.Length) && AcceptsDigitCount(digits.Length))
+            return digits;
+
+        var pattern = PatternFor(digits.Length);
+        if (pattern is null)
+            return raw;
+
+        var grouped = new System.Text.StringBuilder(pattern.Length);
+        var next = 0;
+
+        foreach (var slot in pattern)
+        {
+            if (next >= digits.Length)
+                break;
+
+            grouped.Append(slot == '#' ? digits[next++] : slot);
+        }
+
+        return grouped.ToString();
+    }
+
+    /// <summary>The grouping to use for a number this many digits long, or null when there is none.</summary>
+    private string? PatternFor(int digitCount)
+    {
+        string? best = null;
+        var bestLength = int.MaxValue;
+
+        foreach (var (length, pattern) in NationalFormats)
+        {
+            if (length < digitCount || length >= bestLength)
+                continue;
+
+            best = pattern;
+            bestLength = length;
+        }
+
+        return best;
+    }
 
     /// <summary>Localized country name, from the language file's <c>Country.&lt;code&gt;</c> key.</summary>
     public string DisplayName(LocalizationService localization)

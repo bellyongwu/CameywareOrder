@@ -1,13 +1,14 @@
 {
   "comment": "Phone-number rules keyed by country. Shipped, read-only, editable without a rebuild — the same rule as the tax presets beside this file. 'dialCode' is the international calling code shown in front of the number and stored with it ('+1 905-401-6667'). 'nationalDigits' lists the digit counts a NATIONAL number may have in that country, excluding the dial code: Canada and the US are exactly 10 (NANP), China's mobiles are 11, Japan is 10 or 11, France and Spain are 9. A number is checked against the country PICKED FOR IT, never against the shop's own — a Toronto shop takes a visiting customer's Shanghai mobile, and validating that against Canada would refuse a correct number.",
   "separateFromTaxComment": "This is a SEPARATE file from tax-jurisdictions.json even though the codes overlap today, because they answer different questions and are not the same list. A shop's location is one of the markets this build sells INTO; a phone country is anywhere a customer's number can come FROM. Merging them would mean either shipping tax presets for countries the app does not trade in, or refusing numbers from countries it does not.",
+  "formatComment": "'nationalFormat' groups a number as it is typed. Keyed by DIGIT COUNT, because a country can write two lengths differently: '#' takes the next digit and anything else is punctuation, emitted only when a digit still follows it, so a half-typed number never shows a trailing dash. A digit count with no entry is NOT formatted — the number is left exactly as typed. Japan's 10-digit numbers are deliberately absent: 03-1234-5678 and 045-123-4567 are both correct and nothing in the digits themselves says which grouping applies, so guessing would mis-punctuate half the country. Its 11-digit mobiles are unambiguous and are grouped.",
   "defaultCountryCode": "CA",
   "countries": [
-    { "code": "CA", "dialCode": "+1", "nationalDigits": [10] },
-    { "code": "US", "dialCode": "+1", "nationalDigits": [10] },
-    { "code": "CN", "dialCode": "+86", "nationalDigits": [11] },
-    { "code": "JP", "dialCode": "+81", "nationalDigits": [10, 11] },
-    { "code": "FR", "dialCode": "+33", "nationalDigits": [9] },
-    { "code": "ES", "dialCode": "+34", "nationalDigits": [9] }
+    { "code": "CA", "dialCode": "+1", "nationalDigits": [10], "nationalFormat": { "10": "###-###-####" } },
+    { "code": "US", "dialCode": "+1", "nationalDigits": [10], "nationalFormat": { "10": "###-###-####" } },
+    { "code": "CN", "dialCode": "+86", "nationalDigits": [11], "nationalFormat": { "11": "### #### ####" } },
+    { "code": "JP", "dialCode": "+81", "nationalDigits": [10, 11], "nationalFormat": { "11": "###-####-####" } },
+    { "code": "FR", "dialCode": "+33", "nationalDigits": [9], "nationalFormat": { "9": "# ## ## ## ##" } },
+    { "code": "ES", "dialCode": "+34", "nationalDigits": [9], "nationalFormat": { "9": "### ### ###" } }
   ]
 }

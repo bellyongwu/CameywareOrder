@@ -2239,6 +2239,72 @@ hold "Pre-Tax Service Total" on one line; those went to `158`.
 
 Verify by RENDERING. Both of these compiled, ran, and asserted green the whole time they were wrong.
 
+## The window's own copy of a theme style is where the theme stops (2026-07-30)
+
+`OrderEditWindow` declared `<Style x:Key="FieldLabel" TargetType="TextBlock">` in `Window.Resources`
+with no `BasedOn`. Same key as the theme's, so every label in the window resolved to the LOCAL one and
+silently lost every setter the theme provides. Adding `TextWrapping` to the theme's `FieldLabel` changed
+nothing in the window that needed it, and the long label went on clipping. This is the third time this
+exact shape has cost a debugging session — `CustomMadeServiceWindow`'s `TextBox`, `MethodRadio`, now
+this — so it is worth stating as a rule:
+
+**A keyed style with a `TargetType` and no `BasedOn` REPLACES; it never extends.** Before editing a
+theme style, grep for its key across `Views/` — if a window declares its own, the edit does not reach
+that window. The fix is `BasedOn="{StaticResource SameKey}"`, which is legal and resolves to the
+parent (merged) dictionary's entry rather than to itself.
+
+## Format-as-you-type: read the CHANGE, not the selection (2026-07-30)
+
+Re-grouping a phone number on every keystroke needs the caret put back afterwards, and the obvious
+source — `TextBox.SelectionStart` inside `TextChanged` — is not reliable. Whether the box has already
+moved the caret past the new text depends on how the text arrived: a keystroke, a paste, `SelectedText`
+and an assignment to `Text` do not agree, and a harness cannot fake real keyboard input (see above), so
+the difference shows up in production and not in the suite. `TextChangedEventArgs.Changes` gives
+`Offset + AddedLength`, which is exact for all four routes.
+
+Two more things that make such a field usable rather than merely correct:
+
+- **Emit a separator only when a digit follows it.** A trailing dash appearing at three digits puts the
+  caret behind punctuation the user did not type, and the next keystroke has to step over it.
+- **Backspace onto a separator must take the digit in front of it.** Deleting the separator alone is
+  undone by the re-group that immediately follows, so the key reads as doing nothing at all.
+
+And restore the caret by DIGIT index, never character index: the re-group inserts and removes
+separators on both sides of it, so "four digits in" is the only landmark that survives.
+
+## A rule that fits the finished value can still be wrong on the way there (2026-07-30)
+
+`phonecheck` asserted `FormatNational("0312345678") == "0312345678"` — Japan has no ten-digit grouping,
+so the number comes back untouched — and it passed. The RENDER showed `031-2345-678`. Both were right:
+the harness passed clean digits, while a person types them one at a time and the value passes through
+nine digits, which the eleven-digit mobile pattern *does* group. The punctuation collected on the way
+was still there at ten.
+
+Progressive input has intermediate states that no assertion about the final value can reach. Either
+drive the harness the way a person drives the control — one keystroke at a time — or render it. This
+one was caught by rendering, and the fix was to return bare digits for a length the country accepts but
+has no pattern for, so borrowed punctuation is taken back off rather than frozen in.
+
+## Run the harnesses from the PROJECT ROOT, or the shipped presets vanish (2026-07-30)
+
+`SystemSettingsPaths` probes `AppContext.BaseDirectory` then `Environment.CurrentDirectory` for
+`Settings/System/Defaults`. A harness's own bin has neither, so run from anywhere but the project root
+and every shipped preset reads as absent — and each loader answers a missing file by degrading
+**silently** to its built-in fallback: one phone country instead of six, one tax jurisdiction instead of
+six. Nothing throws.
+
+What that looks like is assertions about unrelated things going red. `taxcheck` died on
+`TaxJurisdictions.Find("US")!` returning null, 300 assertions in; `shopcheck` reported a stored
+`+86 20 1234 5678` coming back as `+1 +86 20 1234 5678`, because with only Canada loaded no dial code
+matched and the home market's `+1` was pasted in front. Neither had anything to do with the change
+being tested, and both reproduced on a clean checkout — which is the check worth running FIRST when a
+harness fails somewhere your diff never touched.
+
+Some harness bins carried a stale copy of those files from an older csproj and passed by luck for
+months; an incremental build swept the copy away and six assertions went red at once, in two harnesses,
+in the middle of an unrelated change. `run-suite.ps1` now sets the working directory itself, and says
+why.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies

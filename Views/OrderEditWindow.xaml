@@ -201,7 +201,12 @@
         </Style>
 
         <!-- Basic-info field label (paired with a FieldIcon glyph). -->
-        <Style x:Key="FieldLabel" TargetType="TextBlock">
+        <!-- EXTENDS the theme's rather than replacing it. A keyed style with no BasedOn drops every
+             setter the theme provides, and this window is the one that reads a label as long as
+             "Cancellation / Return Reason": without the theme's TextWrapping it clipped mid-word
+             while every window using the theme's copy wrapped correctly. Same key, resolved against
+             the merged theme dictionary. -->
+        <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource FieldLabel}">
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Foreground" Value="#3B4859"/>
         </Style>
@@ -340,7 +345,24 @@
                                  thing whose Visibility is toggled. -->
                             <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,8" HorizontalAlignment="Left">
                             <ComboBox x:Name="StatusReasonCategoryBox" Padding="6,4"
-                                      MinWidth="260" Visibility="Collapsed" SelectionChanged="OnStatusReasonCategoryChanged">
+                                      MinWidth="260" MaxWidth="420" Visibility="Collapsed" SelectionChanged="OnStatusReasonCategoryChanged">
+                                <!-- The reasons are sentences, and they are translated: "Not satisfied
+                                     with the service" is half again as long in French. The template
+                                     wraps them in the list AND in the closed box, which takes its
+                                     template from this one. BasedOn, or this would replace the theme's
+                                     row chrome with the stock Windows one. -->
+                                <ComboBox.ItemContainerStyle>
+                                    <Style TargetType="ComboBoxItem" BasedOn="{StaticResource ThemedComboBoxItem}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                        <Setter Property="ContentTemplate">
+                                            <Setter.Value>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                                                </DataTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </Style>
+                                </ComboBox.ItemContainerStyle>
                                 <ComboBoxItem Tag="CustomerDoesNotWant" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.CustomerDoesNotWant], Mode=OneWay}"/>
                                 <ComboBoxItem Tag="ServiceUnsatisfactory" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.ServiceUnsatisfactory], Mode=OneWay}"/>
                                 <ComboBoxItem Tag="ProductIssue" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[ReturnReason.ProductIssue], Mode=OneWay}"/>
@@ -357,7 +379,11 @@
                                 <Grid>
                                     <TextBox x:Name="StatusReasonBox" Padding="6,4" Height="60" TextWrapping="Wrap" AcceptsReturn="True"
                                              VerticalScrollBarVisibility="Auto" TextChanged="OnStatusReasonTextChanged"/>
-                                    <TextBlock x:Name="StatusReasonHint" IsHitTestVisible="False" Foreground="#D1D5DB" Margin="9,7,0,0" VerticalAlignment="Top"/>
+                                    <!-- Margin on the right as well as the left: the placeholder is a
+                                         sentence, and one that runs to the edge would be clipped by
+                                         the box rather than wrapped inside it. -->
+                                    <TextBlock x:Name="StatusReasonHint" IsHitTestVisible="False" Foreground="#D1D5DB"
+                                               Margin="9,7,9,0" VerticalAlignment="Top" TextWrapping="Wrap"/>
                                 </Grid>
                                 <TextBlock x:Name="StatusReasonErrorText" Style="{StaticResource FieldErrorText}"/>
                             </StackPanel>

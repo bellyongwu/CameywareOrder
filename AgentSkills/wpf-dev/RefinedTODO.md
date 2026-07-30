@@ -70,6 +70,31 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-07-30)
 
+### v4.0.3 — a phone number punctuates itself, and the reason section wraps
+
+`phone-countries.json` gained `nationalFormat`, keyed by DIGIT COUNT rather than by country, because a
+country can write two lengths differently. Canada and the US group `###-###-####`, China `### #### ####`,
+France `# ## ## ## ##`, Spain `### ### ###`, Japan's 11-digit mobiles `###-####-####`. **Japan's
+10-digit numbers ship no rule on purpose** — 03-1234-5678 and 045-123-4567 are both correct and the
+digits do not say which — so they are left exactly as typed, which is also what any country the file
+says nothing about gets.
+
+`PhoneCountry.FormatNational` is progressive, so it runs on every keystroke: a separator is emitted only
+when a digit still follows it, so a half-typed number never carries a dash it has not earned. The caret
+comes from `TextChangedEventArgs.Changes`, not `SelectionStart`, which differs by how the text arrived
+and cannot be tested in-process. Backspace onto a separator takes the digit in front of it. A stored
+number is re-punctuated only when there is an exact pattern for its length — an extension, a note or a
+number that never fitted the country comes back untouched.
+
+The cancel/return reason label was clipping because `OrderEditWindow` declares its **own** keyed
+`FieldLabel` with no `BasedOn`, so the wrapping added to the theme in v4.0.2 never reached it. Third
+time that shape has cost a session; the rule is now in `context.md`. The reason picker and its
+placeholder wrap too.
+
+The main list's custom-service column stacks the flag over the garments — `Yes` / `(Qipao, Shirt)` —
+with the second line a fixed height that stands whether the names show or not, so rows stay level; both
+lines fit inside the row's existing 54px minimum, so no row grew.
+
 ### v4.0.2 — the selection controls are drawn, and two labels that would not wrap
 
 `ThemedRadioButton` and `ThemedCheckBox` replace the stock Windows controls in `AppTheme.xaml`, each

@@ -17,6 +17,49 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-30 18:40 — v4.0.3: the reason section wraps, and phone numbers punctuate themselves  [DONE]
+- Ask: "Another UI fixes: 1.Cancellation / Return reason section is overflowed. make this section >Make
+  whole text in this section text wrappable. 2. Add auto format for phone numbers when user type in
+  phone number. for instance, in canada it should be xxx-xxx-xxxx, do the same thing for other countries
+  with their own respective rules on formatting. if they don't have, then no change. 3. push as a little
+  fixes on hotfix release."
+  Mid-turn: "Also, for main records Custom service column. if the user has custom made service, add a
+  break between Yes and services. for instance: Yes / (Qipao, Shirt)"
+- Plan:
+  - [x] T1 render the cancel/return reason row and find what actually overflows before changing anything
+  - [x] T2 make every text in that section wrappable (label, picker rows, placeholder, messages)
+  - [x] T3 per-country grouping patterns in `phone-countries.json`, keyed by DIGIT COUNT
+  - [x] T4 progressive formatter in `PhoneNumberField` — caret preserved, backspace over a separator works
+  - [x] T5 custom-service column onto two lines without making rows ragged
+  - [x] T6 harness coverage in `phonecheck`; build, suite, render, publish, docs, README v4.0.3
+- Notes: **T1/T2** rendering first was what found it, and the label was not the bug: `OrderEditWindow`
+  declares its OWN keyed `FieldLabel` with no `BasedOn`, so it REPLACED the theme's and the wrapping
+  added in v4.0.2 never reached this window. Theme's `FieldLabel` gained `TextWrapping`; the local one
+  now says `BasedOn="{StaticResource FieldLabel}"` (same key, resolves to the merged dictionary's).
+  Third time this shape has cost a session — rule written into `context.md`. Also wrapped the reason
+  picker (`ItemContainerStyle` + `ContentTemplate`, `BasedOn` the theme's or it would have replaced the
+  row chrome) and the placeholder, and gave the picker a `MaxWidth`. **T3/T4** `nationalFormat` keyed by
+  DIGIT COUNT — Japan writes 10 and 11 differently, and 10 is genuinely ambiguous (03-1234-5678 vs
+  045-123-4567) so it ships no rule and is left alone. `PhoneCountry.FormatNational` is progressive:
+  a separator is emitted only when a digit follows it. Caret restored from
+  `TextChangedEventArgs.Changes`, NOT `SelectionStart` — the latter differs by route (keystroke, paste,
+  `Text=`) and a harness cannot fake real keys. Backspace onto a separator takes the digit in front.
+  Constructor parameter made REQUIRED, not optional, so no call site can silently mean "no format".
+  **The render caught what the harness could not**: typing a Japanese landline one digit at a time
+  passes through 9 digits, which the 11-digit pattern groups, and the borrowed dashes were still there
+  at 10 — fixed by returning bare digits for an accepted-but-unpatterned length. Lesson in `context.md`.
+  **T5** the flag and garment names now stack; rows stay level because the second row is a fixed 15px
+  that stands whether the names show or not, and both lines fit inside the existing `MinHeight` 54, so
+  no row grew (`rowcheck` asserts uniform heights at 12px and 40px). Build 0/0; `phonecheck` 112 → 167.
+  **Suite:** six assertions came up red in `taxcheck` and `shopcheck` that REPRODUCED ON A CLEAN
+  CHECKOUT — nothing to do with this change. Harnesses were being run from the scratchpad, and
+  `SystemSettingsPaths` probes the working directory, so every shipped preset read as absent and each
+  loader degraded silently to its fallback (one phone country, one tax jurisdiction). Some harness bins
+  had carried a stale copy of those files and passed by luck until an incremental build swept it away.
+  `run-suite.ps1` now sets the working directory itself; `taxcheck` 0 → 323, `shopcheck` 28 → 33 on that
+  alone. Two real expectation updates: `namecheck` and `shopcheck` asserted a phone string that the
+  field now punctuates — same digits, and `shopcheck`'s trimming claim is subsumed by the grouping.
+
 ### 2026-07-30 18:05 — v4.0.2: a drawn checkbox, and two labels that would not wrap  [DONE]
 - Ask: "UI improvements: Do another hotfix version: >Add checkbox redesigning based on the main theme.
   >the price breakdown labeling section should be a bit wider, make text wrappable, right now the text
