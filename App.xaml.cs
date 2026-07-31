@@ -263,6 +263,95 @@ public partial class App : Application
         ShowMainWindow(shopSelection.ConfigureTerms);
     }
 
+    /// <summary>
+    /// Locks the session: the window goes, the credential is revoked, and coming back needs the same
+    /// account's password — after which the SAME shop reopens with no picker.
+    /// </summary>
+    /// <remarks>
+    /// The difference from <see cref="SignOutAsync"/> is what is remembered, and it is deliberately
+    /// only two things: which account locked it, and which shop was open. Both are held in local
+    /// variables for the length of this method and nowhere else — not on a field, not in a setting,
+    /// not on disk — so nothing about a locked session survives the process, and a crash while locked
+    /// leaves an ordinary sign-in behind rather than a resumable one.
+    ///
+    /// <see cref="AuthenticationService.SignOut"/> IS called, before the lock screen appears. A lock
+    /// that kept <c>CurrentUser</c> alive would leave every capability gate answering yes behind a
+    /// screen that looks closed. What makes this a lock rather than a sign-out is not a retained
+    /// session — it is that the shop is remembered, so unlocking skips the picker.
+    ///
+    /// Access is re-checked on the way back in. Somebody's membership can be revoked while the
+    /// machine sits locked, and resuming into a shop they may no longer enter is exactly the hole
+    /// this feature would otherwise open: unlocking goes through the same accessible-shops filter
+    /// the picker uses, and falls back to a full sign-out when the shop is no longer theirs.
+    /// </remarks>
+    internal async Task LockAsync()
+    {
+        var account = AuthenticationService.Instance.CurrentUser;
+        var shop = ShopContext.Instance.Current;
+
+        // Nothing to lock — no session, or no shop open. Signing out is the honest fallback: it
+        // reaches the same screen and cannot resume anything that was never established.
+        if (account is null || shop is null)
+        {
+            await SignOutAsync();
+            return;
+        }
+
+        var lockedShopId = shop.PublicId;
+        var lockedShopName = shop.ResolveName(LocalizationService.Instance.CurrentLanguageCode);
+
+        // ORDER MATTERS, exactly as in SignOutAsync: relax ShutdownMode before the main window
+        // closes, or WPF treats that close as the end of the application.
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+        var previousWindow = MainWindow;
+        MainWindow = null;
+        previousWindow?.Close();
+
+        AuthenticationService.Instance.SignOut();
+
+        var lockScreen = new LockScreenWindow(LocalizationService.Instance, account, lockedShopName);
+        lockScreen.ShowDialog();
+
+        if (!lockScreen.Unlocked)
+        {
+            // Signed out from the lock screen, or the window was closed — which OnClosing turns into
+            // the same thing. SignOutAsync re-runs SignOut harmlessly and shows the login screen.
+            await SignOutAsync();
+            return;
+        }
+
+        if (!await ReopenLockedShopAsync(lockedShopId))
+        {
+            await SignOutAsync();
+            return;
+        }
+
+        // configureTerms: false — the terms prompt belongs to opening a shop for the first time, and
+        // this shop was already open a moment ago.
+        ShowMainWindow(configureTerms: false);
+    }
+
+    /// <summary>
+    /// Reopens the shop a session was locked from, or false when it is no longer open to this user.
+    /// </summary>
+    /// <remarks>
+    /// Goes through <see cref="LoadSelectableShopsAsync"/> rather than fetching the row by id, so the
+    /// answer comes from the same accessible-shops filter the picker uses. A shop archived, delisted
+    /// or unassigned while the machine sat locked simply is not in the list, and the caller signs out.
+    /// </remarks>
+    private async Task<bool> ReopenLockedShopAsync(Guid shopPublicId)
+    {
+        var shops = await LoadSelectableShopsAsync();
+        var shop = shops.Find(candidate => candidate.PublicId == shopPublicId);
+
+        if (shop is null)
+            return false;
+
+        ApplyActiveShop(shop);
+        return true;
+    }
+
     internal async Task SignOutAsync()
     {
         // ORDER MATTERS. ShutdownMode has to be relaxed BEFORE the main window closes, or WPF

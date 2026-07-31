@@ -1,0 +1,137 @@
+<Window x:Class="CameywareOrder.Views.SessionActionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:CameywareOrder.Localization"
+        Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Action.Title], Mode=OneWay}"
+        SizeToContent="Height" Width="560"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Icon="/Assets/ICONS/app-icon.ico"
+        Background="{StaticResource PageBackgroundBrush}">
+    <!-- Offered on ESC and from the toolbar's Lock button. Two ways of leaving the machine, presented
+         side by side because the difference between them is exactly what the user is deciding: a lock
+         keeps this session and this shop and wants only a password back; signing out ends the session
+         and returns to the shop picker.
+
+         The header is the brand indigo, not the red of ConfirmDestructiveWindow — neither choice here
+         destroys anything, and borrowing the danger colour for an ordinary decision spends it. -->
+    <Window.Resources>
+        <!-- One clickable card per choice. The whole card is the button: a small button beside a
+             paragraph makes the paragraph look like decoration, and the paragraph is the part that
+             says what the choice actually does. -->
+        <Style x:Key="ChoiceCard" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Card" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10" Padding="18,15" SnapsToDevicePixels="True">
+                            <ContentPresenter/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Card" Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource PrimaryHoverBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Card" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter TargetName="Card" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ChoiceGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,0,15,0"/>
+        </Style>
+
+        <Style x:Key="ChoiceTitle" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        </Style>
+
+        <Style x:Key="ChoiceBody" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,3,0,0"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource HeaderGradientBrush}" Padding="24,18">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="22"
+                           Foreground="{StaticResource TextOnPrimaryBrush}"
+                           Margin="0,0,14,0" VerticalAlignment="Center"/>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock FontSize="17" FontWeight="Bold" Foreground="{StaticResource TextOnPrimaryBrush}"
+                               Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Action.Title], Mode=OneWay}"/>
+                    <!-- Names the account and the shop: the whole decision is about THIS session, and
+                         a machine shared by a crew is exactly where that needs saying. -->
+                    <TextBlock x:Name="SubheadText" FontSize="12" Foreground="{StaticResource TextOnHeaderSubtleBrush}"
+                               TextWrapping="Wrap" Margin="0,4,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="1" Margin="24,20,24,4">
+            <!-- Lock first, and it takes the initial focus: it is the one that keeps the session, so
+                 it is both the likelier intent when stepping away and the safer thing to hit blind. -->
+            <!-- A DockPanel, not a horizontal StackPanel: a StackPanel measures its children with
+                 INFINITE width, so the wrapping on the hint below would never fire and the sentence
+                 would be clipped mid-word. Docking the glyph left leaves the text a real width. -->
+            <Button x:Name="LockButton" Style="{StaticResource ChoiceCard}" Click="OnLockClick" IsDefault="True">
+                <DockPanel LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Left" Style="{StaticResource ChoiceGlyph}" Text="&#xE72E;"/>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource ChoiceTitle}"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Action.Lock], Mode=OneWay}"/>
+                        <TextBlock Style="{StaticResource ChoiceBody}"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Action.LockHint], Mode=OneWay}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Button>
+
+            <Button x:Name="SignOutButton" Style="{StaticResource ChoiceCard}" Click="OnSignOutClick">
+                <DockPanel LastChildFill="True">
+                    <TextBlock DockPanel.Dock="Left" Style="{StaticResource ChoiceGlyph}" Text="&#xE7E8;"/>
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource ChoiceTitle}"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}"/>
+                        <TextBlock Style="{StaticResource ChoiceBody}"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Action.SignOutHint], Mode=OneWay}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Button>
+        </StackPanel>
+
+        <Border Grid.Row="2" Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,1,0,0" Padding="24,14">
+            <Button x:Name="CancelButton" HorizontalAlignment="Right" MinWidth="110" Padding="16,7"
+                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Action.StayHere], Mode=OneWay}"
+                    Click="OnCancelClick" IsCancel="True"/>
+        </Border>
+    </Grid>
+</Window>

@@ -155,6 +155,76 @@ public partial class MainWindow : Window
         base.OnClosed(e);
     }
 
+    /// <summary>
+    /// The Lock button, and ESC: offers the choice, then carries it out.
+    /// </summary>
+    /// <remarks>
+    /// One entry point for both, so the toolbar button and the key can never drift into meaning
+    /// different things. The open-editor guard runs FIRST, before the panel appears: an order editor
+    /// left open behind a locked screen still holds its record and its window, which is most of what
+    /// locking is supposed to prevent — and refusing after the user has already chosen would be
+    /// asking a question whose answer is then thrown away.
+    /// </remarks>
+    private async void OnLockClick(object sender, RoutedEventArgs e) => await OfferSessionChoiceAsync();
+
+    private void OfferSessionChoice() => _ = OfferSessionChoiceAsync();
+
+    private async Task OfferSessionChoiceAsync()
+    {
+        if (!EnsureNoOpenOrderWindows("SignOut.CloseEditors", "Session.Action.Title"))
+            return;
+
+        var panel = new SessionActionWindow(
+            _localization,
+            AuthenticationService.Instance.CurrentUser,
+            ShopContext.Instance.Current?.ResolveName(_localization.CurrentLanguageCode))
+        {
+            Owner = this,
+        };
+
+        panel.ShowDialog();
+
+        switch (panel.Action)
+        {
+            case SessionAction.Lock:
+                await RunSessionChangeAsync(() => ((App)Application.Current).LockAsync());
+                break;
+            case SessionAction.SignOut:
+                await RunSessionChangeAsync(() => ((App)Application.Current).SignOutAsync());
+                break;
+            default:
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Runs a sign-out or lock, reporting a failure the user can act on rather than losing it.
+    /// </summary>
+    /// <remarks>
+    /// These are reached from <c>async void</c> handlers and take the main window down as their first
+    /// act, so an exception would otherwise reach the dispatcher with no window left to show it
+    /// against — the application would simply vanish. No owner is passed for the same reason: by the
+    /// time this runs there may not be one.
+    /// </remarks>
+    private async Task RunSessionChangeAsync(Func<Task> change)
+    {
+        try
+        {
+            await change();
+        }
+        catch (Exception ex)
+        {
+            // Localized, unlike the startup and data-folder failures, because by here the string
+            // table is loaded. The exception text sits below a plain-language line: a stack trace
+            // alone tells the person nothing about whether they are still signed in.
+            MessageBox.Show(
+                $"{_localization["SignOut.Failed"]}{Environment.NewLine}{Environment.NewLine}{ex}",
+                _localization["App.MainTitle"],
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
     private async void OnSignOutClick(object sender, RoutedEventArgs e)
     {
         if (!EnsureNoOpenOrderWindows("SignOut.CloseEditors", "Toolbar.SignOut"))
@@ -387,6 +457,21 @@ public partial class MainWindow : Window
     /// </remarks>
     private void OnMainWindowPreviewKeyDown(object sender, KeyEventArgs e)
     {
+        ArgumentNullException.ThrowIfNull(e);
+
+        // ESC is "I am leaving this machine". It offers the choice rather than acting, because the
+        // two things it can mean — lock, or sign out — are not interchangeable and the key is easy
+        // to hit by accident.
+        //
+        // Modifier-free only, and only from the window itself: a combo box or a context menu that is
+        // open owns ESC to close itself, and it is already handled by the time this tunnels past.
+        if (e.Key == Key.Escape && Keyboard.Modifiers == ModifierKeys.None && !e.Handled)
+        {
+            e.Handled = true;
+            OfferSessionChoice();
+            return;
+        }
+
         if (e.Key is not (Key.Left or Key.Right))
             return;
 

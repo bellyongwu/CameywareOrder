@@ -17,7 +17,60 @@ Entry format:
 
 ## Open / in progress
 
-### 2026-07-30 20:10 — v4.0.4: a tax rate with three decimals  [IN PROGRESS]
+### 2026-07-30 21:15 — v4.1.0: a save that changed nothing, and locking the session  [PENDING]
+- Ask: "Use skill wpf-dev: Have another version of release 4.1.0 A few Changes: 1. To detect if a
+  record is modified or not, at least you changed something in the record. -add a content update
+  checker, see if any changes against opened record. -if no change but still click the save, it is
+  considered no change, then last update date time shouldn't update, and 经办人no need to update
+  Feature: To make it more secure and more privacy. Add a new button to lock and unlock the account
+  log in. so you don't need to signout and sign back in to select the store. Requirements: -On main
+  application view, when you press ESC, you will see an themed UI panel to ask you if you want to Sign
+  out or just lock. -If Sign out, then follow what we had now. If locked, then show the Locked sign in
+  panel. have your account filled already. -when you add your password, you can open the store you just
+  locked from. -you can add the lock button beside Sign Out button too. that Lock button pops up
+  alert(same as Sign out) to show you the message that you are going to lock, and you can login back."
+- Decisions taken before coding:
+  - Change detection asks EF whether the tracked entity is modified, rather than hashing the form. EF
+    compares against what is actually in the database, covers every mapped column including the JSON
+    blobs, and cannot drift when a field is added later. The clothing items are the catch: the save
+    path does `RemoveRange` + re-add, which always reads as a change, so they need a by-value
+    comparison or the check answers "changed" every time.
+  - A LOCK keeps the shop and the user; only the password is asked for again. Cancelling or closing
+    the lock screen signs out to the login screen rather than returning to the session — a lock that
+    can be dismissed is not a lock.
+  - Locking runs the same open-editor guard as signing out. An order editor left open behind a locked
+    screen would hold the record and defeat the point.
+- Plan:
+  - [x] T1 change detection: stamp `LastModifiedDate`/`LastModifiedBy` only when something changed
+  - [x] T2 themed session panel (Sign out / Lock / Cancel), shown on ESC from the main window
+  - [x] T3 lock screen: account named and fixed, password only, reopens the SAME shop
+  - [x] T4 Lock button beside Sign Out, same confirmation as Sign Out
+  - [x] T5 localization keys in all five language files
+  - [x] T6 harness coverage for both
+  - [x] T7 build 0/0 + Sonar 0, suite, render, publish, docs, README v4.1.0
+- Notes: **T1** the stamp moved out of `ApplyEditableFields` into `StampLastModified`, called only
+  when `db.Entry(order).Properties.Any(p => p.IsModified)` or the items differ. An unconditional
+  `UtcNow` in the apply method was itself making every save look like a change. Items are compared by
+  value (`ClothingItemsMatch`) instead of `RemoveRange` + re-add, or the graph always reported
+  changes. **A record can be genuinely changed by OPENING it** — an order with null
+  `Downpayment`/`DownpaymentMethod`/`FinalBalanceMethod` gets the form's defaults on load, so its
+  first save writes them and correctly stamps; the harness names the moved columns, which is what
+  turned "detection is broken" into "this row was not in a state the form can round-trip". Reported
+  in the README as expected behaviour rather than papered over.
+  **T2–T4** `SessionActionWindow` (Lock / Sign out / Stay here) and `LockScreenWindow` (account named
+  and fixed, password only). `App.LockAsync` holds the account and shop id in LOCALS only — nothing
+  about a locked session survives the process — calls the real `SignOut()` so no capability survives
+  the lock, and reopens through `LoadSelectableShopsAsync` so access revoked while locked sends the
+  user to sign-in. Neither window uses `DialogResult`: it throws on a non-modal window, which made
+  them undrivable by a harness; both report through their own properties and `Close()`.
+  **Sonar in the build earned itself immediately** — flagged `OnPasswordKeyDown` as static-able the
+  moment it was written; it turned out to be dead (no `IsCancel` button means ESC cannot close the
+  window anyway) and was deleted rather than suppressed.
+  **Rendering caught a clipped sentence** in the choice cards: horizontal `StackPanel` again, one
+  release after writing that rule into `context.md`. Knowing it did not prevent it; rendering did.
+  New `lockcheck` harness, 23 assertions, registered in `run-suite.ps1`.
+
+### 2026-07-30 20:10 — v4.0.4: a tax rate with three decimals  [DONE]
 - Ask: "Fix tax rate, make sure it can accept 3 numeric digts. for instances, Quebec can accept 14.975%
   as the sells tax rate. need to consider it"
 - Findings before changing anything: the rate is `decimal` END TO END, so storage was never the

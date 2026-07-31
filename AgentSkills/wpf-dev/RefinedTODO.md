@@ -70,6 +70,37 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-07-30)
 
+### v4.1.0 — a save that changed nothing, and locking the session
+
+**Change detection.** Opening a record, pressing Save and changing nothing no longer stamps
+`LastModifiedDate`/`LastModifiedBy` — which had been overwriting who last EDITED an order with who
+last looked at it. Answered by asking EF whether the tracked entity is modified rather than hashing
+the form: EF compares against the database column by column, covers the JSON blobs the form does not
+model as fields, and does not drift as columns are added. Two things had to change for it to work at
+all — the stamp moved out of the apply-the-form method (an unconditional `UtcNow` makes every save a
+change), and the clothing items are compared by value instead of being removed and re-added every time.
+
+A record can be genuinely changed by merely OPENING it: an order stored before some field existed
+comes back with nulls the form cannot represent, so the editor's defaults are written on the first
+save and it is correctly stamped once. The harness names the columns a no-op save moved, which is what
+distinguished that from broken detection. Both in `context.md`.
+
+**Lock the session.** ESC on the main window, or the toolbar's Lock button, opens a themed panel
+offering Lock or Sign out. A lock keeps the user AND the shop, asks only for the password, and reopens
+the same store with no picker. It holds no credential while locked — `SignOut()` really is called, so
+every capability gate answers no — and what makes it a lock rather than a sign-out is only that the
+shop is remembered. Both remembered values live in locals for the length of one method, so nothing
+about a locked session survives the process.
+
+There is no Cancel: closing the window signs out. Only the locking account can unlock. Access is
+re-checked through the same accessible-shops filter the picker uses, so a membership revoked while the
+machine sat locked sends the user to sign-in rather than back into the shop.
+
+New `lockcheck` harness (23). Both windows were rendered — and rendering caught the horizontal
+`StackPanel` clipping its own description, the exact trap this file documents from v4.0.2.
+
+## Earlier work (2026-07-30)
+
 ### v4.0.4 — a tax rate with three decimals
 
 Quebec's combined GST+QST is 14.975%, and the application could store it but not keep it. Rates were

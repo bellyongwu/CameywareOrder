@@ -2369,6 +2369,39 @@ findings themselves:
   (`DepositEnabled`/`FinalEnabled`), so one handler serves both. Check what actually distinguishes the
   two before merging — if it is only the name, the name was documentation, and a comment says it better.
 
+## "Did anything change?" — ask EF, and beware what the FORM writes on open (2026-07-30)
+
+Change detection on the order editor compares the tracked entity against what EF loaded
+(`db.Entry(order).Properties.Any(p => p.IsModified)`) rather than hashing the form. EF holds the
+loaded values and compares column by column, so it covers every mapped field — including JSON blobs
+the form does not model — and keeps covering a column added next year without anyone extending a list.
+
+Two things it needs to work:
+
+- **Do not write the audit stamp inside the apply-the-form method.** An unconditional
+  `LastModifiedDate = DateTime.UtcNow` makes every save look like a change, which is exactly the
+  question being asked. Stamping moved to its own method, called only when the check says yes.
+- **Stop removing and re-adding child rows.** The items were `RemoveRange`d and re-added on every
+  save, so the entity graph always reported changes. They are now compared by value first.
+
+The finding worth remembering is the third one: **a record can be genuinely changed by merely opening
+it.** An order stored before some field existed comes back with nulls the form cannot represent, and
+the editor supplies its defaults — so the first save writes `Downpayment`, `DownpaymentMethod`,
+`FinalBalanceMethod` and correctly stamps. That looks like broken change detection and is not. The
+harness names the columns a no-op save moved, which is what turned "detection is broken" into "this
+record was not in a state the form can round-trip"; without that diagnostic the temptation is to go
+and suppress the stamp.
+
+## The infinite-width StackPanel caught me AGAIN, one release after writing it down (2026-07-30)
+
+`SessionActionWindow`'s choice cards were `StackPanel Orientation="Horizontal"` holding a glyph and a
+two-line description. The description had `TextWrapping="Wrap"` and was clipped mid-sentence — the
+identical defect this file already documents from v4.0.2, made while the rule was three screens up.
+
+Knowing the rule did not prevent it; **rendering** did. The lesson is not "remember harder", it is
+that any horizontal composition of an icon and prose gets a `DockPanel` by default, and that a new
+window is rendered before it is called done. An assertion cannot see a clipped sentence.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies

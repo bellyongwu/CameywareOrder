@@ -11,6 +11,31 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.1.0 — 2026-07-30
+
+**Lock the machine instead of signing out.** Stepping away no longer means losing your place.
+
+- **Press ESC on the main window** and a panel asks what you meant: lock, or sign out. The Lock button
+  in the toolbar, beside Sign Out, opens the same panel.
+- **Locking hides everything and asks only for your password.** The store you were in reopens
+  straight away — no picker, no choosing it again — which is the whole difference from signing out.
+- **A lock cannot be dismissed.** There is no Cancel: closing the window, or Alt+F4, ends the session
+  and returns to sign-in rather than letting anyone past. Only the account that locked the session
+  can unlock it; somebody else uses *Sign out instead* and starts a session of their own.
+- **Your access is re-checked on the way back in.** If your membership of that store was withdrawn
+  while the machine sat locked, unlocking returns you to sign-in rather than into a store you may no
+  longer enter.
+- Signing out is unchanged, and the same rule applies to both: close any open order window first.
+
+**A save that changes nothing is not a change.** Opening an order, reading it and pressing Save used
+to restamp it — overwriting the record of who last *edited* the order with the name of whoever last
+*looked* at it, and moving the date with it. The order is now compared against what is stored, column
+by column, and left alone when nothing moved.
+
+One thing worth knowing: an order saved before some of today's fields existed can come back with no
+recorded deposit or payment method, and the form fills those in when it opens. Saving such an order
+really does change it, so it is stamped — once. Every save after that is compared like any other.
+
 ### v4.0.4 — 2026-07-30 (hotfix)
 
 - **A tax rate can carry three decimals.** Quebec's combined GST+QST is **14.975%**, and the settings

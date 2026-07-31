@@ -1,0 +1,73 @@
+<Window x:Class="CameywareOrder.Views.LockScreenWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:CameywareOrder.Localization"
+        Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Lock.Title], Mode=OneWay}"
+        SizeToContent="Height" Width="460"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Icon="/Assets/ICONS/app-icon.ico"
+        Background="{StaticResource PageBackgroundBrush}">
+    <!-- The screen a locked session comes back through. It asks for ONE thing — the password of the
+         account that locked it — because the whole point of locking rather than signing out is that
+         the account and the shop are already settled.
+
+         There is deliberately no way to switch accounts here. Somebody else taking the machine signs
+         out (the button below), which is a different flow with a different screen; letting this one
+         accept another user's name would make it a login window that happens to be pre-filled, and
+         then "unlock" would silently mean "start a new session in whatever shop the last one had". -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="{StaticResource HeaderGradientBrush}" Padding="26,22">
+            <StackPanel>
+                <TextBlock Text="&#xE72E;" FontFamily="Segoe MDL2 Assets" FontSize="26"
+                           Foreground="{StaticResource TextOnPrimaryBrush}" Margin="0,0,0,10"/>
+                <TextBlock FontSize="18" FontWeight="Bold" Foreground="{StaticResource TextOnPrimaryBrush}"
+                           Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Lock.Title], Mode=OneWay}"/>
+                <TextBlock x:Name="ShopText" FontSize="12" Foreground="{StaticResource TextOnHeaderSubtleBrush}"
+                           TextWrapping="Wrap" Margin="0,5,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="1" Margin="26,22,26,22">
+            <!-- The account, stated and not editable. A TextBlock rather than a disabled TextBox: a
+                 greyed-out box invites clicking into it to find out why it will not take a name. -->
+            <TextBlock FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.UserName], Mode=OneWay}"/>
+            <Border Background="{StaticResource SurfaceMutedBrush}" BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="12,10" Margin="0,5,0,16">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE77B;" FontFamily="Segoe MDL2 Assets" FontSize="14"
+                               Foreground="{StaticResource TextMutedBrush}" Margin="0,0,10,0"
+                               VerticalAlignment="Center"/>
+                    <TextBlock x:Name="AccountText" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock FontSize="12" Foreground="{StaticResource TextSecondaryBrush}"
+                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Password], Mode=OneWay}"/>
+            <!-- No Cancel button anywhere on this window, so ESC does nothing: a lock has no
+                 "never mind". Every other way out — the X, Alt+F4 — is caught by OnClosing and
+                 treated as signing out, which is the safe reading of "the person walked away". -->
+            <PasswordBox x:Name="PasswordBox" Margin="0,5,0,0" Padding="10,8" FontSize="14"/>
+
+            <TextBlock x:Name="ErrorText" FontSize="12" Foreground="{StaticResource DangerBrush}"
+                       TextWrapping="Wrap" Margin="0,8,0,0" Visibility="Collapsed"/>
+
+            <Button x:Name="UnlockButton" Style="{StaticResource PrimaryButton}" Margin="0,18,0,0"
+                    Padding="16,9" FontSize="14" IsDefault="True" Click="OnUnlockClick"
+                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Lock.Unlock], Mode=OneWay}"/>
+
+            <!-- The way out for somebody who is not the locked-in user. Not "Cancel": cancelling a
+                 lock screen has no meaning, and the only other thing a person at this machine can
+                 legitimately do is end this session and start their own. -->
+            <Button x:Name="SignOutButton" Margin="0,10,0,0" Padding="16,7" Click="OnSignOutClick"
+                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Lock.SignOutInstead], Mode=OneWay}"/>
+        </StackPanel>
+    </Grid>
+</Window>

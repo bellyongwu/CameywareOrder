@@ -1727,6 +1727,9 @@ public partial class OrderEditWindow : Window
             Items = data.ClothingItems
         };
         ApplyEditableFields(newOrder, data);
+        // A new order is a change by definition, so it is stamped unconditionally. Only an EDIT can
+        // turn out to have altered nothing.
+        StampLastModified(newOrder);
         db.Orders.Add(newOrder);
 
         return newOrder.OrderNumber;
@@ -1764,10 +1767,73 @@ public partial class OrderEditWindow : Window
 
         ApplyEditableFields(order, data);
 
-        db.OrderItems.RemoveRange(order.Items);
-        order.Items.Clear();
-        foreach (var clothingItem in data.ClothingItems)
-            order.Items.Add(clothingItem);
+        // The items are replaced only when they actually differ. The old code removed and re-added
+        // them every time, which made the change check below answer "changed" for every save — the
+        // one thing it must not do.
+        var itemsChanged = !ClothingItemsMatch(order.Items, data.ClothingItems);
+        if (itemsChanged)
+        {
+            db.OrderItems.RemoveRange(order.Items);
+            order.Items.Clear();
+            foreach (var clothingItem in data.ClothingItems)
+                order.Items.Add(clothingItem);
+        }
+
+        // Ask EF whether anything actually moved, rather than comparing the form to a snapshot taken
+        // when the window opened. EF holds the values the row was LOADED with and compares column by
+        // column, so this covers every mapped field — including the JSON blobs the form does not
+        // model as fields — and it keeps covering a column added next year without anyone
+        // remembering to extend a list. Reading Entry() runs change detection.
+        if (itemsChanged || db.Entry(order).Properties.Any(property => property.IsModified))
+            StampLastModified(order);
+    }
+
+    /// <summary>
+    /// Whether the clothing lines on the form are the ones already stored, line for line.
+    /// </summary>
+    /// <remarks>
+    /// Position matters, so this is a pairwise walk rather than a set comparison: the list is the
+    /// order the shop typed and reordering it is an edit a reader would notice on the receipt.
+    /// Existing rows are taken in <c>Id</c> order because that is the order they were inserted in,
+    /// which is the row order that was on screen when they were saved.
+    /// </remarks>
+    private static bool ClothingItemsMatch(ICollection<OrderItem> stored, IReadOnlyList<OrderItem> onForm)
+    {
+        if (stored.Count != onForm.Count)
+            return false;
+
+        var ordered = stored.OrderBy(item => item.Id).ToList();
+
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            if (!string.Equals(ordered[i].ProductName, onForm[i].ProductName, StringComparison.Ordinal)
+                || ordered[i].Quantity != onForm[i].Quantity
+                || ordered[i].UnitPrice != onForm[i].UnitPrice
+                || ordered[i].PromotionalPrice != onForm[i].PromotionalPrice)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Records who saved this order and when.</summary>
+    /// <remarks>
+    /// Called only where something actually changed. Opening an order, looking at it and pressing
+    /// Save is not a modification, and stamping it as one overwrites a real record of who last
+    /// touched the order with the name of whoever last read it.
+    ///
+    /// The name comes from the session rather than from anything on the form — "who saved this" is
+    /// not a field anybody should be able to type. Left untouched when nobody is signed in (only
+    /// reachable from a harness), so a save can never blank a name a real crew member left behind.
+    /// </remarks>
+    private static void StampLastModified(Order order)
+    {
+        order.LastModifiedDate = DateTime.UtcNow;
+
+        if (AuthenticationService.Instance.CurrentUser is { } crew)
+            order.LastModifiedBy = crew.DisplayLabel;
     }
 
     private void ApplyEditableFields(Order order, OrderSaveData data)
@@ -1794,13 +1860,10 @@ public partial class OrderEditWindow : Window
         // regardless of what its shop actually traded in.
         order.CurrencyType = SelectedCurrency;
         order.Notes = NullIfWhiteSpace(NotesBox.Text);
-        order.LastModifiedDate = DateTime.UtcNow;
-        // Stamped beside the timestamp, from the session rather than from anything on the form —
-        // "who saved this" is not a field anybody should be able to type. Left untouched when
-        // nobody is signed in (only reachable from a harness), so a save can never blank a name a
-        // real crew member left behind.
-        if (AuthenticationService.Instance.CurrentUser is { } crew)
-            order.LastModifiedBy = crew.DisplayLabel;
+        // The audit stamp is deliberately NOT written here. This method assigns whatever the form
+        // holds, which is how the change check works — every assignment of an unchanged value leaves
+        // EF's IsModified false. Writing a fresh timestamp in here would make every save look like a
+        // change, including the ones that are not. See StampLastModified.
         ApplyPaymentFields(order);
     }
 

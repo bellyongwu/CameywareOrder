@@ -612,6 +612,23 @@ components are added/renamed or the way pieces fit together changes.
     owns what "proceed" means and is the only thing that can describe the impact. Its phrase box carries
     its OWN template rather than deriving from `ThemedTextBox`; see `context.md`, "a theme trigger with
     TargetName beats your local value".
+  - `SessionActionWindow` — the Lock / Sign out chooser, raised by ESC on the main window and by the
+    toolbar's Lock button (`MainWindow.OfferSessionChoiceAsync`, one entry point for both so they
+    cannot drift). Reports through `Action` (`Stay` / `Lock` / `SignOut`) and NOT through
+    `DialogResult`, which throws on a non-modal window and would make it undrivable by a harness.
+    Closing it leaves `Stay`, so a stray ESC ends nothing. Performs nothing itself.
+  - `LockScreenWindow` — how a locked session comes back: the account is fixed and named, only the
+    password is asked for. Authenticates through the same `AuthenticationService.Authenticate` the
+    login window uses, and accepts ONLY the account that locked the session — a different person's
+    correct password is still refused, because unlocking resumes somebody else's shop, role and name
+    on every order saved next. No Cancel: `OnClosing` turns every other exit into a sign-out.
+    Reports through `Unlocked` / `SignOutRequested`.
+  - `App.LockAsync` — closes the window, calls the real `SignOut()` (a lock that kept `CurrentUser`
+    would leave every capability gate answering yes), shows the lock screen, and on success reopens
+    the SAME shop through `ReopenLockedShopAsync`. The only things remembered are the account and the
+    shop's `PublicId`, both in locals for the length of the method — nothing about a locked session
+    survives the process. Reopening goes through `LoadSelectableShopsAsync`, so access revoked while
+    the machine sat locked lands the user at sign-in instead.
   - `ShopLocalizationWindow` — the languages a shop runs in and the currencies it takes, in one
     panel because they are one decision: a language brings the currencies of its market. Languages
     left, a card per ticked language on the right listing what it brings. Opened from a link card in
