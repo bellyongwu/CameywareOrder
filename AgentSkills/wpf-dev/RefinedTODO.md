@@ -96,8 +96,14 @@ There is no Cancel: closing the window signs out. Only the locking account can u
 re-checked through the same accessible-shops filter the picker uses, so a membership revoked while the
 machine sat locked sends the user to sign-in rather than back into the shop.
 
-New `lockcheck` harness (23). Both windows were rendered — and rendering caught the horizontal
+New `lockcheck` harness (25). Both windows were rendered — and rendering caught the horizontal
 `StackPanel` clipping its own description, the exact trap this file documents from v4.0.2.
+
+**Fixed on report:** the lock screen showed `DisplayLabel` under a field labelled `Login.UserName`, so
+it named the person while authenticating the login. The harness could not have caught it — its test
+account had no first or last name, so `DisplayLabel` falls back to the user name and both readings
+agree. A fixture sitting in the fallback case cannot tell apart the branches it is meant to choose
+between; the regression test now uses a named account and was confirmed to fail before the fix.
 
 ## Earlier work (2026-07-30)
 

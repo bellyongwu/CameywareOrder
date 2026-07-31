@@ -69,6 +69,16 @@ Entry format:
   **Rendering caught a clipped sentence** in the choice cards: horizontal `StackPanel` again, one
   release after writing that rule into `context.md`. Knowing it did not prevent it; rendering did.
   New `lockcheck` harness, 23 assertions, registered in `run-suite.ps1`.
+- Follow-up ask: "when screen locked, the user name should use user name field, it seems like you are
+  using Firstname + Lastname. Please verify" — verified and real. `AccountText` was `DisplayLabel`,
+  i.e. `PersonName.Label(FirstName, LastName, UserName)`, under a field labelled `Login.UserName` and
+  above a password box: it named the person while authenticating the login. Now `account.UserName`.
+  **The original assertion could not have caught it**: the temp account has no first or last name, so
+  `DisplayLabel` falls back to the user name and both readings agree. Only an account WITH a name
+  distinguishes them, so the regression test constructs one — and was confirmed to fail against the
+  old code ('Mei Lin') before the fix went in. The session PANEL deliberately still greets by name:
+  "Signed in as Mei Lin · Toronto Atelier" is prose about who is here, not a labelled credential.
+  `lockcheck` 23 → 25.
 
 ### 2026-07-30 20:10 — v4.0.4: a tax rate with three decimals  [DONE]
 - Ask: "Fix tax rate, make sure it can accept 3 numeric digts. for instances, Quebec can accept 14.975%

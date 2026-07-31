@@ -34,7 +34,13 @@ public partial class LockScreenWindow : Window
         _localization = localization;
         _userName = account.UserName;
 
-        AccountText.Text = account.DisplayLabel;
+        // The USER NAME, not the display label. This field is labelled Login.UserName and sits above
+        // a password box: it has to show the exact identifier that credential belongs to — the one
+        // the login window asks for — or the screen names one thing and authenticates another.
+        // DisplayLabel is PersonName.Label(FirstName, LastName, UserName), so it reads as the
+        // person's name whenever the account has one and silently falls back to the login when it
+        // does not; that fallback is why it looked right on accounts with no name.
+        AccountText.Text = account.UserName;
         ShopText.Text = localization.Format("Session.Lock.Subhead", shopName ?? string.Empty);
 
         Loaded += (_, _) => PasswordBox.Focus();

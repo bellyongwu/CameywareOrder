@@ -2402,6 +2402,25 @@ Knowing the rule did not prevent it; **rendering** did. The lesson is not "remem
 that any horizontal composition of an icon and prose gets a `DockPanel` by default, and that a new
 window is rendered before it is called done. An assertion cannot see a clipped sentence.
 
+## A fallback hides the bug AND the test for it (2026-07-30)
+
+The lock screen showed `UserAccount.DisplayLabel` under a field labelled `Login.UserName`, above a
+password box — naming the person while authenticating the login. `DisplayLabel` is
+`PersonName.Label(FirstName, LastName, UserName)`: it reads as the person's name when the account has
+one and **falls back to the user name when it does not**.
+
+That fallback is why it shipped, and it is why the harness could not have caught it: the test account
+was created with no first or last name, so both readings produced the same string and the assertion
+passed against either. A test fixture in the fallback case cannot distinguish the two branches it is
+supposed to be choosing between.
+
+**When a value has a fallback, the fixture must sit on the side that exercises the real path.** The
+regression test now builds an account WITH a name, and was confirmed to fail against the old code
+before the fix went in — which is the only way to know an assertion is load-bearing.
+
+Related: `DisplayLabel` is right in PROSE ("Signed in as Mei Lin · Toronto Atelier") and wrong in a
+field labelled with a credential. Same value, opposite answers, decided by what the label promises.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies
