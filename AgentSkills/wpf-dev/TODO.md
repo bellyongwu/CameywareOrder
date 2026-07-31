@@ -17,7 +17,38 @@ Entry format:
 
 ## Open / in progress
 
-### 2026-07-31 01:10 — v4.1.1: a retyped phone number is held to the rule  [IN PROGRESS]
+### 2026-07-31 02:05 — v4.1.2: the custom-made record checks its contact details too  [IN PROGRESS]
+- Ask: "Create another fix to 4.1.2 apply the email validation and phone validation rules for Edit
+  custom Record section as well."
+- Findings: `CustomMadeServiceWindow` carries a `PhoneNumberField` and an `EmailBox` and validates
+  NEITHER. `OnSaveClick` checks the phone is non-EMPTY and never checks it is a number; the email is
+  read straight into the record with no check at all. So the rules just tightened for orders were
+  reachable around by editing a custom-made record instead.
+- Decision: the strict-or-loose DECISION moves onto `PhoneNumberField` as one property rather than
+  being restated in a second window — a second copy of a validation rule is free to drift, which is
+  the reason this control exists at all. The control already knows what it loaded, so it can decide
+  alone: an untouched STORED number keeps the loose rule; a blank baseline or an edited value gets
+  the strict one. That is exactly what `OrderEditWindow` computes today, so its behaviour is unchanged.
+- Plan:
+  - [ ] T1 `PhoneNumberField.IsAcceptable` — the one place the strict/loose choice lives
+  - [ ] T2 `OrderEditWindow.ValidatePhoneField` uses it instead of its own copy
+  - [ ] T3 `CustomMadeServiceWindow` validates phone and email on save, marking the phone red
+  - [ ] T4 harness coverage: the custom-made window refuses what the order window refuses
+  - [x] T5 build 0/0 + Sonar 0, suite, publish, docs, README v4.1.2
+- Notes: `PhoneNumberField.IsAcceptable` needs no parameter — the control knows what `Load` gave it,
+  so "an untouched stored value" is something it can answer alone, and both windows now ask the same
+  property. `OrderEditWindow` keeps only the MESSAGE choice locally (the lenient path shows the
+  generic wording), and its behaviour is unchanged: a new order calls `ResetTo`, which loads null, so
+  its blank baseline resolves to the strict rule exactly as `_existing is null` did.
+  `CustomMadeServiceWindow.OnSaveClick` gained the phone check (marking the field red and focusing
+  it) and an email check; a small `Fail` helper stops the banner+dialog pairing being written out a
+  fourth and fifth time. **The lesson is that sharing the CONTROL did not share the RULE** — one
+  implementation and one omission, rather than two implementations — written into `context.md` along
+  with the note to audit the other three hosts of this field the same way. `phonecheck` 209 → 221,
+  and the new assertions check the two windows AGREE on the same inputs rather than checking each
+  separately, because two independent assertions both pass while drifting apart.
+
+### 2026-07-31 01:10 — v4.1.1: a retyped phone number is held to the rule  [DONE]
 - Ask: "Fixing a bug on phone validation. 289-990-33577 I entered this number, but it still accepts.
   it shouldn't allow for the saving." + "For canada region" + "I haven't tried the other countries
   yet. do a deep dive on this section find out why"

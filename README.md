@@ -11,6 +11,19 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.1.2 — 2026-07-31 (hotfix)
+
+**The custom-made record checks its contact details, as the order form does.** That window collects a
+phone number and an email and validated neither — it only checked the phone box was not empty, and
+wrote whatever was in it, and whatever was in the email box, straight into the record. Every rule the
+order form applies could be walked around by editing the record instead.
+
+Both now apply the same rules: the number must be a real one in the country picked for it, and an
+email, if given, must be a well-formed address. Blank stays allowed for the email, as on an order.
+
+The rule itself now lives in one place — on the phone field the two windows share — rather than being
+written out once per screen, so they cannot drift apart again.
+
 ### v4.1.1 — 2026-07-31 (hotfix)
 
 **Phone numbers are checked against the country they belong to, whichever order they are on.**

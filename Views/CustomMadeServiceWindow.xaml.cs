@@ -285,6 +285,20 @@ public partial class CustomMadeServiceWindow : Window
         }
     }
 
+    /// <summary>
+    /// Reports one validation problem the two ways this window already reports them.
+    /// </summary>
+    /// <remarks>
+    /// The banner alone is missed — it sits at the foot of a form taller than the window — and the
+    /// dialog alone leaves nothing on screen once dismissed. Both, as the checks above this already
+    /// do; this only stops the pairing being written out a fourth and fifth time.
+    /// </remarks>
+    private void Fail(string message)
+    {
+        ErrorText.Text = message;
+        MessageBox.Show(message, _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
     private void OnSaveClick(object sender, RoutedEventArgs e)
     {
         if (_isReadOnly)
@@ -308,6 +322,29 @@ public partial class CustomMadeServiceWindow : Window
         {
             ErrorText.Text = _localization["OrderEdit.Validate.PhoneNumber"];
             MessageBox.Show(_localization["OrderEdit.Validate.PhoneNumber"], _localization[ValidationTitleKey], MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // Present, and a real number in the country picked for it. This window hosts the same
+        // PhoneNumberField as the order form and used to check only that the box was non-empty, so
+        // every rule the order form applies could be walked around by editing the record instead.
+        // PhoneField.IsAcceptable is that rule, and it is the ONLY copy of it.
+        if (!PhoneField.IsAcceptable)
+        {
+            Fail(PhoneField.ValidationMessage);
+            PhoneField.MarkInvalid(true);
+            PhoneField.FocusNumber();
+            return;
+        }
+
+        PhoneField.MarkInvalid(false);
+
+        // Blank stays allowed — the email is optional on a custom-made record, as it is on an order.
+        // What is not allowed is a malformed one, which used to be written to the record unexamined.
+        if (!ContactValidation.IsValidEmail(EmailBox.Text))
+        {
+            Fail(_localization["OrderEdit.Validate.EmailInvalid"]);
+            EmailBox.Focus();
             return;
         }
 

@@ -169,6 +169,23 @@ public partial class PhoneNumberField : UserControl
     public bool HasBeenEdited => !string.Equals(FullNumber, _loadedNumber, StringComparison.Ordinal);
 
     /// <summary>
+    /// Whether the number passes the rule that actually applies to it.
+    /// </summary>
+    /// <remarks>
+    /// THE decision, in one place, because every screen collecting a phone number has to make it the
+    /// same way. It lived in <c>OrderEditWindow</c> alone, and the custom-made record editor — which
+    /// hosts this same control — validated nothing at all, so the rule could be walked around simply
+    /// by editing the record instead of the order.
+    ///
+    /// Strict unless the number is a STORED value nobody has touched. A blank baseline means there is
+    /// nothing to grandfather (a new record, or one that never carried a number), and an edit means
+    /// somebody is typing it now with the customer there to be asked — both get the country's own
+    /// rule. Only a number already in the database, left alone, keeps the loose one, because refusing
+    /// that would strand the record until somebody re-typed a number they cannot verify.
+    /// </remarks>
+    public bool IsAcceptable => _loadedNumber.Length == 0 || HasBeenEdited ? IsValid : IsValidLoose;
+
+    /// <summary>
     /// Re-groups a stored number for display, but only when doing so is unambiguous.
     /// </summary>
     /// <remarks>

@@ -2459,6 +2459,27 @@ assertion. Length is the only rule true of all three, so Japan ships no pattern 
 same call already made for its missing 10-digit FORMAT and for the same reason: the digits do not say
 which convention is in use. A fallback that says "no rule" is better than a rule that is wrong.
 
+## A shared CONTROL does not give you a shared RULE (2026-07-31)
+
+`PhoneNumberField` exists precisely so the phone rule lives in one place — its own remarks say a
+second copy of the rule is free to drift. It was hosted by both the order form and the custom-made
+record editor, and only the order form validated anything: the record editor checked that the box was
+non-empty and wrote whatever was in it. Every rule tightened on orders could be walked around by
+editing a record instead. The email was worse — never checked at all, on a window that collects one.
+
+Sharing the control shared the *inputs and the formatting*. The DECISION — which rule applies, strict
+or lenient — stayed in the window, so there was one implementation and one omission rather than two
+implementations. **Ask what each screen decides, not just what it displays.** The fix moved the
+decision onto the control as `IsAcceptable`, where it needs no parameter: the control knows what it
+loaded, so "untouched stored value" is something it can answer for itself.
+
+Worth checking the other three hosts of this control the same way — the shop's own number and the two
+staff screens — and generally, when a control is introduced to centralise a rule, grep its usages for
+who actually *calls* the rule rather than assuming the constructor was enough.
+
+The harness asserts the two windows AGREE on the same inputs, rather than asserting each separately.
+That is what catches a future divergence; two independent assertions both pass while drifting apart.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies

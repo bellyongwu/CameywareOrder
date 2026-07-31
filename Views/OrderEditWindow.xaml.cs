@@ -2253,9 +2253,10 @@ public partial class OrderEditWindow : Window
     /// </remarks>
     private bool ValidatePhoneField()
     {
-        var strict = _existing is null || PhoneField.HasBeenEdited;
-        var valid = strict ? PhoneField.IsValid : PhoneField.IsValidLoose;
-        var message = strict
+        // The rule lives on the control, so this window and the custom-made record editor cannot
+        // drift apart — the field is hosted by both and used to be checked by only one.
+        var valid = PhoneField.IsAcceptable;
+        var message = PhoneField.HasBeenEdited || _existing is null
             ? PhoneField.ValidationMessage
             : _localization["OrderEdit.Validate.PhoneInvalid"];
 

@@ -68,6 +68,32 @@ treatment too, which is theirs to decide.
 
 ---
 
+## Recent work (2026-07-31)
+
+### v4.1.1 / v4.1.2 — phone numbers are validated properly, everywhere
+
+Reported: `289-990-33577` saved on a Canadian order. It was two defects and then a third.
+
+**The strict rule reached only NEW orders** (`_existing is null ? IsValid : IsValidLoose`). The
+leniency is right — an order taken last year must stay saveable without re-typing a number nobody can
+verify — but keying it to the ORDER meant an existing one accepted any 7-to-15-digit number in any
+country, at every wrong length from 6 to 13. **Leniency belongs to the VALUE**: the field remembers
+what `Load` gave it, and only an untouched stored number keeps the loose rule.
+
+**Validation counted digits**, which cannot see an area code starting 0 or 1, a Chinese mobile not
+starting with 1, or a French number carrying a trunk zero — nine such numbers were accepted, each the
+right length. `nationalPattern` in `phone-countries.json` now decides, matched against digits alone
+with the count as fallback. Patterns are asserted anchored (unanchored matches a substring and
+validates nothing) and each country has a positive case (a pattern refusing everything passes every
+negative test). **Japan ships no pattern on purpose** — it writes `090-1234-5678`, `90-1234-5678` and
+`03-1234-5678`, so any leading-digit rule refuses one real form; the first attempt did, and an
+existing assertion caught it.
+
+**Sharing the control had not shared the rule.** `CustomMadeServiceWindow` hosts the same field and
+validated neither phone nor email — one implementation and one omission. The decision moved onto the
+control as `IsAcceptable`, and the harness asserts the two windows AGREE on the same inputs rather
+than testing each separately. Both lessons in `context.md`. `phonecheck` 167 → 221.
+
 ## Recent work (2026-07-30)
 
 ### v4.1.0 — a save that changed nothing, and locking the session
