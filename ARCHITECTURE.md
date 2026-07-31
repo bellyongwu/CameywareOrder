@@ -420,6 +420,42 @@ scanning down a column cannot afford. Cells never wrap; they trim with an ellips
 tooltip. Where a cell needs two lines (the custom-made column: `Yes` over `(Qipao, Shirt)`), the
 second line is a **fixed height that stands whether it shows or not**, so rows stay level.
 
+### 7.7 Selecting several records (v4.2.0)
+
+The list is `SelectionMode="Extended"`: a plain click still selects one row, Ctrl+click toggles one,
+Shift+click takes a run, and Ctrl+A takes the page. Nothing in the application handles Ctrl+A —
+`ListBox` does, in its own `OnKeyDown`, gated on the mode — and "the page" needs no scoping either,
+because paging happens in the view model and the list only ever holds one page.
+
+**Only Copy and Delete act on a selection.** Everything else — open/view, the three print actions,
+Enter, double-click — requires *exactly one* row, because "print the order" is not a question a
+multiple selection has an answer to.
+
+Three decisions worth keeping:
+
+- **The selection lives on the view model, pushed in by the view.** `ListView.SelectedItems` is not a
+  dependency property, so it cannot be bound. The flow is one-way (`SetSelection` from
+  `SelectionChanged`); when the view model needs rows selected — after a batch copy — it raises
+  `SelectionRequested` rather than writing to the list, so a selection change cannot re-enter
+  through the event that reported it.
+- **A rebuild collapses the selection to the anchor.** Ctrl+A means *this page*; a selection carried
+  through a search, a sort or a page turn would leave Delete reaching rows nobody can see.
+- **Right-click replaces a selection it lands outside of.** Setting `IsSelected` alone *adds* the row
+  in Extended mode, so the menu would act on one more record than the user pointed at. Inside an
+  existing selection it changes nothing, which is how the menu comes to act on the batch.
+
+The confirmation is split from the work (`ConfirmAndDeleteSelectedAsync` → `DeleteSelectedAsync`) for
+the reason given in §8.6: a `MessageBox` inside the work blocks the thread, and a harness driving a
+batch delete would hang on a dialog nothing can answer.
+
+**A batch inherits every latent defect of the single action, at scale.** Copy composed its own
+`ORD-{timestamp}` instead of drawing from `OrderNumberFormatter`, which ignored the shop's configured
+numbering — and gave *every copy in one batch the same number*, since they share a second.
+`Reserve` could not fix it as written: it returned early in Timestamp mode, ahead of the collision
+scan its own summary promises. It now steps the number's second forward until one is free (the
+order keeps the date it was written; only the label moves), and the batch saves one copy at a time,
+because `Reserve` asks the database what is taken and EF cannot see added-but-unsaved rows.
+
 ---
 
 ## 8. Validation
@@ -740,6 +776,7 @@ Version numbers track the shape of the change: patch for a fix, minor for a feat
 | v4.1.1 | per-country phone patterns; a retyped number is held to the rule |
 | v4.1.2 | the custom-made record checks its contact details |
 | v4.1.3 | every phone and email field validated, through one rule |
+| v4.2.0 | select several records and copy or delete them at once |
 
 ---
 

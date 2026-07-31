@@ -11,6 +11,31 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.2.0 — 2026-07-31
+
+**Pick several records and act on them at once.** Until now the order list let you work on one record
+at a time, so clearing out ten test orders meant ten rounds of select, delete, confirm.
+
+- **Ctrl + click** adds a record to the selection, or takes it back out. A plain click still selects
+  one record, exactly as before, and Shift + click takes a run of them.
+- **Ctrl + A** selects every record on the page you are looking at. It is the page, not the whole
+  database — what you can see is what you have picked.
+- **Copy and Delete work on the whole selection.** Delete asks once and names how many records it is
+  about to remove; Copy makes one new order per record selected.
+- **A counter appears beside the record count** as soon as more than one is selected, so how far
+  Delete reaches is on screen before you press it — rows you picked can be scrolled out of sight.
+- **Everything else still needs exactly one record.** Opening an order, and the three print actions,
+  grey out while a group is selected: there is no single order for them to act on. Right-clicking
+  inside your selection keeps it; right-clicking a record outside it switches to that one, so the
+  menu never quietly reaches a record you only pointed at.
+
+**Copying now uses your shop's own receipt numbering.** This is a fix that came out of the above.
+Copy had always stamped its own `ORD-` number built from the date and time, ignoring the prefix and
+numbering style set in Shop Settings — so a shop numbering orders `INV-0001, INV-0002…` got a
+date-stamped number from Copy and nothing else. Worse for the new feature: because the number was
+built from the clock to the second, copying several records at once gave **every copy the same
+number**. Copies now draw the next free number from the shop's own run, one each.
+
 ### v4.1.3 — 2026-07-31 (hotfix)
 
 **Every screen that collects a phone number or an email now checks it.** The rule had been written

@@ -48,6 +48,7 @@ public partial class MainWindow : Window
 
         ApplyRolePermissions();
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        _viewModel.SelectionRequested += OnSelectionRequested;
         _localization.LanguageChanged += OnLanguageChangedGlobally;
         ShopContext.Instance.ShopChanged += OnShopChanged;
         RefreshToolbarLabels();
@@ -150,6 +151,7 @@ public partial class MainWindow : Window
         _localization.LanguageChanged -= OnLanguageChangedGlobally;
         ShopContext.Instance.ShopChanged -= OnShopChanged;
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _viewModel.SelectionRequested -= OnSelectionRequested;
         _viewModel.Detach();
 
         base.OnClosed(e);
@@ -430,9 +432,36 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Hands the list's selection to the view model, which is what Copy and Delete act on.
+    /// </summary>
+    /// <remarks>
+    /// A ListView's <c>SelectedItems</c> is not a dependency property, so it cannot be bound and has
+    /// to be pushed. One direction only: the view model never writes back from here, so reporting a
+    /// selection cannot re-enter through the event that reported it.
+    /// </remarks>
+    private void OnOrdersSelectionChanged(object sender, SelectionChangedEventArgs e)
+        => _viewModel.SetSelection(OrdersListView.SelectedItems.OfType<Order>());
+
+    /// <summary>
+    /// Selects exactly the rows the view model asks for — used after a batch copy, so the copies
+    /// end up selected the way a single copy has always left its copy selected.
+    /// </summary>
+    private void OnSelectionRequested(object? sender, IReadOnlyList<Order> orders)
+    {
+        OrdersListView.SelectedItems.Clear();
+        foreach (var order in orders)
+            OrdersListView.SelectedItems.Add(order);
+
+        if (orders.Count > 0)
+            OrdersListView.ScrollIntoView(orders[0]);
+    }
+
     private void OnOrderRowDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (_viewModel.SelectedOrder is null)
+        // Exactly one row: a double-click that lands on a batch would open whichever order happened
+        // to be the anchor, silently ignoring the rest of what is selected.
+        if (!_viewModel.HasSingleSelection)
             return;
 
         OnEditOrderClick(sender, new RoutedEventArgs());
@@ -552,16 +581,22 @@ public partial class MainWindow : Window
             System.Windows.Threading.DispatcherPriority.Loaded);
     }
 
-    // Requirement 4a: pressing Enter on a selected order opens the same edit
-    // window as a double-click. Pressing Delete triggers the delete action.
+    // Enter opens the selected order, as a double-click does. Delete removes the whole selection.
+    //
+    // The two keys are gated differently on purpose: Enter opens ONE order and so needs exactly one
+    // selected, while Delete is a batch action and the command it routes to owns both the "one" and
+    // the "several" wording. Ctrl+A is not handled here at all — ListBox has its own SelectAll
+    // command binding on that gesture, live in Extended mode, and it reaches the loaded items,
+    // which is the current page.
     private void OnOrderRowKeyDown(object sender, KeyEventArgs e)
     {
-        if (_viewModel.SelectedOrder is null)
-            return;
+        ArgumentNullException.ThrowIfNull(e);
 
         switch (e.Key)
         {
             case Key.Enter:
+                if (!_viewModel.HasSingleSelection)
+                    return;
                 e.Handled = true;
                 OnEditOrderClick(sender, new RoutedEventArgs());
                 break;
@@ -573,16 +608,28 @@ public partial class MainWindow : Window
         }
     }
 
-    // Right-clicking a row selects it first so context-menu actions operate on the
-    // intended order (WPF does not select on right-click by default).
+    /// <summary>
+    /// Makes a right-click land on the row the pointer is over. WPF does not select on right-click,
+    /// so without this the context menu would act on whatever was selected before.
+    /// </summary>
+    /// <remarks>
+    /// Right-clicking INSIDE an existing selection leaves it alone — that is how the menu comes to
+    /// act on a batch. Right-clicking outside it means "this one instead", so the selection is
+    /// REPLACED rather than extended: setting <c>IsSelected</c> on its own adds the row in Extended
+    /// mode, and a Delete that quietly takes one more record than the user pointed at is the worst
+    /// version of this control.
+    /// </remarks>
     [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
         Justification = "Named from XAML (EventSetter Handler=\"OnOrderRowRightClick\"). The generated " +
                         "InitializeComponent wires it as this.OnOrderRowRightClick, which does not compile " +
                         "against a static method.")]
     private void OnOrderRowRightClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is ListViewItem item)
-            item.IsSelected = true;
+        if (sender is not ListViewItem item || item.IsSelected)
+            return;
+
+        OrdersListView.SelectedItems.Clear();
+        item.IsSelected = true;
     }
 
     // Keeps the trailing (Notes) column filling the remaining width as the list resizes.
@@ -667,7 +714,9 @@ public partial class MainWindow : Window
 
     private void OnEditOrderClick(object sender, RoutedEventArgs e)
     {
-        if (_viewModel.SelectedOrder is null) return;
+        // The shared entry point for the button, the context menu, Enter and the double-click, so
+        // the "exactly one row" rule is restated here rather than trusted to four callers.
+        if (!_viewModel.HasSingleSelection || _viewModel.SelectedOrder is null) return;
         var dialog = new OrderEditWindow(_scopeFactory, _localization, _viewModel.SelectedOrder) { Owner = this };
         if (dialog.ShowDialog() == true)
             _ = _viewModel.LoadOrdersAsync();

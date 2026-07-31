@@ -70,6 +70,34 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-07-31)
 
+### v4.2.0 — select several records and act on them at once  [DONE]
+
+Ctrl+click picks records on the orders list, Ctrl+A takes the current page, and Copy and Delete act
+on the selection — those two only.
+
+`SelectionMode="Extended"` (never `Multiple`, which would make every plain click a toggle). The
+selection lives on `MainViewModel`, pushed in by the view because `SelectedItems` cannot be bound;
+`SelectedOrder` stays the anchor. Everything that is not Copy or Delete — Edit/View, the three Print
+entries, Enter, double-click — is gated on **exactly one** row.
+
+The durable lessons moved to `context.md`: batch inherits the single action's latent defects; a
+rebuild must collapse the selection; right-click replaces rather than extends; Ctrl+A is
+`ListBox.OnKeyDown` and not a command; render only after the animation settles; a harness must load
+the string table itself.
+
+Copy, which the batch is built on, had two problems:
+
+- **Fixed.** It hand-composed `ORD-{timestamp}` instead of going through `OrderNumberFormatter`, so
+  it ignored the shop's own prefix and mode — and a batch copied inside one second gave every copy
+  the SAME number. `Reserve` could not save it as written: it returned early in Timestamp mode,
+  ahead of the collision scan its own summary promises. Both fixed; proven by reverting the fix and
+  watching `batchcheck` go red on three copies sharing `ORD-20260731-194353`.
+- **Still open — reported, the user's call.** The copy's property list has fallen behind the model.
+  It drops `PricesIncludeTax`, `PaymentSplitsJson`, the three `*FinalTaxRate` columns,
+  `StatusReason`, `StatusReasonCategory` and `LastModifiedBy`. The money ones mean a copy in a
+  tax-inclusive market comes back priced under the other arithmetic — a pre-existing defect of Copy,
+  not of the batch, but the batch repeats it once per record.
+
 ### v4.1.1 / v4.1.2 — phone numbers are validated properly, everywhere
 
 Reported: `289-990-33577` saved on a Canadian order. It was two defects and then a third.

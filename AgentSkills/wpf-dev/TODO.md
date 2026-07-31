@@ -17,6 +17,50 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-31 19:22 — v4.2.0: select several records and act on them at once  [DONE]
+- Ask: "use skill wpf-dev, create a feature for store to delete records in store. To do that, when
+  activate on the main application, use CTRL+left click to select records. you can do batch options.
+  just allow copy and delete records. also, CTRL+A hot key you can select all records in current page."
+- Plan:
+  - [ ] `OrdersListView` `SelectionMode` Single → Extended (ctrl-click toggles, ctrl+A selects the
+        page; the same mode `StoreManagementWindow` already uses)
+  - [ ] `MainViewModel` holds the whole selection, not just the anchor; Delete and Copy act on all of
+        it; every other action requires exactly one row
+  - [ ] Split the confirmation off the delete so a harness can drive the work without a modal
+  - [ ] Batch copy must not issue duplicate order numbers — see the finding below
+  - [ ] Selection-count badge beside the records count; new keys in all five language files
+  - [ ] Harness + render; build 0/0; Sonar clean; README; commit
+- Finding, in scope: `MainViewModel.CopyOrderAsync` composes `$"ORD-{DateTime.Now:yyyyMMdd-HHmmss}"`
+  by hand rather than going through `OrderNumberFormatter`, so it ignores the shop's configured
+  prefix and mode entirely. On a batch every copy made in the same second gets the SAME number.
+  `OrderNumberFormatter.Reserve` cannot currently save it either: it returns early in Timestamp mode,
+  before the collision scan its own summary promises.
+- Finding, adjacent — REPORTED, not fixed: the copy's property list has fallen behind the model. It
+  drops `PricesIncludeTax`, `PaymentSplitsJson`, `AlterationFinalTaxRate`, `ClothingFinalTaxRate`,
+  `CustomMadeFinalTaxRate`, `StatusReason`, `StatusReasonCategory` and `LastModifiedBy`. The first
+  five are money: a copy in a tax-inclusive market comes back priced under the other arithmetic.
+- Notes: `MainWindow.xaml` (SelectionMode Extended + `SelectionChanged`, `HasSingleSelection` gates on
+  Edit/the three Print items in BOTH menus, selection badge on `WarningSoftBrush`),
+  `MainWindow.xaml.cs` (`OnOrdersSelectionChanged`, `OnSelectionRequested`, right-click replaces vs
+  extends, Enter needs one row / Delete takes the batch, unsubscribe in `OnClosed`),
+  `MainViewModel` (selection state + `SetSelection` + `SelectionRequested`;
+  `ConfirmAndDeleteSelectedAsync`→`DeleteSelectedAsync`; `CopySelectedAsync`→`CopyOneOrderAsync`),
+  `OrderNumberFormatter.ReserveTimestamp`, 5 new keys × 5 language files.
+  Build 0/0 (Sonar runs in the build, so that is Sonar-clean too). CJK sweep: nothing introduced
+  outside the language files. Key parity 659/659 across all five, one `{0}` per new key, no value
+  equal to its English.
+  **`scratchpad/batchcheck` — 49 assertions, green three runs running**, driving the real view model
+  over a throwaway SQLite file and the real `MainWindow`; `credentials.json` hashed before/after.
+  Ctrl+A is driven as REAL input (`keybd_event`) after winning the foreground, and fails rather than
+  skips when it cannot — the first attempt asserted it through `ApplicationCommands.SelectAll` and
+  found CanExecute false on a stock Extended ListBox too, i.e. it was testing a mechanism that does
+  not exist. Falsification: reverting `ReserveTimestamp` turned "no two orders share an order
+  number" red with three copies on `ORD-20260731-194353`, then restored byte-for-byte.
+  Rendered both states and looked at them — the first pair was taken mid-fade (0.30s selection
+  animation) and showed every row selected in the SINGLE-selection shot; `Settle(600)` fixed the
+  harness, not the app.
+  Follow-up left open: the eight fields Copy still drops (reported to the user, their call).
+
 ### 2026-07-31 02:40 — v4.1.3: every phone and email field, validated  [IN PROGRESS]
 - Ask: "For all the phone number and email sections, you should apply the validations."
 - Audit of all five hosts of `PhoneNumberField` before touching anything:

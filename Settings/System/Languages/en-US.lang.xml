@@ -85,6 +85,7 @@
   <Text key="Toolbar.SignOut">Sign Out</Text>
   <Text key="Main.Greeting">Hi {0}, you are logged in as {1}.</Text>
   <Text key="Main.Records">Order Records</Text>
+  <Text key="Main.SelectedCount">{0} selected</Text>
   <Text key="SignOut.Confirm">Sign out of the application?</Text>
   <Text key="SignOut.CloseEditors">Close all order windows before signing out.</Text>
   <Text key="Toolbar.Lock">Lock</Text>
@@ -353,7 +354,10 @@
   <Text key="Status.LoadedSummary">{0} orders  |  GraphQL endpoint: http://localhost:5050/graphql</Text>
   <Text key="Status.LoadFailed">Load failed: {0}</Text>
   <Text key="Status.DeleteFailed">Delete failed: {0}</Text>
+  <Text key="Status.Deleted">Order “{0}” deleted</Text>
+  <Text key="Status.DeletedCount">{0} orders deleted</Text>
   <Text key="Status.CopySucceeded">Order copied as {0}</Text>
+  <Text key="Status.CopiedCount">{0} orders copied</Text>
   <Text key="Status.CopyFailed">Copy failed: {0}</Text>
   <Text key="Status.OpenFolderFailed">Open folder failed: {0}</Text>
   <Text key="Status.CopyPathSucceeded">Database path copied</Text>
@@ -402,6 +406,7 @@
   <!-- Curly quotes, not \" — XML text has no backslash escaping, so the backslashes that used to be
        here were shown to the user verbatim: Delete order \"ORD-123\"? -->
   <Text key="Delete.ConfirmMessage">Delete order “{0}”? This action cannot be undone.</Text>
+  <Text key="Delete.ConfirmMessageCount">Delete the {0} selected orders? This action cannot be undone.</Text>
 
   <Text key="Order.Fields.OrderNumber">Order Number</Text>
   <Text key="Order.Fields.CustomerName">Customer Name</Text>

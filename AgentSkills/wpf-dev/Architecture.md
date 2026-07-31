@@ -409,26 +409,54 @@ components are added/renamed or the way pieces fit together changes.
   `IMultiValueConverter`). The built-in `BooleanToVisibilityConverter` is also
   registered in `MainWindow.xaml` (`BoolToVisibility`) for the section gates.
 - **ViewModels/**
-  - `MainViewModel` — order list, paging, search, delete, **copy order**
-    (`CopyOrderCommand`/`CopyOrderAsync`: deep-copy an aggregate, reset a closed
-    status to `Processing`); **column sorting** (`SortBy(key)` + `SortKey`/
-    `SortAscending` state + `GetSortSelector`, applied over the whole filtered set
-    before paging in `RebuildOrdersView`); `DatabaseFilePath` (WPF-bound, kept
-    instance).
+  - `MainViewModel` — order list, paging, search, **the selection**, batch delete, batch **copy
+    order**; **column sorting** (`SortBy(key)` + `SortKey`/`SortAscending` state +
+    `GetSortSelector`, applied over the whole filtered set before paging in `RebuildOrdersView`);
+    `DatabaseFilePath` (WPF-bound, kept instance).
+    - **Selection** (v4.2.0): `SelectedOrder` is the ANCHOR (the row the detail panel describes and
+      the one every single-record action works on); `SelectedOrders` is the whole selection, pushed
+      in by the view through `SetSelection` because `ListView.SelectedItems` is not a dependency
+      property and cannot be bound. `SelectionCount` / `HasSelection` / `HasBatchSelection` (>1) /
+      `HasSingleSelection` (==1) are what the XAML gates on, and `SelectionSummary` is the count
+      badge. `SelectionRequested` asks the view to select given rows — raised after a batch copy so
+      the copies end up selected, which is what a single copy always did through `SelectedOrder`.
+      `RebuildOrdersView` COLLAPSES the selection to the anchor: Ctrl+A means "this page", so a
+      selection must not survive a search, a sort or a page turn.
+    - `DeleteOrderCommand` → `ConfirmAndDeleteSelectedAsync` (owns the one MessageBox, naming a
+      single order or counting several) → `DeleteSelectedAsync` (does the work, no dialog, so a
+      harness can drive it — same split as `TryValidateForSave`/`ValidateForSave`). One query over
+      the id set and ONE `SaveChanges`, so a failure part way leaves nothing half deleted.
+    - `CopyOrderCommand` → `CopySelectedAsync` → `CopyOneOrderAsync` per record (deep-copy the
+      aggregate, reset a closed status to `Processing`). Its number comes from
+      `OrderNumberFormatter.Reserve` + `CommitSequence`, exactly as a new order's does; it used to be
+      a hand-built `ORD-{timestamp}`. One scope and one save PER COPY on purpose — `Reserve` asks the
+      database what is taken and EF cannot see added-but-unsaved rows, so a single batched save would
+      give every copy the same number.
   - `RelayCommand` — `ICommand` helper.
 - **Views/**
   - `MainWindow` — split into a SYSTEM bar (Local Configuration on the left; greeting, language, Store Members and
     Sign Out on the right) and a RECORDS panel that owns its own action bar (Add / Edit / Delete / Refresh plus a
-    count badge bound to `MainViewModel.FilteredCount`). The greeting block carries a second line
+    count badge bound to `MainViewModel.FilteredCount`, and beside it a `WarningSoftBrush` badge
+    carrying `MainViewModel.SelectionSummary`, shown only while MORE THAN ONE record is selected —
+    how far Delete reaches has to be on screen, since ctrl-picked rows can be scrolled out of
+    sight). The greeting block carries a second line
     naming the languages the open shop installs (`ShopLanguages.InstalledSummary`); the language
     toggle beside it is scoped by `ShopLanguages.Selectable` and HIDDEN when that leaves one
     option. Both are rebuilt by `RefreshLanguageScope` from `ApplyRolePermissions`, so a shop
     switch re-scopes them, and both are re-rendered from `OnLanguageChangedGlobally` because they
     are written from code rather than bound. Order list + detail + paging. The list is a **`ListView` +
-    `GridView`** (not a DataGrid) with a right-click `ListView.ContextMenu`
+    `GridView`** (not a DataGrid), **`SelectionMode="Extended"`** since v4.2.0 (ctrl-click toggles a
+    row, shift-click takes a run, and Ctrl+A selects the page — `ListBox` handles that gesture in its
+    own `OnKeyDown`, so the mode is the whole of what the app supplies; the "page" scoping is free,
+    because paging happens in the view model and the list only ever holds one page). Copy and Delete
+    act on the whole selection; **every other action is gated on `HasSingleSelection`** — Edit/View,
+    the three Print entries, `Enter` and the double-click — because opening or printing "the" order
+    is not a question a multiple selection answers. It carries a right-click `ListView.ContextMenu`
     (Edit/Copy/Delete/Print) and a `PreviewMouseRightButtonDown` row-select
-    `EventSetter`, keyboard shortcuts (`Enter` = open/details, `Delete` = delete
-    command), and **clickable column headers that sort** (asc/desc toggle + ▲/▼
+    `EventSetter` that REPLACES a selection it lands outside of and leaves one it lands inside alone
+    (plain `IsSelected = true` ADDS in Extended mode, which would let the menu reach one more record
+    than was pointed at), keyboard shortcuts (`Enter` = open/details, `Delete` = delete
+    the selection), and **clickable column headers that sort** (asc/desc toggle + ▲/▼
     glyph) via the `GridViewColumnHeader.Click` handler and the
     `OrderColumnSort` attached properties. The Edit toolbar button + context-menu
     item relabel to "Toolbar.ViewOrder" for read-only orders

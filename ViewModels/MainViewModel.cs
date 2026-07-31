@@ -8,6 +8,7 @@ using System.Windows.Input;
 using CameywareOrder.Data;
 using CameywareOrder.Localization;
 using CameywareOrder.Models;
+using CameywareOrder.Services;
 
 namespace CameywareOrder.ViewModels;
 
@@ -18,6 +19,7 @@ public class MainViewModel : INotifyPropertyChanged
     private List<Order> _allOrders = new();
     private ObservableCollection<Order> _orders = new();
     private Order? _selectedOrder;
+    private List<Order> _selectedOrders = new();
     private string _statusMessage;
     private string _searchText = string.Empty;
     private StatusFilterOption _selectedStatusFilter;
@@ -40,12 +42,15 @@ public class MainViewModel : INotifyPropertyChanged
         LoadOrdersCommand = new RelayCommand(async _ => await LoadOrdersAsync());
         NextPageCommand = new RelayCommand(_ => GoToNextPage(), _ => CanGoToNextPage);
         PreviousPageCommand = new RelayCommand(_ => GoToPreviousPage(), _ => CanGoToPreviousPage);
+        // Both act on the whole SELECTION, not on the anchor row alone. One command per action
+        // whatever the count, so the action bar, the row context menu and the Delete key cannot end
+        // up with three different ideas of what "delete" reaches.
         DeleteOrderCommand = new RelayCommand(
-            async _ => await DeleteOrderAsync(),
-            _ => SelectedOrder is not null);
+            async _ => await ConfirmAndDeleteSelectedAsync(),
+            _ => HasSelection);
         CopyOrderCommand = new RelayCommand(
-            async _ => await CopyOrderAsync(),
-            _ => SelectedOrder is not null);
+            async _ => await CopySelectedAsync(),
+            _ => HasSelection);
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e)
@@ -53,6 +58,9 @@ public class MainViewModel : INotifyPropertyChanged
         StatusMessage = _localization["Status.Ready"];
         OnPropertyChanged(nameof(PageSummary));
         OnPropertyChanged(nameof(FilteredCount));
+        // Written by Format rather than bound to a key, so it does not follow a language switch on
+        // its own.
+        OnPropertyChanged(nameof(SelectionSummary));
     }
 
     /// <summary>
@@ -71,11 +79,68 @@ public class MainViewModel : INotifyPropertyChanged
         set { _orders = value; OnPropertyChanged(); }
     }
 
+    /// <summary>
+    /// The anchor row — the one the detail panel describes and the one every single-record action
+    /// (open, print) works on. It is always part of <see cref="SelectedOrders"/> when anything is
+    /// selected at all.
+    /// </summary>
     public Order? SelectedOrder
     {
         get => _selectedOrder;
         set { _selectedOrder = value; OnPropertyChanged(); }
     }
+
+    /// <summary>
+    /// Every row currently selected on the open page. Pushed in by the view: a ListView's
+    /// <c>SelectedItems</c> is not a dependency property and so cannot be bound, which is why this
+    /// is set through <see cref="SetSelection"/> rather than declared in XAML.
+    /// </summary>
+    public IReadOnlyList<Order> SelectedOrders => _selectedOrders;
+
+    public int SelectionCount => _selectedOrders.Count;
+
+    public bool HasSelection => _selectedOrders.Count > 0;
+
+    /// <summary>
+    /// Whether more than one record is selected — the state in which only Copy and Delete are
+    /// offered. Everything else is gated on <see cref="HasSingleSelection"/> instead: opening or
+    /// printing "the" order is not a question a multiple selection has an answer to.
+    /// </summary>
+    public bool HasBatchSelection => _selectedOrders.Count > 1;
+
+    public bool HasSingleSelection => _selectedOrders.Count == 1;
+
+    /// <summary>The count badge shown while a batch is armed, so the reach of Delete is on screen.</summary>
+    public string SelectionSummary => _localization.Format("Main.SelectedCount", SelectionCount);
+
+    /// <summary>
+    /// Records what the view has selected. Deliberately one-way: nothing here writes back to the
+    /// list, so a selection change cannot re-enter through the event that reported it.
+    /// </summary>
+    public void SetSelection(IEnumerable<Order> selection)
+    {
+        ArgumentNullException.ThrowIfNull(selection);
+
+        _selectedOrders = selection.Where(order => order is not null).ToList();
+        RaiseSelectionChanged();
+    }
+
+    private void RaiseSelectionChanged()
+    {
+        OnPropertyChanged(nameof(SelectedOrders));
+        OnPropertyChanged(nameof(SelectionCount));
+        OnPropertyChanged(nameof(HasSelection));
+        OnPropertyChanged(nameof(HasBatchSelection));
+        OnPropertyChanged(nameof(HasSingleSelection));
+        OnPropertyChanged(nameof(SelectionSummary));
+    }
+
+    /// <summary>
+    /// Asks the view to select exactly these rows. Raised after a batch copy so the copies are the
+    /// selection, which is what the single-order copy has always done through
+    /// <see cref="SelectedOrder"/> and what a batch cannot express that way.
+    /// </summary>
+    public event EventHandler<IReadOnlyList<Order>>? SelectionRequested;
 
     public string SearchText
     {
@@ -346,42 +411,88 @@ public class MainViewModel : INotifyPropertyChanged
         else
             SelectedOrder = Orders.FirstOrDefault();
 
+        // A multiple selection does not survive the page changing under it. Ctrl+A means "this
+        // page", so a selection carried through a search, a sort or a page turn would leave Delete
+        // reaching rows that are no longer on screen. The view re-pushes its own selection straight
+        // afterwards; this is what keeps the two in step for a caller with no window attached.
+        SetSelection(SelectedOrder is null ? Array.Empty<Order>() : new[] { SelectedOrder });
+
         OnPropertyChanged(nameof(PageSummary));
         OnPropertyChanged(nameof(FilteredCount));
         OnPropertyChanged(nameof(CanGoToPreviousPage));
         OnPropertyChanged(nameof(CanGoToNextPage));
     }
 
-    private async Task DeleteOrderAsync()
+    /// <summary>
+    /// Asks before deleting the selection, then deletes it. The dialog lives here and nowhere else,
+    /// so the action bar, the context menu and the Delete key are all covered by one confirmation.
+    /// </summary>
+    /// <remarks>
+    /// Split from <see cref="DeleteSelectedAsync"/> on purpose: a MessageBox reached from inside the
+    /// work blocks the thread, so a harness driving a batch delete would hang on a dialog nothing
+    /// can answer. Same shape as <c>TryValidateForSave</c> / <c>ValidateForSave</c> in the order
+    /// form.
+    /// </remarks>
+    private async Task ConfirmAndDeleteSelectedAsync()
     {
-        if (SelectedOrder is null) return;
+        if (!HasSelection) return;
+
+        // One record is named; several are counted. Listing twenty order numbers in a message box
+        // is unreadable, and the count is the fact that decides the answer.
+        var message = SelectionCount == 1
+            ? _localization.Format("Delete.ConfirmMessage", _selectedOrders[0].OrderNumber)
+            : _localization.Format("Delete.ConfirmMessageCount", SelectionCount);
 
         var result = System.Windows.MessageBox.Show(
-            _localization.Format("Delete.ConfirmMessage", SelectedOrder.OrderNumber),
+            message,
             _localization["Delete.ConfirmTitle"],
             System.Windows.MessageBoxButton.YesNo,
             System.Windows.MessageBoxImage.Warning);
 
         if (result != System.Windows.MessageBoxResult.Yes) return;
 
+        await DeleteSelectedAsync();
+    }
+
+    /// <summary>
+    /// Deletes every selected order and reloads the list. Returns how many rows were actually
+    /// removed, which is not always the count that was selected — another machine, or another
+    /// window, may have deleted one already.
+    /// </summary>
+    public async Task<int> DeleteSelectedAsync()
+    {
+        var ids = _selectedOrders.Select(order => order.Id).Distinct().ToList();
+        if (ids.Count == 0) return 0;
+
         try
         {
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            // A query, not FindAsync: Find is a key lookup and bypasses the shop query filter, so
-            // a stale selection left over from a shop switch could delete another shop's order.
-            var orderId = SelectedOrder.Id;
-            var order = await db.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
-            if (order is not null)
+
+            // A query, not FindAsync: Find is a key lookup and bypasses the shop query filter, so a
+            // stale selection left over from a shop switch could delete another shop's order. The
+            // whole batch goes in ONE SaveChanges — a failure part way through then leaves the list
+            // exactly as it was, rather than half deleted with no record of where it stopped.
+            var orders = await db.Orders.Where(order => ids.Contains(order.Id)).ToListAsync();
+            if (orders.Count > 0)
             {
-                db.Orders.Remove(order);
+                db.Orders.RemoveRange(orders);
                 await db.SaveChangesAsync();
             }
+
+            var deletedNumber = orders.Count == 1 ? orders[0].OrderNumber : null;
             await LoadOrdersAsync();
+
+            StatusMessage = deletedNumber is not null
+                ? _localization.Format("Status.Deleted", deletedNumber)
+                : _localization.Format("Status.DeletedCount", orders.Count);
+
+            return orders.Count;
         }
         catch (Exception ex)
         {
             StatusMessage = _localization.Format("Status.DeleteFailed", ex.Message);
+            return 0;
         }
     }
 
@@ -392,90 +503,157 @@ public class MainViewModel : INotifyPropertyChanged
     private static bool IsClosedStatus(OrderStatus status)
         => status is OrderStatus.Shipped or OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned;
 
-    private async Task CopyOrderAsync()
+    /// <summary>
+    /// Copies every selected order and selects the copies. Returns how many were written.
+    /// </summary>
+    /// <remarks>
+    /// Each copy gets its own scope and its own SaveChanges, which looks wasteful next to one
+    /// batched write and is not. The next order number is reserved by asking the DATABASE what is
+    /// already taken, and EF does not see rows that have been added but not saved — so a single
+    /// batched save would hand every copy in the selection the same number, which is the defect
+    /// this feature would otherwise have introduced at scale.
+    /// </remarks>
+    public async Task<int> CopySelectedAsync()
     {
-        if (SelectedOrder is null) return;
+        var ids = _selectedOrders.Select(order => order.Id).Distinct().ToList();
+        if (ids.Count == 0) return 0;
+
+        var copyIds = new List<int>();
+        string? lastNumber = null;
 
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var shop = ShopContext.Instance.RequireCurrent();
 
-            var source = await db.Orders
-                .Include(o => o.Items)
-                .AsNoTracking()
-                .FirstOrDefaultAsync(o => o.Id == SelectedOrder.Id);
-
-            if (source is null)
-                return;
-
-            var copy = new Order
+            foreach (var sourceId in ids)
             {
-                OrderNumber = $"ORD-{DateTime.Now:yyyyMMdd-HHmmss}",
-                OrderDate = DateTime.UtcNow,
-                LastModifiedDate = DateTime.UtcNow,
-                CustomerName = source.CustomerName,
-                PhoneNumber = source.PhoneNumber,
-                Email = source.Email,
-                Address = source.Address,
-                CurrencyType = source.CurrencyType,
-                ServiceType = source.ServiceType,
-                ServiceDetails = source.ServiceDetails,
-                AdditionalNotes = source.AdditionalNotes,
-                Subtotal = source.Subtotal,
-                TaxRate = source.TaxRate,
-                ChestSize = source.ChestSize,
-                JacketLength = source.JacketLength,
-                CustomMadeRecordsJson = source.CustomMadeRecordsJson,
-                // A closed order becomes a new Processing order; otherwise keep its status.
-                Status = IsClosedStatus(source.Status) ? OrderStatus.Processing : source.Status,
-                TotalAmount = source.TotalAmount,
-                Downpayment = source.Downpayment,
-                DownpaymentMethod = source.DownpaymentMethod,
-                FinalBalanceMethod = source.FinalBalanceMethod,
-                AlterationDownpayment = source.AlterationDownpayment,
-                AlterationDownpaymentMethod = source.AlterationDownpaymentMethod,
-                AlterationDownpaymentCompleted = source.AlterationDownpaymentCompleted,
-                AlterationFinalBalanceMethod = source.AlterationFinalBalanceMethod,
-                AlterationBalanceCleared = source.AlterationBalanceCleared,
-                CustomMadeDownpayment = source.CustomMadeDownpayment,
-                CustomMadeDownpaymentMethod = source.CustomMadeDownpaymentMethod,
-                CustomMadeDownpaymentCompleted = source.CustomMadeDownpaymentCompleted,
-                CustomMadeFinalBalanceMethod = source.CustomMadeFinalBalanceMethod,
-                CustomMadeBalanceCleared = source.CustomMadeBalanceCleared,
-                ClothingDownpayment = source.ClothingDownpayment,
-                ClothingDownpaymentMethod = source.ClothingDownpaymentMethod,
-                ClothingDownpaymentCompleted = source.ClothingDownpaymentCompleted,
-                ClothingFinalBalanceMethod = source.ClothingFinalBalanceMethod,
-                ClothingBalanceCleared = source.ClothingBalanceCleared,
-                AlterationSubtotal = source.AlterationSubtotal,
-                AlterationTaxRate = source.AlterationTaxRate,
-                ClothingSubtotal = source.ClothingSubtotal,
-                ClothingTaxRate = source.ClothingTaxRate,
-                CustomMadeTaxRate = source.CustomMadeTaxRate,
-                Notes = source.Notes,
-                Items = source.Items
-                    .Select(item => new OrderItem
-                    {
-                        ProductName = item.ProductName,
-                        Quantity = item.Quantity,
-                        UnitPrice = item.UnitPrice,
-                        PromotionalPrice = item.PromotionalPrice
-                    })
-                    .ToList()
-            };
+                var copy = await CopyOneOrderAsync(shop, sourceId);
+                if (copy is null)
+                    continue;
 
-            db.Orders.Add(copy);
-            await db.SaveChangesAsync();
+                copyIds.Add(copy.Id);
+                lastNumber = copy.OrderNumber;
+            }
+
             await LoadOrdersAsync();
+            SelectCopies(copyIds);
 
-            SelectedOrder = Orders.FirstOrDefault(order => order.Id == copy.Id) ?? SelectedOrder;
-            StatusMessage = _localization.Format("Status.CopySucceeded", copy.OrderNumber);
+            StatusMessage = copyIds.Count == 1 && lastNumber is not null
+                ? _localization.Format("Status.CopySucceeded", lastNumber)
+                : _localization.Format("Status.CopiedCount", copyIds.Count);
+
+            return copyIds.Count;
         }
         catch (Exception ex)
         {
             StatusMessage = _localization.Format("Status.CopyFailed", ex.Message);
+            return copyIds.Count;
         }
+    }
+
+    /// <summary>
+    /// Points the list at the orders just written, so a batch copy ends with its copies selected —
+    /// which is what a single copy has always done. They sort to the top of the first page, being
+    /// the most recently touched, so this normally reaches all of them.
+    /// </summary>
+    private void SelectCopies(IReadOnlyCollection<int> copyIds)
+    {
+        if (copyIds.Count == 0)
+            return;
+
+        var copies = Orders.Where(order => copyIds.Contains(order.Id)).ToList();
+        if (copies.Count == 0)
+            return;
+
+        SelectedOrder = copies[0];
+        SetSelection(copies);
+        SelectionRequested?.Invoke(this, copies);
+    }
+
+    private async Task<Order?> CopyOneOrderAsync(Shop shop, int sourceId)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var source = await db.Orders
+            .Include(o => o.Items)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(o => o.Id == sourceId);
+
+        if (source is null)
+            return null;
+
+        // The copy takes a number from the shop's OWN receipt run, exactly as a new order does.
+        // This used to compose "ORD-{timestamp}" by hand, which ignored whatever prefix and
+        // numbering mode the shop had configured — so a shop on sequential numbering got a
+        // timestamp number from Copy and nothing else.
+        var now = DateTime.Now;
+        var copy = new Order
+        {
+            OrderNumber = OrderNumberFormatter.Reserve(db, shop, now),
+            OrderDate = DateTime.UtcNow,
+            LastModifiedDate = DateTime.UtcNow,
+            CustomerName = source.CustomerName,
+            PhoneNumber = source.PhoneNumber,
+            Email = source.Email,
+            Address = source.Address,
+            CurrencyType = source.CurrencyType,
+            ServiceType = source.ServiceType,
+            ServiceDetails = source.ServiceDetails,
+            AdditionalNotes = source.AdditionalNotes,
+            Subtotal = source.Subtotal,
+            TaxRate = source.TaxRate,
+            ChestSize = source.ChestSize,
+            JacketLength = source.JacketLength,
+            CustomMadeRecordsJson = source.CustomMadeRecordsJson,
+            // A closed order becomes a new Processing order; otherwise keep its status.
+            Status = IsClosedStatus(source.Status) ? OrderStatus.Processing : source.Status,
+            TotalAmount = source.TotalAmount,
+            Downpayment = source.Downpayment,
+            DownpaymentMethod = source.DownpaymentMethod,
+            FinalBalanceMethod = source.FinalBalanceMethod,
+            AlterationDownpayment = source.AlterationDownpayment,
+            AlterationDownpaymentMethod = source.AlterationDownpaymentMethod,
+            AlterationDownpaymentCompleted = source.AlterationDownpaymentCompleted,
+            AlterationFinalBalanceMethod = source.AlterationFinalBalanceMethod,
+            AlterationBalanceCleared = source.AlterationBalanceCleared,
+            CustomMadeDownpayment = source.CustomMadeDownpayment,
+            CustomMadeDownpaymentMethod = source.CustomMadeDownpaymentMethod,
+            CustomMadeDownpaymentCompleted = source.CustomMadeDownpaymentCompleted,
+            CustomMadeFinalBalanceMethod = source.CustomMadeFinalBalanceMethod,
+            CustomMadeBalanceCleared = source.CustomMadeBalanceCleared,
+            ClothingDownpayment = source.ClothingDownpayment,
+            ClothingDownpaymentMethod = source.ClothingDownpaymentMethod,
+            ClothingDownpaymentCompleted = source.ClothingDownpaymentCompleted,
+            ClothingFinalBalanceMethod = source.ClothingFinalBalanceMethod,
+            ClothingBalanceCleared = source.ClothingBalanceCleared,
+            AlterationSubtotal = source.AlterationSubtotal,
+            AlterationTaxRate = source.AlterationTaxRate,
+            ClothingSubtotal = source.ClothingSubtotal,
+            ClothingTaxRate = source.ClothingTaxRate,
+            CustomMadeTaxRate = source.CustomMadeTaxRate,
+            Notes = source.Notes,
+            Items = source.Items
+                .Select(item => new OrderItem
+                {
+                    ProductName = item.ProductName,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.UnitPrice,
+                    PromotionalPrice = item.PromotionalPrice
+                })
+                .ToList()
+        };
+
+        db.Orders.Add(copy);
+        await db.SaveChangesAsync();
+
+        // Move the shop's running number past the one just used, exactly as saving a new order
+        // does. Without this a sequential run would re-offer the same number to the next order and
+        // only Reserve's collision scan would push it along — the counter itself would never move.
+        ShopContext.Instance.UpdateActiveShop(
+            current => OrderNumberFormatter.CommitSequence(current, copy.OrderNumber, now));
+
+        return copy;
     }
 
     // ── INotifyPropertyChanged ─────────────────────────────────────────────────

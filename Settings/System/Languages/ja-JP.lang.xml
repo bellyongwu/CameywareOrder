@@ -85,6 +85,7 @@
   <Text key="Toolbar.SignOut">ログアウト</Text>
   <Text key="Main.Greeting">こんにちは {0} さん、{1} としてログインしています。</Text>
   <Text key="Main.Records">注文記録</Text>
+  <Text key="Main.SelectedCount">{0} 件選択中</Text>
   <Text key="SignOut.Confirm">アプリケーションからログアウトしますか？</Text>
   <Text key="SignOut.CloseEditors">ログアウトする前に、すべての注文ウィンドウを閉じてください。</Text>
   <Text key="Toolbar.Lock">ロック</Text>
@@ -353,7 +354,10 @@
   <Text key="Status.LoadedSummary">注文 {0} 件  |  GraphQL エンドポイント: http://localhost:5050/graphql</Text>
   <Text key="Status.LoadFailed">読み込みに失敗しました：{0}</Text>
   <Text key="Status.DeleteFailed">削除に失敗しました：{0}</Text>
+  <Text key="Status.Deleted">注文「{0}」を削除しました</Text>
+  <Text key="Status.DeletedCount">{0} 件の注文を削除しました</Text>
   <Text key="Status.CopySucceeded">注文を {0} としてコピーしました</Text>
+  <Text key="Status.CopiedCount">{0} 件の注文をコピーしました</Text>
   <Text key="Status.CopyFailed">コピーに失敗しました：{0}</Text>
   <Text key="Status.OpenFolderFailed">フォルダーを開けませんでした：{0}</Text>
   <Text key="Status.CopyPathSucceeded">データベースのパスをコピーしました</Text>
@@ -402,6 +406,7 @@
   <!-- Corner brackets 「」, the Japanese convention — and NOT \" — XML text has no backslash
        escaping, so a backslash written here would be shown to the user verbatim. -->
   <Text key="Delete.ConfirmMessage">注文「{0}」を削除しますか？この操作は取り消せません。</Text>
+  <Text key="Delete.ConfirmMessageCount">選択した {0} 件の注文を削除しますか？この操作は取り消せません。</Text>
 
   <Text key="Order.Fields.OrderNumber">注文番号</Text>
   <Text key="Order.Fields.CustomerName">顧客名</Text>

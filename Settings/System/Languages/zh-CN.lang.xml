@@ -89,6 +89,7 @@
        translated format string rather than a hard-coded one. -->
   <Text key="Main.Greeting">你好 {0}，您当前的身份是{1}。</Text>
   <Text key="Main.Records">订单记录</Text>
+  <Text key="Main.SelectedCount">已选 {0} 项</Text>
   <Text key="SignOut.Confirm">确定要退出登录吗？</Text>
   <Text key="SignOut.CloseEditors">请先关闭所有订单窗口，再退出登录。</Text>
   <Text key="Toolbar.Lock">锁定</Text>
@@ -357,7 +358,10 @@
   <Text key="Status.LoadedSummary">共 {0} 条订单  |  GraphQL 端点: http://localhost:5050/graphql</Text>
   <Text key="Status.LoadFailed">加载失败: {0}</Text>
   <Text key="Status.DeleteFailed">删除失败: {0}</Text>
+  <Text key="Status.Deleted">订单“{0}”已删除</Text>
+  <Text key="Status.DeletedCount">已删除 {0} 个订单</Text>
   <Text key="Status.CopySucceeded">订单已复制为 {0}</Text>
+  <Text key="Status.CopiedCount">已复制 {0} 个订单</Text>
   <Text key="Status.CopyFailed">复制失败: {0}</Text>
   <Text key="Status.OpenFolderFailed">打开目录失败: {0}</Text>
   <Text key="Status.CopyPathSucceeded">数据库路径已复制</Text>
@@ -405,6 +409,7 @@
   <Text key="Delete.ConfirmTitle">确认删除</Text>
   <!-- 直角引号，而不是 \"：XML 文本没有反斜杠转义，原来的反斜杠会原样显示给用户。 -->
   <Text key="Delete.ConfirmMessage">确定要删除订单“{0}”吗？此操作不可撤销。</Text>
+  <Text key="Delete.ConfirmMessageCount">确定要删除选中的 {0} 个订单吗？此操作不可撤销。</Text>
 
   <Text key="Order.Fields.OrderNumber">订单编号</Text>
   <Text key="Order.Fields.CustomerName">客户名称</Text>

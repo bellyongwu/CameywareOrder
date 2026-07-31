@@ -49,7 +49,7 @@ public static class OrderNumberFormatter
         ArgumentNullException.ThrowIfNull(shop);
 
         if (shop.OrderNumberMode == OrderNumberMode.Timestamp)
-            return Compose(shop, now, sequence: 0);
+            return ReserveTimestamp(db, shop, now);
 
         var sequence = ResolveNextSequence(shop, now);
         var candidate = Compose(shop, now, sequence);
@@ -60,6 +60,34 @@ public static class OrderNumberFormatter
         {
             sequence++;
             candidate = Compose(shop, now, sequence);
+        }
+
+        return candidate;
+    }
+
+    /// <summary>
+    /// The next free timestamp number. A timestamp carries no running counter, so the only thing
+    /// that can move it past a collision is a later second.
+    /// </summary>
+    /// <remarks>
+    /// This mode used to skip the collision scan entirely and return the composed number as-is,
+    /// which contradicted what <see cref="Reserve"/> promises. It went unnoticed while orders were
+    /// written one at a time by hand — two saves inside the same second is not something a person
+    /// does. Copying several orders at once makes it certain: every copy in the batch is composed
+    /// from the same instant and would come out identically numbered.
+    ///
+    /// Only the NUMBER's timestamp moves; the order keeps the date it was actually written. The
+    /// number is a label on the receipt run, not a record of when the order was taken.
+    /// </remarks>
+    private static string ReserveTimestamp(AppDbContext db, Shop shop, DateTime now)
+    {
+        var candidate = Compose(shop, now, sequence: 0);
+
+        // Same bound and the same reasoning as the sequential scan above.
+        for (var attempt = 0; attempt < 10_000 && IsTaken(db, candidate); attempt++)
+        {
+            now = now.AddSeconds(1);
+            candidate = Compose(shop, now, sequence: 0);
         }
 
         return candidate;

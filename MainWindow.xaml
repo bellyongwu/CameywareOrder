@@ -254,11 +254,15 @@
                              both answer "what does this branch sell and how is it described". -->
                         <MenuItem x:Name="ProductCatalogMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ProductCatalog], Mode=OneWay}" Click="OnProductCatalogClick"/>
                         <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
+                            <!-- One order per printout: gated on exactly one selected row, the same
+                                 rule the row context menu applies. -->
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick"
-                                      IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility}, ConverterParameter=NotNull}"/>
+                                      IsEnabled="{Binding HasSingleSelection}"/>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnPrintMeasurementsClick"
+                                      IsEnabled="{Binding HasSingleSelection}"
                                       Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}"/>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnPrintReceiptAndMeasurementsClick"
+                                      IsEnabled="{Binding HasSingleSelection}"
                                       Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}"/>
                             <!-- Staff print receipts but do not design them; hidden in code. -->
                             <MenuItem x:Name="HeaderFooterMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}" Click="OnEditBrandingClick"/>
@@ -406,17 +410,30 @@
                                 <TextBlock Text="{Binding FilteredCount}" FontSize="12" FontWeight="SemiBold"
                                            Foreground="#3730A3"/>
                             </Border>
+                            <!-- Shown only while a BATCH is armed. The reach of Delete has to be on
+                                 screen before it is pressed: rows selected with Ctrl+click can be
+                                 scrolled out of sight, and the count is the only thing that says
+                                 how many are still in. Deliberately the warning pair rather than the
+                                 indigo of the count badge beside it — two identical badges read as
+                                 two counts of the same thing. -->
+                            <Border CornerRadius="10" Background="{StaticResource WarningSoftBrush}"
+                                    Padding="9,3" Margin="8,0,0,0" VerticalAlignment="Center"
+                                    Visibility="{Binding HasBatchSelection, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{Binding SelectionSummary}" FontSize="12" FontWeight="SemiBold"
+                                           Foreground="{StaticResource WarningBrush}"/>
+                            </Border>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <Button Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Padding="18,8"
                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.NewOrder], Mode=OneWay}"
                                     Click="OnAddOrderClick"/>
+                            <!-- Exactly one row, not "at least one": with a batch selected there is
+                                 no single order for this button to open. -->
                             <Button x:Name="EditOrderButton" Margin="0,0,8,0"
                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}"
                                     Click="OnEditOrderClick"
-                                    IsEnabled="{Binding SelectedOrder, Converter={StaticResource NullToVisibility},
-                                                        ConverterParameter=NotNull}"/>
+                                    IsEnabled="{Binding HasSingleSelection}"/>
                             <Button Style="{StaticResource DangerButton}" Margin="0,0,8,0"
                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}"
                                     Command="{Binding DeleteOrderCommand}"/>
@@ -473,7 +490,14 @@
 
                 <!-- Both scrollbars are Auto. Nothing in a row wraps, so a window too narrow for the
                      columns can only be answered by scrolling to them — Disabled left the rightmost
-                     columns clipped with no way to reach them. -->
+                     columns clipped with no way to reach them.
+
+                     SelectionMode is Extended, not Multiple: a plain click still selects one row,
+                     which is what this list has always done, and Ctrl+click adds or removes one.
+                     Multiple would turn every plain click into a toggle. Extended is also what
+                     gives Ctrl+A for nothing — ListBox enables its own SelectAll command binding in
+                     this mode alone — and SelectAll reaches the loaded items, which IS the current
+                     page, because paging happens in the view model. -->
                 <ListView Grid.Row="2"
                           x:Name="OrdersListView"
                           ItemsSource="{Binding Orders}"
@@ -482,14 +506,19 @@
                           KeyDown="OnOrderRowKeyDown"
                           SizeChanged="OnOrdersListSizeChanged"
                           GridViewColumnHeader.Click="OnOrderColumnHeaderClick"
-                          SelectionMode="Single"
+                          SelectionChanged="OnOrdersSelectionChanged"
+                          SelectionMode="Extended"
                           ItemContainerStyle="{StaticResource OrderListItemStyle}"
                           ScrollViewer.HorizontalScrollBarVisibility="Auto"
                           ScrollViewer.VerticalScrollBarVisibility="Auto"
                           BorderBrush="#DDD" BorderThickness="1">
                     <ListView.ContextMenu>
+                        <!-- Copy and Delete act on the WHOLE selection and stay enabled for a batch.
+                             Everything else here opens or prints "the" order, which a multiple
+                             selection has no answer to, so each is gated on HasSingleSelection. -->
                         <ContextMenu>
-                            <MenuItem x:Name="EditContextMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnContextEditClick">
+                            <MenuItem x:Name="EditContextMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}" Click="OnContextEditClick"
+                                      IsEnabled="{Binding HasSingleSelection}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE70F;"/>
                                 </MenuItem.Icon>
@@ -505,18 +534,21 @@
                                 </MenuItem.Icon>
                             </MenuItem>
                             <Separator/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnContextPrintClick">
+                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnContextPrintClick"
+                                      IsEnabled="{Binding HasSingleSelection}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE749;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnContextPrintMeasurementsClick"
+                                      IsEnabled="{Binding HasSingleSelection}"
                                       Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE1D3;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnContextPrintReceiptAndMeasurementsClick"
+                                      IsEnabled="{Binding HasSingleSelection}"
                                       Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE749;"/>

@@ -82,6 +82,7 @@
   <Text key="Toolbar.SignOut">Se déconnecter</Text>
   <Text key="Main.Greeting">Bonjour {0}, vous êtes connecté en tant que {1}.</Text>
   <Text key="Main.Records">Registre des commandes</Text>
+  <Text key="Main.SelectedCount">{0} sélectionnées</Text>
   <Text key="SignOut.Confirm">Se déconnecter de l’application ?</Text>
   <Text key="SignOut.CloseEditors">Fermez toutes les fenêtres de commande avant de vous déconnecter.</Text>
   <Text key="Toolbar.Lock">Verrouiller</Text>
@@ -351,7 +352,10 @@
   <Text key="Status.LoadedSummary">{0} commandes  |  Point de terminaison GraphQL : http://localhost:5050/graphql</Text>
   <Text key="Status.LoadFailed">Échec du chargement : {0}</Text>
   <Text key="Status.DeleteFailed">Échec de la suppression : {0}</Text>
+  <Text key="Status.Deleted">Commande «&#160;{0}&#160;» supprimée</Text>
+  <Text key="Status.DeletedCount">{0} commandes supprimées</Text>
   <Text key="Status.CopySucceeded">Commande copiée sous {0}</Text>
+  <Text key="Status.CopiedCount">{0} commandes copiées</Text>
   <Text key="Status.CopyFailed">Échec de la copie : {0}</Text>
   <Text key="Status.OpenFolderFailed">Échec de l’ouverture du dossier : {0}</Text>
   <Text key="Status.CopyPathSucceeded">Chemin de la base de données copié</Text>
@@ -399,6 +403,7 @@
   <Text key="Delete.ConfirmTitle">Confirmation de suppression</Text>
   <!-- Guillemets français, pas \" — le texte XML n’a pas d’échappement par barre oblique inverse. -->
   <Text key="Delete.ConfirmMessage">Supprimer la commande «&#160;{0}&#160;» ? Cette action est irréversible.</Text>
+  <Text key="Delete.ConfirmMessageCount">Supprimer les {0} commandes sélectionnées ? Cette action est irréversible.</Text>
 
   <Text key="Order.Fields.OrderNumber">Numéro de commande</Text>
   <Text key="Order.Fields.CustomerName">Nom du client</Text>

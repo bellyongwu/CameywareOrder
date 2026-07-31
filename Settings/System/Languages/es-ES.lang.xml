@@ -83,6 +83,7 @@
   <Text key="Toolbar.SignOut">Cerrar sesión</Text>
   <Text key="Main.Greeting">Hola {0}, has iniciado sesión como {1}.</Text>
   <Text key="Main.Records">Registros de pedidos</Text>
+  <Text key="Main.SelectedCount">{0} seleccionados</Text>
   <Text key="SignOut.Confirm">¿Cerrar la sesión de la aplicación?</Text>
   <Text key="SignOut.CloseEditors">Cierra todas las ventanas de pedidos antes de cerrar sesión.</Text>
   <Text key="Toolbar.Lock">Bloquear</Text>
@@ -352,7 +353,10 @@
   <Text key="Status.LoadedSummary">{0} pedidos  |  Punto de conexión GraphQL: http://localhost:5050/graphql</Text>
   <Text key="Status.LoadFailed">Error al cargar: {0}</Text>
   <Text key="Status.DeleteFailed">Error al eliminar: {0}</Text>
+  <Text key="Status.Deleted">Pedido «{0}» eliminado</Text>
+  <Text key="Status.DeletedCount">{0} pedidos eliminados</Text>
   <Text key="Status.CopySucceeded">Pedido copiado como {0}</Text>
+  <Text key="Status.CopiedCount">{0} pedidos copiados</Text>
   <Text key="Status.CopyFailed">Error al copiar: {0}</Text>
   <Text key="Status.OpenFolderFailed">Error al abrir la carpeta: {0}</Text>
   <Text key="Status.CopyPathSucceeded">Ruta de la base de datos copiada</Text>
@@ -401,6 +405,7 @@
   <!-- Angular quotes, the es-ES convention — and NOT \" — XML text has no backslash escaping, so a
        backslash written here would be shown to the user verbatim. -->
   <Text key="Delete.ConfirmMessage">¿Eliminar el pedido «{0}»? Esta acción no se puede deshacer.</Text>
+  <Text key="Delete.ConfirmMessageCount">¿Eliminar los {0} pedidos seleccionados? Esta acción no se puede deshacer.</Text>
 
   <Text key="Order.Fields.OrderNumber">Número de pedido</Text>
   <Text key="Order.Fields.CustomerName">Nombre del cliente</Text>

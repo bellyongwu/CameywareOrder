@@ -24,6 +24,62 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A "batch" version of an action inherits every latent defect of the single one, at scale
+  (2026-07-31).** Multi-select turned `CopyOrderAsync`'s hand-built
+  `$"ORD-{DateTime.Now:yyyyMMdd-HHmmss}"` from a cosmetic wrong into a guaranteed one: every copy in
+  a batch is composed from the same second, so all of them came out with the SAME order number.
+  Before making an action repeat, read what it does once and ask which parts were only ever correct
+  because a human could not do them twice quickly.
+  - The fix was to route Copy through `OrderNumberFormatter.Reserve`, which it should always have
+    used — the hand-built number also ignored the shop's configured prefix and mode entirely.
+  - `Reserve` could not save it as written: it **returned early in Timestamp mode, ahead of the
+    collision scan its own summary promises**. A method whose doc comment describes a guarantee one
+    branch does not implement is worse than one carrying no comment — that branch is exactly where
+    nobody looks. `ReserveTimestamp` now steps the number's second forward until it is free. Only
+    the NUMBER's timestamp moves; the order keeps the date it was written.
+  - **Reserve asks the DATABASE what is taken, and EF cannot see added-but-unsaved rows.** So the
+    batch saves one copy at a time rather than batching one `SaveChanges` — batching would re-issue
+    the same number to every copy for a second, unrelated reason.
+- **`SelectedItems` is not a dependency property, so a multiple selection cannot be bound
+  (2026-07-31).** `SelectedItem` can; `SelectedItems` cannot. The view pushes the selection into the
+  view model from `SelectionChanged` (`MainViewModel.SetSelection`), one direction only, and the view
+  model asks for a selection back through an event (`SelectionRequested`) rather than writing to the
+  list — which is what stops a selection change re-entering through the event that reported it.
+  - Consequence worth remembering: a view model holding a selection must **collapse it on every
+    rebuild**. Ctrl+A means "this page", and paging happens in the view model, so a selection carried
+    through a search, a sort or a page turn leaves Delete reaching rows no longer on screen.
+- **`SelectionMode="Extended"`, never `Multiple` (2026-07-31).** Multiple makes every plain click a
+  toggle, silently redefining the click the list has always had. Extended keeps plain click = one
+  row, adds Ctrl+click and Shift+click, and is what `StoreManagementWindow` already uses.
+  - Right-click must REPLACE a selection it lands outside of, not extend it: setting `IsSelected` on
+    its own ADDS the row in Extended mode, so the context menu would act on one more record than the
+    user pointed at. Inside an existing selection it leaves it alone — that is how the menu comes to
+    act on the batch at all.
+- **Ctrl+A on a ListBox is `OnKeyDown`, NOT a command — do not assert it through
+  `ApplicationCommands.SelectAll` (2026-07-31).** The first version of `batchcheck` did exactly that
+  and found `CanExecute` **false**, on our list and on a stock Extended `ListBox` alike, because
+  `ListBox` never registers that command; it handles the gesture in `OnKeyDown`, gated on
+  `CanSelectMultiple`. Asserting the wrong mechanism would have passed while proving nothing.
+  - Synthesising a `KeyEventArgs` does not work either: `ListBox` reads `Keyboard.Modifiers`, which
+    comes from real device state, so a fabricated event arrives with no Ctrl held. The honest test is
+    real input — `keybd_event` after winning the foreground — and **fail rather than skip** when the
+    foreground cannot be won, because the alternative is typing into somebody else's window.
+    `SetForegroundWindow` plus a temporary `Topmost` is what stopped it flapping.
+- **Render AFTER the animation, or the screenshot lies (2026-07-31).** The orders list fades its
+  selection highlight over 0.30s. A render taken straight after a selection change caught it mid-fade
+  and produced a "one row selected" screenshot in which all nine rows still looked selected — which
+  reads as a real defect and is not one. Pumping the dispatcher is not enough; real time has to pass
+  (`Settle(600)` in `batchcheck`). Anything with a transition has the same trap —
+  `Animations/PanelTransition` runs 0.5s.
+- **A harness must load the string table itself (2026-07-31).** `App.OnStartup` calls
+  `LocalizationService.LoadFromDirectory`, which a harness never runs, so every lookup returns its
+  own key and any assertion on localized text fails for a reason that has nothing to do with the code
+  under test. `batchcheck` reported four such failures on its first run. Load it the way startup
+  does: `LoadFromDirectory(SystemSettingsPaths.LanguagesDirectory, AppDefaults.Load().DefaultLanguageCode)`.
+  - Supplying a harness's own `IServiceScopeFactory` to `MainViewModel` is the clean way to run
+    against a throwaway SQLite file and never touch the user's database. Set the shop on
+    `ShopContext` **before** any `AppDbContext` is constructed — the context captures the shop id in
+    its constructor.
 - **A per-shop setting needs a fallback that reproduces the OLD behaviour, or it is a
   migration (2026-07-28).** `Shop.InstalledLanguagesJson` decides which languages a branch runs in.
   Null — every existing shop — reads back through `ShopLanguages.Installed` as just the shop's
