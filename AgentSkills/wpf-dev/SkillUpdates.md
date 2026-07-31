@@ -13,6 +13,33 @@ Entry format:
 - Why: <reason / triggering request>
 ```
 
+### 2026-07-31 — Verification discipline, running the gate, and how this user works
+- Changed: `SKILL.md` — new **§0a "How this user works"** (release-per-ask with a version number and
+  a shop-facing README entry, the full build→suite→render→publish→docs→commit loop, zero-tolerance
+  gates, mid-turn asks, bilingual conversation against English-only code, report-and-offer for
+  adjacent findings, pushing is the user's); new **§9a-1 "Verification discipline"** (render anything
+  visual, prove a new assertion can fail, check a red harness on a clean checkout before assuming it
+  is yours, assert against the SOURCE for "every X must do Y" invariants); new **§9a-2 "Run the gate;
+  do not remember it"**; and three additions to §9 (measure before diagnosing, report findings without
+  widening scope, commit messages through a file rather than a heredoc).
+- Why: user asked for the session's practices and preferences to be folded into the skill. Every item
+  is something that either caught a real defect or cost real time in this session, so each is written
+  with the evidence rather than as advice:
+  - **Rendering** caught a clipped label TWICE — the second time one release after the rule was
+    written into `context.md` — plus a mis-punctuated phone number and a checkbox whose disabled
+    state read as the opposite of the truth. All compiled, ran and passed a green suite.
+  - **Proving an assertion can fail** caught a test that could not have failed: its fixture account
+    had no first name, so `DisplayLabel` and `UserName` were the same string and the assertion could
+    not distinguish the branches it existed to choose between.
+  - **Checking a clean checkout** would have saved the time spent diagnosing six red assertions that
+    reproduced perfectly at HEAD.
+  - **Source-level assertions** are what stop the "sixth window forgets the rule" failure, which
+    happened twice in one session with the same shared control.
+  - **Running Sonar as an analyzer** instead of reading the Problems view found nine issues across
+    six files in a workspace repeatedly called clean.
+  - **The heredoc rule** is from a mangled commit message that reached the remote and needed a
+    force-push to correct.
+
 ### 2026-07-30 — The CJK verification grep now covers Markdown, and says how to sort the hits
 - Changed: `SKILL.md` "Who this skill is" — the grep's `-Include` widened to `*.md,*.json,*.csproj,*.ps1`
   alongside `*.cs,*.xaml`, its character class made explicit, and a new paragraph on triaging hits.

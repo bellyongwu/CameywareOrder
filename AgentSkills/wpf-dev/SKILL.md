@@ -101,6 +101,35 @@ That sort is why the sweep is a **whitelist of known labels**, not a strip: a ba
 same files produced half-English wreckage (`Order.Fields.FinalBalanceShort结清`) because the short
 tokens are substrings of compounds it did not enumerate.
 
+## 0a. How this user works (observed preferences)
+
+Not rules imposed from outside — this is how the work has actually been run
+here, and matching it saves a round trip on every task.
+
+- **Releases are named and versioned, one per ask.** The user says "another
+  hotfix version" or "release 4.1.0" and expects a version number to come out of
+  it. Patch for a fix (`4.1.2`), minor for a feature (`4.1.0`). Every release
+  gets a `README.md` "Latest release" entry written for the SHOP owner, not for
+  a developer: what changed and what it means for them, not which class moved.
+- **Finish the whole loop before reporting done:** build 0/0 → full harness
+  suite green → render if anything visual changed → publish → `README.md` →
+  checkpoint the companions → commit. The user notices when a step is skipped.
+- **Ship-blocking gates are zero-tolerance**: 0 warnings / 0 errors, Sonar
+  clean, the whole suite green. A harness that is red for an unrelated reason is
+  still red, and gets diagnosed rather than explained away.
+- **Asks arrive small, scoped and often mid-turn.** A follow-up frequently lands
+  while a build is running; take it into the current turn rather than deferring.
+  The user also sends corrections ("纠正一下…") — treat these as authoritative and
+  do not re-argue the point that was corrected.
+- **The user writes in English and Chinese, interchangeably.** Reply in the
+  language they used. The CODE and the companions stay English regardless — see
+  "Who this skill is", the rule that erodes.
+- **Adjacent problems: report, offer, wait.** Do not expand scope silently, and
+  do not stay quiet either. Given a clear finding the user has consistently
+  authorised the wider fix — but as their decision.
+- **Pushing is theirs.** Commit locally; do not push unless asked. History that
+  is already pushed is not rewritten without explicit agreement.
+
 ## 0. Session continuity & checkpoints (do this first)
 
 The skill folder (same folder as this `SKILL.md`) holds two kinds of tracking
@@ -662,6 +691,68 @@ pd.PrintDocument(((IDocumentPaginatorSource)doc).DocumentPaginator, title);
 
 - Read a file region before editing; make minimal, targeted edits with enough
   surrounding context to match uniquely; batch independent edits together.
+- **Measure before diagnosing.** Every hypothesis about a defect is checked
+  against the running code before it is acted on. Write the throwaway probe: a
+  matrix of every country against every rule; a print of which columns a
+  "no-op" save actually moved; a diff of what a screen seeded into its own edit
+  box. It costs minutes and it is repeatedly the difference between fixing the
+  defect and fixing something adjacent to it. Three times in one session the
+  measurement contradicted a confident hypothesis — including twice where the
+  code was right and the assertion was wrong.
+- **Report what you find, even unasked, and do not silently widen scope.** An
+  audit that turns up the same defect in three other windows gets reported with
+  the offer to fix; it does not get quietly fixed as part of a different task,
+  and it does not get dropped either. The user decides the scope; they cannot
+  decide about a finding they were never told.
+- **Pass commit messages through a FILE (`git commit -F <file>`), never a bash
+  heredoc.** A heredoc in a compound command has mangled a message into an
+  unrelated line of Markdown, producing a garbage subject on a commit that was
+  then pushed. Writing the message with the Write tool and passing `-F` has no
+  such failure mode.
+
+### 9a-1. Verification discipline (the part that actually catches things)
+
+A green build and a green suite are necessary and are not sufficient. Four
+habits, in rough order of how often they earn their keep here:
+
+1. **RENDER anything visual before calling it done.** A template, a layout, a
+   drawn control and a formatted value are the things no assertion can judge.
+   In one session rendering caught: a label clipped mid-word (twice — the second
+   time one release after the rule was written down), a phone number carrying
+   punctuation it should have shed, and a checkbox whose disabled state said the
+   opposite of what was true. Every one of them compiled, ran, and passed a
+   green suite. If a change alters what something LOOKS like, look at it.
+2. **Prove a new assertion can fail.** Stash the fix, run it, watch it go red,
+   restore. An assertion never seen failing is not yet known to be load-bearing
+   — and the failure mode is silent: it passes forever while testing nothing.
+   Watch especially for a fixture sitting on a FALLBACK path, where two
+   different readings produce the same value and the test cannot tell the
+   branches apart (a test account with no first name made `DisplayLabel` and
+   `UserName` identical, so the assertion could not have caught the bug it was
+   there for).
+3. **Before diagnosing a red harness as yours, check it on a clean checkout.**
+   `git stash` the change set and re-run. Six assertions across two harnesses
+   once reproduced perfectly at HEAD — an environment problem masquerading as a
+   regression, and half an hour of looking in the wrong file.
+4. **For "every X must do Y" invariants, assert against the SOURCE.** Driving
+   the five screens that exist proves today's behaviour and says nothing about
+   the sixth one added next year — which is the failure that keeps happening.
+   A harness that greps every window hosting a control for the call it must
+   make, and for the bypasses it must not name, is what constrains the code
+   that has not been written yet.
+
+### 9a-2. Run the gate; do not remember it
+
+A quality gate that depends on someone choosing to look is not a gate. Sonar was
+"check the Problems view before building" for months; the first run of the same
+rules as an analyzer package (`SonarAnalyzer.CSharp` in `Directory.Build.props`,
+`PrivateAssets=all`) reported **nine issues across six files**, several of them
+months old, in a workspace repeatedly called clean.
+
+It is now part of `dotnet build`, so the baseline is zero and anything reported
+is new. It earns this on the same day it was added by flagging a just-written
+handler that turned out to be dead code. Prefer this shape generally: make the
+check run itself rather than adding it to a list of things to remember.
 - **Sanity-check BOTH gates BEFORE building — IDE diagnostics *and* Sonar.**
   After a change set, do not jump straight to `dotnet build`. Run a two-part
   pre-build sanity check on every changed file first (see section 9b), then and

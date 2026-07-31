@@ -528,6 +528,30 @@ public partial class ShopSetupWindow : Window
             return;
         }
 
+        // The shop's OWN contact details, held to the rules a customer's are. This window hosts the
+        // same PhoneNumberField as the order form and checked nothing at all, so a shop could store a
+        // number no country issues — and then print it on every receipt it hands out, which is the
+        // one place a wrong number is copied by the people who need it.
+        //
+        // Both are optional: a shop that gives no number and no address is a valid shop, and blank
+        // passes both rules. What is refused is a malformed value, not a missing one.
+        if (!PhoneField.IsAcceptable)
+        {
+            ShowError("OrderEdit.Validate.PhoneInvalid");
+            PhoneField.MarkInvalid(true);
+            PhoneField.FocusNumber();
+            return;
+        }
+
+        PhoneField.MarkInvalid(false);
+
+        if (!ContactValidation.IsValidEmail(EmailBox.Text))
+        {
+            ShowError("OrderEdit.Validate.EmailInvalid");
+            EmailBox.Focus();
+            return;
+        }
+
         // A shop with no language is a shop nobody can read; a shop with no currency cannot price an
         // order at all. The localization panel refuses to return either, and a NEW shop is seeded
         // with one of each, so these are belt-and-braces — but they are the last gate before a write,

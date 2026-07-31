@@ -419,9 +419,10 @@ public partial class StoreMembersWindow : Window
 
         var userName = NewUserNameBox.Text.Trim();
 
-        // A member being CREATED gets the country rule; an existing one keeps the loose check below,
-        // because a record saved before this rule existed must stay editable.
-        if (!NewPhoneField.IsValid)
+        // A member being CREATED has nothing stored to grandfather, so IsAcceptable resolves to the
+        // country rule here — the same property the edit path uses, rather than a second answer to
+        // the same question.
+        if (!NewPhoneField.IsAcceptable)
         {
             ShowCreateError(NewPhoneField.ValidationMessage, alreadyLocalized: true);
             return;
@@ -509,10 +510,13 @@ public partial class StoreMembersWindow : Window
     // details. A member address the roster accepts but the order form rejects would be a defect
     // nobody sees until mail bounces.
 
-    // An EXISTING member keeps the loose rule: their record predates the country one, and a manager
-    // opening it to change a shift must not be stopped by a phone number they cannot re-verify.
+    // A STORED number keeps the loose rule: it predates the country one, and a manager opening a
+    // member's record to change a shift must not be stopped by a phone number they cannot re-verify.
+    // A number TYPED here gets the country's rule, exactly as on an order — the leniency belongs to
+    // the value that is already saved, not to the record that holds it. IsAcceptable draws that line
+    // and is the only place it is drawn.
     private void OnPhoneFieldCommitted(object? sender, EventArgs e)
-        => SetFieldError(PhoneErrorText, PhoneField.IsValidLoose
+        => SetFieldError(PhoneErrorText, PhoneField.IsAcceptable
             ? null
             : "OrderEdit.Validate.PhoneInvalid");
 

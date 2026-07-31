@@ -2473,9 +2473,19 @@ implementations. **Ask what each screen decides, not just what it displays.** Th
 decision onto the control as `IsAcceptable`, where it needs no parameter: the control knows what it
 loaded, so "untouched stored value" is something it can answer for itself.
 
-Worth checking the other three hosts of this control the same way — the shop's own number and the two
-staff screens — and generally, when a control is introduced to centralise a rule, grep its usages for
-who actually *calls* the rule rather than assuming the constructor was enough.
+That audit was then done, and three of the five hosts were wrong: `ShopSetupWindow` validated nothing
+at all (the shop's own number, which prints on every receipt), and `StoreMembersWindow` and
+`UserManagementWindow` both used the lenient rule unconditionally. Their comments explaining the
+leniency were RIGHT about the reason and wrong about the subject — the same value/record confusion.
+So: when a control is introduced to centralise a rule, grep its usages for who actually *calls* the
+rule. Hosting it is not calling it.
+
+**The assertion that stops this recurring is structural, not behavioural.** `phonecheck` reads the
+SOURCE of every window hosting the field and requires it to call `IsAcceptable`, to validate an
+email, and NOT to name `IsValid`/`IsValidLoose` directly — those two being the halves the shared rule
+chooses between, so naming either is a window deciding for itself again. Driving the five that exist
+proves today's behaviour; only the source check constrains the sixth window somebody adds next year.
+Worth reaching for whenever the invariant is "every X must do Y" rather than "X does Y".
 
 The harness asserts the two windows AGREE on the same inputs, rather than asserting each separately.
 That is what catches a future divergence; two independent assertions both pass while drifting apart.

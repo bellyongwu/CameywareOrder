@@ -11,6 +11,25 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.1.3 — 2026-07-31 (hotfix)
+
+**Every screen that collects a phone number or an email now checks it.** The rule had been written
+once per screen, and three of the five had it wrong or missing:
+
+- **Shop setup validated nothing.** A shop could store a phone number no country issues and an email
+  that was not an address — and then print both on every receipt it hands out, which is the one place
+  a wrong number gets copied by the people who need it.
+- **Store members and user management always used the lenient rule**, so a number typed into either
+  was never checked against its country. As with orders, that leniency is meant for a number already
+  stored — one nobody can re-verify — and not for one being typed now.
+
+All five screens now ask the same question of the same shared rule, and the suite checks the *source*
+of every one of them: a new window that hosts a phone field and forgets to validate it, or reaches
+past the shared rule to pick its own, fails the build's checks rather than shipping.
+
+Nothing gets stricter for data already saved: a stored number left untouched is still accepted
+everywhere, and both fields stay optional.
+
 ### v4.1.2 — 2026-07-31 (hotfix)
 
 **The custom-made record checks its contact details, as the order form does.** That window collects a

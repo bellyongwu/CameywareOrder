@@ -411,10 +411,11 @@ public partial class UserManagementWindow : Window
     {
         userName = row.UserName;
 
-        // The same rules the order form applies to a customer's details.
-        // An existing account keeps the loose rule — see StoreMembersWindow for why editing a record
-        // saved before the country rule must not be blocked by it.
-        if (!ContactPhoneField.IsValidLoose)
+        // The same rules the order form applies to a customer's details, through the same property.
+        // A STORED number keeps the loose rule — see StoreMembersWindow for why editing a record
+        // saved before the country rule must not be blocked by it — while a number typed here is
+        // held to the country's own, because it is being typed now rather than re-read from a record.
+        if (!ContactPhoneField.IsAcceptable)
         {
             ShowContactError("OrderEdit.Validate.PhoneInvalid");
             return false;

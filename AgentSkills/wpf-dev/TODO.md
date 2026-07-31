@@ -17,7 +17,27 @@ Entry format:
 
 ## Open / in progress
 
-### 2026-07-31 02:05 — v4.1.2: the custom-made record checks its contact details too  [IN PROGRESS]
+### 2026-07-31 02:40 — v4.1.3: every phone and email field, validated  [IN PROGRESS]
+- Ask: "For all the phone number and email sections, you should apply the validations."
+- Audit of all five hosts of `PhoneNumberField` before touching anything:
+  - `OrderEditWindow` — fixed in v4.1.1.
+  - `CustomMadeServiceWindow` — fixed in v4.1.2.
+  - `ShopSetupWindow` — **no validation at all**, phone or email. The shop's own number goes onto
+    every receipt, so this is the one that gets copied by the people who need it.
+  - `StoreMembersWindow` — `IsValidLoose` unconditionally on the edit path, so a retyped number was
+    never checked. The new-member path used `IsValid`, which was right but a second answer.
+  - `UserManagementWindow` — `IsValidLoose` unconditionally, same as above.
+- Notes: all six phone call sites now read `IsAcceptable` and all six email sites
+  `ContactValidation.IsValidEmail`; `IsValidLoose` no longer appears in any window. The comments that
+  justified the leniency were RIGHT about the reason and wrong about the subject — kept, and re-aimed
+  at the stored value rather than the record.
+  **The assertion that matters is structural**: `phonecheck` reads the SOURCE of every window hosting
+  a phone field and requires it to call `IsAcceptable`, to validate an email, and NOT to name
+  `IsValid`/`IsValidLoose` directly. Driving the five that exist proves today's behaviour; reading
+  the source is what stops a sixth window skipping the rule, which is exactly how this whole run of
+  fixes started. `phonecheck` 221 → 236.
+
+### 2026-07-31 02:05 — v4.1.2: the custom-made record checks its contact details too  [DONE]
 - Ask: "Create another fix to 4.1.2 apply the email validation and phone validation rules for Edit
   custom Record section as well."
 - Findings: `CustomMadeServiceWindow` carries a `PhoneNumberField` and an `EmailBox` and validates
