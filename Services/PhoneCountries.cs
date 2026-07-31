@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using CameywareOrder.Configuration;
 using CameywareOrder.Models;
 
@@ -154,7 +155,8 @@ public static class PhoneCountries
                             && e.NationalDigits is { Count: > 0 })
                 .Select(e => new PhoneCountry(e.Code!.Trim(), e.DialCode!.Trim(),
                     e.NationalDigits!.Where(d => d > 0).ToList(),
-                    ParseFormats(e.NationalFormat)))
+                    ParseFormats(e.NationalFormat),
+                    ParsePattern(e.NationalPattern)))
                 .Where(c => c.NationalDigits.Count > 0)
                 .ToList();
 
@@ -208,6 +210,35 @@ public static class PhoneCountries
         return formats;
     }
 
+    /// <summary>
+    /// Compiles a country's national-number pattern, or null when it ships none.
+    /// </summary>
+    /// <remarks>
+    /// A pattern that does not compile costs that country its pattern and nothing else — it falls
+    /// back to the digit-count rule, which is what every country used before patterns existed. The
+    /// file is meant to be edited by hand, and a stray bracket in one entry must not take the phone
+    /// field down for every country in it.
+    ///
+    /// The timeout is not optional: these patterns come from a FILE, so they are untrusted input as
+    /// far as backtracking is concerned, and they are matched on every keystroke.
+    /// </remarks>
+    private static Regex? ParsePattern(string? pattern)
+    {
+        if (string.IsNullOrWhiteSpace(pattern))
+            return null;
+
+        try
+        {
+            return new Regex(pattern.Trim(), RegexOptions.CultureInvariant, PatternTimeout);
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    private static readonly TimeSpan PatternTimeout = TimeSpan.FromSeconds(1);
+
     /// <summary>Built-in home market, used only when the shipped file is missing or unreadable.</summary>
     /// <remarks>
     /// Carries the NANP grouping rather than an empty map: this is the fallback a shop actually runs on
@@ -217,11 +248,12 @@ public static class PhoneCountries
     private static IReadOnlyList<PhoneCountry> Fallback { get; } = new[]
     {
         new PhoneCountry(DefaultCode, "+1", new[] { 10 },
-            new Dictionary<int, string> { [10] = "###-###-####" })
+            new Dictionary<int, string> { [10] = "###-###-####" },
+            new Regex("^[2-9][0-9]{2}[2-9][0-9]{6}$", RegexOptions.CultureInvariant, PatternTimeout))
     };
 
     private sealed record CountriesPayload(string? DefaultCountryCode, List<CountryEntry>? Countries);
 
     private sealed record CountryEntry(string? Code, string? DialCode, List<int>? NationalDigits,
-        Dictionary<string, string>? NationalFormat);
+        Dictionary<string, string>? NationalFormat, string? NationalPattern);
 }

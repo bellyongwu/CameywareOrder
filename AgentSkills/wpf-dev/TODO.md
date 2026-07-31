@@ -17,7 +17,57 @@ Entry format:
 
 ## Open / in progress
 
-### 2026-07-30 21:15 — v4.1.0: a save that changed nothing, and locking the session  [PENDING]
+### 2026-07-31 01:10 — v4.1.1: a retyped phone number is held to the rule  [IN PROGRESS]
+- Ask: "Fixing a bug on phone validation. 289-990-33577 I entered this number, but it still accepts.
+  it shouldn't allow for the saving." + "For canada region" + "I haven't tried the other countries
+  yet. do a deep dive on this section find out why"
+- Deep dive (`phoneprobe`, a throwaway diagnostic that prints STRICT vs LOOSE for every shipped
+  country across 6-13 digits):
+  - The STRICT rule is correct everywhere. CA/US refuse 11 digits, FR/ES refuse 11, and CN/JP ACCEPT
+    11 because 11 is a real mobile length in both — so the reported number is legitimately valid
+    under China and Japan and invalid under the other four.
+  - The hole is not in any country's rule. `ValidatePhoneField` chooses which rule to apply from
+    whether the ORDER is new (`_existing is null ? IsValid : IsValidLoose`), so an EXISTING order is
+    never held to its country's length at all. Every disagreeing row in the matrix — every country,
+    every wrong length, 6 digits through 13 — is accepted on an existing order.
+  - The save path itself is fine: `ValidateForSave` does call `ValidatePhoneField`.
+- Decision: choose the rule from whether the NUMBER was edited, not from whether the order is new.
+  The leniency exists for a number typed before the rule existed and that nobody can re-verify; it
+  was never meant to cover a number typed just now with the customer standing there. Untouched keeps
+  the loose rule, anything retyped gets the strict one — both properties instead of a trade.
+- Plan:
+  - [ ] T1 `PhoneNumberField` remembers what it loaded and reports `HasBeenEdited`
+  - [ ] T2 `ValidatePhoneField` goes strict for a new order OR an edited number
+  - [ ] T3 `phonecheck`: the existing assertion encodes the OLD behaviour and has to be re-aimed —
+        untouched legacy number still saves, retyped number is refused, reported number refused for
+        Canada and ACCEPTED for China
+  - [x] T4 build 0/0 + Sonar 0, suite, publish, docs, README v4.1.1
+- Mid-turn ask: "you can use regular expression for different countries phone number type for the
+  validation. did you use this strategy?" — honest answer was NO: validation counted digits per
+  country plus one shared shape regex. Measured what that misses before answering, and it was worse
+  than expected: `0899903357`, `1899903357`, `2890990335`, `0125551234`, `23800138000`,
+  `10800138000`, `012345678`, `112345678` were ALL accepted — every one the right length for its
+  country and none of them a number that country issues.
+- Notes: **T1/T2** `PhoneNumberField._loadedNumber` is captured in `Load` AFTER the regroup (a
+  re-punctuation is the control's doing, not an edit) and `HasBeenEdited` compares `FullNumber`
+  against it — country included, because the same digits are a valid Chinese mobile and an invalid
+  Canadian one. `ValidatePhoneField` now goes strict on `_existing is null || HasBeenEdited`.
+  **Regex** added as `nationalPattern` in `phone-countries.json`, matched against DIGITS ONLY so each
+  pattern describes numbers rather than punctuation, with the digit count kept as the fallback for
+  any country shipping none and an unparsable pattern degrading to that same fallback rather than
+  taking the country down. NANP `^[2-9][0-9]{2}[2-9][0-9]{6}$` for CA/US, `^1[3-9][0-9]{9}$` for CN,
+  `^[1-9][0-9]{8}$` FR, `^[6-9][0-9]{8}$` ES.
+  **Japan ships no pattern, deliberately** — and my first attempt (`^0[0-9]{9,10}$`) was WRONG and
+  caught by an existing assertion: this app takes `090-1234-5678` (11, domestic trunk zero),
+  `90-1234-5678` (10, international, no zero) AND `03-1234-5678` (10, Tokyo, with zero). Demanding a
+  leading zero refuses the second; forbidding it refuses the third. Length is the only rule true of
+  all three — the same call as its missing 10-digit format, for the same reason.
+  New key `OrderEdit.Validate.PhoneShape` in all five languages: quoting "a number here has 10
+  digits" at somebody who typed exactly 10 reads as a bug in the check, so the length message is used
+  only when the length is what is wrong. `phonecheck` 167 → 209, including a positive number per
+  country so a pattern that refuses everything cannot pass.
+
+### 2026-07-30 21:15 — v4.1.0: a save that changed nothing, and locking the session  [DONE]
 - Ask: "Use skill wpf-dev: Have another version of release 4.1.0 A few Changes: 1. To detect if a
   record is modified or not, at least you changed something in the record. -add a content update
   checker, see if any changes against opened record. -if no change but still click the save, it is

@@ -11,6 +11,27 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.1.1 — 2026-07-31 (hotfix)
+
+**Phone numbers are checked against the country they belong to, whichever order they are on.**
+
+- **A number typed into an existing order is now held to the same rule as a new one.** The lenient
+  rule exists for numbers taken before the per-country check existed, so that an old order can still
+  have its status corrected without somebody re-typing a phone number they cannot verify. It was
+  being applied to the whole field rather than to the stored value, so an existing order accepted any
+  7-to-15-digit number in any country. It now applies only while the stored number is untouched;
+  anything typed is checked properly, and restoring the original makes the record saveable again.
+- **Each country now has its own pattern, not just a digit count.** Counting digits cannot see an
+  area code starting with 0 or 1, a Chinese mobile that does not begin with 1, or a French number
+  carrying a trunk zero it should not — all of these have exactly the right number of digits, and all
+  of them used to be accepted.
+- **Japan is deliberately checked by length alone.** It writes numbers both with the trunk zero
+  (`090-1234-5678`) and without it (`90-1234-5678`), and nothing in the digits says which — so a
+  pattern would refuse one form or the other.
+- **The message says which problem it is.** A number of the wrong length is told the length; one that
+  is the right length but not a real number is told that instead, rather than being told it needs the
+  number of digits it already has.
+
 ### v4.1.0 — 2026-07-30
 
 **Lock the machine instead of signing out.** Stepping away no longer means losing your place.

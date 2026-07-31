@@ -78,6 +78,9 @@ public static class ContactValidation
         if (country is null)
             return IsValidPhone(value);
 
-        return country.AcceptsDigitCount(value.Count(char.IsDigit));
+        // The country's own pattern where it ships one, its digit count where it does not. Counting
+        // digits alone accepted an area code beginning 0, a Chinese mobile not starting with 1, and a
+        // Japanese number without its trunk 0 — all the right length, none of them real.
+        return country.AcceptsNationalNumber(value);
     }
 }

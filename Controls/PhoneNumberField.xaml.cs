@@ -39,6 +39,9 @@ public partial class PhoneNumberField : UserControl
     private bool _populating;
     private bool _formatting;
 
+    /// <summary>What <see cref="Load"/> put on screen, to tell an edit apart from a stored value.</summary>
+    private string _loadedNumber = string.Empty;
+
     public PhoneNumberField()
     {
         InitializeComponent();
@@ -90,9 +93,20 @@ public partial class PhoneNumberField : UserControl
             if (country is null)
                 return _localization["OrderEdit.Validate.PhoneInvalid"];
 
-            return _localization.Format("OrderEdit.Validate.PhoneDigits",
-                country.DisplayName(_localization),
-                country.ExpectedDigitsText(_localization));
+            // Two different problems, and telling somebody "a number here has 10 digits" when they
+            // have typed exactly 10 is worse than saying nothing: it reads as a bug in the check.
+            // The length message when the length is what is wrong; otherwise the number simply is
+            // not one this country issues, which is all that can honestly be said without quoting
+            // the pattern at a person who did not write it.
+            if (!country.AcceptsDigitCount(NumberBox.Text.Count(char.IsDigit)))
+            {
+                return _localization.Format("OrderEdit.Validate.PhoneDigits",
+                    country.DisplayName(_localization),
+                    country.ExpectedDigitsText(_localization));
+            }
+
+            return _localization.Format("OrderEdit.Validate.PhoneShape",
+                country.DisplayName(_localization));
         }
     }
 
@@ -126,7 +140,33 @@ public partial class PhoneNumberField : UserControl
         {
             _populating = false;
         }
+
+        // The baseline for HasBeenEdited, taken AFTER the regroup: re-punctuating a stored number is
+        // this control's doing, not the user's, and must not read as an edit.
+        _loadedNumber = FullNumber;
     }
+
+    /// <summary>
+    /// Whether the number on screen differs from the one that was loaded into it.
+    /// </summary>
+    /// <remarks>
+    /// This is what decides how strictly the number is judged, and the distinction it draws is
+    /// between a number that was ALREADY STORED and one typed just now — not between a new order and
+    /// an old one.
+    ///
+    /// The leniency exists for a number that predates the per-country length rule: refusing it would
+    /// mean an order taken last year could not have its status corrected or its balance cleared until
+    /// somebody re-typed a phone number they have no way to verify. That argument covers the stored
+    /// value and nothing else. A number typed now is typed with the customer standing there, so it is
+    /// held to the country's rule whatever order it belongs to — which is the hole this closes: an
+    /// existing order used to accept ANY 7-to-15-digit number in any country.
+    ///
+    /// Country counts as part of the number, because it is: the same digits are a valid Chinese
+    /// mobile and an invalid Canadian one, so switching the picker changes the claim being made.
+    /// Editing back to the original value reads as unedited, which is correct — the stored number is
+    /// what would be saved.
+    /// </remarks>
+    public bool HasBeenEdited => !string.Equals(FullNumber, _loadedNumber, StringComparison.Ordinal);
 
     /// <summary>
     /// Re-groups a stored number for display, but only when doing so is unambiguous.

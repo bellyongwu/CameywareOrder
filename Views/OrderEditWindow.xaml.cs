@@ -2235,20 +2235,27 @@ public partial class OrderEditWindow : Window
     }
 
     /// <summary>
-    /// The number must be a possible one in the country picked for it — but only on an order being
-    /// created.
+    /// The number must be a possible one in the country picked for it — unless it is a stored number
+    /// nobody has touched.
     /// </summary>
     /// <remarks>
-    /// An EXISTING order keeps the loose rule it was saved under: shape, and 7 to 15 digits. Applying
-    /// the national-length rule to one would mean an order taken last year could not be saved again —
-    /// its status could not be corrected, its balance could not be cleared — until somebody re-typed a
-    /// phone number they have no way to verify. The new rule earns its strictness at the point where
-    /// the customer is standing there to be asked.
+    /// The lenient rule (shape, and 7 to 15 digits) exists for numbers that predate the per-country
+    /// length rule: holding those to it would mean an order taken last year could not be saved again
+    /// — its status could not be corrected, its balance could not be cleared — until somebody re-typed
+    /// a phone number they have no way to verify.
+    ///
+    /// That argument covers the STORED VALUE and nothing else, which is why the choice is made on
+    /// <see cref="PhoneNumberField.HasBeenEdited"/> and not on whether the order is new. Keying it to
+    /// the order meant an existing one accepted ANY 7-to-15-digit number in any country: a probe
+    /// across every shipped country from 6 to 13 digits found the two rules disagreeing on every
+    /// length but the correct one, and the lenient answer winning every time. A number typed just now
+    /// is typed with the customer standing there, whatever order it belongs to.
     /// </remarks>
     private bool ValidatePhoneField()
     {
-        var valid = _existing is null ? PhoneField.IsValid : PhoneField.IsValidLoose;
-        var message = _existing is null
+        var strict = _existing is null || PhoneField.HasBeenEdited;
+        var valid = strict ? PhoneField.IsValid : PhoneField.IsValidLoose;
+        var message = strict
             ? PhoneField.ValidationMessage
             : _localization["OrderEdit.Validate.PhoneInvalid"];
 

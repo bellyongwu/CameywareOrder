@@ -26,13 +26,19 @@ public sealed class PhoneCountry
     /// call site keep compiling while silently declaring "this country has no format", which is
     /// indistinguishable from a country that genuinely has none.
     /// </param>
+    /// <param name="nationalPattern">
+    /// Matched against the DIGITS of a national number, or null for a country that ships none — in
+    /// which case <paramref name="nationalDigits"/> decides alone.
+    /// </param>
     public PhoneCountry(string code, string dialCode, IReadOnlyList<int> nationalDigits,
-        IReadOnlyDictionary<int, string> nationalFormats)
+        IReadOnlyDictionary<int, string> nationalFormats,
+        System.Text.RegularExpressions.Regex? nationalPattern)
     {
         Code = code;
         DialCode = dialCode;
         NationalDigits = nationalDigits;
         NationalFormats = nationalFormats;
+        NationalPattern = nationalPattern;
     }
 
     /// <summary>ISO country code — "CA", "CN", "JP". Matches a tax jurisdiction's code where one exists.</summary>
@@ -136,8 +142,44 @@ public sealed class PhoneCountry
     /// <summary>What the picker shows: the dial code, with the country named beside it.</summary>
     public string PickerText(LocalizationService localization) => $"{DialCode}  {DisplayName(localization)}";
 
-    /// <summary>Whether a national number of this many digits is a possible number here.</summary>
+    /// <summary>
+    /// The shape a national number takes here, matched against its digits alone — or null when this
+    /// country ships no pattern and length is the only rule.
+    /// </summary>
+    public System.Text.RegularExpressions.Regex? NationalPattern { get; }
+
+    /// <summary>Whether a national number of this many digits is a possible LENGTH here.</summary>
+    /// <remarks>
+    /// Length only. <see cref="AcceptsNationalNumber"/> is the actual test — this stays public
+    /// because the error message needs to know whether the length was the problem, which is what
+    /// decides between "a number here has 10 digits" and "that is not a number here".
+    /// </remarks>
     public bool AcceptsDigitCount(int digits) => NationalDigits.Contains(digits);
+
+    /// <summary>
+    /// Whether <paramref name="national"/> is a number this country actually issues.
+    /// </summary>
+    /// <remarks>
+    /// The pattern where there is one, the digit count where there is not. Counting digits alone
+    /// cannot see an area code beginning 0 or 1, a Chinese mobile that does not start with 1, or a
+    /// Japanese number missing its trunk 0 — each has exactly the right number of digits and is still
+    /// impossible. Every one of those was accepted before the patterns were added.
+    ///
+    /// Punctuation is stripped first, so the caller may pass "289-990-3357" or "289 990 3357" and the
+    /// pattern only ever describes digits. That keeps each pattern readable and stops six countries
+    /// from each having to re-state which separators people type.
+    /// </remarks>
+    public bool AcceptsNationalNumber(string? national)
+    {
+        var digits = new string((national ?? string.Empty).Where(char.IsDigit).ToArray());
+
+        if (NationalPattern is null)
+            return AcceptsDigitCount(digits.Length);
+
+        // Length is still checked, because a pattern and a declared length can disagree only by
+        // mistake and the length list is what the error message quotes.
+        return AcceptsDigitCount(digits.Length) && NationalPattern.IsMatch(digits);
+    }
 
     /// <summary>
     /// The lengths this country accepts, as prose for an error message — "10", or "10 or 11". Built

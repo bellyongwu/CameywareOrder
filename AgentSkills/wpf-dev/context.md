@@ -2421,6 +2421,44 @@ before the fix went in — which is the only way to know an assertion is load-be
 Related: `DisplayLabel` is right in PROSE ("Signed in as Mei Lin · Toronto Atelier") and wrong in a
 field labelled with a credential. Same value, opposite answers, decided by what the label promises.
 
+## Leniency belongs to the VALUE, not to the record (2026-07-31)
+
+Phone validation applied the strict per-country rule only to NEW orders: `_existing is null ?
+IsValid : IsValidLoose`. The reasoning was sound — an order taken last year must stay saveable
+without re-typing a number nobody can verify — but it was attached to the wrong thing. Keyed to the
+ORDER, it meant an existing one accepted any 7-to-15-digit number in any country, including one typed
+just now with the customer standing there.
+
+**Leniency for legacy data should be keyed to whether the VALUE was touched, not to whether the
+record is old.** `PhoneNumberField` remembers what `Load` put on screen (after any re-formatting, so
+the control's own tidying does not read as an edit) and reports `HasBeenEdited`; untouched keeps the
+old rule, anything retyped gets the current one. Both properties, instead of trading one away. Worth
+reaching for wherever a "grandfathered" rule exists.
+
+## Validate a phone number by PATTERN, not by digit count (2026-07-31)
+
+Counting digits per country accepted `0899903357` and `1899903357` for Canada (NANP area codes cannot
+begin 0 or 1), `23800138000` for China (mobiles start with 1), `012345678` for France (the national
+part drops the trunk zero) — nine such numbers in the first probe, every one the right length and
+none of them real.
+
+`nationalPattern` in `phone-countries.json` now decides, with the digit count kept as the fallback.
+Three things that made it safe:
+
+- **Match against the DIGITS only**, stripping punctuation first. Otherwise every pattern has to
+  re-state which separators people type, six times over.
+- **Anchor both ends.** An unanchored pattern matches a substring, so a long wrong number containing a
+  right one passes — a validating regex that validates nothing. Asserted per country.
+- **Assert a real number per country too.** A pattern refusing everything satisfies every negative
+  assertion while being useless.
+
+**And do not ship a pattern you cannot justify.** Japan writes `090-1234-5678` (11 digits, domestic
+trunk zero), `90-1234-5678` (10, international, no zero) and `03-1234-5678` (10, Tokyo, with zero).
+The first pattern written for it demanded a leading zero and broke the second — caught by an existing
+assertion. Length is the only rule true of all three, so Japan ships no pattern at all, which is the
+same call already made for its missing 10-digit FORMAT and for the same reason: the digits do not say
+which convention is in use. A fallback that says "no rule" is better than a rule that is wrong.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies

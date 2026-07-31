@@ -516,6 +516,7 @@
   <!-- {0} = the country picked for THIS number, {1} = the digit counts it accepts, both from
        phone-countries.json so editing that file cannot leave this sentence stale. -->
   <Text key="OrderEdit.Validate.PhoneDigits">{0}の電話番号は{1}桁です。</Text>
+  <Text key="OrderEdit.Validate.PhoneShape">{0}の電話番号として正しくありません。</Text>
   <!-- Plain country names for the dial-code picker. Not the TaxJurisdiction.* names: those describe a
        tax treatment and belong on a location picker. -->
   <Text key="Country.CA">カナダ</Text>
