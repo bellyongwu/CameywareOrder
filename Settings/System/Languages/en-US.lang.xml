@@ -733,4 +733,43 @@
   <Text key="Status.Completed">Completed</Text>
   <Text key="Status.Cancelled">Cancelled</Text>
   <Text key="Status.Returned">Returned</Text>
+
+  <!-- v6.0 settlement reporting. Service-line and payment-method names are NOT here:
+       they reuse ServiceType.* and PaymentMethod.*, which already name the same things.
+       Period.Month takes the year and the month NAME, so each language orders them its own way. -->
+  <Text key="Toolbar.Settlement">Settlement Report</Text>
+  <Text key="Settlement.Title">Settlement Report</Text>
+  <Text key="Settlement.Subtitle">What the shop took over a period, by service line and by payment method.</Text>
+  <Text key="Settlement.Empty">No orders were taken in this period.</Text>
+  <Text key="Settlement.Print">Print / Save PDF</Text>
+  <Text key="Settlement.GeneratedOn">Generated {0}</Text>
+  <Text key="Settlement.Period.Day">Day</Text>
+  <Text key="Settlement.Period.Month">Month</Text>
+  <Text key="Settlement.Period.Year">Year</Text>
+  <Text key="Settlement.Period.Custom">Custom</Text>
+  <Text key="Settlement.Period.From">From</Text>
+  <Text key="Settlement.Period.To">To</Text>
+  <Text key="Settlement.Period.Previous">Previous</Text>
+  <Text key="Settlement.Period.Next">Next</Text>
+  <Text key="Settlement.Section.Revenue">Revenue</Text>
+  <Text key="Settlement.Section.Services">By service</Text>
+  <Text key="Settlement.Section.Orders">Orders</Text>
+  <Text key="Settlement.Section.Payments">Payments</Text>
+  <Text key="Settlement.PreTax">Before tax</Text>
+  <Text key="Settlement.Tax">Tax</Text>
+  <Text key="Settlement.PostTax">After tax</Text>
+  <Text key="Settlement.Received">Received</Text>
+  <Text key="Settlement.Outstanding">Outstanding</Text>
+  <Text key="Settlement.RefundedValue">Cancelled &amp; returned</Text>
+  <Text key="Settlement.CardTotal">Card total</Text>
+  <Text key="Settlement.Orders.Unfinished">Not finished</Text>
+  <Text key="Settlement.Orders.Refunded">Cancelled / returned</Text>
+  <Text key="Settlement.Chart.ByService">Revenue by service</Text>
+  <Text key="Settlement.Chart.ByMethod">Money received by method</Text>
+  <Text key="Settlement.OrderCount">{0} order(s)</Text>
+  <Text key="Period.Month">{1} {0}</Text>
+  <Text key="Period.Year">{0}</Text>
+  <Text key="Period.Span">{0} – {1}</Text>
+  <Text key="Main.Summary.Title">This month</Text>
+  <Text key="Main.Summary.OpenReport">Open the settlement report</Text>
 </Language>

@@ -736,4 +736,43 @@
   <Text key="Status.Completed">已完成</Text>
   <Text key="Status.Cancelled">已取消</Text>
   <Text key="Status.Returned">已退货</Text>
+
+  <!-- v6.0 settlement reporting. Service-line and payment-method names are NOT here:
+       they reuse ServiceType.* and PaymentMethod.*, which already name the same things.
+       Period.Month takes the year and the month NAME, so each language orders them its own way. -->
+  <Text key="Toolbar.Settlement">结算报表</Text>
+  <Text key="Settlement.Title">结算报表</Text>
+  <Text key="Settlement.Subtitle">按服务类别和付款方式统计该期间的营业情况。</Text>
+  <Text key="Settlement.Empty">该期间没有订单。</Text>
+  <Text key="Settlement.Print">打印 / 保存 PDF</Text>
+  <Text key="Settlement.GeneratedOn">生成于 {0}</Text>
+  <Text key="Settlement.Period.Day">日</Text>
+  <Text key="Settlement.Period.Month">月</Text>
+  <Text key="Settlement.Period.Year">年</Text>
+  <Text key="Settlement.Period.Custom">自定义</Text>
+  <Text key="Settlement.Period.From">起</Text>
+  <Text key="Settlement.Period.To">至</Text>
+  <Text key="Settlement.Period.Previous">上一期</Text>
+  <Text key="Settlement.Period.Next">下一期</Text>
+  <Text key="Settlement.Section.Revenue">营业额</Text>
+  <Text key="Settlement.Section.Services">按服务分类</Text>
+  <Text key="Settlement.Section.Orders">订单</Text>
+  <Text key="Settlement.Section.Payments">收款</Text>
+  <Text key="Settlement.PreTax">税前</Text>
+  <Text key="Settlement.Tax">税额</Text>
+  <Text key="Settlement.PostTax">税后</Text>
+  <Text key="Settlement.Received">已收</Text>
+  <Text key="Settlement.Outstanding">未收</Text>
+  <Text key="Settlement.RefundedValue">取消及退货</Text>
+  <Text key="Settlement.CardTotal">刷卡合计</Text>
+  <Text key="Settlement.Orders.Unfinished">未完成</Text>
+  <Text key="Settlement.Orders.Refunded">取消／退货</Text>
+  <Text key="Settlement.Chart.ByService">各服务营业额</Text>
+  <Text key="Settlement.Chart.ByMethod">各付款方式收款</Text>
+  <Text key="Settlement.OrderCount">{0} 笔订单</Text>
+  <Text key="Period.Month">{0}年{1}</Text>
+  <Text key="Period.Year">{0}年</Text>
+  <Text key="Period.Span">{0} – {1}</Text>
+  <Text key="Main.Summary.Title">本月概览</Text>
+  <Text key="Main.Summary.OpenReport">打开结算报表</Text>
 </Language>

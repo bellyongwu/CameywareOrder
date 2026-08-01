@@ -732,4 +732,43 @@
   <Text key="Status.Completed">Completado</Text>
   <Text key="Status.Cancelled">Cancelado</Text>
   <Text key="Status.Returned">Devuelto</Text>
+
+  <!-- v6.0 settlement reporting. Service-line and payment-method names are NOT here:
+       they reuse ServiceType.* and PaymentMethod.*, which already name the same things.
+       Period.Month takes the year and the month NAME, so each language orders them its own way. -->
+  <Text key="Toolbar.Settlement">Informe de caja</Text>
+  <Text key="Settlement.Title">Informe de caja</Text>
+  <Text key="Settlement.Subtitle">Lo que ha ingresado la tienda en un periodo, por servicio y por método de pago.</Text>
+  <Text key="Settlement.Empty">No hay pedidos en este periodo.</Text>
+  <Text key="Settlement.Print">Imprimir / Guardar PDF</Text>
+  <Text key="Settlement.GeneratedOn">Generado el {0}</Text>
+  <Text key="Settlement.Period.Day">Día</Text>
+  <Text key="Settlement.Period.Month">Mes</Text>
+  <Text key="Settlement.Period.Year">Año</Text>
+  <Text key="Settlement.Period.Custom">Personalizado</Text>
+  <Text key="Settlement.Period.From">Desde</Text>
+  <Text key="Settlement.Period.To">Hasta</Text>
+  <Text key="Settlement.Period.Previous">Anterior</Text>
+  <Text key="Settlement.Period.Next">Siguiente</Text>
+  <Text key="Settlement.Section.Revenue">Facturación</Text>
+  <Text key="Settlement.Section.Services">Por servicio</Text>
+  <Text key="Settlement.Section.Orders">Pedidos</Text>
+  <Text key="Settlement.Section.Payments">Cobros</Text>
+  <Text key="Settlement.PreTax">Antes de impuestos</Text>
+  <Text key="Settlement.Tax">Impuestos</Text>
+  <Text key="Settlement.PostTax">Con impuestos</Text>
+  <Text key="Settlement.Received">Cobrado</Text>
+  <Text key="Settlement.Outstanding">Pendiente</Text>
+  <Text key="Settlement.RefundedValue">Cancelados y devueltos</Text>
+  <Text key="Settlement.CardTotal">Total tarjeta</Text>
+  <Text key="Settlement.Orders.Unfinished">Sin terminar</Text>
+  <Text key="Settlement.Orders.Refunded">Cancelados / devueltos</Text>
+  <Text key="Settlement.Chart.ByService">Facturación por servicio</Text>
+  <Text key="Settlement.Chart.ByMethod">Cobros por método de pago</Text>
+  <Text key="Settlement.OrderCount">{0} pedido(s)</Text>
+  <Text key="Period.Month">{1} de {0}</Text>
+  <Text key="Period.Year">{0}</Text>
+  <Text key="Period.Span">{0} – {1}</Text>
+  <Text key="Main.Summary.Title">Este mes</Text>
+  <Text key="Main.Summary.OpenReport">Abrir el informe de caja</Text>
 </Language>

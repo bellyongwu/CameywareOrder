@@ -262,6 +262,7 @@
                         <!-- Currency Setup used to sit here. The currency is now part of Shop Settings,
                              belongs — it is a property OF a shop, and two places to set one value is
                              one place too many. -->
+                        <MenuItem x:Name="SettlementMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Settlement], Mode=OneWay}" Click="OnSettlementClick"/>
                         <MenuItem x:Name="MeasurementTermsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.MeasurementTerms], Mode=OneWay}" Click="OnMeasurementTermsClick"/>
                         <!-- The shop's ready-made categories. Beside the measurement terms because
                              both answer "what does this branch sell and how is it described". -->
@@ -403,16 +404,61 @@
 
             <Grid Grid.Column="0" Margin="14,14,10,14">
                 <Grid.RowDefinitions>
+                    <!-- summary strip, records header, filters, list, paging -->
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
+                <!-- ── This month at a glance ───────────────────────────────────────────
+                     The four figures a shop owner opens the application to see, over the period they
+                     settle on. Every one of them comes from the SAME SettlementCalculator the report
+                     window uses, so the strip and the report cannot disagree — the whole point of the
+                     calculator being a pure function of the orders. Clicking it opens the full
+                     report. Hidden until it has something to say. -->
+                <Border x:Name="SummaryStrip" Grid.Row="0" Background="White" BorderBrush="#E5E7EB" BorderThickness="1"
+                        CornerRadius="10" Padding="16,12" Margin="0,0,0,10" Cursor="Hand"
+                        MouseLeftButtonUp="OnSummaryClick" Visibility="Collapsed">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="0,0,22,0">
+                            <TextBlock x:Name="SummaryTitleText" FontSize="13" FontWeight="Bold" Foreground="#4F46E5"/>
+                            <TextBlock x:Name="SummaryPeriodText" FontSize="11" Foreground="#9CA3AF" Margin="0,2,0,0"/>
+                        </StackPanel>
+
+                        <ItemsControl Grid.Column="1" x:Name="SummaryMetricList" VerticalAlignment="Center">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,26,0">
+                                        <TextBlock Text="{Binding Caption}" FontSize="10" Foreground="#9CA3AF"/>
+                                        <TextBlock Text="{Binding Value}" FontSize="16" FontWeight="Bold"
+                                                   Foreground="{Binding Accent}" Margin="0,2,0,0"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Grid.Column="2" x:Name="SummaryOpenText" VerticalAlignment="Center"
+                                   FontSize="11" Foreground="#4F46E5" TextDecorations="Underline"/>
+                    </Grid>
+                </Border>
+
                 <!-- ── Records: title, count, and the actions that act on a record ──────
                      These four used to live in the top toolbar, two panels away from the list they
                      operate on. They belong to the records, so they sit with the records. -->
-                <Border Grid.Row="0" Background="White" BorderBrush="#E5E7EB" BorderThickness="1"
+                <Border Grid.Row="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1"
                         CornerRadius="10" Padding="16,13" Margin="0,0,0,10">
                     <Grid>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Left">
@@ -456,7 +502,7 @@
                     </Grid>
                 </Border>
 
-                <Border Grid.Row="1" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="10" Padding="16,12" Margin="0,0,0,10">
+                <Border Grid.Row="2" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="10" Padding="16,12" Margin="0,0,0,10">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -511,7 +557,7 @@
                      gives Ctrl+A for nothing — ListBox enables its own SelectAll command binding in
                      this mode alone — and SelectAll reaches the loaded items, which IS the current
                      page, because paging happens in the view model. -->
-                <ListView Grid.Row="2"
+                <ListView Grid.Row="3"
                           x:Name="OrdersListView"
                           ItemsSource="{Binding Orders}"
                           SelectedItem="{Binding SelectedOrder}"
@@ -695,7 +741,7 @@
                     </ListView.View>
                 </ListView>
 
-                <DockPanel Grid.Row="3" Margin="0,10,0,0">
+                <DockPanel Grid.Row="4" Margin="0,10,0,0">
                     <!-- LiveSetting=Polite: a screen reader announces the new "page 2 of 5, 87 records"
                          when paging happens, which is the only feedback a non-sighted user gets that
                          the arrow key did anything. Raised from code-behind on each change. -->

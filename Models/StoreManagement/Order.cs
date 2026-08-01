@@ -408,6 +408,82 @@ public class Order
     public bool ClothingSectionCleared
         => IsSectionCleared(ClothingMoney, ClothingBalanceCleared);
 
+    /// <summary>
+    /// One service line's money, cleared flag, deposit method and final method — everything a
+    /// consumer needs about that line, chosen by the line rather than by naming three properties.
+    /// </summary>
+    /// <remarks>
+    /// These five accessors exist so a REPORT does not have to re-implement the per-section rules.
+    /// Before them, reading "what did alterations take" meant knowing that the money is
+    /// <c>AlterationMoney</c>, that "cleared" is <c>AlterationBalanceCleared</c> passed through a
+    /// private helper, and that the final method falls back to the deposit's — three facts a second
+    /// consumer would have had to copy, and copies of a money rule drift.
+    ///
+    /// Written as switches over <see cref="ServiceLine"/> rather than as a dictionary so a line added
+    /// later fails to compile here instead of silently returning nothing.
+    /// </remarks>
+    public SectionPayment MoneyFor(ServiceLine line) => line switch
+    {
+        ServiceLine.Alterations => AlterationMoney,
+        ServiceLine.CustomMade => CustomMadeMoney,
+        _ => ClothingMoney
+    };
+
+    /// <inheritdoc cref="MoneyFor"/>
+    public bool BalanceClearedFor(ServiceLine line) => line switch
+    {
+        ServiceLine.Alterations => AlterationBalanceCleared,
+        ServiceLine.CustomMade => CustomMadeBalanceCleared,
+        _ => ClothingBalanceCleared
+    };
+
+    /// <summary>What this line has actually taken: the received deposit plus a settled balance.</summary>
+    public decimal ReceivedFor(ServiceLine line)
+    {
+        var money = MoneyFor(line);
+        return money.ReceivedDownpayment + SectionReceivedFinal(money, BalanceClearedFor(line));
+    }
+
+    /// <summary>What this line is still owed.</summary>
+    public decimal OutstandingFor(ServiceLine line)
+        => SectionResidual(MoneyFor(line), BalanceClearedFor(line));
+
+    /// <summary>The method a stage of this line was settled by, as far as the order records one.</summary>
+    /// <remarks>
+    /// The final stage falls back to the deposit's method, which is the rule the editor already
+    /// applies when a shop settles a balance without saying how: the money went somewhere, and
+    /// attributing it to "unknown" would leave the cash and card figures short of the total.
+    /// </remarks>
+    public PaymentMethod? MethodFor(ServiceLine line, bool finalStage)
+    {
+        var deposit = line switch
+        {
+            ServiceLine.Alterations => AlterationDownpaymentMethod,
+            ServiceLine.CustomMade => CustomMadeDownpaymentMethod,
+            _ => ClothingDownpaymentMethod
+        };
+
+        if (!finalStage)
+            return deposit;
+
+        var final = line switch
+        {
+            ServiceLine.Alterations => AlterationFinalBalanceMethod,
+            ServiceLine.CustomMade => CustomMadeFinalBalanceMethod,
+            _ => ClothingFinalBalanceMethod
+        };
+
+        return final ?? deposit;
+    }
+
+    /// <summary>The stored split for one line, whether or not it is switched on.</summary>
+    public SectionPaymentSplit SplitFor(ServiceLine line) => PaymentSplits.For(line switch
+    {
+        ServiceLine.Alterations => OrderPaymentSplits.AlterationKey,
+        ServiceLine.CustomMade => OrderPaymentSplits.CustomMadeKey,
+        _ => OrderPaymentSplits.ClothingKey
+    });
+
     // Outstanding final balance across sections: the taxed final charge on every section
     // that is not yet cleared.
     [NotMapped]

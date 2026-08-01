@@ -17,6 +17,7 @@ using CameywareOrder.Models;
 using CameywareOrder.Services;
 using CameywareOrder.ViewModels;
 using CameywareOrder.Views;
+using Microsoft.EntityFrameworkCore;
 using System.Diagnostics.CodeAnalysis;
 
 namespace CameywareOrder;
@@ -52,7 +53,22 @@ public partial class MainWindow : Window
         _localization.LanguageChanged += OnLanguageChangedGlobally;
         ShopContext.Instance.ShopChanged += OnShopChanged;
         RefreshToolbarLabels();
+
+        // The strip reads the database directly rather than the loaded page, so it does not wait on
+        // the list — and it is refreshed again whenever the orders change, since a saved order moves
+        // the month's figures.
+        _viewModel.PropertyChanged += OnViewModelChanged;
+        RefreshSummaryStrip();
         _ = _viewModel.LoadOrdersAsync();
+    }
+
+    /// <summary>Keeps the month's figures in step with the records underneath them.</summary>
+    private void OnViewModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // FilteredCount moves on every reload, which is the cheapest honest signal that the order
+        // set has changed — a save, a delete, a copy, or a shop switch.
+        if (e.PropertyName == nameof(MainViewModel.FilteredCount))
+            RefreshSummaryStrip();
     }
 
     // Shipped is treated as a finalized/completed state (the order has already been
@@ -918,6 +934,74 @@ public partial class MainWindow : Window
         var window = new ReceiptBrandingWindow(_localization) { Owner = this };
         window.ShowDialog();
     }
+
+    /// <summary>Opens the settlement report, and refreshes the summary strip once it closes.</summary>
+    /// <remarks>
+    /// Reachable from the menu AND by clicking the strip, because the strip is a summary of exactly
+    /// what the report says — a reader who wants more of it should not have to find a menu.
+    /// </remarks>
+    private void OnSettlementClick(object sender, RoutedEventArgs e)
+    {
+        var window = new SettlementWindow(_scopeFactory, _localization) { Owner = this };
+        window.ShowDialog();
+        RefreshSummaryStrip();
+    }
+
+    private void OnSummaryClick(object sender, MouseButtonEventArgs e) => OnSettlementClick(sender, e);
+
+    /// <summary>
+    /// Fills the "this month" strip above the records list.
+    /// </summary>
+    /// <remarks>
+    /// Through the SAME <see cref="SettlementCalculator"/> the report window uses. It would have been
+    /// a handful of Sum() calls to total the loaded page here instead, and that is the version that
+    /// goes wrong: the page is twenty orders, the strip would silently describe them rather than the
+    /// month, and the two screens would disagree about the shop's takings.
+    ///
+    /// Hidden outright when the period earned nothing, rather than showing a row of zeroes that
+    /// reads as a fault on a shop's first day.
+    /// </remarks>
+    private void RefreshSummaryStrip()
+    {
+        var period = DateRange.CurrentMonth();
+
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var orders = db.Orders.AsNoTracking().ToList();
+
+        var report = SettlementCalculator.For(
+            orders, period, ShopContext.Instance.Current?.CurrencyType ?? CurrencyType.CAD);
+
+        if (report.IsEmpty)
+        {
+            SummaryStrip.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        string Money(decimal amount)
+            => CurrencySettingService.GetSymbol(report.Currency)
+               + amount.ToString("N2", CultureInfo.InvariantCulture);
+
+        SummaryStrip.Visibility = Visibility.Visible;
+        SummaryTitleText.Text = _localization["Main.Summary.Title"];
+        SummaryPeriodText.Text = period.Title(_localization, CultureInfo.CurrentUICulture);
+        SummaryOpenText.Text = _localization["Main.Summary.OpenReport"];
+
+        SummaryMetricList.ItemsSource = new[]
+        {
+            new SummaryMetric(_localization["Settlement.PostTax"], Money(report.PostTaxTotal), "#111827"),
+            new SummaryMetric(_localization["Settlement.Received"], Money(report.ReceivedTotal), "#15803D"),
+            new SummaryMetric(_localization["Settlement.Outstanding"], Money(report.OutstandingTotal), "#B45309"),
+            new SummaryMetric(_localization["Settlement.Tax"], Money(report.TaxTotal), "#6B7280"),
+            new SummaryMetric(
+                _localization["Settlement.Orders.Unfinished"],
+                report.Counts.Unfinished.ToString(CultureInfo.InvariantCulture),
+                "#4F46E5")
+        };
+    }
+
+    /// <summary>One figure on the summary strip. Bound from MainWindow.xaml.</summary>
+    internal sealed record SummaryMetric(string Caption, string Value, string Accent);
 
     private void OnMeasurementTermsClick(object sender, RoutedEventArgs e)
     {

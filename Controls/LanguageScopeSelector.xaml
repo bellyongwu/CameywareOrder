@@ -12,8 +12,12 @@
          previewed one. Preview Japanese with a control that has itself turned Japanese and there is
          no longer anything on screen you can read to get back. See the code-behind. -->
     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <!-- The label takes the HOST's foreground rather than a fixed grey. It is dropped onto panels
+             and onto dark gradient headers alike, and rendering the settlement report showed what a
+             hard-coded #6B7280 looks like on indigo: invisible. The default below keeps it quiet on a
+             pale panel, which is where it started. -->
         <TextBlock x:Name="PreviewLabel" VerticalAlignment="Center" Margin="0,0,8,0"
-                   Foreground="#6B7280"/>
+                   Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
         <ComboBox x:Name="LanguageBox" MinWidth="150" VerticalContentAlignment="Center"
                   DisplayMemberPath="Name" SelectedValuePath="Code"
                   SelectionChanged="OnLanguageChanged"/>

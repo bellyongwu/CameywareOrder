@@ -733,4 +733,43 @@
   <Text key="Status.Completed">完了</Text>
   <Text key="Status.Cancelled">キャンセル済み</Text>
   <Text key="Status.Returned">返品済み</Text>
+
+  <!-- v6.0 settlement reporting. Service-line and payment-method names are NOT here:
+       they reuse ServiceType.* and PaymentMethod.*, which already name the same things.
+       Period.Month takes the year and the month NAME, so each language orders them its own way. -->
+  <Text key="Toolbar.Settlement">精算レポート</Text>
+  <Text key="Settlement.Title">精算レポート</Text>
+  <Text key="Settlement.Subtitle">期間中の売上を、サービス別・支払方法別にまとめます。</Text>
+  <Text key="Settlement.Empty">この期間の注文はありません。</Text>
+  <Text key="Settlement.Print">印刷 / PDF 保存</Text>
+  <Text key="Settlement.GeneratedOn">作成日 {0}</Text>
+  <Text key="Settlement.Period.Day">日</Text>
+  <Text key="Settlement.Period.Month">月</Text>
+  <Text key="Settlement.Period.Year">年</Text>
+  <Text key="Settlement.Period.Custom">カスタム</Text>
+  <Text key="Settlement.Period.From">開始</Text>
+  <Text key="Settlement.Period.To">終了</Text>
+  <Text key="Settlement.Period.Previous">前へ</Text>
+  <Text key="Settlement.Period.Next">次へ</Text>
+  <Text key="Settlement.Section.Revenue">売上</Text>
+  <Text key="Settlement.Section.Services">サービス別</Text>
+  <Text key="Settlement.Section.Orders">注文</Text>
+  <Text key="Settlement.Section.Payments">入金</Text>
+  <Text key="Settlement.PreTax">税抜</Text>
+  <Text key="Settlement.Tax">税額</Text>
+  <Text key="Settlement.PostTax">税込</Text>
+  <Text key="Settlement.Received">入金済</Text>
+  <Text key="Settlement.Outstanding">未収</Text>
+  <Text key="Settlement.RefundedValue">キャンセル・返品</Text>
+  <Text key="Settlement.CardTotal">カード合計</Text>
+  <Text key="Settlement.Orders.Unfinished">未完了</Text>
+  <Text key="Settlement.Orders.Refunded">キャンセル／返品</Text>
+  <Text key="Settlement.Chart.ByService">サービス別売上</Text>
+  <Text key="Settlement.Chart.ByMethod">支払方法別入金</Text>
+  <Text key="Settlement.OrderCount">{0} 件</Text>
+  <Text key="Period.Month">{0}年{1}</Text>
+  <Text key="Period.Year">{0}年</Text>
+  <Text key="Period.Span">{0} – {1}</Text>
+  <Text key="Main.Summary.Title">今月の概要</Text>
+  <Text key="Main.Summary.OpenReport">精算レポートを開く</Text>
 </Language>

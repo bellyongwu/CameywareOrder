@@ -17,6 +17,48 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-01 15:10 — v6.0.0: settlement reporting  [DONE]
+- Ask: "Major release 6.0.0\n\n添加结算系统，可以根据日期过滤，总结年月日的报告，\n报告中需要总结\n所有服务税前总价，总结税是多少。\n哪些是卖衣服赚的钱，哪些是做衣服 还有哪些是修改的，这些钱税前税后都要算。\n\n还有多少order没有finish\n还有多少order被取消和退货等等。\n\n完毕最后要计算出，税后总价多少，还有现金收入多少，刷卡收入怎么样。服务税收了多少等等，越详细越好。\n\n根据相应的title 生成一个总结报表，同时也能够打印。\n\n一般月结是default， 也就是每个月一号到月尾。\n\n然后PDF文件也要尽量做的精美一点。\n\nCode-简洁，模块化 可移植。 做之前线分析哪些可以重复使用的code 和以后还能多次使用。"
+- Plan:
+  - [ ] REUSE ANALYSIS FIRST (explicitly asked for) — what already exists that this must not
+        re-implement, and what this should leave behind for the next report
+  - [ ] `DateRange` — a reusable period (Day / Month / Year / Custom), month-to-date by default
+  - [ ] `SettlementReport` + calculator — pure, UI-free, driven off the EXISTING per-section money
+  - [ ] Window with the period filter and the figures, printable
+  - [ ] QuestPDF document reusing the shop letterhead and branding
+  - [x] Keys × 5 languages; build; render; PDF smoke test
+  - [x] Mid-turn: "做完后在演示商品店可以进行测试，并且为了更加精准测试，请再添加50条记录用于测试"
+  - [x] Mid-turn: "功能报告越详细越好，可以使用柱状图和扇状图做出优美的ai界面 在首页做出总结。"
+- Notes: **Reuse analysis first, as asked.** Nothing about money is recomputed: every figure comes
+  from `Order.MoneyFor(line)` → `SectionPayment`, which already carries both pricing modes, the
+  per-portion tax rules and the deposit clamp. Five accessors were added to `Order`
+  (`MoneyFor` / `BalanceClearedFor` / `ReceivedFor` / `OutstandingFor` / `MethodFor` / `SplitFor`)
+  so a consumer selects by `ServiceLine` instead of copying the per-section rules — the report was
+  the second consumer and a copy would have been free to disagree with the receipt.
+  Also reused: `ShopLetterhead` + `BrandingRenderer` + the `MeasurementSheetDocument` shape for the
+  PDF, `LocalizationScope` + `LanguageScopeSelector` for the report's language, `ServiceType.*` /
+  `PaymentMethod.*` / `Status.*` string keys (no new names for things already named),
+  `CurrencySettingService.GetSymbol`.
+  **New and built to be reused again:** `Models/Global/DateRange` (Day/Month/Year/Custom, half-open,
+  local, `Shift`, `Title`) — a calendar period with nothing about money in it;
+  `SettlementReport` + `SettlementCalculator` (pure, no WPF/DB/singletons, so window + PDF + main
+  screen read one set of numbers); `Controls/Charts` — `BarChart`, `PieChart`, `ChartSlice`,
+  `ChartPalette`, `ChartText`, `ChartImage`, all `OnRender`-drawn, no dependencies, and the PDF
+  embeds the SAME element via `ChartImage` rather than redrawing it.
+  35 keys × 5 languages. Build 0/0 (three Sonar findings fixed on the way: S6562 DateTimeKind,
+  S3358 nested ternary, S2325 static).
+  **Demo** shop #5 now holds 100 orders — 50 more across all three service lines and every payment
+  method, spread over four months, plus a `redate` pass moving a third into the current month
+  (seeding history on the 1st leaves the default report empty) and the shop's tax set to 13% (the
+  shipped Canadian preset quotes 0, so every tax figure was zero). Database backed up first; counts
+  asserted as +50 orders, no new shop, nothing else moved.
+  Verified: settlement window rendered and read; PDF generated headlessly — 1 page, 4 embedded
+  images, 134 KB. *Found by rendering:* the preview picker's hard-coded grey label was invisible on
+  the report's dark header; it now takes the host's `Foreground`.
+  **NOT done, and said so:** no assertion harness for the calculator (the invariant "methods sum to
+  received" is checked by `demoseed2`'s reporter, not by a test), and Gate 1/Gate 2 remain
+  unavailable in this session.
+
 ### 2026-08-01 12:20 — v5.1.0: an expected pickup date the list is ordered and coloured by  [DONE]
 - Ask: "添加一个取单日期，expected pickup日期必须要是future dates。\n\n这个日期是用户预定的要取货的日期。\n\n所有订单 如果取货日期距离当前日期还有2周，必须要把record的background color改为orange， 如果日期超过，就改为red。提醒用户订单是否快超时了。\n\n订单的排序不再按照last modified time去排序，而是按照取货日期。 而且取货日期是必填。不能留空 需要有validation， default是空，需要提醒用户。然后订单日期和预计取货日期必须放一排。"
 - Plan:

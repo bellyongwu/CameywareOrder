@@ -734,4 +734,43 @@
   <Text key="Status.Completed">Terminée</Text>
   <Text key="Status.Cancelled">Annulée</Text>
   <Text key="Status.Returned">Retournée</Text>
+
+  <!-- v6.0 settlement reporting. Service-line and payment-method names are NOT here:
+       they reuse ServiceType.* and PaymentMethod.*, which already name the same things.
+       Period.Month takes the year and the month NAME, so each language orders them its own way. -->
+  <Text key="Toolbar.Settlement">Rapport de caisse</Text>
+  <Text key="Settlement.Title">Rapport de caisse</Text>
+  <Text key="Settlement.Subtitle">Ce que la boutique a encaissé sur une période, par service et par mode de paiement.</Text>
+  <Text key="Settlement.Empty">Aucune commande sur cette période.</Text>
+  <Text key="Settlement.Print">Imprimer / Enregistrer en PDF</Text>
+  <Text key="Settlement.GeneratedOn">Généré le {0}</Text>
+  <Text key="Settlement.Period.Day">Jour</Text>
+  <Text key="Settlement.Period.Month">Mois</Text>
+  <Text key="Settlement.Period.Year">Année</Text>
+  <Text key="Settlement.Period.Custom">Personnalisé</Text>
+  <Text key="Settlement.Period.From">Du</Text>
+  <Text key="Settlement.Period.To">Au</Text>
+  <Text key="Settlement.Period.Previous">Précédent</Text>
+  <Text key="Settlement.Period.Next">Suivant</Text>
+  <Text key="Settlement.Section.Revenue">Chiffre d’affaires</Text>
+  <Text key="Settlement.Section.Services">Par service</Text>
+  <Text key="Settlement.Section.Orders">Commandes</Text>
+  <Text key="Settlement.Section.Payments">Encaissements</Text>
+  <Text key="Settlement.PreTax">Hors taxe</Text>
+  <Text key="Settlement.Tax">Taxe</Text>
+  <Text key="Settlement.PostTax">Toutes taxes comprises</Text>
+  <Text key="Settlement.Received">Encaissé</Text>
+  <Text key="Settlement.Outstanding">Restant dû</Text>
+  <Text key="Settlement.RefundedValue">Annulées et retournées</Text>
+  <Text key="Settlement.CardTotal">Total carte</Text>
+  <Text key="Settlement.Orders.Unfinished">Non terminées</Text>
+  <Text key="Settlement.Orders.Refunded">Annulées / retournées</Text>
+  <Text key="Settlement.Chart.ByService">Chiffre d’affaires par service</Text>
+  <Text key="Settlement.Chart.ByMethod">Encaissements par mode de paiement</Text>
+  <Text key="Settlement.OrderCount">{0} commande(s)</Text>
+  <Text key="Period.Month">{1} {0}</Text>
+  <Text key="Period.Year">{0}</Text>
+  <Text key="Period.Span">{0} – {1}</Text>
+  <Text key="Main.Summary.Title">Ce mois-ci</Text>
+  <Text key="Main.Summary.OpenReport">Ouvrir le rapport de caisse</Text>
 </Language>

@@ -858,6 +858,32 @@ move.
     - Every operation has an overload taking the data root, so the migration is testable against a
       throwaway folder rather than only against the machine it must not break.
 
+## Settlement reporting (v6.0.0)
+
+Four pieces, each usable without the others — the analysis the feature was asked to start with:
+
+- **`Models/Global/DateRange`** — a calendar period: `Day` / `Month` / `Year` / `Custom`, half-open
+  and in LOCAL days, with `Shift` (previous/next by its own kind) and `Title`. Knows nothing about
+  money or orders; the next filter or export should take this rather than a start/end pair.
+- **`Models/StoreManagement/SettlementReport`** — `ServiceLine`, `ServiceLineTotals`, `MethodTotals`,
+  `OrderStateCounts` and the report itself. Plain data: no WPF, no keys, no database. Refunded orders
+  are COUNTED but earn nothing, and their value is reported on `RefundedValue` rather than dropped.
+- **`Services/StoreManagement/SettlementCalculator`** — orders + period → report. Pure, and it
+  RE-COMPUTES NOTHING: every figure comes from `Order.MoneyFor(line)` → `SectionPayment`. A payment
+  split apportions the stage's known received total by line share, so cash + card + transfer always
+  equals the money received.
+- **`Services/StoreManagement/SettlementDocument`** + `SettlementContent` — the PDF, shaped exactly
+  like `MeasurementSheetDocument`: already-localized plain data in, headless layout out, the shop's
+  own letterhead and branded header/footer, and the on-screen charts embedded as PNGs.
+
+`Views/StoreManagement/SettlementWindow` orchestrates and computes nothing; `MainWindow`'s summary
+strip reads the SAME calculator over the current month, so the two cannot disagree.
+
+- **`Controls/Charts/`** — `BarChart` and `PieChart` (a doughnut with a legend and a total in the
+  hole), `ChartSlice`, `ChartPalette`, `ChartText` and `ChartImage`. Drawn in `OnRender`: no
+  templates, no styles to merge, no third-party dependency — and `ChartImage` renders the very same
+  element into the PDF, so the printed chart cannot drift from the screen's. Reusable by any panel.
+
 ## Key cross-cutting patterns
 
 - All UI text flows through `Languages.xml` / `LocalizationService`.

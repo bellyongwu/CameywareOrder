@@ -24,6 +24,31 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A second consumer of a money rule gets an ACCESSOR, never a copy (2026-08-01).** The settlement
+  report needed "what did alterations take" — which meant knowing the money is `AlterationMoney`,
+  that cleared is `AlterationBalanceCleared` passed through a private helper, and that the final
+  method falls back to the deposit's. Three facts, and a report that copied them would have been free
+  to disagree with the receipt. `Order.MoneyFor/ReceivedFor/OutstandingFor/MethodFor/SplitFor` select
+  by `ServiceLine` instead, written as switches so a line added later fails to COMPILE rather than
+  silently returning nothing.
+- **A payment split says how to DIVIDE a stage, not what the stage is worth (2026-08-01).** Split
+  lines are pre-tax amounts, so summing them to attribute money by method leaves the figures short of
+  what was received. Apportion the stage's known received total across its lines by share, and give
+  the last line the rounding remainder — which keeps cash + card + transfer exactly equal to the
+  money received. That equality is the invariant a settlement sheet lives or dies on.
+- **A report's period filter is a MODEL, not two DateTime fields on a window (2026-08-01).**
+  `DateRange` is half-open (`Start` inclusive, `EndExclusive` not), which gets month boundaries right
+  without anybody writing `AddMonths(1).AddDays(-1)` and meeting February; local, because "August" is
+  the shop's August and `Contains` converts the stored UTC instant; and it knows its own KIND so
+  previous/next can step by a month, a year or a custom span's own length.
+- **Seeding demo history on the 1st of a month leaves a monthly report empty (2026-08-01).** Obvious
+  in hindsight and not before: the seeder spread four months of orders backwards, the default period
+  is month-to-date, and month-to-date was one day long. Demo data has to be seeded relative to the
+  period the feature DEFAULTS to. Two related traps in the same pass: the shipped Canadian tax preset
+  quotes 0% (sales tax is added at settlement there), so every tax figure was zero until the demo
+  shop was given a real rate; and `CustomMadeServiceRecord.Subtotal` is COMPUTED from `Price`, so
+  hand-built JSON carrying "Subtotal" deserialises to a record worth nothing — serialise the real
+  type.
 - **A warning colour has to be drawn ABOVE the selection highlight (2026-08-01).** The pickup tint
   went in under it, which looked right in the markup and was wrong on screen: the list opens with the
   FIRST row selected, the ordering puts the most overdue order first, and the opaque selection colour

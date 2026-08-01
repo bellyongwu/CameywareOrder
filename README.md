@@ -11,6 +11,35 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v6.0.0 — 2026-08-01
+
+**Settlement reporting.** The shop can now close off a period and see exactly what it took.
+
+- **Local Configuration → Settlement Report.** It opens on **this month** — the 1st to the last —
+  which is the period most shops settle on. Day, Year and a custom range are one click away, and
+  Previous / Next step a whole period at a time.
+- **Every figure, before and after tax.** Total charged before tax, the tax on it, the total with
+  tax, what has actually been received, and what is still owed.
+- **Split by what earned it** — alterations, made-to-measure, and ready-made stock — each with its
+  own before-tax, tax, after-tax, received and outstanding figures, and a total line under them.
+- **Split by how it was paid** — cash, card (debit, credit and older undifferentiated card records
+  together), and bank transfer. The methods always add up to the money received; that is asserted,
+  not hoped for.
+- **Order counts**: how many were taken, how many are **not finished**, how many were completed,
+  shipped, **cancelled** and **returned**. Cancelled and returned orders are counted but earn
+  nothing — their value is reported on its own line rather than quietly folded into the takings.
+- **A doughnut chart and a bar chart** show the same figures at a glance: revenue by service, money
+  received by method.
+- **Print or save as PDF**, on your shop's own letterhead, with your header, footer and logo — the
+  same branding the receipt and the measurement sheet use. The charts go into the PDF exactly as
+  they appear on screen.
+- **The report can be read in another language** without switching the application, the same
+  Preview-in picker as Measurement Terms. The PDF comes out in whichever language you are reading.
+
+**A summary strip on the main screen.** Above the order list: this month's after-tax total, what has
+been received, what is outstanding, the tax collected, and how many orders are unfinished. Click it
+to open the full report. It reads the same figures the report does, so the two cannot disagree.
+
 ### v5.1.0 — 2026-08-01
 
 **Every order now records the day the customer is coming back for it, and the list is built around

@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using CameywareOrder.Localization;
 using CameywareOrder.Services;
 
@@ -60,6 +61,10 @@ public partial class LanguageScopeSelector : UserControl
     public LanguageScopeSelector()
     {
         InitializeComponent();
+
+        // The quiet grey it used to hard-code, now only a DEFAULT: a host on a dark header sets its
+        // own and the label follows. See the binding in the XAML.
+        Foreground = new SolidColorBrush(Color.FromRgb(0x6B, 0x72, 0x80));
         Populate();
 
         _localization.LanguageChanged += OnApplicationLanguageChanged;

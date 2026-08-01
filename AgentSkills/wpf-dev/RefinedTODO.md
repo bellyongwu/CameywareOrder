@@ -77,6 +77,40 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-08-01)
 
+### v6.0.0 — settlement reporting  [DONE]
+
+Local Configuration → Settlement Report. Opens on **this month**; Day / Year / custom range and
+previous-next stepping. Shows before-tax, tax, after-tax, received and outstanding — split by service
+line (alterations / made-to-measure / ready-made) and by payment method (cash / card / transfer) —
+plus order counts including unfinished, cancelled and returned. A doughnut and a bar chart, a PDF on
+the shop's own letterhead, and a summary strip on the main screen.
+
+**The reuse analysis was the task's first requirement, and it shaped everything.** Nothing about
+money is recomputed: every figure comes from `Order.MoneyFor(line)` → `SectionPayment`, which already
+holds both pricing modes, the per-portion tax rules and the deposit clamp. `Order` gained
+`MoneyFor` / `ReceivedFor` / `OutstandingFor` / `MethodFor` / `SplitFor` so a consumer selects by
+`ServiceLine` rather than copying per-section rules — the report was the SECOND consumer, and a copy
+would have been free to disagree with the receipt the customer is holding.
+
+Left behind for the next feature: **`DateRange`** (a calendar period with nothing about money in it),
+**`SettlementCalculator`** (pure — window, PDF and main screen read one set of numbers), and
+**`Controls/Charts`** (`BarChart`, `PieChart`, palette, and `ChartImage`, which puts the SAME element
+into the PDF rather than redrawing it).
+
+Two rules worth keeping:
+
+- **The stage total is authoritative; a payment split only says how to divide it.** Split lines are
+  pre-tax, so summing them leaves the method figures short of the money received. The known stage
+  total is apportioned by share instead, which keeps cash + card + transfer = received.
+- **Refunded orders are counted but earn nothing**, and their value is reported on its own line
+  rather than dropped — hiding it would be as wrong as counting it.
+
+*Found by rendering:* the preview picker's hard-coded grey label was invisible on a dark header. It
+now takes the host's `Foreground`.
+
+**Not done:** no assertion harness for the calculator. The one invariant that matters (methods sum to
+received) is checked by the demo seeder's reporter, not by a test. That is the first thing to add.
+
 ### v5.1.0 — the expected pickup date, and a list built around it  [DONE]
 
 Every order now records the day the customer is coming back. Required, blank by default, and refused
