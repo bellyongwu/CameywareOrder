@@ -458,6 +458,7 @@
   <Text key="Order.Fields.PromotionalPrice">Precio promocional</Text>
   <Text key="Order.Fields.ItemCategory">Categoría del artículo</Text>
   <Text key="Order.Fields.OrderDate">Fecha del pedido</Text>
+  <Text key="Order.Fields.ExpectedPickupDate">Recogida prevista</Text>
   <Text key="Order.Fields.LastModifiedDate">Última modificación</Text>
   <Text key="Order.Fields.LastModifiedBy">Atendido por</Text>
   <Text key="Order.Fields.CustomMadeFlag">Servicio a medida</Text>
@@ -501,8 +502,10 @@
   <Text key="OrderEdit.Cancel">Cancelar</Text>
   <Text key="OrderEdit.Save">Guardar</Text>
   <Text key="OrderEdit.OrderDateHint">El día en que se tomó el pedido. Déjalo en hoy salvo que estés registrando un pedido de una jornada anterior.</Text>
+  <Text key="OrderEdit.PickupDateHint">El día acordado con el cliente para recoger el pedido. Obligatorio, y tiene que ser un día futuro.</Text>
   <Text key="OrderEdit.Validate.OrderNumber">Escribe el número de pedido.</Text>
   <Text key="OrderEdit.Validate.OrderDateFuture">La fecha del pedido no puede ser posterior a hoy.</Text>
+  <Text key="OrderEdit.Validate.PickupDateRequired">Elige la fecha de recogida prevista.</Text>   <Text key="OrderEdit.Validate.PickupDateFuture">La fecha de recogida prevista debe ser posterior a hoy.</Text>
   <Text key="OrderEdit.Validate.CustomerName">Escribe el nombre del cliente.</Text>
   <Text key="OrderEdit.Validate.PhoneNumber">El número de teléfono no puede estar vacío.</Text>
   <Text key="OrderEdit.Validate.EmailRequired">Escribe una dirección de correo electrónico cuando haya un método de pago seleccionado.</Text>

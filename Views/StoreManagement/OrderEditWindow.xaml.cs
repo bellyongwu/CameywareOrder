@@ -426,6 +426,7 @@ public partial class OrderEditWindow : Window
         ClearAllBalancesCheck.IsEnabled = false;
 
         OrderDatePicker.IsEnabled = false;
+        PickupDatePicker.IsEnabled = false;
         CustomerNameBox.IsReadOnly = true;
         PhoneField.IsReadOnlyField = true;
         EmailBox.IsReadOnly = true;
@@ -593,6 +594,32 @@ public partial class OrderEditWindow : Window
 
         OrderDatePicker.SelectedDate = recorded;
         OrderDatePicker.BlackoutDates.Add(new CalendarDateRange(lastAllowed.AddDays(1), DateTime.MaxValue));
+
+        InitializePickupDatePicker();
+    }
+
+    /// <summary>
+    /// Seeds the pickup picker and blacks out everything that is not in the future.
+    /// </summary>
+    /// <remarks>
+    /// The mirror image of the order date, and empty where that one is seeded: a pickup date is
+    /// something the shop AGREED with a customer, so there is no sensible default. It stays blank
+    /// until somebody fills it in, and the save refuses to go without it.
+    ///
+    /// The boundary is the EARLIER of tomorrow and whatever the order already carries. Orders taken
+    /// before this field existed have none, and one whose promised day has since passed must still
+    /// open, and still save, without being forced to a new date the customer never agreed to.
+    /// </remarks>
+    private void InitializePickupDatePicker()
+    {
+        var recorded = _existing?.ExpectedPickupDateLocal?.Date;
+        var firstAllowed = recorded is { } day && day < DateTime.Today.AddDays(1)
+            ? day
+            : DateTime.Today.AddDays(1);
+
+        PickupDatePicker.SelectedDate = recorded;
+        PickupDatePicker.BlackoutDates.Add(
+            new CalendarDateRange(DateTime.MinValue, firstAllowed.AddDays(-1)));
     }
 
     /// <summary>The order date as it stands before this form is saved — <c>UtcNow</c> for a new one.</summary>
@@ -1573,6 +1600,9 @@ public partial class OrderEditWindow : Window
         if (!IsOrderDateAllowed())
             return Fail("OrderEdit.Validate.OrderDateFuture", OrderDateErrorText, OrderDatePicker);
 
+        if (!IsPickupDateAllowed())
+            return Fail("OrderEdit.Validate.PickupDateFuture", PickupDateErrorText, PickupDatePicker);
+
         RefreshComputedTotals();
 
         if (HasPaymentMethodRequiringEmail() && string.IsNullOrWhiteSpace(EmailBox.Text))
@@ -1612,6 +1642,15 @@ public partial class OrderEditWindow : Window
     {
         yield return RequiredTextField.For(
             OrderNumberBox, OrderNumberErrorText, _localization["OrderEdit.Validate.OrderNumber"]);
+
+        // Not a TextBox, so it takes the two-closure form the phone field introduced. It belongs in
+        // this pass rather than in a check of its own precisely so a form missing both a customer
+        // name and a pickup date reports both at once.
+        yield return new RequiredTextField(
+            () => PickupDatePicker.SelectedDate is null,
+            () => PickupDatePicker.Focus(),
+            PickupDateErrorText,
+            _localization["OrderEdit.Validate.PickupDateRequired"]);
 
         foreach (var field in CustomerContactFields())
             yield return field;
@@ -1775,10 +1814,32 @@ public partial class OrderEditWindow : Window
             || picked.Date == RecordedOrderDate().ToLocalTime().Date;
     }
 
+    /// <summary>
+    /// Whether the pickup day is one the shop can still promise — strictly after today.
+    /// </summary>
+    /// <remarks>
+    /// Blank passes HERE: "you have not filled this in" is a different message from "that day has
+    /// gone", and it is <see cref="RequiredTextFields"/> that says the first one. Reporting both from
+    /// one check would name whichever came first and leave the other to the next attempt.
+    ///
+    /// A date already ON the order passes whatever it says, for the same reason the order date's
+    /// check exempts one: an order whose promised day has passed is exactly the order somebody needs
+    /// to open, and refusing to save it would make the overdue ones the ones that cannot be worked.
+    /// </remarks>
+    private bool IsPickupDateAllowed()
+    {
+        if (PickupDatePicker.SelectedDate is not { } picked)
+            return true;
+
+        return picked.Date > DateTime.Today
+            || picked.Date == _existing?.ExpectedPickupDateLocal?.Date;
+    }
+
     private IEnumerable<TextBlock> ValidationErrorBlocks()
     {
         yield return OrderNumberErrorText;
         yield return OrderDateErrorText;
+        yield return PickupDateErrorText;
         yield return CustomerNameErrorText;
         yield return PhoneErrorText;
         yield return EmailErrorText;
@@ -1912,6 +1973,11 @@ public partial class OrderEditWindow : Window
         // a new order is seeded with UtcNow just above, an existing one holds what was stored. Either
         // way an untouched picker returns it unchanged — see Order.ResolveOrderDate.
         order.OrderDate = Order.ResolveOrderDate(OrderDatePicker.SelectedDate, order.OrderDate);
+        // Straight through, unlike the order date: this one has no live default to preserve, so the
+        // day on the picker IS the answer. Validation has already refused a blank one.
+        order.ExpectedPickupDate = PickupDatePicker.SelectedDate is { } pickup
+            ? Order.ToStoredDate(pickup)
+            : null;
         order.CustomerName = CustomerNameBox.Text.Trim();
         // Stored with its dial code in front, in the same column it always used: "+1 905-401-6667".
         order.PhoneNumber = PhoneField.FullNumber;
@@ -2366,6 +2432,7 @@ public partial class OrderEditWindow : Window
         // Not a TextBox either: picking a day IS the correction, so the message clears on the
         // selection rather than on a keystroke.
         OrderDatePicker.SelectedDateChanged += (_, _) => SetFieldError(OrderDateErrorText, null);
+        PickupDatePicker.SelectedDateChanged += (_, _) => SetFieldError(PickupDateErrorText, null);
 
         // The phone is not a TextBox any more, and its message must clear on a change to EITHER half —
         // switching the country is as much a correction as retyping the digits.

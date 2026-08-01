@@ -1,6 +1,33 @@
 <Project>
 
   <!--
+    THE version of the application, in one place.
+
+    Until this existed the release number lived only in README.md and in commit subjects, so a built
+    exe could not say what it was: the file's Details tab read 1.0.0 for every release ever shipped,
+    and a copy on a shop's machine could not be identified without asking whoever installed it.
+
+    Three properties, because .NET treats them differently and only the last one is allowed to carry
+    a suffix like "-hotfix":
+      Version               the release number, and what NuGet-style tooling reads.
+      AssemblyVersion       what the RUNTIME binds against. Deliberately pinned to the major with
+                            zeros after it (5.0.0.0), so a patch cannot break a binding reference.
+      FileVersion           what Windows shows in the file's Details tab.
+      InformationalVersion  free text, so this is where the release's own name goes.
+
+    Bump Version and FileVersion together for every release; AssemblyVersion only on a major.
+    README.md's "Latest release" heading and this number must always name the same release.
+  -->
+  <PropertyGroup>
+    <Version>5.1.0</Version>
+    <AssemblyVersion>5.0.0.0</AssemblyVersion>
+    <FileVersion>5.1.0.0</FileVersion>
+    <InformationalVersion>5.1.0</InformationalVersion>
+    <Company>Cameyware INC</Company>
+    <Product>Cameyware Order</Product>
+  </PropertyGroup>
+
+  <!--
     Sonar runs on every build.
 
     The project's rule is zero Sonar issues on changed files, and it used to be enforced by

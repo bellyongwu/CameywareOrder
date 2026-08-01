@@ -462,6 +462,7 @@
   <Text key="Order.Fields.PromotionalPrice">优惠价</Text>
   <Text key="Order.Fields.ItemCategory">品类</Text>
   <Text key="Order.Fields.OrderDate">订单日期</Text>
+  <Text key="Order.Fields.ExpectedPickupDate">预计取货日期</Text>
   <Text key="Order.Fields.LastModifiedDate">最后修改时间</Text>
   <Text key="Order.Fields.LastModifiedBy">经手人</Text>
   <Text key="Order.Fields.CustomMadeFlag">定制服务</Text>
@@ -505,8 +506,10 @@
   <Text key="OrderEdit.Cancel">取消</Text>
   <Text key="OrderEdit.Save">保存</Text>
   <Text key="OrderEdit.OrderDateHint">接单的日期。补录以往订单时才需要修改，否则保持当天即可。</Text>
+  <Text key="OrderEdit.PickupDateHint">与客户约定的取货日期。必填，且必须是今天以后的日期。</Text>
   <Text key="OrderEdit.Validate.OrderNumber">请输入订单编号</Text>
   <Text key="OrderEdit.Validate.OrderDateFuture">订单日期不能晚于今天</Text>
+  <Text key="OrderEdit.Validate.PickupDateRequired">请选择预计取货日期</Text>   <Text key="OrderEdit.Validate.PickupDateFuture">预计取货日期必须晚于今天</Text>
   <Text key="OrderEdit.Validate.CustomerName">请输入客户名称</Text>
   <Text key="OrderEdit.Validate.PhoneNumber">电话号码不能为空</Text>
   <Text key="OrderEdit.Validate.EmailRequired">选择付款方式时，请填写电子邮箱地址</Text>

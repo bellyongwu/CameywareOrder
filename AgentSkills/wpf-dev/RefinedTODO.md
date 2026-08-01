@@ -77,6 +77,39 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-08-01)
 
+### v5.1.0 — the expected pickup date, and a list built around it  [DONE]
+
+Every order now records the day the customer is coming back. Required, blank by default, and refused
+unless it is in the future. It sits on the same row as the order date.
+
+The list is a **work queue** now: ordered by pickup day soonest-first, rows tinted amber inside two
+weeks and red once the day has gone. `Order.PickupDue` is derived from `DateTime.Today`, so nothing
+persists "overdue" and nothing can go stale.
+
+Two things rendering caught that every assertion had missed:
+
+- The **selection highlight painted over the tint**, on the exact row the ordering puts first — the
+  most overdue one. The tint now draws above the highlight and stays translucent.
+- **Finished orders sat at the top**, because a job collected last month carries last month's pickup
+  date. `IsPickedUp || IsRefunded` is now the first sort key. A header click still sorts by the date
+  alone.
+
+Orders predating the field have no date and none was invented: they sink below the dated ones and are
+never coloured.
+
+### v5.0.1 — the build knows its own version  [DONE]
+
+`Directory.Build.props` carries Version / AssemblyVersion / FileVersion / InformationalVersion.
+Before it, a shipped exe reported 1.0.0 for every release ever made. `AssemblyVersion` moves only on
+a major; `InformationalVersion` is the only one allowed a suffix.
+
+### Demo data  [DONE]
+
+`scratchpad/demoseed` builds shop **#5 "Demo — Pickup Dates"** with 50 orders spread across all three
+colour states plus finished ones. It only ever ADDS — verified as exactly +1 shop and +50 orders with
+nothing else moved, and the real database was backed up to the scratchpad first. Re-runnable: the RNG
+is seeded, so the same demo comes out twice.
+
 ### v5.0.0 — a panel can be read in a language the application is not in  [DONE]
 
 Checking a translation meant switching the whole app into a language, finding the screen, reading it,

@@ -281,10 +281,30 @@ public class MainViewModel : INotifyPropertyChanged
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+            // Ordered by the day the customer is coming back, soonest first — the list is a work
+            // queue now, not a history. Ascending, because the thing a shop needs at the top is what
+            // is nearly due, and the row's colour only means something when the urgent end is the
+            // end you are looking at.
+            //
+            // Orders with no pickup date sink to the bottom rather than to the top: every order
+            // saved before the field existed has none, and sorting nulls first would bury today's
+            // work under years of history. Sorted client-side on purpose — SQLite orders a NULL
+            // first whatever the provider translates, and the second key needs the same list.
             var orders = await db.Orders
                 .Include(o => o.Items)
-                .OrderByDescending(o => o.LastModifiedDate ?? o.OrderDate)
                 .ToListAsync();
+
+            // FINISHED orders sink, whatever day they were promised for. Without this line the top of
+            // the list fills with work that is already done: a job collected last month has last
+            // month's pickup date, which sorts it ahead of everything due this week. Rendering the
+            // demo data showed exactly that — eight completed and cancelled orders above every
+            // overdue one. The list is a queue, so the top of it has to be what is still owed.
+            orders = orders
+                .OrderBy(o => o.IsPickedUp || o.IsRefunded)
+                .ThenBy(o => o.ExpectedPickupDate is null)
+                .ThenBy(o => o.ExpectedPickupDate)
+                .ThenByDescending(o => o.LastModifiedDate ?? o.OrderDate)
+                .ToList();
 
             _allOrders = orders;
             CurrentPage = 1;
@@ -355,6 +375,10 @@ public class MainViewModel : INotifyPropertyChanged
         nameof(Order.CustomerName) => order => order.CustomerName ?? string.Empty,
         nameof(Order.PhoneNumber) => order => order.PhoneNumber ?? string.Empty,
         nameof(Order.OrderDate) => order => order.OrderDate,
+        // DateTime.MaxValue for an order with no pickup date, so clicking this column sends them to
+        // the bottom ascending — the same place the default order puts them. Comparer<object> cannot
+        // be handed a null.
+        nameof(Order.ExpectedPickupDate) => order => order.ExpectedPickupDate ?? DateTime.MaxValue,
         nameof(Order.Status) => order => (int)order.Status,
         nameof(Order.TotalAmount) => order => order.TotalAmount,
         "BalanceStatus" => order => order.IsBalanceCleared,

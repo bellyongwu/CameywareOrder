@@ -17,6 +17,40 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-01 12:20 — v5.1.0: an expected pickup date the list is ordered and coloured by  [DONE]
+- Ask: "添加一个取单日期，expected pickup日期必须要是future dates。\n\n这个日期是用户预定的要取货的日期。\n\n所有订单 如果取货日期距离当前日期还有2周，必须要把record的background color改为orange， 如果日期超过，就改为red。提醒用户订单是否快超时了。\n\n订单的排序不再按照last modified time去排序，而是按照取货日期。 而且取货日期是必填。不能留空 需要有validation， default是空，需要提醒用户。然后订单日期和预计取货日期必须放一排。"
+- Plan:
+  - [ ] `Order.ExpectedPickupDate` (nullable — every existing order has none) + a runtime column
+        guard, `ExpectedPickupDateLocal`, and the due-state the colour reads
+  - [ ] Editor: a second picker on the SAME row as the order date, blank by default, required, and
+        refusing anything that is not in the future
+  - [ ] List: ordered by pickup date instead of last-modified, a column showing it, and the row
+        background orange within two weeks / red once past
+  - [x] Keys × 5 languages; build; render; harness
+  - [x] Mid-turn: "新建一个店铺，插入50条订单，我用来做demo" + "新建的demo数据要新建一个新的店铺。不要在现有的店铺操作"
+  - [x] Mid-turn: "Upate <version> keywords for the repo, and mark the version 5.0.1 as a hotfix"
+- Notes: **Model** `Order.ExpectedPickupDate` (nullable) + `ExpectedPickupDateLocal` + `PickupDue`
+  → new `PickupDueKind` (None/Soon/Overdue, `PickupSoonDays` = 14; None for a FINISHED order too) +
+  shared `ToStoredDate` (both dates now convert through it). Runtime column guard added.
+  **Form** `PickupDatePicker` on the SAME grid row as the order date (order date moved to col 0/1,
+  pickup to col 2/3); empty by default, blacked out up to and including today, `IsPickedUpDateAllowed`
+  → `IsPickupDateAllowed` refuses a past day at save, and the blank case goes through
+  `RequiredTextFields` so two missing fields still report as two. Read-only orders lock it.
+  **List** default order is the pickup QUEUE (finished sink, then no-date, then by date asc);
+  `ExpectedPickupDate` added to `GetSortSelector`; new column + detail-panel line; new
+  `PickupDueBrushConverter` drives a `DueTint` layer in the row template.
+  **Version** `Directory.Build.props` now carries Version/AssemblyVersion/FileVersion/
+  InformationalVersion + Company/Product; shipped as 5.0.1-hotfix for the version keywords, then
+  5.1.0 for this feature. README has an entry for each.
+  **Demo** `scratchpad/demoseed` created shop #5 "Demo — Pickup Dates" with 50 orders (8 overdue,
+  14 due-soon, 20 quiet, 8 finished). Verified it added exactly 1 shop and 50 orders and touched
+  nothing else; the real database was backed up to the scratchpad first.
+  Build 0/0. `scratchpad/pickupcheck` 67 assertions green; `datecheck` and `langscope` unaffected.
+  *Found by rendering, twice:* the selection highlight painted over the overdue tint on the very row
+  the ordering puts first (fixed by layering, now asserted), and finished orders sat above every
+  overdue one because their pickup day is older (fixed by sinking them, now asserted).
+  Gate 1/Gate 2 still unavailable — no IDE-diagnostics or SonarLint tool in this session.
+
 ### 2026-08-01 10:05 — v5.0.0: a reusable language scope, and the source tree split three ways  [DONE]
 - Ask: "给量身项目设置添加一个切换可选语言的选择\n-目的，是为了检查改变前后的效果。\n注意：\n只改变当前量身项目设置的语言选择，不改变整体的语言设置。\n-目前，为了去看量身项目设置还要切换整体语言去查看，有点费劲。\n\n要求：把语言切换设定更加模块化，可以用来加载在任何panel上。\n\n做完后，commit和push，可以作为一个新的release start v5.0.0"
   Mid-turn: "Restructor application 把views folder分成三个folder 一个是users management 一个是store management 还有是Global"

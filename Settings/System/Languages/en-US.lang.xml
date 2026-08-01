@@ -459,6 +459,7 @@
   <Text key="Order.Fields.PromotionalPrice">Promotional Price</Text>
   <Text key="Order.Fields.ItemCategory">Item Category</Text>
   <Text key="Order.Fields.OrderDate">Order Date</Text>
+  <Text key="Order.Fields.ExpectedPickupDate">Expected Pickup</Text>
   <Text key="Order.Fields.LastModifiedDate">Last Modified</Text>
   <Text key="Order.Fields.LastModifiedBy">Served by</Text>
   <Text key="Order.Fields.CustomMadeFlag">Custom Service</Text>
@@ -502,8 +503,10 @@
   <Text key="OrderEdit.Cancel">Cancel</Text>
   <Text key="OrderEdit.Save">Save</Text>
   <Text key="OrderEdit.OrderDateHint">The date the order was taken. Leave it on today unless you are entering an order from an earlier day.</Text>
+  <Text key="OrderEdit.PickupDateHint">The day the customer agreed to collect. Required, and it has to be a day still to come.</Text>
   <Text key="OrderEdit.Validate.OrderNumber">Please enter order number.</Text>
   <Text key="OrderEdit.Validate.OrderDateFuture">The order date cannot be later than today.</Text>
+  <Text key="OrderEdit.Validate.PickupDateRequired">Please choose the expected pickup date.</Text>   <Text key="OrderEdit.Validate.PickupDateFuture">The expected pickup date has to be later than today.</Text>
   <Text key="OrderEdit.Validate.CustomerName">Please enter customer name.</Text>
   <Text key="OrderEdit.Validate.PhoneNumber">Phone number cannot be empty.</Text>
   <Text key="OrderEdit.Validate.EmailRequired">Please enter an email address when a payment method is selected.</Text>

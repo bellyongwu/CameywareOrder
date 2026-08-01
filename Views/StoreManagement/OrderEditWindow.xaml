@@ -283,21 +283,35 @@
                                 <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Returned], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Returned}"/>
                             </ComboBox>
 
-                            <!-- When the order was TAKEN, which is not always when it is typed up: an
-                                 order written down on paper on Monday and entered on Wednesday belongs
-                                 to Monday. Sits under Status rather than under the order number so its
-                                 box lines up with the other right-hand inputs.
+                            <!-- The two dates share a row on purpose: they are read together, and the
+                                 gap between them is what the whole job is measured by. Taken on the
+                                 left, promised on the right, in that reading order.
 
-                                 No local Style: the picker takes the application's ThemedDatePicker
-                                 implicitly, so it and the four in Store Members are one control. -->
-                            <DockPanel Grid.Row="1" Grid.Column="2" Margin="0,8" VerticalAlignment="Center">
+                                 Neither carries a local Style: both take the application's
+                                 ThemedDatePicker implicitly, so every date field in the app is one
+                                 control. -->
+                            <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,8" VerticalAlignment="Center">
                                 <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldIcon}" Text="&#xE787;"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}"/>
                             </DockPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="3" Margin="0,8">
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,8,14,8">
                                 <DatePicker x:Name="OrderDatePicker"
                                             ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.OrderDateHint], Mode=OneWay}"/>
                                 <TextBlock x:Name="OrderDateErrorText" Style="{StaticResource FieldErrorText}"/>
+                            </StackPanel>
+
+                            <!-- When the customer said they would collect. Required, and deliberately
+                                 EMPTY until somebody fills it in — a default here would be a date the
+                                 shop never agreed with anybody, and the list's colours are driven off
+                                 it. -->
+                            <DockPanel Grid.Row="1" Grid.Column="2" Margin="0,8" VerticalAlignment="Center">
+                                <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldIcon}" Text="&#xE823;"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ExpectedPickupDate], Mode=OneWay}"/>
+                            </DockPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="3" Margin="0,8">
+                                <DatePicker x:Name="PickupDatePicker"
+                                            ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.PickupDateHint], Mode=OneWay}"/>
+                                <TextBlock x:Name="PickupDateErrorText" Style="{StaticResource FieldErrorText}"/>
                             </StackPanel>
 
                             <DockPanel Grid.Row="2" Grid.Column="0" Margin="0,8" VerticalAlignment="Center">

@@ -11,6 +11,39 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v5.1.0 — 2026-08-01
+
+**Every order now records the day the customer is coming back for it, and the list is built around
+that day.**
+
+- **A new Expected Pickup field** sits beside the order date, on the same row. It starts **empty** and
+  it is **required** — you cannot save an order without agreeing a date, and a form saved without one
+  says so under the field, in the banner and in the dialog.
+- **It has to be a day still to come.** Today and everything before it are struck through in the
+  calendar.
+- **The list is ordered by it**, soonest first, instead of by when a record was last touched. The
+  order that needs doing next is the one at the top.
+- **Rows change colour as the day approaches.** Amber inside two weeks, red once the day has passed.
+  Nothing to read, nothing to filter — the list tells you at a glance which jobs are running out of
+  time.
+- **A finished order is never coloured, and never sits at the top.** Something collected last month
+  cannot be late, and it does not belong above this week's work.
+- **The date is shown as its own column** and in the details panel, so what the colour and the
+  ordering are based on is always on screen.
+
+**Orders taken before this release have no pickup date**, and none has been invented for them. They
+sort below the ones that do have a date and are never coloured. Give one a date by opening it and
+saving.
+
+### v5.0.1 — 2026-08-01 (hotfix)
+
+**The application now knows its own version number.** Until now the release number lived only in this
+file, so a built copy could not tell you what it was — right-clicking `CameywareOrder.exe` and asking
+for its details showed `1.0.0` for every release ever shipped. The number is now stamped into the
+build, and it is the one shown here.
+
+Nothing else changed: no screen, no setting, no data.
+
 ### v5.0.0 — 2026-08-01
 
 **Check a translation without changing the language you work in.** Measurement Terms now has a

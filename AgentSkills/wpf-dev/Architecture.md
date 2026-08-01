@@ -280,6 +280,14 @@ move.
     untouched (which is what keeps an untouched save off EF's modified list), a changed one is stored
     as that day's local midnight in UTC. `OrderDateLocal` is the read side and is what every surface
     binds — the list, the detail panel and the receipt all show the shop's own day.
+    `ExpectedPickupDate` (v5.1) is the day the customer agreed to COLLECT — nullable, because orders
+    taken before it existed have none and no date has been invented for them, but REQUIRED by the
+    form and refused unless it is in the future. `ExpectedPickupDateLocal` is its read side and
+    `ToStoredDate` the shared local-midnight-to-UTC conversion both dates use.
+    `PickupDue` → `PickupDueKind` (None / Soon / Overdue, `PickupSoonDays` = 14) is what the list
+    paints a row from. It is `None` for a FINISHED order as well as for one with no date: a collected
+    order cannot be late, and colouring those turns the list red with work nobody has to do.
+    Derived from `DateTime.Today`, so it moves with the clock rather than the data.
     Also customer + per-section (Alteration / CustomMade / Clothing) money
     fields, **a payment method per portion** (deposit + final balance), **a tax rate
     per portion** (`XxxTaxRate` = deposit stage, `XxxFinalTaxRate` = final stage;
@@ -428,6 +436,10 @@ move.
   `NullToVisibilityConverter`, `OrderStatusToLocalizedTextConverter`,
   `CustomMadeRecordSummaryConverter`, `OrderPaymentSummaryConverter`,
   `PositiveAmountToVisibilityConverter`,
+  `PickupDueBrushConverter` (binds the whole `Order` → the row's background tint: amber inside two
+  weeks of the promised day, red once it has passed, transparent otherwise. Translucent and frozen;
+  it is drawn ABOVE the row's selection highlight, without which the selected row — which the
+  ordering makes the most overdue one — hides its own warning),
   `TaxLabelConverter` (binds the whole `Order`; `Order.Fields.TaxAmount` where tax is added at
   settlement, and `Order.Fields.IncludedTaxLabel` — the tax's own name plus its rate, "Includes VAT
   (6%)" — where it is already in the price, because subtotal + tax = total holds in only one of the two
@@ -465,6 +477,11 @@ move.
       single order or counting several) → `DeleteSelectedAsync` (does the work, no dialog, so a
       harness can drive it — same split as `TryValidateForSave`/`ValidateForSave`). One query over
       the id set and ONE `SaveChanges`, so a failure part way leaves nothing half deleted.
+    - **Default ordering is the PICKUP QUEUE** (v5.1): finished orders (`IsPickedUp || IsRefunded`)
+      sink first, then orders with no pickup date, then by pickup date ascending. Sorted client-side
+      because SQLite orders a NULL first whatever the provider emits, and because the first key is a
+      computed one. `GetSortSelector` still offers `ExpectedPickupDate` on its own for an explicit
+      header click — asking to sort by a column is a different question from the default view.
     - `CopyOrderCommand` → `CopySelectedAsync` → `CopyOneOrderAsync` per record (deep-copy the
       aggregate, reset a closed status to `Processing`). Its number comes from
       `OrderNumberFormatter.Reserve` + `CommitSequence`, exactly as a new order's does; it used to be

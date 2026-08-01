@@ -24,6 +24,31 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A warning colour has to be drawn ABOVE the selection highlight (2026-08-01).** The pickup tint
+  went in under it, which looked right in the markup and was wrong on screen: the list opens with the
+  FIRST row selected, the ordering puts the most overdue order first, and the opaque selection colour
+  painted over the only warning visible. The tint now sits above the highlight and below the accent
+  bar, and stays translucent so the two mix. Only rendering catches this class of bug — every
+  assertion about the colour passed.
+- **"Order by pickup date" is not the whole rule — FINISHED orders have to sink (2026-08-01).** A job
+  collected last month carries last month's pickup date, which sorts it ahead of everything due this
+  week. Seeding fifty demo orders showed eight completed and cancelled ones sitting above every
+  overdue one. The list is a work QUEUE, so `IsPickedUp || IsRefunded` is the first sort key and the
+  date is the second. Clicking the column header still sorts by the date alone — an explicit sort is
+  a different question from the default view.
+- **A date-state that drives colour is derived from `DateTime.Today`, so it moves with the clock
+  rather than the data (2026-08-01).** `Order.PickupDue` is recomputed on every read and the list
+  re-reads it when it reloads. Nothing persists "overdue", which means nothing can be stale — and
+  also means a window left open overnight shows yesterday's colours until it is refreshed.
+- **Required-but-not-a-TextBox goes in the SAME pass as the text fields (2026-08-01).** The pickup
+  picker reuses the two-closure `RequiredTextField` the phone field introduced, so a form missing a
+  customer name AND a pickup date reports both at once. "Blank" and "in the past" are deliberately
+  separate checks with separate messages — one check reporting both would name whichever it hit
+  first and leave the other for the next attempt.
+- **The version lives in `Directory.Build.props` (2026-08-01).** `Version` / `FileVersion` move every
+  release, `AssemblyVersion` only on a major (a patch must not break a binding reference), and
+  `InformationalVersion` is the one allowed a suffix. Before this a built exe reported 1.0.0 for
+  every release ever shipped. README's "Latest release" heading and this number name the same thing.
 - **A language PREVIEW is a scope, not a global switch (2026-08-01).** Checking a translation used to
   mean switching the whole application into a language and back. `LocalizationScope` is the smaller
   unit: same table, same fallbacks, one panel's own language. It is a plain object with a

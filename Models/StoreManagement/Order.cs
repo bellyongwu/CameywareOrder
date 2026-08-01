@@ -37,6 +37,65 @@ public class Order
     /// </remarks>
     public DateTime OrderDate { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// The day the customer is coming back for the garment, as they agreed it — stored UTC.
+    /// </summary>
+    /// <remarks>
+    /// Nullable, and null on every order saved before this column existed. The form REQUIRES it and
+    /// starts blank, so nobody is handed a plausible default they then forget to correct; but a
+    /// historical order genuinely has no such date and must not be invented one.
+    ///
+    /// Same storage rule as <see cref="OrderDate"/>: the picked day's LOCAL midnight in UTC, so the
+    /// date is the one the shop chose whatever timezone reads it back.
+    /// </remarks>
+    public DateTime? ExpectedPickupDate { get; set; }
+
+    /// <summary>The pickup day in the shop's own timezone — what every surface should display.</summary>
+    [NotMapped]
+    public DateTime? ExpectedPickupDateLocal => ExpectedPickupDate?.ToLocalTime();
+
+    /// <summary>
+    /// How close this order is to the day it was promised for — what colours its row in the list.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="PickupDueKind.None"/> for an order that is FINISHED as well as for one carrying no
+    /// date. A collected order cannot be late, and a cancelled one is not waiting for anybody: paint
+    /// those and the list turns red with orders nobody has to do anything about, which is the fastest
+    /// way to teach people to ignore the colour.
+    ///
+    /// Computed from <c>DateTime.Today</c>, so it moves with the clock rather than with the data —
+    /// the list re-reads it when it reloads, which is what a shop opening the app the next morning
+    /// gets.
+    /// </remarks>
+    [NotMapped]
+    public PickupDueKind PickupDue
+    {
+        get
+        {
+            if (ExpectedPickupDateLocal is not { } due || IsPickedUp || IsRefunded)
+                return PickupDueKind.None;
+
+            var days = (due.Date - DateTime.Today).TotalDays;
+            if (days < 0)
+                return PickupDueKind.Overdue;
+
+            return days <= PickupSoonDays ? PickupDueKind.Soon : PickupDueKind.None;
+        }
+    }
+
+    /// <summary>How far ahead a pickup date starts being flagged. Two weeks, as the shop asked.</summary>
+    public const int PickupSoonDays = 14;
+
+    /// <summary>
+    /// A day picked in the shop's timezone, as the instant to store.
+    /// </summary>
+    /// <remarks>
+    /// Local midnight, converted to UTC — never <c>SpecifyKind(day, Utc)</c>, which reads back as the
+    /// day before everywhere east of Greenwich. Shared by both date fields so they cannot disagree.
+    /// </remarks>
+    public static DateTime ToStoredDate(DateTime localDay)
+        => DateTime.SpecifyKind(localDay.Date, DateTimeKind.Local).ToUniversalTime();
+
     /// <summary>The order's date in the shop's own timezone — what every surface should display.</summary>
     /// <remarks>
     /// <see cref="OrderDate"/> is UTC, and rendering it raw shows the wrong DAY either side of
@@ -70,7 +129,7 @@ public class Order
         if (picked is not { } chosen || chosen.Date == recorded.ToLocalTime().Date)
             return recorded;
 
-        return DateTime.SpecifyKind(chosen.Date, DateTimeKind.Local).ToUniversalTime();
+        return ToStoredDate(chosen);
     }
 
     /// <summary>
@@ -713,4 +772,21 @@ public enum BalanceStatusKind
     ClearedPickedUp,    // Payment.Status.ClearedPickedUp
     ClearedNotPickedUp, // Payment.Status.ClearedNotPickedUp
     Refunded            // Payment.Status.Refunded
+}
+
+/// <summary>How close an order is to the pickup day it was promised for.</summary>
+/// <remarks>
+/// Derived, never stored — see <see cref="Order.PickupDue"/>. The list paints a row from this, and
+/// nothing else consults it, so the three cases are exactly the three things a row can look like.
+/// </remarks>
+public enum PickupDueKind
+{
+    /// <summary>Far enough off to say nothing about — or finished, or never given a date.</summary>
+    None,
+
+    /// <summary>Within <see cref="Order.PickupSoonDays"/> of the promised day, today included.</summary>
+    Soon,
+
+    /// <summary>The promised day has passed and the order is still open.</summary>
+    Overdue
 }

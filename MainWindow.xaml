@@ -24,6 +24,7 @@
         <conv:CurrencyAmountConverter x:Key="CurrencyAmountConverter"/>
         <conv:OrderPaymentSummaryConverter x:Key="OrderPaymentSummaryConverter"/>
         <conv:BalanceStatusColorConverter x:Key="BalanceStatusColorConverter"/>
+        <conv:PickupDueBrushConverter x:Key="PickupDueBrush"/>
         <conv:LastItemBorderThicknessConverter x:Key="LastItemBorderThickness"/>
         <conv:OrderServicesSummaryConverter x:Key="OrderServicesSummaryConverter"/>
         <conv:PositiveAmountToVisibilityConverter x:Key="PositiveAmountToVisibility"/>
@@ -92,6 +93,18 @@
                             <Grid>
                                 <!-- Selection/focus color that fades in and out (Requirement D) -->
                                 <Border x:Name="Highlight" Background="#EEF2FF" Opacity="0" SnapsToDevicePixels="True"/>
+                                <!-- How close this order is to the day it was promised for: amber
+                                     inside two weeks, red once that day has gone.
+
+                                     ABOVE the selection highlight, and semi-transparent, so the two
+                                     mix rather than one hiding the other. Rendering it the other way
+                                     round showed why that matters: the list opens with the FIRST row
+                                     selected, the first row is the most overdue one, and the opaque
+                                     selection colour painted over the only warning on screen. Below
+                                     the accent bar, which still has to read as "this row is the one
+                                     selected". -->
+                                <Border x:Name="DueTint" Background="{Binding Converter={StaticResource PickupDueBrush}}"
+                                        SnapsToDevicePixels="True"/>
                                 <Border x:Name="Accent" Width="4" HorizontalAlignment="Left" Background="#4F46E5" Opacity="0"/>
                                 <GridViewRowPresenter Content="{TemplateBinding Content}"
                                                       Columns="{TemplateBinding GridView.ColumnCollection}"
@@ -598,6 +611,16 @@
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
+                            <!-- The day the list is ORDERED by and coloured by, so it has to be on
+                                 screen: a row tinted red beside no date at all reads as a fault.
+                                 Blank for every order taken before the field existed. -->
+                            <GridViewColumn local:OrderColumnSort.SortKey="ExpectedPickupDate" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ExpectedPickupDate], Mode=OneWay}" Width="165">
+                                <GridViewColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Style="{StaticResource NumericCellText}" Text="{Binding ExpectedPickupDateLocal, StringFormat=yyyy-MM-dd}"/>
+                                    </DataTemplate>
+                                </GridViewColumn.CellTemplate>
+                            </GridViewColumn>
                             <GridViewColumn local:OrderColumnSort.SortKey="Status" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Status], Mode=OneWay}" Width="110">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
@@ -726,6 +749,10 @@
                          last Monday would otherwise read "00:00" here and look like missing data. When
                          it was SAVED is the line below, and that one is a real timestamp. -->
                     <TextBlock Text="{Binding SelectedOrder.OrderDateLocal, StringFormat=yyyy-MM-dd}"
+                               Margin="0,2,0,10" FontSize="13"/>
+
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.ExpectedPickupDate], Mode=OneWay}" Foreground="#777" FontSize="11"/>
+                    <TextBlock Text="{Binding SelectedOrder.ExpectedPickupDateLocal, StringFormat=yyyy-MM-dd}"
                                Margin="0,2,0,10" FontSize="13"/>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.LastModifiedDate], Mode=OneWay}" Foreground="#777" FontSize="11"/>

@@ -622,6 +622,10 @@ public partial class App : Application
         ("LastModifiedBy", "ALTER TABLE Orders ADD COLUMN LastModifiedBy TEXT NULL; "),
         ("StatusReason", "ALTER TABLE Orders ADD COLUMN StatusReason TEXT NULL; "),
         ("StatusReasonCategory", "ALTER TABLE Orders ADD COLUMN StatusReasonCategory TEXT NULL; "),
+        // v5.1. The day the customer agreed to collect. NULL on every existing order and left that
+        // way: the form requires it from now on, but there is no record of what was promised for an
+        // order taken before the field existed, and a made-up date would drive the list's colours.
+        ("ExpectedPickupDate", "ALTER TABLE Orders ADD COLUMN ExpectedPickupDate TEXT NULL; "),
     };
 
     /// <summary>
