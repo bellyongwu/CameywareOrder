@@ -17,6 +17,44 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-01 10:05 — v5.0.0: a reusable language scope, and the source tree split three ways  [DONE]
+- Ask: "给量身项目设置添加一个切换可选语言的选择\n-目的，是为了检查改变前后的效果。\n注意：\n只改变当前量身项目设置的语言选择，不改变整体的语言设置。\n-目前，为了去看量身项目设置还要切换整体语言去查看，有点费劲。\n\n要求：把语言切换设定更加模块化，可以用来加载在任何panel上。\n\n做完后，commit和push，可以作为一个新的release start v5.0.0"
+  Mid-turn: "Restructor application 把views folder分成三个folder 一个是users management 一个是store management 还有是Global"
+  Mid-turn: "根据你的理解 把Models 和services也归纳一下新的folder。"
+  Answered when asked: order/custom-made windows → StoreManagement; StoreMembersWindow → UserManagement.
+- Plan:
+  - [ ] `LocalizationScope` — a table reader bound to ONE language, independent of the global
+        setting, declarable in any panel's `Resources` and bindable exactly like the singleton
+  - [ ] `LanguageScopeSelector` — the reusable control that drives a scope; options from
+        `ShopLanguages.Selectable`, so it obeys what the shop installs
+  - [ ] `MeasurementTermsWindow` renders through the scope: its own labels AND the term/garment
+        names, so switching previews the translation without touching the app's language
+  - [x] `Localization/ILocalizedText` + `LocalizationScope`
+  - [x] `Controls/LanguageScopeSelector`
+  - [x] `MeasurementTermsWindow` renders through the scope
+  - [x] Views / Models / Services each split into UserManagement / StoreManagement / Global
+  - [x] Build; render; harness; README v5.0.0; commit + push
+- Notes: **New** `Localization/ILocalizedText.cs` (indexer + Format; `LocalizationService` now
+  implements it, so no call site changed), `Localization/LocalizationScope.cs` (follows the app until
+  pinned; raises `"Item[]"` + `TextChanged`; `Detach()`), `Controls/LanguageScopeSelector.xaml(.cs)`
+  (`Scope` DP, fills from `ShopLanguages.Selectable()`, collapses at one option, follows its scope
+  BOTH ways). **Window** 22 binding sources repointed to `{StaticResource Scope}`; Title moved to
+  code (`Resources` do not exist when a Window's own properties are set); `PreviewLanguage` replaces
+  `CurrentLanguage` for names and panel copy while dialogs/warnings keep `_localization`;
+  `TermRow` takes an `ILocalizedText` for its gender tooltip;
+  `MeasurementGenderPresentation.NameText` now takes `ILocalizedText`. **Key**
+  `Language.PreviewLabel` × 5 languages.
+  **Move** `git mv` only — namespaces unchanged, nothing references a source path (checked: no pack
+  URI, no MergedDictionary, no csproj item), `obj/Debug` deleted so the old generated partials did
+  not compile alongside the new ones. Views: 5+1 / 11+1 / 3 files. Models: 1 / 13 / 2.
+  Services: 1 / 15 / 4.
+  Build 0/0. `scratchpad/langscope` 37 assertions green, `datecheck` 94 still green after the move,
+  both renders looked at. *Found by rendering:* the picker did not follow a scope moved by its HOST —
+  fixed, and now asserted in both directions. Gate 1/Gate 2 unavailable again (no IDE-diagnostics or
+  SonarLint tool in this session); the in-build SonarAnalyzer pass is the whole Sonar evidence.
+  Stale `Architecture.md` entries removed while there: `ManagementStyles.xaml` and
+  `CurrencySettingWindow` no longer exist.
+
 ### 2026-07-31 21:40 — v4.3.0: the order date is a field, and it can be backdated  [DONE]
 - Ask: "skill wpf-dev, create a field of date time picker for the order date field. right now it is
   using the date that we operate. but sometimes we need to record the order before the date because

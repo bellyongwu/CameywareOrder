@@ -41,13 +41,17 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 ## Open
 
-Nothing in flight. Everything through **v4.3.0 is committed and pushed to `main`** — the user asked
-for the push explicitly with that release.
+Nothing in flight. Everything through **v5.0.0 is committed and pushed to `main`**.
 
 **The harness suite is GONE from disk (2026-08-01).** It lived in a previous session's scratchpad,
-which has been cleaned up; only `batchcheck` and the new `datecheck` survive. Treat "the suite is
-green" as unverifiable until the harnesses are rebuilt — the lessons they encode are in this file and
-in `context.md`, but the assertions are not.
+which has been cleaned up; only `batchcheck`, `datecheck` and `langscope` survive. Treat "the suite
+is green" as unverifiable until the harnesses are rebuilt — the lessons they encode are in this file
+and in `context.md`, but the assertions are not.
+
+**Neither quality GATE has been runnable for two releases (2026-08-01).** No IDE-diagnostics tool and
+no SonarLint tool is connected in this session, so Gate 1 and Gate 2 of `SKILL.md` §9b cannot be
+performed as written. The in-build `SonarAnalyzer.CSharp` pass is the whole of the Sonar evidence for
+v4.3.0 and v5.0.0. Say so rather than reporting the gates as clean.
 
 **Fixed 2026-07-30:** `langcheck`'s "installs every shipped language" pair was FLAPPING — red, then
 green for several runs, then red — because it asserted on live shop data that `storecheck` rewrites
@@ -68,6 +72,44 @@ treatment too, which is theirs to decide.
   double-print for any shop that typed its address there by hand.
 - Moving `measurement-terms-<publicId>.json` into a `Shops/` subfolder. Name-keyed,
   so it needs a migration for no user-visible gain.
+
+---
+
+## Recent work (2026-08-01)
+
+### v5.0.0 — a panel can be read in a language the application is not in  [DONE]
+
+Checking a translation meant switching the whole app into a language, finding the screen, reading it,
+and switching back. Measurement Terms now has a **Preview in** picker: the panel — headings, buttons,
+and every garment and term NAME — re-reads in the chosen language while the application stays put.
+
+Built as two reusable pieces, which is why it is a major version: `LocalizationScope` (one panel's
+own language; declare it in `Resources` and every existing binding changes by one word) and
+`LanguageScopeSelector` (the picker; drop it on, point it at the scope, done). Any panel can have
+this now.
+
+The rule that shapes it: **what is being EXAMINED follows the preview; what you must ACT on does
+not.** The picker's own label, the confirmation dialogs and the warnings stay in the reader's
+language — preview Japanese with a Japanese picker and there is nothing left to click to get back.
+An inline rename deliberately writes into the PREVIEWED language, which is what makes the screen
+useful for filling translation gaps.
+
+Three traps are in `context.md`: a `Window`'s Title cannot bind to a scope in its own `Resources`
+(properties are set before Resources exist); code-built rows need rebuilding from `TextChanged`
+because a binding refresh cannot reach them; and the scope must be `Detach()`ed or the singleton
+holds the window forever.
+
+*Found by rendering:* the picker did not follow a scope moved by its HOST, so it named a language
+that was not on screen. Now asserted in both directions.
+
+### Source tree split three ways  [DONE]
+
+`Views/`, `Models/` and `Services/` each hold `UserManagement/`, `StoreManagement/` and `Global/`.
+Orders live under StoreManagement — a shop's daily work, not chrome.
+
+**Namespaces deliberately unchanged.** What made the move a pure `git mv` was checking first that
+nothing references a source PATH; the two `Themes/` dictionaries do, by absolute pack URI, and did
+not move. Delete `obj/` afterwards or the old generated partials compile alongside the new ones.
 
 ---
 

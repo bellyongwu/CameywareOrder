@@ -24,6 +24,37 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A language PREVIEW is a scope, not a global switch (2026-08-01).** Checking a translation used to
+  mean switching the whole application into a language and back. `LocalizationScope` is the smaller
+  unit: same table, same fallbacks, one panel's own language. It is a plain object with a
+  parameterless constructor **on purpose**, so a panel declares it in its own `Resources` and every
+  existing binding changes by one word — `Source={StaticResource Scope}` for
+  `Source={x:Static loc:LocalizationService.Instance}`. Three traps, all paid for:
+  - **A `Window`'s own properties are set before its `Resources` exist**, so `Title` cannot be bound
+    to a scope declared there. It fails as a resource-not-found at parse time. Set the title in code.
+  - **Rows built in code do not re-render from a binding refresh.** The scope raises `"Item[]"`,
+    which reaches the markup; anything whose text was resolved in C# has to be rebuilt from
+    `TextChanged`.
+  - **The scope subscribes to the singleton**, so the singleton holds the panel alive. `Detach()` in
+    `OnClosed`, same rule as `MainViewModel.Detach`.
+- **A preview control must NOT render itself in the language being previewed (2026-08-01).** Preview
+  Japanese with a picker that has itself turned Japanese and there is nothing left on screen the
+  reader can use to get back. Generalised: the split is DISPLAY versus INSTRUCTION — what is being
+  examined follows the preview, what the user must ACT on (the picker's label, confirmation dialogs,
+  warnings) stays in the language they actually read. The terms panel follows the same line.
+- **Take `ILocalizedText`, not `LocalizationService` (2026-08-01).** A helper that composes a
+  localized string has no opinion on WHICH language; taking the service hard-wires "whatever the
+  application is currently in" into it, and that is exactly the assumption a preview breaks.
+  `MeasurementGenderPresentation.NameText` was the first to change; the service still implements the
+  interface, so no call site had to.
+- **Source folders were split three ways; NAMESPACES were not (2026-08-01).** `Views/`, `Models/` and
+  `Services/` each hold `UserManagement/`, `StoreManagement/` and `Global/`, but everything under
+  `Views/` is still `CameywareOrder.Views`. Moving the namespaces too would have touched every
+  `using`, every `x:Class` and every `xmlns:` for no gain. What made the move safe was checking
+  first that **nothing references a source PATH** — no pack URI, no `MergedDictionary`, no csproj
+  item. The two `Themes/` dictionaries ARE referenced by absolute pack URI and did not move. One
+  thing does need doing after such a move: **delete `obj/`**, or the generated partials at the old
+  paths compile alongside the new ones.
 - **A field that records a DATE must return the stored instant untouched when the day has not
   changed (2026-08-01).** `Order.ResolveOrderDate(picked, recorded)` compares DAYS and hands back
   `recorded` itself when they match — it does not re-derive midnight from the picked day. Two things

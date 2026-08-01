@@ -35,6 +35,7 @@
        "language is" against "languages are", and this line sits where it will be skimmed. -->
   <Text key="Language.Installed.One">Installed language: {0}</Text>
   <Text key="Language.Installed.Many">Installed languages: {0}</Text>
+  <Text key="Language.PreviewLabel">Preview in</Text>
   <Text key="Toolbar.OpenDataFolder">Open Data Folder</Text>
   <Text key="Toolbar.CopyDataPath">Copy Database Path</Text>
   <Text key="Toolbar.RevealDataFile">Reveal Database File</Text>

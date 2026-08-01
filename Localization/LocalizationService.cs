@@ -9,7 +9,7 @@ using Path = System.IO.Path;
 
 namespace CameywareOrder.Localization;
 
-public sealed class LocalizationService : INotifyPropertyChanged
+public sealed class LocalizationService : INotifyPropertyChanged, ILocalizedText
 {
     public static LocalizationService Instance { get; } = new();
 

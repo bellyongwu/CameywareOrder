@@ -20,11 +20,39 @@ namespace CameywareOrder.Views;
 /// terms/garments are locked; user-added ones can be renamed (inline + per-language),
 /// deleted, and dragged into a garment's assigned list.
 /// </summary>
+/// <remarks>
+/// <b>The panel renders in a language of its OWN</b> (<see cref="LocalizationScope"/>, declared in
+/// the XAML and driven by the picker in the header), so a translation can be checked without moving
+/// the whole application into that language and back. Term and garment names resolve against the
+/// same scope, which is the point: the names are the thing being checked.
+///
+/// The split is between DISPLAY and INSTRUCTION. Anything describing the terms — labels, the title,
+/// every name — follows the preview. Anything the user has to act on — the confirmation dialogs, the
+/// warnings, the picker's own label — stays in the application's language, because a "delete this?"
+/// prompt in a language the reader picked precisely BECAUSE they cannot read it fluently is a trap.
+/// Same rule the selector control itself follows.
+///
+/// One thing deliberately follows the preview rather than the application: an inline rename writes
+/// the new name into the language being PREVIEWED. Renaming while looking at Japanese means editing
+/// the Japanese name, which is both what it looks like and what makes this screen usable for
+/// filling translation gaps.
+/// </remarks>
 public partial class MeasurementTermsWindow : Window
 {
     private const string TermDragFormat = "MeasurementTermId";
 
     private readonly MeasurementTermsService _service = MeasurementTermsService.Instance;
+
+    /// <summary>
+    /// The language this panel is being read in. Taken from the XAML resource rather than built here
+    /// so the markup's bindings and this code are looking at the same object — two scopes would let
+    /// the labels and the names drift into different languages.
+    /// </summary>
+    private readonly LocalizationScope _scope;
+
+    /// <summary>What a dialog or a warning is written in — the reader's own language, never the preview.</summary>
+    private readonly LocalizationService _localization = LocalizationService.Instance;
+
     private readonly ObservableCollection<GarmentRow> _garmentRows = new();
     private readonly ObservableCollection<TermRow> _termRows = new();
     private readonly ObservableCollection<TermRow> _filteredTermRows = new();
@@ -40,6 +68,11 @@ public partial class MeasurementTermsWindow : Window
     {
         InitializeComponent();
 
+        _scope = (LocalizationScope)Resources["Scope"];
+        // The rows carry names resolved in code, so a binding refresh cannot reach them — they have
+        // to be rebuilt when the preview moves.
+        _scope.TextChanged += OnPreviewLanguageChanged;
+
         GarmentList.ItemsSource = _garmentRows;
         AllTermsList.ItemsSource = _filteredTermRows;
         AssignedList.ItemsSource = _assignedRows;
@@ -49,6 +82,7 @@ public partial class MeasurementTermsWindow : Window
         // in XAML fires the event mid-parse, before the sibling Male/Female radios exist.
         GenderFilterAllRadio.IsChecked = true;
 
+        RefreshTitle();
         RefreshGarmentRows();
         RefreshTermRows();
 
@@ -56,7 +90,33 @@ public partial class MeasurementTermsWindow : Window
             GarmentList.SelectedIndex = 0;
     }
 
-    private static string CurrentLanguage => LocalizationService.Instance.CurrentLanguageCode;
+    /// <summary>The language the panel is being READ in — the preview, not the application's.</summary>
+    private string PreviewLanguage => _scope.EffectiveLanguageCode;
+
+    /// <summary>
+    /// Set in code because a <c>Window</c>'s own properties are assigned before its
+    /// <c>Resources</c> exist, so the scope cannot be reached from a Title binding in the markup.
+    /// </summary>
+    private void RefreshTitle() => Title = _scope["MeasureTerms.Title"];
+
+    private void OnPreviewLanguageChanged(object? sender, EventArgs e)
+    {
+        RefreshTitle();
+        RefreshGarmentRows();
+        RefreshTermRows();
+        RefreshAssigned();
+    }
+
+    /// <summary>
+    /// Drops the scope's subscription to the localization singleton. Without it the singleton holds
+    /// this window alive for the life of the process — see <see cref="LocalizationScope.Detach"/>.
+    /// </summary>
+    protected override void OnClosed(EventArgs e)
+    {
+        _scope.TextChanged -= OnPreviewLanguageChanged;
+        _scope.Detach();
+        base.OnClosed(e);
+    }
 
     [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
         Justification = "Reads the XAML-generated GarmentList x:Name field, which SonarLint's single-file analysis cannot resolve.")]
@@ -70,7 +130,7 @@ public partial class MeasurementTermsWindow : Window
 
         _garmentRows.Clear();
         foreach (var garment in _service.Garments)
-            _garmentRows.Add(new GarmentRow(garment, MeasurementTermsService.ResolveGarmentName(garment, CurrentLanguage)));
+            _garmentRows.Add(new GarmentRow(garment, MeasurementTermsService.ResolveGarmentName(garment, PreviewLanguage)));
 
         var restore = _garmentRows.FirstOrDefault(row => string.Equals(row.Garment.Id, previousId, StringComparison.Ordinal))
                       ?? _garmentRows.FirstOrDefault();
@@ -81,7 +141,7 @@ public partial class MeasurementTermsWindow : Window
     {
         _termRows.Clear();
         foreach (var term in _service.Terms)
-            _termRows.Add(new TermRow(term, MeasurementTermsService.ResolveTermName(term, CurrentLanguage)));
+            _termRows.Add(new TermRow(term, MeasurementTermsService.ResolveTermName(term, PreviewLanguage), _scope));
 
         ApplyTermFilter();
     }
@@ -137,22 +197,22 @@ public partial class MeasurementTermsWindow : Window
         if (garment is null)
         {
             AssignedGarmentText.Text = string.Empty;
-            AssignedHintText.Text = LocalizationService.Instance["MeasureTerms.EmptyGarment"];
+            AssignedHintText.Text = _scope["MeasureTerms.EmptyGarment"];
             AssignedHintPanel.Visibility = Visibility.Visible;
             MeasurementModePanel.Visibility = Visibility.Collapsed;
             return;
         }
 
-        AssignedGarmentText.Text = MeasurementTermsService.ResolveGarmentName(garment, CurrentLanguage);
+        AssignedGarmentText.Text = MeasurementTermsService.ResolveGarmentName(garment, PreviewLanguage);
         RefreshMeasurementModePanel(garment);
 
         foreach (var term in _service.GetGarmentTerms(garment.Id))
         {
             var locked = MeasurementTermDefaults.IsTermLockedInGarment(garment, term.Id);
-            _assignedRows.Add(new AssignedRow(term.Id, MeasurementTermsService.ResolveTermName(term, CurrentLanguage), locked));
+            _assignedRows.Add(new AssignedRow(term.Id, MeasurementTermsService.ResolveTermName(term, PreviewLanguage), locked));
         }
 
-        AssignedHintText.Text = LocalizationService.Instance["MeasureTerms.DragHint"];
+        AssignedHintText.Text = _scope["MeasureTerms.DragHint"];
         AssignedHintPanel.Visibility = _assignedRows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -168,9 +228,9 @@ public partial class MeasurementTermsWindow : Window
 
         MeasurementModePanel.Visibility = Visibility.Visible;
         var isCustomized = garment.UseCustomMeasurements;
-        MeasurementModeStatusText.Text = LocalizationService.Instance[
+        MeasurementModeStatusText.Text = _scope[
             isCustomized ? "MeasureTerms.CustomizedStatus" : "MeasureTerms.DefaultStatus"];
-        MeasurementModeActionButton.Content = LocalizationService.Instance[
+        MeasurementModeActionButton.Content = _scope[
             isCustomized ? "MeasureTerms.RestoreDefault" : "MeasureTerms.Customize"];
     }
 
@@ -183,8 +243,8 @@ public partial class MeasurementTermsWindow : Window
         if (garment.UseCustomMeasurements)
         {
             var confirm = MessageBox.Show(
-                LocalizationService.Instance["MeasureTerms.RestoreDefaultConfirm"],
-                LocalizationService.Instance["MeasureTerms.DeleteTitle"],
+                _localization["MeasureTerms.RestoreDefaultConfirm"],
+                _localization["MeasureTerms.DeleteTitle"],
                 MessageBoxButton.YesNo, MessageBoxImage.Question);
             if (confirm != MessageBoxResult.Yes)
                 return;
@@ -270,7 +330,7 @@ public partial class MeasurementTermsWindow : Window
     private void OnAddPropClick(object sender, RoutedEventArgs e)
     {
         var dialog = new MeasurementTermLanguageWindow(
-            LocalizationService.Instance["MeasureTerms.AddProp"],
+            _localization["MeasureTerms.AddProp"],
             new Dictionary<string, string>(),
             MeasurementGender.Common)
         {
@@ -318,13 +378,13 @@ public partial class MeasurementTermsWindow : Window
         if (string.IsNullOrWhiteSpace(newName))
         {
             MessageBox.Show(
-                LocalizationService.Instance["MeasureTerms.NameRequired"],
-                LocalizationService.Instance["MeasureTerms.Title"],
+                _localization["MeasureTerms.NameRequired"],
+                _localization["MeasureTerms.Title"],
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
 
-        var names = new Dictionary<string, string>(row.Term.Names) { [CurrentLanguage] = newName };
+        var names = new Dictionary<string, string>(row.Term.Names) { [PreviewLanguage] = newName };
         if (_service.IsDuplicateTermName(names, row.Term.Id))
         {
             ShowDuplicateTermWarning();
@@ -342,7 +402,7 @@ public partial class MeasurementTermsWindow : Window
             return;
 
         var dialog = new MeasurementTermLanguageWindow(
-            MeasurementTermsService.ResolveTermName(row.Term, CurrentLanguage), row.Term.Names, row.Term.Gender)
+            MeasurementTermsService.ResolveTermName(row.Term, PreviewLanguage), row.Term.Names, row.Term.Gender)
         {
             Owner = this
         };
@@ -367,8 +427,8 @@ public partial class MeasurementTermsWindow : Window
             return;
 
         var confirm = MessageBox.Show(
-            LocalizationService.Instance["MeasureTerms.DeleteTermConfirm"],
-            LocalizationService.Instance["MeasureTerms.DeleteTitle"],
+            _localization["MeasureTerms.DeleteTermConfirm"],
+            _localization["MeasureTerms.DeleteTitle"],
             MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.Yes)
             return;
@@ -383,7 +443,7 @@ public partial class MeasurementTermsWindow : Window
     private void OnAddGarmentClick(object sender, RoutedEventArgs e)
     {
         var dialog = new MeasurementTermLanguageWindow(
-            LocalizationService.Instance["MeasureTerms.AddGarment"],
+            _localization["MeasureTerms.AddGarment"],
             new Dictionary<string, string>())
         {
             Owner = this
@@ -403,7 +463,7 @@ public partial class MeasurementTermsWindow : Window
             return;
 
         var dialog = new MeasurementTermLanguageWindow(
-            MeasurementTermsService.ResolveGarmentName(row.Garment, CurrentLanguage), row.Garment.Names)
+            MeasurementTermsService.ResolveGarmentName(row.Garment, PreviewLanguage), row.Garment.Names)
         {
             Owner = this
         };
@@ -421,8 +481,8 @@ public partial class MeasurementTermsWindow : Window
             return;
 
         var confirm = MessageBox.Show(
-            LocalizationService.Instance["MeasureTerms.DeleteGarmentConfirm"],
-            LocalizationService.Instance["MeasureTerms.DeleteTitle"],
+            _localization["MeasureTerms.DeleteGarmentConfirm"],
+            _localization["MeasureTerms.DeleteTitle"],
             MessageBoxButton.YesNo, MessageBoxImage.Question);
         if (confirm != MessageBoxResult.Yes)
             return;
@@ -475,10 +535,18 @@ public partial class MeasurementTermsWindow : Window
         private bool _isEditing;
         private string _editName = string.Empty;
 
-        public TermRow(MeasurementTerm term, string name)
+        private readonly ILocalizedText _text;
+
+        /// <param name="text">
+        /// The panel's scope, so the gender badge's tooltip is written in the language being
+        /// previewed rather than the application's — it describes the term, and the term's own name
+        /// beside it has already moved.
+        /// </param>
+        public TermRow(MeasurementTerm term, string name, ILocalizedText text)
         {
             Term = term;
             Name = name;
+            _text = text;
         }
 
         public MeasurementTerm Term { get; }
@@ -509,7 +577,7 @@ public partial class MeasurementTermsWindow : Window
             Justification = "Bound in MeasurementTermsWindow.xaml (gender badge tooltip); not visible to single-file analysis.")]
         public string GenderTooltip => Term.Gender == MeasurementGender.Common
             ? string.Empty
-            : MeasurementGenderPresentation.NameText(LocalizationService.Instance, Term.Gender);
+            : MeasurementGenderPresentation.NameText(_text, Term.Gender);
 
         public bool IsEditing
         {

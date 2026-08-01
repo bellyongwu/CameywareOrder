@@ -54,9 +54,14 @@ internal static class MeasurementGenderPresentation
     };
 
     /// <summary>Localized name of a classification.</summary>
-    public static string NameText(LocalizationService localization, MeasurementGender gender)
+    /// <param name="text">
+    /// Where to read it from. <see cref="ILocalizedText"/> rather than the localization service, so
+    /// this works just as well against a panel previewing itself in another language — the terms
+    /// screen labels its gender badges through its own scope.
+    /// </param>
+    public static string NameText(ILocalizedText text, MeasurementGender gender)
     {
-        ArgumentNullException.ThrowIfNull(localization);
-        return localization[NameKey(gender)];
+        ArgumentNullException.ThrowIfNull(text);
+        return text[NameKey(gender)];
     }
 }

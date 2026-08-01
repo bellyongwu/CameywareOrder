@@ -37,6 +37,7 @@
        keys because English needs "language is" against "languages are". -->
   <Text key="Language.Installed.One">本店已安装语言：{0}</Text>
   <Text key="Language.Installed.Many">本店已安装语言：{0}</Text>
+  <Text key="Language.PreviewLabel">预览语言</Text>
   <Text key="Toolbar.OpenDataFolder">打开数据目录</Text>
   <Text key="Toolbar.CopyDataPath">复制数据库路径</Text>
   <Text key="Toolbar.RevealDataFile">定位数据库文件</Text>

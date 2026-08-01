@@ -32,6 +32,7 @@
   <!-- Singular and plural are separate keys: French, like English, inflects the noun and the verb. -->
   <Text key="Language.Installed.One">Langue installée : {0}</Text>
   <Text key="Language.Installed.Many">Langues installées : {0}</Text>
+  <Text key="Language.PreviewLabel">Aperçu en</Text>
   <Text key="Toolbar.OpenDataFolder">Ouvrir le dossier de données</Text>
   <Text key="Toolbar.CopyDataPath">Copier le chemin de la base de données</Text>
   <Text key="Toolbar.RevealDataFile">Afficher le fichier de base de données</Text>

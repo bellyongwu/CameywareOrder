@@ -1,0 +1,21 @@
+<UserControl x:Class="CameywareOrder.Controls.LanguageScopeSelector"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Previews ONE panel in another language, without touching the application's own setting.
+
+         Drop it onto any panel that owns a LocalizationScope, point Scope at that scope, and it does
+         the rest: it fills itself from the languages the shop actually installs, hides itself when
+         that leaves a single option, and writes the chosen code onto the scope. It performs nothing
+         else — the scope is what re-renders the panel.
+
+         Its OWN label and options deliberately render in the APPLICATION's language, never in the
+         previewed one. Preview Japanese with a control that has itself turned Japanese and there is
+         no longer anything on screen you can read to get back. See the code-behind. -->
+    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <TextBlock x:Name="PreviewLabel" VerticalAlignment="Center" Margin="0,0,8,0"
+                   Foreground="#6B7280"/>
+        <ComboBox x:Name="LanguageBox" MinWidth="150" VerticalContentAlignment="Center"
+                  DisplayMemberPath="Name" SelectedValuePath="Code"
+                  SelectionChanged="OnLanguageChanged"/>
+    </StackPanel>
+</UserControl>

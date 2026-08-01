@@ -11,6 +11,33 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v5.0.0 — 2026-08-01
+
+**Check a translation without changing the language you work in.** Measurement Terms now has a
+**Preview in** picker in its top-right corner. Choose a language and the whole panel — the headings,
+the buttons, and every garment and measurement name — is re-read in it, right there. The application
+itself does not move: the rest of the app, and the language you get back to when you close the panel,
+are exactly as you left them.
+
+- **It offers the languages your shop installs**, the same set as the toolbar's language switch, and
+  it disappears entirely for a shop that runs in one language.
+- **The picker itself stays in your own language.** Preview Japanese and the words *Preview in* stay
+  readable, so you can always find your way back.
+- **Confirmations stay in your own language too.** "Delete this measurement?" is a question you have
+  to answer, so it is never asked in the language you are only previewing.
+- **Renaming while previewing edits THAT language's name.** Look at the panel in Japanese, rename a
+  measurement you added yourself, and you have filled in its Japanese name — which is the quickest
+  way to complete a translation.
+
+**Why this is 5.0.0 rather than 4.4.0.** The preview is built on a piece anything can now use: a
+panel can be given its own language in three lines, and the picker is a control you drop onto it.
+Other screens can gain the same button without inventing it again.
+
+**The source tree has been reorganised.** `Views`, `Models` and `Services` each now hold the same
+three folders — **UserManagement**, **StoreManagement** and **Global** — so where a file lives
+answers who it belongs to. Nothing about the running application changed: no window moved, no
+setting moved, and your data is untouched. It is a change for whoever reads the code next.
+
 ### v4.3.0 — 2026-08-01
 
 **You can now say when an order was actually taken.** Until now every order was stamped with the day

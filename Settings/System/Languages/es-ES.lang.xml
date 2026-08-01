@@ -33,6 +33,7 @@
        "Idioma instalado" against "Idiomas instalados", and this line sits where it will be skimmed. -->
   <Text key="Language.Installed.One">Idioma instalado: {0}</Text>
   <Text key="Language.Installed.Many">Idiomas instalados: {0}</Text>
+  <Text key="Language.PreviewLabel">Vista previa en</Text>
   <Text key="Toolbar.OpenDataFolder">Abrir la carpeta de datos</Text>
   <Text key="Toolbar.CopyDataPath">Copiar la ruta de la base de datos</Text>
   <Text key="Toolbar.RevealDataFile">Mostrar el archivo de base de datos</Text>

@@ -35,6 +35,7 @@
        which is correct rather than lazy — same as zh-CN. -->
   <Text key="Language.Installed.One">インストール済みの言語：{0}</Text>
   <Text key="Language.Installed.Many">インストール済みの言語：{0}</Text>
+  <Text key="Language.PreviewLabel">プレビュー言語</Text>
   <Text key="Toolbar.OpenDataFolder">データフォルダーを開く</Text>
   <Text key="Toolbar.CopyDataPath">データベースのパスをコピー</Text>
   <Text key="Toolbar.RevealDataFile">データベースファイルの場所を表示</Text>

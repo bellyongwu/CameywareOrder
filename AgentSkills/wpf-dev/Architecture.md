@@ -42,6 +42,25 @@ components are added/renamed or the way pieces fit together changes.
   session's shop bound until the next is chosen, since the running GraphQL server
   calls `ShopContext.RequireCurrent`.
 
+## How the source is filed (v5.0.0)
+
+`Views/`, `Models/` and `Services/` each split into the **same three folders**, so one question —
+"whose is this?" — answers where a file lives in all three:
+
+- **`UserManagement/`** — people: accounts, roles, sessions, the roster.
+- **`StoreManagement/`** — a shop and everything it does: its settings, its catalogue and tax rules,
+  and the ORDERS it takes (the order and custom-made screens are a shop's daily work, not chrome).
+- **`Global/`** — what belongs to no single shop and no single person: the confirmation dialog, the
+  image viewer, the first-run language picker, the installation-wide currency setting, the data
+  folder and its migrations, contact validation, money rounding.
+
+**The namespaces did NOT change.** Everything under `Views/` is still `CameywareOrder.Views`, and
+likewise for Models and Services. The folders are for a reader; renaming the namespaces would have
+touched every `using`, every `x:Class` and every `xmlns:` in the markup for no gain, and nothing in
+the application references a source path (checked before moving: no pack URI, no MergedDictionary
+and no csproj item names one). The two `Themes/` dictionaries ARE referenced by path — those did not
+move.
+
 ## Layers / folders
 
 - **Data/**
@@ -388,8 +407,22 @@ components are added/renamed or the way pieces fit together changes.
   - `Query` — `GetOrders`, `GetOrderAsync`.
   - `Mutation` — create/update/delete order, add/remove order item.
 - **Localization/**
+  - `ILocalizedText` — *somewhere* to read UI text from: an indexer and `Format`, nothing else.
+    Implemented by both the service and a scope. A helper that composes a localized string takes
+    THIS, not the service — taking the service hard-wires "the language the whole application is in"
+    into code that has no opinion on the matter, which is precisely what a preview panel breaks.
   - `LocalizationService` — singleton `Instance`, indexer `["Key"]`, `Format`,
-    `LanguageChanged` event; reads `Languages.xml`.
+    `GetText(key, languageCode)` for a NAMED language, `LanguageChanged` event; reads the
+    per-language files. The application's own setting: switching it, persisting it, listing what is
+    available. Reach for it only when you mean exactly that.
+  - `LocalizationScope` — one panel's own language, independent of the application's (v5.0.0). Same
+    indexer, so a panel declares one in its `Resources` and changes one word at each binding site
+    (`Source={StaticResource Scope}` in place of the singleton). A fresh scope FOLLOWS the
+    application and re-renders with it; assigning `LanguageCode` pins it, `Follow()` lets go. It
+    subscribes to the singleton, so a window that opens one must `Detach()` it on close — the same
+    rule, and the same leak, as `MainViewModel.Detach`.
+    A `Window`'s own properties (its `Title`) are set BEFORE its `Resources` exist, so a title
+    cannot be bound to a scope declared there; set it from code.
   - `LanguagePreferenceStore` — persists the chosen language code.
 - **Converters/** — `CurrencyAmountConverter`, `LocalizationLookupConverter`,
   `NullToVisibilityConverter`, `OrderStatusToLocalizedTextConverter`,
@@ -568,6 +601,13 @@ components are added/renamed or the way pieces fit together changes.
     chips + Add Measurement). Modern card styling + Segoe MDL2 icons; predefined
     term/garment names locked; custom items support inline edit/save/delete +
     alt-language remap. Launched from the Local Configuration menu.
+    **The first panel to carry a `LocalizationScope`** (v5.0.0): a `LanguageScopeSelector` in its
+    header reads the whole panel — labels, title, and every term and garment NAME — in another
+    language, without moving the application into it. The split it draws is DISPLAY versus
+    INSTRUCTION: anything describing the terms follows the preview, while the confirmation dialogs,
+    the warnings and the picker's own label stay in the reader's language. An inline rename
+    deliberately writes into the language being PREVIEWED, which is what makes the screen usable for
+    filling translation gaps.
   - `MeasurementTermLanguageWindow` — alt-language name editor popup (one name row
     per `LocalizationService.AvailableLanguages`); returns a langCode→name dict.
   - `MeasurementPrintOptionsWindow` — small pre-print dialog asking for the
@@ -582,8 +622,6 @@ components are added/renamed or the way pieces fit together changes.
     holding a header + footer `RichTextBox`. Persists via `ReceiptBrandingStore`;
     content is injected into the printed receipt and the measurements PDF by
     `BrandingRenderer`.
-  - `CurrencySettingWindow` — small Currency Setup dialog (currency ComboBox +
-    Save/Cancel) writing through `CurrencySettingService`.
   - `DocumentPreviewWindow` — in-app image viewer (loads via `BitmapImage`
     `OnLoad` so the file is not locked).
   - `LanguageSelectionWindow` — first-run language picker.
@@ -623,11 +661,7 @@ components are added/renamed or the way pieces fit together changes.
     membership together. Delete Account is administrator-only — deletion reaches every shop, whereas a
     manager's tool for "they left" is deactivation, which records when. Needs no database: members come
     from `AuthenticationService` and the shop is passed in.
-  - `ManagementStyles.xaml` (`Views/`) — the shared `ResourceDictionary` behind Select Shop / User Management /
-    Store Members: `RoundedButton` / `PrimaryButton` / `DangerButton`, `CardBorder` / `CardHeading` /
-    `FieldLabel` / `InputBox`, and `RosterCardContainer`. Merged rather than copied so the three
-    screens cannot drift apart silently.
-  - `UserPresentation` (static, `Views/`) — localized role name (including "no role") and the stable
+  - `UserPresentation` (static, `Views/UserManagement/`) — localized role name (including "no role") and the stable
     name-hashed avatar brush/initial, shared by the picker, the user manager, the roster and the main
     toolbar so the role-name switch is not copied a fourth time.
   - **Validation reporting in `OrderEditWindow`** — a refused save marks three surfaces from one path:
@@ -713,6 +747,15 @@ components are added/renamed or the way pieces fit together changes.
   snapshot. Columns added after those two migrations arrive through the runtime
   guards in `App.xaml.cs` instead (see Startup above).
 - **Controls/**
+  - `LanguageScopeSelector` — the picker that drives a `LocalizationScope`, and the whole of what a
+    panel needs to become previewable: declare a scope in `Resources`, drop this on the panel with
+    `Scope="{StaticResource Scope}"`, bind through the scope. Fills itself from
+    `ShopLanguages.Selectable()` (a preview must not offer a language the branch does not run in) and
+    collapses when that leaves one option. Follows its scope in BOTH directions, so a host that moves
+    the scope itself does not leave the box naming a language that is no longer on screen.
+    **It renders ITSELF in the application's language, never in the previewed one** — a control that
+    followed its own preview would turn Japanese the moment Japanese was picked, leaving nothing on
+    screen the reader could use to get back.
   - `CalendarSizing` — attached `MatchOwnerWidth`, which makes a `DatePicker`'s drop-down calendar
     **at least** as wide as its box (a `MinWidth` floor, not a fixed `Width`: the month grid is
     content-sized and a hard width narrower than it needs clips columns off). A behavior rather than
