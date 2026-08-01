@@ -26,8 +26,52 @@ public class Order
     public string PhoneNumber { get; set; } = string.Empty;
     public string? Email { get; set; }
     public string? Address { get; set; }
+    /// <summary>
+    /// When the order was taken, stored UTC. Defaults to the moment it is created, but the order
+    /// form can backdate it — an order taken on Monday and typed up on Wednesday belongs to Monday.
+    /// </summary>
+    /// <remarks>
+    /// A backdated order carries the picked day's LOCAL MIDNIGHT converted to UTC, so the date is
+    /// what the shop chose in every timezone. See <see cref="ResolveOrderDate"/> for why only a
+    /// changed date is written, and <see cref="OrderDateLocal"/> for reading it back.
+    /// </remarks>
     public DateTime OrderDate { get; set; } = DateTime.UtcNow;
+
+    /// <summary>The order's date in the shop's own timezone — what every surface should display.</summary>
+    /// <remarks>
+    /// <see cref="OrderDate"/> is UTC, and rendering it raw shows the wrong DAY either side of
+    /// midnight: a shop in +08 typing an order at 09:00 stored 01:00Z and read it back as the day
+    /// before. That was invisible while the date was always "now" and the reader was in the western
+    /// hemisphere; it is not invisible once a date can be chosen deliberately.
+    /// </remarks>
+    [NotMapped]
+    public DateTime OrderDateLocal => OrderDate.ToLocalTime();
+
     public DateTime? LastModifiedDate { get; set; }
+
+    /// <summary>
+    /// The order date to store, given the day the form is showing and the one already recorded.
+    /// </summary>
+    /// <param name="picked">The day the picker is showing, in local time; null when it is empty.</param>
+    /// <param name="recorded">
+    /// The instant already on the order — <c>DateTime.UtcNow</c> for one being created.
+    /// </param>
+    /// <remarks>
+    /// The picker records a DATE, not an instant, so an unchanged day must return
+    /// <paramref name="recorded"/> untouched rather than a re-derived midnight. Two things depend on
+    /// that: an order saved without touching the picker keeps the real time it was taken (the user's
+    /// "if not edit the date field, just use the real time order date as default"), and an edit that
+    /// changed nothing else leaves EF's <c>IsModified</c> false, so it is not stamped as a
+    /// modification. Comparing the DAY rather than the instant is the whole point — every save would
+    /// otherwise differ from the stored value by the seconds since it was written.
+    /// </remarks>
+    public static DateTime ResolveOrderDate(DateTime? picked, DateTime recorded)
+    {
+        if (picked is not { } chosen || chosen.Date == recorded.ToLocalTime().Date)
+            return recorded;
+
+        return DateTime.SpecifyKind(chosen.Date, DateTimeKind.Local).ToUniversalTime();
+    }
 
     /// <summary>
     /// The crew member who last saved this order, as their name READ AT THE TIME — for the record

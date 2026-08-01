@@ -5,10 +5,15 @@ using System.Windows.Controls.Primitives;
 namespace CameywareOrder.Controls;
 
 /// <summary>
-/// Makes a <see cref="DatePicker"/>'s drop-down calendar exactly as wide as the box it belongs to,
+/// Makes a <see cref="DatePicker"/>'s drop-down calendar at least as wide as the box it belongs to,
 /// so the panel lines up with the field instead of hanging off it at the stock ~179px.
 /// </summary>
 /// <remarks>
+/// A FLOOR, not a fixed width. It was an exact <c>Width</c> until the day cells were sized up: the
+/// month grid inside a Calendar is content-sized and centred, it does not stretch to fill the panel,
+/// so a hard width narrower than the grid needs simply CLIPS the days — which would have hit the
+/// narrow pickers in Store Members while the wide one in the order editor looked correct.
+///
 /// This cannot be done from the theme with a binding, which is the obvious first attempt: the
 /// Calendar is created in code by <see cref="DatePicker"/> and lives inside a <see cref="Popup"/>,
 /// which is a SEPARATE visual tree. A <c>RelativeSource AncestorType=DatePicker</c> from the Calendar
@@ -62,6 +67,6 @@ public static class CalendarSizing
             return;
 
         if (picker.Template?.FindName("PART_Popup", picker) is Popup { Child: FrameworkElement panel })
-            panel.Width = picker.ActualWidth;
+            panel.MinWidth = picker.ActualWidth;
     }
 }

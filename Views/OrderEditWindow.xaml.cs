@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using CameywareOrder.Data;
 using CameywareOrder.Localization;
@@ -424,6 +425,7 @@ public partial class OrderEditWindow : Window
         PickedUpCheck.IsEnabled = false;
         ClearAllBalancesCheck.IsEnabled = false;
 
+        OrderDatePicker.IsEnabled = false;
         CustomerNameBox.IsReadOnly = true;
         PhoneField.IsReadOnlyField = true;
         EmailBox.IsReadOnly = true;
@@ -562,9 +564,51 @@ public partial class OrderEditWindow : Window
         RegisterValidationClearing();
         InitializeCustomMadeRecordsList();
         InitializeCurrencyChoices();
+        InitializeOrderDatePicker();
         SelectServiceType(OrderServiceType.Alterations);
         RefreshLocalizedLabels();
     }
+
+    /// <summary>
+    /// Seeds the order-date picker and stops it offering a day that has not happened yet.
+    /// </summary>
+    /// <remarks>
+    /// The picker opens on the date the order already carries — today for a new one — so a save that
+    /// never touches it records exactly what it recorded before this field existed.
+    ///
+    /// The future is BLACKED OUT rather than cut off with <c>DisplayDateEnd</c>. Both refuse it, but
+    /// DisplayDateEnd makes the days after it cease to exist, and rendering the drop-down showed what
+    /// that looks like on the 1st of a month: a calendar headed "August 2026" containing a single
+    /// day. A blacked-out day is still drawn, struck through, which reads as "not that one" instead
+    /// of as a fault. It also refuses a TYPED date, which DisplayDateEnd was measured NOT to do.
+    ///
+    /// The boundary is the LATER of today and the stored date. Nothing in the app produces a future
+    /// order date, but the GraphQL API accepts any <c>DateTime</c> a caller sends, and blacking out
+    /// the date an order already carries throws rather than merely looking odd.
+    /// </remarks>
+    private void InitializeOrderDatePicker()
+    {
+        var recorded = RecordedOrderDate().ToLocalTime().Date;
+        var lastAllowed = recorded > DateTime.Today ? recorded : DateTime.Today;
+
+        OrderDatePicker.SelectedDate = recorded;
+        OrderDatePicker.BlackoutDates.Add(new CalendarDateRange(lastAllowed.AddDays(1), DateTime.MaxValue));
+    }
+
+    /// <summary>The order date as it stands before this form is saved — <c>UtcNow</c> for a new one.</summary>
+    private DateTime RecordedOrderDate() => _existing?.OrderDate ?? DateTime.UtcNow;
+
+    /// <summary>
+    /// Puts the calendar drop-down into the current UI language.
+    /// </summary>
+    /// <remarks>
+    /// A <c>Calendar</c> renders its month and day names from <c>FrameworkElement.Language</c> rather
+    /// than from the string table, so without this it stays in the OS language whatever the shop
+    /// picked. Set on the window because Language is inherited, and re-set on every language change
+    /// because this window stays open across one. Same line as <c>StoreMembersWindow</c>'s.
+    /// </remarks>
+    private void ApplyCalendarLanguage()
+        => Language = XmlLanguage.GetLanguage(_localization.CurrentLanguageCode);
 
     /// <summary>
     /// Fills the currency picker from the currencies the open shop accepts, and hides it outright
@@ -840,6 +884,7 @@ public partial class OrderEditWindow : Window
         }
 
         RefreshCustomMadeButtonLabel();
+        ApplyCalendarLanguage();
 
         RefreshServicePanels();
         RefreshCustomMadeEmptyState();
@@ -1525,6 +1570,9 @@ public partial class OrderEditWindow : Window
         if (!ValidateEmailField())
             return Fail("OrderEdit.Validate.EmailInvalid", null, EmailBox);
 
+        if (!IsOrderDateAllowed())
+            return Fail("OrderEdit.Validate.OrderDateFuture", OrderDateErrorText, OrderDatePicker);
+
         RefreshComputedTotals();
 
         if (HasPaymentMethodRequiringEmail() && string.IsNullOrWhiteSpace(EmailBox.Text))
@@ -1706,9 +1754,31 @@ public partial class OrderEditWindow : Window
             SetFieldError(block, null);
     }
 
+    /// <summary>
+    /// Whether the day on the picker is one the shop could actually have taken the order on.
+    /// </summary>
+    /// <remarks>
+    /// The calendar cannot offer a future day (<see cref="InitializeOrderDatePicker"/> caps it), but
+    /// the box can be typed into, so the rule is enforced here as well as shown there.
+    ///
+    /// The comparison is against the day this runs rather than the day the window opened, so a form
+    /// left open over midnight is not refused for a date that was legal when it was picked. A date
+    /// already ON the order passes whatever it says: only the GraphQL API can put a future date
+    /// there, and refusing it would leave that order unsaveable rather than merely odd.
+    /// </remarks>
+    private bool IsOrderDateAllowed()
+    {
+        if (OrderDatePicker.SelectedDate is not { } picked)
+            return true;
+
+        return picked.Date <= DateTime.Today
+            || picked.Date == RecordedOrderDate().ToLocalTime().Date;
+    }
+
     private IEnumerable<TextBlock> ValidationErrorBlocks()
     {
         yield return OrderNumberErrorText;
+        yield return OrderDateErrorText;
         yield return CustomerNameErrorText;
         yield return PhoneErrorText;
         yield return EmailErrorText;
@@ -1838,6 +1908,10 @@ public partial class OrderEditWindow : Window
 
     private void ApplyEditableFields(Order order, OrderSaveData data)
     {
+        // Reads the order's OWN date as the baseline, which is what makes one line serve both paths:
+        // a new order is seeded with UtcNow just above, an existing one holds what was stored. Either
+        // way an untouched picker returns it unchanged — see Order.ResolveOrderDate.
+        order.OrderDate = Order.ResolveOrderDate(OrderDatePicker.SelectedDate, order.OrderDate);
         order.CustomerName = CustomerNameBox.Text.Trim();
         // Stored with its dial code in front, in the same column it always used: "+1 905-401-6667".
         order.PhoneNumber = PhoneField.FullNumber;
@@ -2288,6 +2362,10 @@ public partial class OrderEditWindow : Window
 
         foreach (var (box, error) in pairs)
             box.TextChanged += (_, _) => SetFieldError(error, null);
+
+        // Not a TextBox either: picking a day IS the correction, so the message clears on the
+        // selection rather than on a keystroke.
+        OrderDatePicker.SelectedDateChanged += (_, _) => SetFieldError(OrderDateErrorText, null);
 
         // The phone is not a TextBox any more, and its message must clear on a change to EITHER half —
         // switching the country is as much a correction as retyping the digits.

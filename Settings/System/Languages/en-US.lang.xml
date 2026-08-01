@@ -500,7 +500,9 @@
   <Text key="OrderEdit.ViewTitle">View Order</Text>
   <Text key="OrderEdit.Cancel">Cancel</Text>
   <Text key="OrderEdit.Save">Save</Text>
+  <Text key="OrderEdit.OrderDateHint">The date the order was taken. Leave it on today unless you are entering an order from an earlier day.</Text>
   <Text key="OrderEdit.Validate.OrderNumber">Please enter order number.</Text>
+  <Text key="OrderEdit.Validate.OrderDateFuture">The order date cannot be later than today.</Text>
   <Text key="OrderEdit.Validate.CustomerName">Please enter customer name.</Text>
   <Text key="OrderEdit.Validate.PhoneNumber">Phone number cannot be empty.</Text>
   <Text key="OrderEdit.Validate.EmailRequired">Please enter an email address when a payment method is selected.</Text>

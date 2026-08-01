@@ -499,7 +499,9 @@
   <Text key="OrderEdit.ViewTitle">Consulter la commande</Text>
   <Text key="OrderEdit.Cancel">Annuler</Text>
   <Text key="OrderEdit.Save">Enregistrer</Text>
+  <Text key="OrderEdit.OrderDateHint">Le jour où la commande a été prise. Laissez la date du jour, sauf si vous saisissez une commande d’une journée antérieure.</Text>
   <Text key="OrderEdit.Validate.OrderNumber">Veuillez saisir le numéro de commande.</Text>
+  <Text key="OrderEdit.Validate.OrderDateFuture">La date de la commande ne peut pas être postérieure à aujourd’hui.</Text>
   <Text key="OrderEdit.Validate.CustomerName">Veuillez saisir le nom du client.</Text>
   <Text key="OrderEdit.Validate.PhoneNumber">Le numéro de téléphone ne peut pas être vide.</Text>
   <Text key="OrderEdit.Validate.EmailRequired">Veuillez saisir une adresse courriel lorsqu’un mode de paiement est sélectionné.</Text>

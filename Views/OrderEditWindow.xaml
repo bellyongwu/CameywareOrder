@@ -259,6 +259,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
 
                             <DockPanel Grid.Row="0" Grid.Column="0" Margin="0,8" VerticalAlignment="Center">
@@ -282,20 +283,37 @@
                                 <ComboBoxItem Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Status.Returned], Mode=OneWay}" Tag="{x:Static model:OrderStatus.Returned}"/>
                             </ComboBox>
 
-                            <DockPanel Grid.Row="1" Grid.Column="0" Margin="0,8" VerticalAlignment="Center">
+                            <!-- When the order was TAKEN, which is not always when it is typed up: an
+                                 order written down on paper on Monday and entered on Wednesday belongs
+                                 to Monday. Sits under Status rather than under the order number so its
+                                 box lines up with the other right-hand inputs.
+
+                                 No local Style: the picker takes the application's ThemedDatePicker
+                                 implicitly, so it and the four in Store Members are one control. -->
+                            <DockPanel Grid.Row="1" Grid.Column="2" Margin="0,8" VerticalAlignment="Center">
+                                <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldIcon}" Text="&#xE787;"/>
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}"/>
+                            </DockPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="3" Margin="0,8">
+                                <DatePicker x:Name="OrderDatePicker"
+                                            ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.OrderDateHint], Mode=OneWay}"/>
+                                <TextBlock x:Name="OrderDateErrorText" Style="{StaticResource FieldErrorText}"/>
+                            </StackPanel>
+
+                            <DockPanel Grid.Row="2" Grid.Column="0" Margin="0,8" VerticalAlignment="Center">
                                 <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldIcon}" Text="&#xE77B;"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}"/>
                             </DockPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,8,14,8">
+                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,8,14,8">
                                 <TextBox x:Name="CustomerNameBox" Padding="6,4"/>
                                 <TextBlock x:Name="CustomerNameErrorText" Style="{StaticResource FieldErrorText}"/>
                             </StackPanel>
 
-                            <DockPanel Grid.Row="1" Grid.Column="2" Margin="0,8" VerticalAlignment="Center">
+                            <DockPanel Grid.Row="2" Grid.Column="2" Margin="0,8" VerticalAlignment="Center">
                                 <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldIcon}" Text="&#xE717;"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.PhoneNumber], Mode=OneWay}"/>
                             </DockPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="3" Margin="0,8">
+                            <StackPanel Grid.Row="2" Grid.Column="3" Margin="0,8">
                                 <!-- Carries the country the number belongs to; the shop's location only
                                      decides what it opens on. Validation and the stored "+1 …" string
                                      are the control's, so every phone field in the app agrees. -->
@@ -303,11 +321,11 @@
                                 <TextBlock x:Name="PhoneErrorText" Style="{StaticResource FieldErrorText}"/>
                             </StackPanel>
 
-                            <DockPanel Grid.Row="2" Grid.Column="0" Margin="0,8" VerticalAlignment="Center">
+                            <DockPanel Grid.Row="3" Grid.Column="0" Margin="0,8" VerticalAlignment="Center">
                                 <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldIcon}" Text="&#xE715;"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Email], Mode=OneWay}"/>
                             </DockPanel>
-                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,8,14,8">
+                            <StackPanel Grid.Row="3" Grid.Column="1" Margin="0,8,14,8">
                                 <TextBox x:Name="EmailBox" Padding="6,4" LostFocus="OnEmailBoxLostFocus"/>
                                 <TextBlock x:Name="EmailErrorText" Style="{StaticResource FieldErrorText}"/>
                             </StackPanel>
@@ -318,24 +336,24 @@
                                  single option is chrome that cannot do anything. The amount fields
                                  carry no symbol of their own, so this is the only place on the form
                                  that says which currency the numbers are in. -->
-                            <DockPanel Grid.Row="2" Grid.Column="2" x:Name="CurrencyLabelPanel" Margin="0,8" VerticalAlignment="Center">
+                            <DockPanel Grid.Row="3" Grid.Column="2" x:Name="CurrencyLabelPanel" Margin="0,8" VerticalAlignment="Center">
                                 <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldIcon}" Text="&#xE1D7;"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CurrencyType], Mode=OneWay}"/>
                             </DockPanel>
-                            <ComboBox Grid.Row="2" Grid.Column="3" x:Name="CurrencyBox" Margin="0,8" Padding="6,4"
+                            <ComboBox Grid.Row="3" Grid.Column="3" x:Name="CurrencyBox" Margin="0,8" Padding="6,4"
                                       SelectionChanged="OnCurrencyChanged"/>
 
-                            <DockPanel Grid.Row="3" Grid.Column="0" Margin="0,10,0,8" VerticalAlignment="Top">
+                            <DockPanel Grid.Row="4" Grid.Column="0" Margin="0,10,0,8" VerticalAlignment="Top">
                                 <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldIcon}" Text="&#xE707;" Margin="0,2,6,0"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.Address], Mode=OneWay}"/>
                             </DockPanel>
-                            <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,8">
+                            <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,8">
                                 <TextBox x:Name="AddressBox" Padding="6,4"
                                          Height="68" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
                                 <TextBlock x:Name="AddressErrorText" Style="{StaticResource FieldErrorText}"/>
                             </StackPanel>
 
-                            <DockPanel Grid.Row="4" Grid.Column="0" x:Name="StatusReasonLabelPanel" Margin="0,10,0,8" VerticalAlignment="Top" Visibility="Collapsed">
+                            <DockPanel Grid.Row="5" Grid.Column="0" x:Name="StatusReasonLabelPanel" Margin="0,10,0,8" VerticalAlignment="Top" Visibility="Collapsed">
                                 <TextBlock DockPanel.Dock="Left" Style="{StaticResource FieldIcon}" Text="&#xE7C1;" Margin="0,2,6,0"/>
                                 <TextBlock Style="{StaticResource FieldLabel}" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.StatusReason], Mode=OneWay}"/>
                             </DockPanel>
@@ -343,7 +361,7 @@
                                  UpdateStatusReasonVisibility and OnStatusReasonCategoryChanged both
                                  read StatusReasonCategoryBox.Visibility, so the picker has to stay the
                                  thing whose Visibility is toggled. -->
-                            <StackPanel Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,8" HorizontalAlignment="Left">
+                            <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,8" HorizontalAlignment="Left">
                             <ComboBox x:Name="StatusReasonCategoryBox" Padding="6,4"
                                       MinWidth="260" MaxWidth="420" Visibility="Collapsed" SelectionChanged="OnStatusReasonCategoryChanged">
                                 <!-- The reasons are sentences, and they are translated: "Not satisfied
@@ -375,7 +393,7 @@
                             <!-- StatusReasonContainer stays the element whose Visibility is toggled, so
                                  the error message hides with the box it belongs to; the inner Grid keeps
                                  the placeholder overlaid on the TextBox. -->
-                            <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="3" x:Name="StatusReasonContainer" Margin="0,8" Visibility="Collapsed">
+                            <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="3" x:Name="StatusReasonContainer" Margin="0,8" Visibility="Collapsed">
                                 <Grid>
                                     <TextBox x:Name="StatusReasonBox" Padding="6,4" Height="60" TextWrapping="Wrap" AcceptsReturn="True"
                                              VerticalScrollBarVisibility="Auto" TextChanged="OnStatusReasonTextChanged"/>

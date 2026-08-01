@@ -102,6 +102,13 @@
     <sys:Double x:Key="FontSizeTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">18</sys:Double>
     <sys:Double x:Key="FontSizePageTitle" xmlns:sys="clr-namespace:System;assembly=mscorlib">22</sys:Double>
 
+    <!-- Off the scale above on purpose. A date drop-down is a GRID of ~40 numbers read at a glance
+         and clicked at, not a paragraph, so it is sized like a control surface rather than like body
+         text. Named rather than spelled into the three calendar styles that use it so they cannot
+         drift apart, and kept moderate: the panel grows sideways, not down, so this has to stay
+         comfortable inside a row height that did not change. -->
+    <sys:Double x:Key="FontSizeCalendar" xmlns:sys="clr-namespace:System;assembly=mscorlib">15</sys:Double>
+
     <!-- Inherited by everything in a window that does not say otherwise. -->
     <Style TargetType="Window">
         <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
@@ -656,7 +663,14 @@
          it belongs to. The Calendar is created in code and lives inside a Popup — a separate visual
          tree — so the binding walks out through the Popup's LOGICAL parent to reach the DatePicker.
          It resolves; if a future WPF change breaks it the binding fails silently to the natural
-         width, and the harness's binding-error count is what catches that. -->
+         width, and the harness's binding-error count is what catches that.
+
+         HEIGHT, and only height: the drop-down is sized up by the day cells and the type, never by a
+         ScaleTransform on the Calendar. A transform would double the WIDTH too, and the width is the
+         one dimension already spoken for — it is bound to the box the drop-down belongs to. Nor is a
+         MinWidth set on the day buttons: the day grid's columns are star-sized inside that bound
+         width, so a fixed cell width would overflow and clip on the narrower pickers in Store
+         Members while looking fine on the wide one in the order editor. -->
     <Style x:Key="ThemedCalendar" TargetType="Calendar">
         <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
         <!-- Set EXPLICITLY, not left to the implicit style: Calendar hands each day button whatever
@@ -666,7 +680,7 @@
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
-        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCalendar}"/>
     </Style>
 
     <Style TargetType="Calendar" BasedOn="{StaticResource ThemedCalendar}"/>
@@ -675,7 +689,7 @@
         <Setter Property="Background" Value="{StaticResource SurfaceBrush}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCalendar}"/>
     </Style>
 
     <!-- The one part of the calendar worth re-templating: the stock day button paints its selection
@@ -683,8 +697,13 @@
          The month/year navigation above it is left alone — it is intricate and it works. -->
     <Style x:Key="ThemedCalendarDayButton" TargetType="CalendarDayButton">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCalendar}"/>
+        <!-- WIDE, not tall. The month grid is content-sized rather than stretched, so a day cell
+             was only about as wide as its two digits; MinWidth is what actually opens the panel out,
+             and it is set to twice that. The row height is left where it was — a calendar that gets
+             taller as well pushes the drop-down past the bottom of the window on a small screen. -->
+        <Setter Property="MinWidth" Value="58"/>
+        <Setter Property="MinHeight" Value="34"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
         <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -693,7 +712,21 @@
                 <ControlTemplate TargetType="CalendarDayButton">
                     <Border x:Name="Bd" CornerRadius="5" Background="Transparent" Margin="1"
                             BorderThickness="1" BorderBrush="Transparent" SnapsToDevicePixels="True">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <!-- The wrapper sizes itself to the DIGITS, which is what gives the blackout
+                             bar below the width of the number rather than of the whole cell. -->
+                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <!-- The stock day button draws a strike for a blacked-out day; this
+                                 template replaces the stock one, so it has to draw it too. Without
+                                 it an unavailable day is merely grey — near enough to the grey of a
+                                 day spilling in from a neighbouring month, which IS selectable.
+                                 A horizontal rule rather than the stock diagonal: at this cell size
+                                 a corner-to-corner line reads as a stroke across the whole panel. -->
+                            <Border x:Name="Blackout" Height="1.6" Margin="-3,0,-3,0"
+                                    VerticalAlignment="Center" IsHitTestVisible="False"
+                                    Background="{StaticResource DisabledForegroundBrush}"
+                                    Visibility="Collapsed"/>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
                         <!-- Days spilling in from the neighbouring month: present, but not competing. -->
@@ -716,6 +749,7 @@
                         </Trigger>
                         <Trigger Property="IsBlackedOut" Value="True">
                             <Setter Property="Foreground" Value="{StaticResource DisabledForegroundBrush}"/>
+                            <Setter TargetName="Blackout" Property="Visibility" Value="Visible"/>
                             <Setter Property="IsEnabled" Value="False"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -726,11 +760,14 @@
 
     <Style TargetType="CalendarDayButton" BasedOn="{StaticResource ThemedCalendarDayButton}"/>
 
-    <!-- The month and year buttons in the drill-up views. -->
+    <!-- The month and year buttons in the drill-up views. Sized with the day buttons — four columns
+         against seven, so the same panel width divides into wider cells — because dropping from days
+         to months must not resize the panel it is inside. -->
     <Style TargetType="CalendarButton">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="FontSize" Value="{StaticResource FontSizeBody}"/>
-        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="FontSize" Value="{StaticResource FontSizeCalendar}"/>
+        <Setter Property="MinWidth" Value="100"/>
+        <Setter Property="MinHeight" Value="40"/>
         <Setter Property="Cursor" Value="Hand"/>
     </Style>
 

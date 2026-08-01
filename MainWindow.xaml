@@ -591,7 +591,10 @@
                             <GridViewColumn local:OrderColumnSort.SortKey="OrderDate" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Width="165">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
-                                        <TextBlock Style="{StaticResource NumericCellText}" Text="{Binding OrderDate, StringFormat=yyyy-MM-dd}"/>
+                                        <!-- OrderDateLocal, not OrderDate: the column stores UTC and a
+                                             shop east of Greenwich would read a morning order as the
+                                             day before. -->
+                                        <TextBlock Style="{StaticResource NumericCellText}" Text="{Binding OrderDateLocal, StringFormat=yyyy-MM-dd}"/>
                                     </DataTemplate>
                                 </GridViewColumn.CellTemplate>
                             </GridViewColumn>
@@ -719,7 +722,10 @@
                     <TextBlock Text="{Binding SelectedOrder.Address}" Margin="0,2,0,10" FontSize="13" TextWrapping="Wrap"/>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.OrderDate], Mode=OneWay}" Foreground="#777" FontSize="11"/>
-                    <TextBlock Text="{Binding SelectedOrder.OrderDate, StringFormat='yyyy-MM-dd  HH:mm'}"
+                    <!-- The DAY, with no time: the order form records a date, so an order backdated to
+                         last Monday would otherwise read "00:00" here and look like missing data. When
+                         it was SAVED is the line below, and that one is a real timestamp. -->
+                    <TextBlock Text="{Binding SelectedOrder.OrderDateLocal, StringFormat=yyyy-MM-dd}"
                                Margin="0,2,0,10" FontSize="13"/>
 
                     <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.LastModifiedDate], Mode=OneWay}" Foreground="#777" FontSize="11"/>

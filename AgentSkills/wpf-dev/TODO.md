@@ -17,6 +17,55 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-07-31 21:40 — v4.3.0: the order date is a field, and it can be backdated  [DONE]
+- Ask: "skill wpf-dev, create a field of date time picker for the order date field. right now it is
+  using the date that we operate. but sometimes we need to record the order before the date because
+  we may forgot to input the order realtime, we can record it later on. so for the record, do not
+  that so speicific, just record the date should be good enough. if not edit the date field, just use
+  the real time order date as default."
+  Mid-turn: "So the order date cannot be later than the realtime date"
+  Mid-turn: "Also, make datetime picker UI float right on align with the input field."
+  Layout answer (asked): right-hand label/input pair, new row under Order Number / Status.
+- Plan:
+  - [ ] `OrderEditWindow.xaml`: a themed `DatePicker` in the Basic Info card, right column, new row
+  - [ ] Seed it from the order's own date (new order = today); cap the calendar at today
+  - [ ] Save writes a DATE, not an instant: local midnight → UTC, and only when the picked date
+        differs from the one already recorded, so an untouched picker keeps the live timestamp and
+        an untouched EDIT does not count as a modification
+  - [ ] Refuse a future date on save (the calendar cannot offer one; the box can be typed into)
+  - [ ] Read-only orders: the picker locks with the rest of the form
+  - [ ] `Order.OrderDateLocal` — the list and the detail panel render the stored UTC instant RAW,
+        so a shop in +08 would see a backdated order a day early. The receipt already converts.
+  - [x] `OrderEditWindow.xaml`: a themed `DatePicker` in the Basic Info card, right column, new row
+  - [x] Seed it from the order's own date (new order = today); refuse the future
+  - [x] Save writes a DATE, not an instant: local midnight → UTC, and only when the picked date
+        differs from the one already recorded
+  - [x] Refuse a future date on save (the box can be typed into)
+  - [x] Read-only orders: the picker locks with the rest of the form
+  - [x] `Order.OrderDateLocal` for the list, the detail panel and the receipt
+  - [x] Two new string-table keys × 5 languages; build; render; harness
+  - [x] Mid-turn: the drop-down twice as WIDE (not taller), shared by every picker in the app
+- Notes: **Model** `Order.OrderDate` documented + `OrderDateLocal` (`[NotMapped]`) +
+  `static ResolveOrderDate(picked, recorded)` — unchanged DAY returns `recorded` to the tick, so an
+  untouched save stays off EF's modified list; a changed day is `SpecifyKind(day, Local).ToUniversalTime()`.
+  **Form** new row 1 in the Basic Info grid, right-hand label/input pair (rows 1-5 renumbered to
+  2-6); `InitializeOrderDatePicker` (seed + `BlackoutDates` from the later of today and the stored
+  day), `ApplyCalendarLanguage` called from `RefreshLocalizedLabels`, `IsOrderDateAllowed` in
+  `ValidateForSave`, `OrderDateErrorText` in `ValidationErrorBlocks` + the clearing map, picker
+  disabled in `ApplyReadOnlyMode`, one line in `ApplyEditableFields`. **Display** `MainWindow.xaml`
+  list column + detail panel → `OrderDateLocal`, detail drops the time; receipt line → local day only.
+  **Theme** `FontSizeCalendar` (15), day button `MinWidth 58` / `MinHeight 34`, blackout strike drawn
+  in the custom template, `CalendarButton` sized to match; `CalendarSizing` sets `MinWidth` not
+  `Width` so a narrow picker's drop-down grows instead of clipping. **Keys**
+  `OrderEdit.OrderDateHint`, `OrderEdit.Validate.OrderDateFuture` × 5 languages.
+  Build 0/0 (Sonar analyzers run in-build). `scratchpad/datecheck` — 94 assertions green, two renders
+  looked at. Gate 1/Gate 2 could not be run as written: no IDE-diagnostics or SonarLint MCP tool is
+  connected in this session, so the in-build SonarAnalyzer pass is the whole of the Sonar evidence.
+  Three findings reported to the user rather than fixed, all pre-existing: an order whose service
+  category is "None" clears its section on the next save; the legacy aggregate `FinalBalanceMethod`
+  reconciles itself on the first re-save; and `CopyOneOrderAsync`'s property list is still behind the
+  model (carried over from v4.2.0).
+
 ### 2026-07-31 19:22 — v4.2.0: select several records and act on them at once  [DONE]
 - Ask: "use skill wpf-dev, create a feature for store to delete records in store. To do that, when
   activate on the main application, use CTRL+left click to select records. you can do batch options.

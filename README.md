@@ -11,6 +11,32 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v4.3.0 — 2026-08-01
+
+**You can now say when an order was actually taken.** Until now every order was stamped with the day
+you typed it in. If a customer came in on Monday and the order only got entered on Wednesday, the
+record said Wednesday — and there was nothing you could do about it.
+
+- **A new Order Date field** sits in the order form, under Status. It opens on today, so an order
+  entered as it is taken needs nothing from you: leave it alone and it behaves exactly as it always
+  did.
+- **To record an order from an earlier day**, pick that day. The order is filed under it — in the
+  list, on the detail panel and on the receipt.
+- **You cannot pick a day that has not happened yet.** Future days are struck through in the
+  calendar, and typing one in is refused when you save.
+- **You can also correct the date on an order you already saved.** Reopen it, change the date, save.
+  Saving without touching the date leaves it exactly as it was and does not mark the order as
+  edited.
+- **The date drop-down is twice as wide** and easier to read and click. Every date field in the
+  application uses the same one, so the birthday and start-date pickers under Store Members got the
+  same treatment.
+
+**One fix that came with it.** Order dates were stored in universal time but shown raw, so a shop in
+a timezone ahead of London could see an order taken this morning listed under yesterday's date. The
+list, the detail panel and the receipt now all show the date in your own local time, and they agree
+with each other. The receipt no longer prints a time of day beside the order date — the record is a
+date.
+
 ### v4.2.0 — 2026-07-31
 
 **Pick several records and act on them at once.** Until now the order list let you work on one record

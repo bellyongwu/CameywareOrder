@@ -24,6 +24,42 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A field that records a DATE must return the stored instant untouched when the day has not
+  changed (2026-08-01).** `Order.ResolveOrderDate(picked, recorded)` compares DAYS and hands back
+  `recorded` itself when they match — it does not re-derive midnight from the picked day. Two things
+  depend on that and both are invisible until they break:
+  - an order saved without touching the picker keeps the real TIME it was taken, so the field
+    changes nothing for the normal case;
+  - `UpdateExistingOrderAsync` decides "was this actually edited?" by asking EF whether any property
+    `IsModified`. Rewriting the date to midnight on every save would make every re-save an edit and
+    overwrite the record of who last really touched the order.
+  A backdated day is stored as that day's LOCAL midnight converted to UTC, never
+  `SpecifyKind(day, Utc)` — the naive version reads back as the day before everywhere east of
+  Greenwich. `Order.OrderDateLocal` is the read side; the list and the detail panel bound
+  `OrderDate` RAW and were already showing the wrong day near midnight before any of this.
+- **DisplayDateEnd hides days; BlackoutDates refuses them (2026-08-01).** Both stop a future date
+  being PICKED, and the difference only shows when you look: `DisplayDateEnd = Today` makes every
+  later day cease to exist, so on the 1st of a month the drop-down is a calendar headed "August
+  2026" containing one day. It also does **not** refuse a date TYPED into the box (measured), while a
+  blackout does, because `DatePicker` asks the Calendar whether the parsed date is a valid selection.
+  Blackouts it is — and the custom `CalendarDayButton` template has to draw the strike itself, since
+  it replaced the stock one that drew it.
+- **`CalendarSizing` sets a MinWidth, not a Width (2026-08-01).** The month grid inside a `Calendar`
+  is content-sized and centred; it does not stretch to fill the panel. So the day cells decide how
+  wide the grid needs to be, and a hard `Width` taken from a narrow box CLIPS columns off it. The
+  order editor's picker is wide enough to hide that; Store Members' four are not.
+- **A harness must not drive a Save that will be REFUSED (2026-08-01).** `AnnounceValidationFailure`
+  raises a `MessageBox`, which blocks the thread until a human clicks it — a hung run, and a dialog
+  on the user's screen. Drive `ValidateForSave` (the half that marks without announcing) by
+  reflection instead. That split exists for this; `datecheck` also asserts the method is still there,
+  so removing it fails a test rather than silently re-hanging the next harness.
+- **Diff every COLUMN across a save, not just the one you changed (2026-08-01).** Asserting "an
+  untouched save moves nothing" found two things that were not the order date: an order whose service
+  category is "None" clears its section on the next save (the price box is ignored while the category
+  switches the service off), and the legacy aggregate `Orders.FinalBalanceMethod` reads the raw final
+  radio while the per-section column stores the RESOLVED method, so the two disagree until the first
+  re-save reconciles them. Both are pre-existing and neither was visible from a passing test — the
+  diff named them in one run where "LastModifiedDate moved" would have sent the next reader hunting.
 - **A "batch" version of an action inherits every latent defect of the single one, at scale
   (2026-07-31).** Multi-select turned `CopyOrderAsync`'s hand-built
   `$"ORD-{DateTime.Now:yyyyMMdd-HHmmss}"` from a cosmetic wrong into a guaranteed one: every copy in

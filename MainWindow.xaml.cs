@@ -1542,7 +1542,12 @@ public partial class MainWindow : Window
         AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.PhoneNumber"], order.PhoneNumber);
         AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.Email"], order.Email);
         AddReceiptInfoLineIfHasValue(blocks, _localization["Order.Fields.Address"], order.Address);
-        blocks.Add(ReceiptInfoLine(_localization["Order.Fields.OrderDate"], order.OrderDate.ToLocalTime().ToString("yyyy-MM-dd HH:mm")));
+        // The day only. The order form records a date — an order can be backdated to the day it was
+        // actually taken — so a time here would print 00:00 on exactly those orders and read as a
+        // fault. The receipt agrees with the list column and the detail panel line for line.
+        blocks.Add(ReceiptInfoLine(
+            _localization["Order.Fields.OrderDate"],
+            order.OrderDateLocal.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
         blocks.Add(ReceiptInfoLine(_localization["Order.Fields.Status"], _localization[$"Status.{order.Status}"]));
         blocks.Add(ReceiptInfoLine(
             _localization["Order.Fields.CurrencyType"],

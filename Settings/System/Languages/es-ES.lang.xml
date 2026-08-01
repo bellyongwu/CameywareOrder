@@ -499,7 +499,9 @@
   <Text key="OrderEdit.ViewTitle">Ver pedido</Text>
   <Text key="OrderEdit.Cancel">Cancelar</Text>
   <Text key="OrderEdit.Save">Guardar</Text>
+  <Text key="OrderEdit.OrderDateHint">El día en que se tomó el pedido. Déjalo en hoy salvo que estés registrando un pedido de una jornada anterior.</Text>
   <Text key="OrderEdit.Validate.OrderNumber">Escribe el número de pedido.</Text>
+  <Text key="OrderEdit.Validate.OrderDateFuture">La fecha del pedido no puede ser posterior a hoy.</Text>
   <Text key="OrderEdit.Validate.CustomerName">Escribe el nombre del cliente.</Text>
   <Text key="OrderEdit.Validate.PhoneNumber">El número de teléfono no puede estar vacío.</Text>
   <Text key="OrderEdit.Validate.EmailRequired">Escribe una dirección de correo electrónico cuando haya un método de pago seleccionado.</Text>

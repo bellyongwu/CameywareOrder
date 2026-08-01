@@ -41,15 +41,18 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 ## Open
 
-Nothing in flight. v3.0.0 (store location / tax jurisdictions) is **committed to `main`**, not pushed;
-the Canada collapse, the tax-inclusive wording and the phone-country field are on top of it,
-uncommitted.
+Nothing in flight. Everything through **v4.3.0 is committed and pushed to `main`** — the user asked
+for the push explicitly with that release.
+
+**The harness suite is GONE from disk (2026-08-01).** It lived in a previous session's scratchpad,
+which has been cleaned up; only `batchcheck` and the new `datecheck` survive. Treat "the suite is
+green" as unverifiable until the harnesses are rebuilt — the lessons they encode are in this file and
+in `context.md`, but the assertions are not.
 
 **Fixed 2026-07-30:** `langcheck`'s "installs every shipped language" pair was FLAPPING — red, then
 green for several runs, then red — because it asserted on live shop data that `storecheck` rewrites
 (delete/restore moved Montreal Atelier from `#4` to `#14`). It now seeds its own fixture copy. See
-`context.md`: a flapping gate devalues every result it has produced, and this suite is what every change
-in this session was verified against.
+`context.md`: a flapping gate devalues every result it has produced.
 
 **Known odd, not a regression:** shop #10 "Shanghai LeeYonge Bespoke" is located `CA-BC`, so it prices
 tax-exclusive and dials +1. Reported to the user rather than corrected: a location change moves the tax
@@ -69,6 +72,30 @@ treatment too, which is theirs to decide.
 ---
 
 ## Recent work (2026-07-31)
+
+### v4.3.0 — the order date is a field, and it can be backdated  [DONE]
+
+An order taken on Monday and typed up on Wednesday was stamped Wednesday, because `OrderDate` was
+only ever `DateTime.UtcNow` at save. Now a picker in the Basic Info card, in the right-hand input
+column, refusing any day after today.
+
+It records a **date**, not an instant, and writes only when the picked day differs from the one
+already recorded — so an untouched picker keeps the live timestamp and an untouched edit still reads
+as "no change" to the EF-driven modification check. Backdated days are stored as LOCAL midnight in
+UTC; `SpecifyKind(day, Utc)` reads back a day early everywhere east of Greenwich.
+
+*Found on the way in:* the list and the detail panel bound `OrderDate` **raw**, so a shop in +08 has
+been seeing morning orders under the previous day since the beginning. `Order.OrderDateLocal` is now
+what every surface binds, and the receipt prints the day without a time — the record is a date.
+
+Rules for the future: **blackouts, not `DisplayDateEnd`** (which hides later days entirely and does
+not refuse a typed one); **`CalendarSizing` floors the width rather than fixing it** (the month grid
+is content-sized, so a hard width clips columns); and a **harness must not drive a refused Save** —
+the dialog blocks the thread. All three are in `context.md` with the measurements behind them.
+
+Two pre-existing quirks the column-diff turned up, reported and not fixed: an order whose service
+category is "None" clears its section on the next save, and the legacy aggregate
+`Orders.FinalBalanceMethod` reconciles itself on the first re-save.
 
 ### v4.2.0 — select several records and act on them at once  [DONE]
 

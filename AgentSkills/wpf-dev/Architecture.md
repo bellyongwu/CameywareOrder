@@ -255,7 +255,13 @@ components are added/renamed or the way pieces fit together changes.
     and returns free text unchanged; `Resolve(cm, inch, wantInches)` converts from
     whichever unit WAS filled in, which is what stopped inch printing from dropping
     95% of stored values.
-  - `Order` — customer + per-section (Alteration / CustomMade / Clothing) money
+  - `Order` — `OrderDate` is the day the order was TAKEN, stored UTC and editable in the form, so an
+    order written down on Monday and typed up on Wednesday is filed under Monday.
+    `ResolveOrderDate(picked, recorded)` is the rule: an unchanged DAY returns the recorded instant
+    untouched (which is what keeps an untouched save off EF's modified list), a changed one is stored
+    as that day's local midnight in UTC. `OrderDateLocal` is the read side and is what every surface
+    binds — the list, the detail panel and the receipt all show the shop's own day.
+    Also customer + per-section (Alteration / CustomMade / Clothing) money
     fields, **a payment method per portion** (deposit + final balance), **a tax rate
     per portion** (`XxxTaxRate` = deposit stage, `XxxFinalTaxRate` = final stage;
     a null final rate means a pre-split order whose single rate applies to both),
@@ -508,7 +514,13 @@ components are added/renamed or the way pieces fit together changes.
   - `OrderColumnSort` (static, in `MainWindow.xaml.cs`) — attached properties
     `SortKey` (per-column sort member) and `SortGlyph` (header arrow), consumed by
     the header `ContentTemplate` and `UpdateSortGlyphs`.
-  - `OrderEditWindow` — the large create/edit form: per-section pricing &
+  - `OrderEditWindow` — the large create/edit form. Its Basic Info card carries an **order-date
+    picker** in the right-hand input column (`InitializeOrderDatePicker` seeds it from the order's own
+    day and blacks out everything after the later of today and that day; `IsOrderDateAllowed` refuses
+    a future date at save; `ApplyEditableFields` writes it through `Order.ResolveOrderDate`). The
+    window sets `FrameworkElement.Language` from the string table (`ApplyCalendarLanguage`, re-run on
+    every language change) because a `Calendar` renders its month names from that, not from the
+    string table. Then per-section pricing &
     payment, a **stage-aware tax-rate box** (one box per section that edits the
     deposit rate until the deposit is marked received and the final-balance rate
     afterwards, with a label naming the stage — `PaymentSectionControls` holds both
@@ -702,9 +714,11 @@ components are added/renamed or the way pieces fit together changes.
   guards in `App.xaml.cs` instead (see Startup above).
 - **Controls/**
   - `CalendarSizing` — attached `MatchOwnerWidth`, which makes a `DatePicker`'s drop-down calendar
-    exactly as wide as its box. A behavior rather than a binding because the Calendar lives in a
-    `Popup`, a separate visual tree that `RelativeSource` cannot cross — and fails silently when it
-    tries. The home for any future "the theme cannot express this" hook; see context.md.
+    **at least** as wide as its box (a `MinWidth` floor, not a fixed `Width`: the month grid is
+    content-sized and a hard width narrower than it needs clips columns off). A behavior rather than
+    a binding because the Calendar lives in a `Popup`, a separate visual tree that `RelativeSource`
+    cannot cross — and fails silently when it tries. The home for any future "the theme cannot
+    express this" hook; see context.md.
   - `WindowFitting` — `Fit(Window)` resolves the monitor; `Fit(Window, Rect)` takes the work area as
     an argument, which is what makes the rule testable on a machine that is not small. Fits EVERY
     window to the screen it opens on, scaling the whole layout down
@@ -726,7 +740,11 @@ components are added/renamed or the way pieces fit together changes.
     size scale, and semantic text styles), the palette as named brushes (`PrimaryBrush`,
     `AccentBrush`, `HeaderGradientBrush`,
     the neutral ramp, danger/success/warning), implicit styles for Button / TextBox / PasswordBox /
-    ComboBoxItem / DatePicker / CheckBox / RadioButton, the ToolBar button key, and the keyed
+    ComboBoxItem / DatePicker / CheckBox / RadioButton — the date picker and its Calendar are styled
+    ONCE here and reached implicitly, so the order form's and Store Members' four are one control;
+    `FontSizeCalendar` plus the day button's `MinWidth` open the drop-down out SIDEWAYS rather than
+    down, and its `IsBlackedOut` trigger draws the strike the stock template would have — the ToolBar
+    button key, and the keyed
     `CardBorder` / `CardHeading` / `FieldLabel` / `SectionHeading` / `RosterCardContainer` /
     `TimePickerComboBox`, plus themed `Menu` / `MenuItem` / `ContextMenu` / `Separator` (one
     MenuItem template covering all four roles, switched by `Role` triggers; `ThemedContextMenu`

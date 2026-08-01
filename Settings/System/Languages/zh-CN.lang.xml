@@ -503,7 +503,9 @@
   <Text key="OrderEdit.ViewTitle">查看订单</Text>
   <Text key="OrderEdit.Cancel">取消</Text>
   <Text key="OrderEdit.Save">保存</Text>
+  <Text key="OrderEdit.OrderDateHint">接单的日期。补录以往订单时才需要修改，否则保持当天即可。</Text>
   <Text key="OrderEdit.Validate.OrderNumber">请输入订单编号</Text>
+  <Text key="OrderEdit.Validate.OrderDateFuture">订单日期不能晚于今天</Text>
   <Text key="OrderEdit.Validate.CustomerName">请输入客户名称</Text>
   <Text key="OrderEdit.Validate.PhoneNumber">电话号码不能为空</Text>
   <Text key="OrderEdit.Validate.EmailRequired">选择付款方式时，请填写电子邮箱地址</Text>
