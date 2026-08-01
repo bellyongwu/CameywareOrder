@@ -590,6 +590,14 @@
 
     <Style x:Key="ThemedDatePicker" TargetType="DatePicker">
         <Setter Property="MinHeight" Value="38"/>
+        <!-- A FLOOR, never a fixed width. A date box should take the width its column offers — the
+             order form's two stretch with the form, and the report's stretch with the window — so
+             that the drop-down, which is floored at the box's width (see CalendarSizing), lines up
+             with it instead of hanging off a box narrower than itself. The minimum is what stops it
+             collapsing to the text in a horizontal StackPanel, which does not stretch its children. -->
+        <Setter Property="MinWidth" Value="170"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
         <!-- DatePicker BINDS its Calendar.Style to this property, and a bound null Style suppresses
              implicit lookup entirely — which is why the themed Calendar style never applied until it
              was named here. Same reason CalendarDayButtonStyle has to be set on the Calendar style. -->

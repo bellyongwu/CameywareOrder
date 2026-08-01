@@ -37,11 +37,12 @@
         <!-- One KPI: a caption over a number. The number is the thing being read, so it carries the
              weight and the caption stays quiet above it. -->
         <DataTemplate x:Key="MetricTemplate">
-            <!-- The bottom margin matches the right one on purpose. These sit in a WrapPanel, so with
-                 a right margin alone the cards are spaced across but touch once the row wraps — which
-                 is exactly what the Orders and Payments cards do at six items. Equal gaps in both
-                 directions is what makes it read as a grid rather than as rows that ran together. -->
-            <Border Background="{Binding Background}" CornerRadius="10" Padding="14,12" Margin="0,0,10,10" MinWidth="150">
+            <!-- Equal margins in both directions, and that is the whole point. These sit in a
+                 WrapPanel: a right margin alone spaces the cards across while letting the ROWS touch
+                 as soon as they wrap, which is exactly what the Orders and Payments cards do at six
+                 items. The gap has to read the same horizontally and vertically or the block stops
+                 looking like a grid. -->
+            <Border Background="{Binding Background}" CornerRadius="10" Padding="14,12" Margin="0,0,12,12" MinWidth="150">
                 <StackPanel>
                     <TextBlock Text="{Binding Caption}" FontSize="11" Foreground="#6B7280" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding Value}" FontSize="19" FontWeight="Bold" Foreground="#111827" Margin="0,4,0,0"/>
@@ -124,32 +125,45 @@
 
         <!-- Period filter -->
         <Border DockPanel.Dock="Top" Background="White" BorderBrush="#E5E7EB" BorderThickness="0,0,0,1" Padding="22,12">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <RadioButton x:Name="DayChip" Style="{StaticResource PeriodChip}" GroupName="Period" Checked="OnPeriodKindChanged"/>
-                <RadioButton x:Name="MonthChip" Style="{StaticResource PeriodChip}" GroupName="Period" Checked="OnPeriodKindChanged"/>
-                <RadioButton x:Name="YearChip" Style="{StaticResource PeriodChip}" GroupName="Period" Checked="OnPeriodKindChanged"/>
-                <RadioButton x:Name="CustomChip" Style="{StaticResource PeriodChip}" GroupName="Period" Checked="OnPeriodKindChanged"/>
+            <!-- A DockPanel so the date range can take the room the fixed controls leave. In a
+                 horizontal StackPanel every child is measured against infinite width, so a star
+                 column inside one never grows and a "stretch" date box stays at its minimum. -->
+            <DockPanel LastChildFill="True" VerticalAlignment="Center">
+                <RadioButton x:Name="DayChip" DockPanel.Dock="Left" Style="{StaticResource PeriodChip}" GroupName="Period" Checked="OnPeriodKindChanged"/>
+                <RadioButton x:Name="MonthChip" DockPanel.Dock="Left" Style="{StaticResource PeriodChip}" GroupName="Period" Checked="OnPeriodKindChanged"/>
+                <RadioButton x:Name="YearChip" DockPanel.Dock="Left" Style="{StaticResource PeriodChip}" GroupName="Period" Checked="OnPeriodKindChanged"/>
+                <RadioButton x:Name="CustomChip" DockPanel.Dock="Left" Style="{StaticResource PeriodChip}" GroupName="Period" Checked="OnPeriodKindChanged"/>
 
-                <Border Width="1" Background="#E5E7EB" Margin="10,2" VerticalAlignment="Stretch"/>
+                <Border DockPanel.Dock="Left" Width="1" Background="#E5E7EB" Margin="10,2" VerticalAlignment="Stretch"/>
 
-                <Button x:Name="PreviousButton" Padding="10,6" Margin="0,0,6,0" Click="OnPreviousClick" Cursor="Hand"/>
-                <Button x:Name="NextButton" Padding="10,6" Margin="0,0,12,0" Click="OnNextClick" Cursor="Hand"/>
+                <Button x:Name="PreviousButton" DockPanel.Dock="Left" Padding="10,6" Margin="0,0,6,0" Click="OnPreviousClick" Cursor="Hand"/>
+                <Button x:Name="NextButton" DockPanel.Dock="Left" Padding="10,6" Margin="0,0,12,0" Click="OnNextClick" Cursor="Hand"/>
 
-                <StackPanel x:Name="CustomRangePanel" Orientation="Horizontal" VerticalAlignment="Center" Visibility="Collapsed">
-                    <TextBlock x:Name="FromLabel" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="#6B7280"/>
-                    <DatePicker x:Name="FromPicker" Width="150" Margin="0,0,12,0" SelectedDateChanged="OnCustomRangeChanged"/>
-                    <TextBlock x:Name="ToLabel" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="#6B7280"/>
-                    <DatePicker x:Name="ToPicker" Width="150" SelectedDateChanged="OnCustomRangeChanged"/>
-                </StackPanel>
+                <TextBlock x:Name="PeriodText" DockPanel.Dock="Right" VerticalAlignment="Center"
+                           FontWeight="SemiBold" Foreground="#111827" Margin="12,0,0,0"/>
 
-                <TextBlock x:Name="PeriodText" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#111827" Margin="8,0,0,0"/>
-            </StackPanel>
+                <!-- Last child, so it fills what the chips and buttons leave: the two date boxes take
+                     half the remaining width each and grow with the window, rather than sitting at a
+                     fixed 150 with a drop-down almost three times wider hanging off them. -->
+                <Grid x:Name="CustomRangePanel" VerticalAlignment="Center" Visibility="Collapsed">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="FromLabel" Grid.Column="0" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="#6B7280"/>
+                    <DatePicker x:Name="FromPicker" Grid.Column="1" Margin="0,0,12,0" SelectedDateChanged="OnCustomRangeChanged"/>
+                    <TextBlock x:Name="ToLabel" Grid.Column="2" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="#6B7280"/>
+                    <DatePicker x:Name="ToPicker" Grid.Column="3" SelectedDateChanged="OnCustomRangeChanged"/>
+                </Grid>
+            </DockPanel>
         </Border>
 
         <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="22,18">
             <StackPanel x:Name="ReportRoot">
                 <!-- Headline figures -->
-                <ItemsControl x:Name="MetricList" ItemTemplate="{StaticResource MetricTemplate}">
+                <ItemsControl x:Name="MetricList" ItemTemplate="{StaticResource MetricTemplate}" Margin="0,0,-12,-12">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel/>
@@ -219,7 +233,7 @@
                     <Border Grid.Column="0" Style="{StaticResource Card}" Margin="0,0,8,0">
                         <StackPanel>
                             <TextBlock x:Name="OrdersTitle" Style="{StaticResource CardTitle}"/>
-                            <ItemsControl x:Name="CountList" ItemTemplate="{StaticResource MetricTemplate}">
+                            <ItemsControl x:Name="CountList" ItemTemplate="{StaticResource MetricTemplate}" Margin="0,0,-12,-12">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel/>
@@ -232,7 +246,7 @@
                     <Border Grid.Column="1" Style="{StaticResource Card}" Margin="8,0,0,0">
                         <StackPanel>
                             <TextBlock x:Name="PaymentsTitle" Style="{StaticResource CardTitle}"/>
-                            <ItemsControl x:Name="PaymentList" ItemTemplate="{StaticResource MetricTemplate}">
+                            <ItemsControl x:Name="PaymentList" ItemTemplate="{StaticResource MetricTemplate}" Margin="0,0,-12,-12">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel/>

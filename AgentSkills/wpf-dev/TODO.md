@@ -17,6 +17,19 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-01 18:00 — v6.0.1: report spacing and date-box width  [DONE]
+- Ask: "1.目前报表位置的padding 还有问题。2. date time picker 的宽度没有随着input的宽度变化而自由变化。要求只要有日期的地方要随着宽度大小而变，而不是固定宽度。同时要有一个最小值. 做完之后作为一个6.0版本hotfix commit 和push了"
+- Notes: **Spacing** the metric cards had a right margin only, so a WrapPanel spaced them across and
+  let the ROWS touch as soon as six of them wrapped. Equal margins both ways (12), plus a matching
+  negative margin on the three lists so the trailing gap does not push the block's edges past the
+  card title above it.
+  **Width** `ThemedDatePicker` now carries `MinWidth 170` + stretch instead of each site pinning a
+  width, and the report's period bar became a `DockPanel` with the From/To range as the filling
+  child — a horizontal StackPanel measures children against infinite width, so a star column inside
+  one never grows and a "stretch" date box stays at its minimum. The drop-down is already floored at
+  the box's width, so the two now line up rather than the calendar being three times wider.
+  Rendered in zh-CN with the custom range open to check both at once. Build 0/0.
+
 ### 2026-08-01 15:10 — v6.0.0: settlement reporting  [DONE]
 - Ask: "Major release 6.0.0\n\n添加结算系统，可以根据日期过滤，总结年月日的报告，\n报告中需要总结\n所有服务税前总价，总结税是多少。\n哪些是卖衣服赚的钱，哪些是做衣服 还有哪些是修改的，这些钱税前税后都要算。\n\n还有多少order没有finish\n还有多少order被取消和退货等等。\n\n完毕最后要计算出，税后总价多少，还有现金收入多少，刷卡收入怎么样。服务税收了多少等等，越详细越好。\n\n根据相应的title 生成一个总结报表，同时也能够打印。\n\n一般月结是default， 也就是每个月一号到月尾。\n\n然后PDF文件也要尽量做的精美一点。\n\nCode-简洁，模块化 可移植。 做之前线分析哪些可以重复使用的code 和以后还能多次使用。"
 - Plan:

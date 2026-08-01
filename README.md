@@ -11,6 +11,18 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v6.0.1 — 2026-08-01 (hotfix)
+
+Two things on the settlement report, both reported after v6.0.0 shipped:
+
+- **The small cards under Orders and Payments now sit on an even grid.** They had space between
+  them across but none between the rows once six of them wrapped onto a second line, so the two rows
+  ran together.
+- **Date boxes size themselves to the space they are in.** The report's custom From / To boxes were
+  pinned at a fixed width, which left the calendar that drops out of them nearly three times wider
+  than the box itself. Every date field in the application now stretches with its column and simply
+  refuses to go below a sensible minimum — so the box and its calendar line up.
+
 ### v6.0.0 — 2026-08-01
 
 **Settlement reporting.** The shop can now close off a period and see exactly what it took.

@@ -24,6 +24,19 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A horizontal StackPanel measures its children against INFINITE width (2026-08-01).** So a star
+  column inside one never grows, and a control set to stretch sits at its minimum forever. The
+  settlement report's date range looked pinned because it was inside one; a `DockPanel` with the
+  range as the filling child is what actually gives it the leftover width. Same measuring rule that
+  made the Custom Service column need a Grid rather than a StackPanel.
+- **A control in a WrapPanel needs margins in BOTH directions (2026-08-01).** A right margin alone
+  spaces items across and lets the rows touch the moment they wrap — invisible until the data grows
+  enough to wrap, which is why it shipped. Give the item equal margins and the container a matching
+  negative one, so the trailing gap does not push the block past whatever it is aligned with.
+- **Date boxes take a MinWidth, never a Width (2026-08-01).** The drop-down is floored at the box's
+  width (`CalendarSizing`), so a box pinned narrower than the calendar needs leaves the calendar
+  hanging off it — measured at 150 against 424. The floor lives in `ThemedDatePicker` so no call site
+  has to remember it.
 - **A second consumer of a money rule gets an ACCESSOR, never a copy (2026-08-01).** The settlement
   report needed "what did alterations take" — which meant knowing the money is `AlterationMoney`,
   that cleared is `AlterationBalanceCleared` passed through a private helper, and that the final
