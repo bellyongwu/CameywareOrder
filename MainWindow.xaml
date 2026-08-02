@@ -297,16 +297,24 @@
                             <MenuItem x:Name="HeaderFooterMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}" Click="OnEditBrandingClick"/>
                         </MenuItem>
                         <!-- The next two act on the whole installation rather than on one shop, so
-                             they are administrator-only; hidden in code. -->
-                        <!-- Backups and how long the bin keeps things: one panel, because to a shop
-                             owner they are one question. Above the database tools rather than inside
-                             them — this is the entry somebody reaches for when something has already
-                             gone wrong, and it should not be nested. -->
-                        <MenuItem x:Name="DataProtectionMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DataProtection], Mode=OneWay}" Click="OnDataProtectionClick"/>
+                             they are administrator-only; hidden in code.
+
+                             Backup & Recovery lives INSIDE Local Database, at the top of it. Both
+                             answer for the same thing — the file this installation keeps its data in
+                             — and a top-level entry beside a submenu that also concerns the database
+                             made "where do I go" a question with two plausible answers.
+
+                             Its own capability still gates it (CanManageBackups, not CanUseDataTools),
+                             so the parent has to be shown when EITHER is held and each child gated
+                             separately; see ApplyRolePermissions. Nesting a differently-gated item is
+                             what makes that necessary, and it is the part that would otherwise hide
+                             this panel from exactly the person brought in to restore a backup. -->
                         <MenuItem x:Name="LocalDatabaseMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalDatabase], Mode=OneWay}">
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyDataPath], Mode=OneWay}" Click="OnCopyDataPathClick"/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.RevealDataFile], Mode=OneWay}" Click="OnRevealDataFileClick"/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.OpenDataFolder], Mode=OneWay}" Click="OnOpenDataFolderClick"/>
+                            <MenuItem x:Name="DataProtectionMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DataProtection], Mode=OneWay}" Click="OnDataProtectionClick"/>
+                            <Separator x:Name="DataPathToolsSeparator"/>
+                            <MenuItem x:Name="CopyDataPathMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyDataPath], Mode=OneWay}" Click="OnCopyDataPathClick"/>
+                            <MenuItem x:Name="RevealDataFileMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.RevealDataFile], Mode=OneWay}" Click="OnRevealDataFileClick"/>
+                            <MenuItem x:Name="OpenDataFolderMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.OpenDataFolder], Mode=OneWay}" Click="OnOpenDataFolderClick"/>
                         </MenuItem>
                         <MenuItem x:Name="ImportExportMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ImportExport], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}">
@@ -516,8 +524,14 @@
                             <Button x:Name="DeleteOrderButton" Style="{StaticResource DangerButton}" Margin="0,0,8,0"
                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}"
                                     Command="{Binding DeleteOrderCommand}"/>
-                            <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Refresh], Mode=OneWay}"
-                                    Command="{Binding LoadOrdersCommand}"/>
+                            <!-- Where Refresh used to be. Refresh is F5 now — a key every Windows
+                                 user already tries — and this is the action that earns a place in a
+                                 bar of five buttons. Tinted green: it neither creates nor destroys,
+                                 so it should read as neither the primary action nor a dangerous one. -->
+                            <Button x:Name="ExportCsvButton" Style="{StaticResource AccentGreenButton}"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Csv.Export.Action], Mode=OneWay}"
+                                    ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Csv.Export.Hint], Mode=OneWay}"
+                                    Click="OnExportCsvClick"/>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -541,6 +555,7 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -566,7 +581,15 @@
                         <TextBlock Grid.Column="4" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Paging.PageSize], Mode=OneWay}" VerticalAlignment="Center" Margin="16,0,8,0"/>
                         <TextBox Grid.Column="5" Text="{Binding PageSize, UpdateSourceTrigger=PropertyChanged}" Padding="6,4"/>
 
-                        <StackPanel Grid.Column="6" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <!-- Opens the second row. Its content is written from code, because it
+                             carries three things at once: the label, a caret saying which way it will
+                             go, and a mark when the row it hides holds an active filter — without
+                             which a list narrowed by a collapsed date range looks broken. -->
+                        <Button x:Name="AdvancedSearchButton" Grid.Column="6" Margin="16,0,0,0"
+                                Padding="12,5" VerticalAlignment="Center"
+                                Click="OnToggleAdvancedSearchClick"/>
+
+                        <StackPanel Grid.Column="7" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                             <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.RecordFontSize], Mode=OneWay}" VerticalAlignment="Center" Margin="16,0,8,0"/>
                             <Slider x:Name="RecordFontSizeSlider" Width="150" VerticalAlignment="Center"
                                     Minimum="12" Maximum="40" Value="18"
@@ -576,8 +599,12 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Where to look, and over what period. -->
-                    <Grid Grid.Row="1" Margin="0,10,0,0">
+                    <!-- Where to look, and over what period. Collapsed until Advanced search is
+                         opened: a shop looking somebody up types a name and presses nothing else, and
+                         four more controls on permanent display are four the everyday case has to
+                         read past. -->
+                    <Grid x:Name="AdvancedFilterPanel" Grid.Row="1" Margin="0,10,0,0"
+                          Visibility="Collapsed">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
@@ -615,18 +642,17 @@
                         <DatePicker x:Name="ToDatePicker" Grid.Column="5" VerticalAlignment="Center"
                                     SelectedDate="{Binding ToDate}"/>
 
+                        <!-- Tinted rather than plain. It shipped as a bare themed Button and read as
+                             one more input in a row of inputs; it is the only control here that ACTS,
+                             so it takes the theme's indigo tint — the same one the administrator
+                             tools use — and stops looking like a fourth filter. -->
                         <Button x:Name="ClearFiltersButton" Grid.Column="6" Margin="16,0,0,0" Padding="12,5"
                                 VerticalAlignment="Center"
+                                Style="{StaticResource AccentIndigoButton}"
                                 IsEnabled="{Binding HasQuery}"
                                 Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Clear], Mode=OneWay}"
                                 Click="OnClearFiltersClick"/>
 
-                        <!-- Right-aligned and away from the filters: it acts on what they produced
-                             rather than being one of them. -->
-                        <Button x:Name="ExportCsvButton" Grid.Column="7" HorizontalAlignment="Right"
-                                Padding="12,5" VerticalAlignment="Center"
-                                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Csv.Export.Action], Mode=OneWay}"
-                                Click="OnExportCsvClick"/>
                     </Grid>
                   </Grid>
                 </Border>
@@ -842,6 +868,12 @@
                                 AutomationProperties.HelpText="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Paging.NextHint], Mode=OneWay}"/>
                     </StackPanel>
                 </DockPanel>
+
+                <!-- LAST child and spanning every row, so it covers the whole records column: the
+                     filters and the action bar have to be unreachable while the list under them is
+                     being rewritten, or a second Delete lands on rows that are already going.
+                     It hides itself; nothing needs to set its Visibility. -->
+                <ctrl:BusyOverlay Grid.Row="0" Grid.RowSpan="5" Tracker="{Binding Busy}"/>
             </Grid>
 
             <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#DDD"/>

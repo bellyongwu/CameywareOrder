@@ -32,6 +32,16 @@ public class MainViewModel : INotifyPropertyChanged
     private DateTime? _fromDate;
     private DateTime? _toDate;
     private StatusFilterOption _selectedStatusFilter;
+
+    /// <summary>
+    /// Whether this screen is reading or writing data, and what — bound by the busy overlay.
+    /// </summary>
+    /// <remarks>
+    /// One tracker for the whole view model rather than a flag per operation. Refresh, copy and
+    /// delete all end by reloading the list, so they overlap; the tracker counts, and the overlay
+    /// lifts when the last of them finishes.
+    /// </remarks>
+    public BusyTracker Busy { get; } = new();
     private int _pageSize = 20;
     private int _currentPage = 1;
     private int _totalPages = 1;
@@ -410,6 +420,10 @@ public class MainViewModel : INotifyPropertyChanged
             return;
         }
 
+        // The overlay says the same thing the status bar does, but on top of the list the user is
+        // looking at rather than in a line at the foot of the window.
+        using var busy = Busy.Begin(_localization["Status.LoadingOrders"]);
+
         try
         {
             StatusMessage = _localization["Status.LoadingOrders"];
@@ -621,6 +635,8 @@ public class MainViewModel : INotifyPropertyChanged
 
         var deletedNumber = ids.Count == 1 ? _selectedOrders[0].OrderNumber : null;
 
+        using var busy = Busy.Begin(_localization["Busy.Deleting"]);
+
         try
         {
             int moved;
@@ -649,13 +665,16 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Builds a spreadsheet of exactly what the list is currently showing, and a file name for it.
+    /// Builds a spreadsheet of EVERY order this shop holds, and a file name for it.
     /// </summary>
     /// <remarks>
-    /// EXACTLY what the list shows — <see cref="FilteredOrders"/>, not <c>_allOrders</c> and not the
-    /// visible page. A file with more rows than the screen it was taken from is the version nobody
-    /// re-checks; a file with only the current page is one somebody quietly bases a quarter's
-    /// accounts on.
+    /// The whole set, not the filtered one and not the visible page. The button says so — "Export all
+    /// orders" — because the one thing an export must not be is ambiguous about its own scope: a file
+    /// with fewer rows than the shop has is one somebody quietly bases a quarter's accounts on, and
+    /// nobody re-counts a spreadsheet.
+    ///
+    /// The recycle bin is still excluded, and that is not a filter but the query filter itself: a
+    /// deleted order is not one of the shop's orders until it is restored.
     ///
     /// Returns the writer rather than saving it: choosing where a file goes means a dialog, and a
     /// view model that opens one cannot be driven by a harness. The window owns the dialog, this owns
@@ -663,7 +682,7 @@ public class MainViewModel : INotifyPropertyChanged
     /// </remarks>
     public (CsvWriter Csv, string FileName, int RowCount) BuildOrderExport()
     {
-        var orders = FilteredOrders;
+        var orders = _allOrders;
 
         return (
             OrderCsvExport.Build(orders, _localization),
@@ -722,6 +741,8 @@ public class MainViewModel : INotifyPropertyChanged
 
         var copyIds = new List<int>();
         string? lastNumber = null;
+
+        using var busy = Busy.Begin(_localization["Busy.Copying"]);
 
         try
         {

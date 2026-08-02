@@ -29,7 +29,6 @@
   <Text key="Toolbar.HeaderFooter">Add or Change Header &amp; Footer</Text>
   <Text key="Toolbar.CurrencySetting">Currency Setup</Text>
   <Text key="Toolbar.LocalDatabase">Local Database</Text>
-  <Text key="Toolbar.Refresh">Refresh</Text>
   <Text key="Toolbar.Language">Language</Text>
   <!-- Singular and plural are separate keys rather than one string with a count: English needs
        "language is" against "languages are", and this line sits where it will be skimmed. -->
@@ -944,4 +943,8 @@
   <Text key="Permission.Capability.ManageBackups.Detail">Change the backup schedule and replace all data with a safety copy.</Text>
   <!-- v8.0.0 — search, CSV export, recycle bin, backup & recovery -->
   <Text key="RecycleBin.OrderedOn">Taken {0}</Text>
+  <Text key="Search.Advanced">Advanced search</Text>
+  <Text key="Busy.Deleting">Moving to the recycle bin…</Text>
+  <Text key="Busy.Copying">Copying orders…</Text>
+  <Text key="Csv.Export.Hint">Writes every order this shop holds to a spreadsheet. Press F5 to refresh the list.</Text>
 </Language>

@@ -24,6 +24,30 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A Storyboard inside a ControlTemplate trigger must be FREEZABLE, so it cannot contain a Binding
+  (2026-08-02).** `ThemedProgressBar`'s indeterminate sweep animated `To="{Binding ActualWidth,
+  ElementName=TemplateRoot}"` so it would look the same at any width. WPF freezes template
+  storyboards when it seals the dictionary, and a Binding makes that impossible: it threw
+  `Cannot freeze this Storyboard timeline tree` and took the whole main window down AT LOAD. Use a
+  literal. And do not over-compensate — a range of 620 on a 240-wide bar left the runner clipped and
+  invisible for more than half the cycle, which reads as a bar that does not work.
+  - **Both faults were found by RENDERING, not by building.** The build was 0/0 for each of them.
+- **A reusable control must not reach the theme with `StaticResource` (2026-08-02).** `BusyOverlay`
+  referenced `{StaticResource ThemedProgressBar}`; a `StaticResource` in a UserControl's own XAML is
+  resolved while that control is being sealed, before the application dictionary is on the lookup
+  path, and throws at load. The fix that is better than `DynamicResource`: name no style at all and
+  let the theme's IMPLICIT `TargetType` style reach it through the live tree — it then cannot drift
+  from what the theme says the control looks like.
+- **`dotnet build` after deleting `obj/` fails until the build SERVER is shut down (2026-08-02).**
+  MSBuild reuses worker nodes between invocations, and a node that remembers the old `obj` reports
+  every WPF `*.g.cs` as missing — sixteen `CS2001`s naming files the markup pass should have just
+  written. It is not a code fault and re-deleting `obj` does not clear it.
+  `dotnet build-server shutdown`, then delete, then build with `-nodeReuse:false`.
+- **Busy state is COUNTED, not a bool (2026-08-02).** `BusyTracker.Begin` returns a scope and the
+  overlay lifts when the last one is disposed. Operations here overlap — a copy ends by reloading the
+  list, and a shop switch can start a refresh underneath it — and with a flag the first to finish
+  clears the indicator while the second is still writing. A scope rather than paired Begin/End calls
+  so an exception cannot leave a progress bar on screen for work that stopped.
 - **Adding a second condition to a QUERY FILTER changes every `IgnoreQueryFilters()` caller at once
   (2026-08-02).** `Orders` was filtered on `ShopId`; v8.0 made it `ShopId && DeletedOnUtc == null`.
   The escape hatch is all-or-nothing, so every existing caller — which had reached for it to drop the

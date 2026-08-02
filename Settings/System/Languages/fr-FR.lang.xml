@@ -27,7 +27,6 @@
   <Text key="Toolbar.HeaderFooter">Ajouter ou modifier l’en-tête et le pied de page</Text>
   <Text key="Toolbar.CurrencySetting">Configuration de la devise</Text>
   <Text key="Toolbar.LocalDatabase">Base de données locale</Text>
-  <Text key="Toolbar.Refresh">Actualiser</Text>
   <Text key="Toolbar.Language">Langue</Text>
   <!-- Singular and plural are separate keys: French, like English, inflects the noun and the verb. -->
   <Text key="Language.Installed.One">Langue installée : {0}</Text>
@@ -945,4 +944,8 @@
   <Text key="Permission.Capability.ManageBackups.Detail">Modifier la planification des sauvegardes et remplacer toutes les données par une copie.</Text>
   <!-- v8.0.0 — search, CSV export, recycle bin, backup & recovery -->
   <Text key="RecycleBin.OrderedOn">Prise le {0}</Text>
+  <Text key="Search.Advanced">Recherche avancée</Text>
+  <Text key="Busy.Deleting">Déplacement vers la corbeille…</Text>
+  <Text key="Busy.Copying">Copie des commandes…</Text>
+  <Text key="Csv.Export.Hint">Écrit toutes les commandes de la boutique dans une feuille de calcul. Appuyez sur F5 pour actualiser la liste.</Text>
 </Language>

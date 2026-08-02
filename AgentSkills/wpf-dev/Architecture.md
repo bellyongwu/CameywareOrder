@@ -825,6 +825,15 @@ move.
     **It renders ITSELF in the application's language, never in the previewed one** — a control that
     followed its own preview would turn Japanese the moment Japanese was picked, leaving nothing on
     screen the reader could use to get back.
+  - `BusyOverlay` (v8.1) — the visible half of the busy indicator: a translucent scrim, a card, a
+    message and an indeterminate `ProgressBar`. Drop it in as the LAST child of a Grid cell, point
+    `Tracker` at a `Services/BusyTracker`, and it shows itself while that tracker is working;
+    `IsHitTestVisible` is deliberately true, since clicking the list while it is being rewritten is
+    what must not happen. It names NO style for its progress bar on purpose — see `context.md`, a
+    `StaticResource` to the theme from a reusable control throws while the control is sealed.
+    `BusyTracker` (`Services/Global`) is the state half: `Begin(message)` returns a scope, the count
+    means overlapping operations cannot clear each other, and nothing in it references a control.
+    Used today by `MainViewModel` for load / copy / delete.
   - `CopyPasteBinding` + `ICopyPasteSurface` (v7.1) — the copy/paste keyboard module. An attached
     `Surface` property installs a `CommandBinding` and a `KeyBinding` for `ApplicationCommands.Copy`
     and `.Paste` on one control; a screen implements five members (`ClipboardKind`, `CanCopy`,

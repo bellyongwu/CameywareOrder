@@ -17,6 +17,37 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-02 — v8.1.0: advanced-search disclosure, a shared busy indicator, F5, export-all  [DONE]
+- Ask: "l小的改动，添加高级搜索， 点开后在新的一行可以进行日期和关键字搜索。 第二，清楚筛选的按钮现在不符合theme 的button，另外给加一个背景色"
+  + mid-turn: "导出CSV 改为导出所有订单 替换刷新的按钮， 并且在主界面按F5即可刷新所有order，并且提供一个progress bar， 表明正在刷新。 另外progress bar将会作为所有数据处理的一个通用的模块，表明正在做数据处理。无论刷新，添加还是更改数据。"
+  + mid-turn: "更改一下本地配置的navigation， 把备份与恢复放到本地数据库的菜单内"
+- Notes:
+  **New.** `Services/Global/BusyTracker` (counted scopes, not a bool) and `Controls/BusyOverlay` (the
+  reusable visible half), plus `ThemedProgressBar` in the theme — the "generic module for all data
+  processing" the ask calls for. `MainViewModel.Busy` wraps load / copy / delete; any screen added
+  later gets the same indicator by declaring one overlay and one tracker.
+  **Changed.** The second filter row is behind `AdvancedSearchButton`, collapsed, showing a dot when
+  it hides an active filter. `Clear filters` takes `AccentIndigoButton`. Export moved into the records
+  action bar as `AccentGreenButton`, REPLACING Refresh, and now exports every order rather than the
+  filtered set. F5 reloads from anywhere in the window. Backup & Recovery moved inside the Local
+  Database submenu. `Toolbar.Refresh` pruned as orphaned; +4 keys in five languages.
+  **Gating note worth keeping:** nesting a `CanManageBackups` item inside a `CanUseDataTools` submenu
+  means the PARENT must open on either capability and each child gate itself — otherwise the backup
+  panel is hidden from exactly the person granted the capability to restore one.
+  **THREE FAULTS THE RENDER CAUGHT THAT A 0/0 BUILD DID NOT** — all now in `context.md`:
+  a `Binding` inside a template `Storyboard` cannot be frozen and took the main window down AT LOAD;
+  a `StaticResource` to the theme from a reusable `UserControl` throws while that control is sealed;
+  and an over-generous animation range left the runner clipped off screen most of the cycle.
+  **Two process lessons.** After deleting `obj/`, MSBuild's reused nodes report every WPF `.g.cs` as
+  missing until `dotnet build-server shutdown` — not a code fault, and re-deleting does not clear it.
+  And a `node -e` script passed through bash was mangled exactly the way the skill says a commit
+  heredoc is: write the file with the Write tool instead.
+  **Verification.** Build 0/0. datacheck 56, democheck 41, surfacecheck and keycheck clean;
+  storerender renders six panels and asserts the new menu nesting and its visibility rules.
+  §9b Gates 1 and 2 still not runnable in this session — the four `CS0103`s the IDE reported on the
+  new `x:Name` controls are the documented stale design-time model and cleared on build, but no
+  language-server restart could be performed to confirm the editor itself is empty.
+
 ### 2026-08-02 — v8.0.0: the data release — automatic backup, order search + CSV, a 30-day recycle bin  [DONE]
 - Ask: "根据你的意见可以生成下一次需要添加的新功能：自动备份和支持订单查询+CSV导出订单等功能。还有添加保留三十天内删除的订单等操作（可恢复）把这些做一个较大的版本更新，面向数据面的新功能。要求模块化设计，以及避免代码重复。如有需要添加新界面，可视界面需采用主题色调。如有问题可以随时告知。采用skill wpf-dev 开发。"
 - Context: this came out of a completeness review of the product for a LOCAL single-shop deployment

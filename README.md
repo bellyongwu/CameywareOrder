@@ -11,6 +11,27 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v8.1.0 — 2026-08-02
+
+Follow-ups to the data release, and one new piece the rest of the application will build on.
+
+- **Advanced search is folded away.** Finding a customer is typing a name into the search box, so the
+  *Look in*, *From* and *To* controls now sit behind an **Advanced search** button and the bar opens
+  as one clean row. If you close it while a date range or a narrowed field is still in force, the
+  button shows a dot — a list quietly filtered by something you cannot see is the one thing this must
+  never do.
+- **Clear filters looks like a button again.** It was styled as one more input in a row of inputs;
+  it now carries the same tint as the other action buttons.
+- **A progress bar for anything that touches data.** Refreshing, copying and deleting now dim the list
+  and show what is happening. It is built as one shared piece rather than as part of the order screen,
+  so every screen added later gets the same indicator by asking for it.
+- **Export all orders replaces Refresh** in the records bar, and now writes **every** order the shop
+  holds rather than the filtered list. **Press F5 to refresh** — which is what most people were
+  already trying.
+- **Backup & Recovery moved into Local Configuration → Local Database**, at the top of it. Both
+  entries answer for the same thing — the file your data lives in — and having one beside the other
+  made "where do I go" a question with two answers.
+
 ### v8.0.0 — 2026-08-02
 
 **The data release.** Three things a shop running this on one computer needs and did not have: a

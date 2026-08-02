@@ -28,7 +28,6 @@
   <Text key="Toolbar.HeaderFooter">ヘッダー・フッターの追加または変更</Text>
   <Text key="Toolbar.CurrencySetting">通貨の設定</Text>
   <Text key="Toolbar.LocalDatabase">ローカルデータベース</Text>
-  <Text key="Toolbar.Refresh">更新</Text>
   <Text key="Toolbar.Language">言語</Text>
   <!-- Singular and plural stay separate keys even though Japanese does not inflect for number: the
        key set is shared across every language, and one of them needs both. Both read the same here,
@@ -944,4 +943,8 @@
   <Text key="Permission.Capability.ManageBackups.Detail">バックアップの予定を変更し、控えですべてのデータを置き換える。</Text>
   <!-- v8.0.0 — search, CSV export, recycle bin, backup & recovery -->
   <Text key="RecycleBin.OrderedOn">{0} に受注</Text>
+  <Text key="Search.Advanced">詳細検索</Text>
+  <Text key="Busy.Deleting">ごみ箱に移動しています…</Text>
+  <Text key="Busy.Copying">注文を複製しています…</Text>
+  <Text key="Csv.Export.Hint">この店舗のすべての注文を表計算ファイルに書き出します。F5 キーで一覧を更新できます。</Text>
 </Language>

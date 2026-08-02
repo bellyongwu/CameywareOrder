@@ -31,7 +31,6 @@
   <Text key="Toolbar.HeaderFooter">添加或更改页眉页脚</Text>
   <Text key="Toolbar.CurrencySetting">货币设置</Text>
   <Text key="Toolbar.LocalDatabase">本地数据库</Text>
-  <Text key="Toolbar.Refresh">刷新</Text>
   <Text key="Toolbar.Language">语言</Text>
   <!-- Chinese does not inflect for number, so both keys carry the same text here. They are separate
        keys because English needs "language is" against "languages are". -->
@@ -947,4 +946,8 @@
   <Text key="Permission.Capability.ManageBackups.Detail">修改备份计划，并用备份副本替换全部数据。</Text>
   <!-- v8.0.0 — search, CSV export, recycle bin, backup & recovery -->
   <Text key="RecycleBin.OrderedOn">下单于 {0}</Text>
+  <Text key="Search.Advanced">高级搜索</Text>
+  <Text key="Busy.Deleting">正在移入回收站……</Text>
+  <Text key="Busy.Copying">正在复制订单……</Text>
+  <Text key="Csv.Export.Hint">将本店铺的全部订单写入表格文件。按 F5 可刷新列表。</Text>
 </Language>

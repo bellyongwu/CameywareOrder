@@ -45,6 +45,12 @@ public partial class MainWindow : Window, ICopyPasteSurface
     private bool _isLanguageSwitchInitializing;
     private bool _suppressLanguageRefresh;
 
+    /// <summary>
+    /// Whether the second filter row is showing. Closed on open: the everyday case is typing a name
+    /// into the search box, and four more controls on permanent display are four to read past.
+    /// </summary>
+    private bool _advancedSearchOpen;
+
     public MainWindow(
         MainViewModel viewModel,
         IServiceScopeFactory scopeFactory,
@@ -62,6 +68,7 @@ public partial class MainWindow : Window, ICopyPasteSurface
         _localization.LanguageChanged += OnLanguageChangedGlobally;
         ShopContext.Instance.ShopChanged += OnShopChanged;
         RefreshToolbarLabels();
+        RefreshAdvancedSearch();
 
         // The strip reads the database directly rather than the loaded page, so it does not wait on
         // the list — and it is refreshed again whenever the orders change, since a saved order moves
@@ -89,6 +96,11 @@ public partial class MainWindow : Window, ICopyPasteSurface
     {
         if (e.PropertyName == nameof(MainViewModel.SelectedOrder))
             RefreshToolbarLabels();
+
+        // So the "a filter is hiding in here" mark appears the moment one is set, including when
+        // Clear filters removes the last of them.
+        if (e.PropertyName == nameof(MainViewModel.Query))
+            RefreshAdvancedSearch();
     }
 
     private void RefreshToolbarLabels()
@@ -165,9 +177,20 @@ public partial class MainWindow : Window, ICopyPasteSurface
         RecycleBinMenuItem.Visibility = Show(auth.CanManageRecycleBin);
 
         // Whole-installation tools, and the database path they act on.
+        //
+        // Local Database now holds two DIFFERENTLY gated things: the path tools (CanUseDataTools) and
+        // Backup & Recovery (CanManageBackups). So the parent opens when either is held and each
+        // child answers for itself — gating the parent on the path tools alone would hide the backup
+        // panel from precisely the person granted the capability to restore one.
         var dataTools = Show(auth.CanUseDataTools);
         DataProtectionMenuItem.Visibility = Show(auth.CanManageBackups);
-        LocalDatabaseMenuItem.Visibility = dataTools;
+        CopyDataPathMenuItem.Visibility = dataTools;
+        RevealDataFileMenuItem.Visibility = dataTools;
+        OpenDataFolderMenuItem.Visibility = dataTools;
+
+        // The separator only earns its place with something on both sides of it.
+        DataPathToolsSeparator.Visibility = Show(auth.CanUseDataTools && auth.CanManageBackups);
+        LocalDatabaseMenuItem.Visibility = Show(auth.CanUseDataTools || auth.CanManageBackups);
         ImportExportMenuItem.Visibility = dataTools;
         DataPathSeparator.Visibility = dataTools;
         DataPathLabelItem.Visibility = dataTools;
@@ -435,6 +458,7 @@ public partial class MainWindow : Window, ICopyPasteSurface
             // installed-languages line under it would have done the same.
             RefreshSignedInUser();
             RefreshInstalledLanguagesText();
+            RefreshAdvancedSearch();
         }
         finally
         {
@@ -578,6 +602,20 @@ public partial class MainWindow : Window, ICopyPasteSurface
         {
             e.Handled = true;
             OfferSessionChoice();
+            return;
+        }
+
+        // F5 reloads the list, from anywhere in the window and whatever has focus. Unlike the arrow
+        // keys below it needs no stand-down list: no text box, combo or picker in this application
+        // claims F5, and every Windows user tries it before looking for a button — which is what let
+        // the Refresh button give up its place in the action bar to the export.
+        if (e.Key == Key.F5 && Keyboard.Modifiers == ModifierKeys.None)
+        {
+            e.Handled = true;
+
+            if (_viewModel.LoadOrdersCommand.CanExecute(null))
+                _viewModel.LoadOrdersCommand.Execute(null);
+
             return;
         }
 
@@ -2098,6 +2136,40 @@ public partial class MainWindow : Window, ICopyPasteSurface
     // ── Search, export and the two data panels (v8.0) ─────────────────────────────────────────────
 
     private void OnClearFiltersClick(object sender, RoutedEventArgs e) => _viewModel.ClearQuery();
+
+    private void OnToggleAdvancedSearchClick(object sender, RoutedEventArgs e)
+    {
+        _advancedSearchOpen = !_advancedSearchOpen;
+        RefreshAdvancedSearch();
+    }
+
+    /// <summary>
+    /// Shows or hides the second filter row, and says on the button what is behind it.
+    /// </summary>
+    /// <remarks>
+    /// The button carries a MARK when the collapsed row holds an active filter. Without it a list
+    /// narrowed by a date range the user set an hour ago, then collapsed, reads as a list that has
+    /// lost half its orders — the worst kind of bug report, because nothing on screen is wrong.
+    ///
+    /// Written from code rather than bound, so it has to be re-run from
+    /// <see cref="OnLanguageChangedGlobally"/> like every other code-written label here, and from the
+    /// view model's <c>Query</c> change so the mark appears the moment a filter is set.
+    /// </remarks>
+    private void RefreshAdvancedSearch()
+    {
+        AdvancedFilterPanel.Visibility = _advancedSearchOpen ? Visibility.Visible : Visibility.Collapsed;
+
+        // The caret points where pressing it will GO, which is the convention every disclosure
+        // control on Windows follows.
+        var caret = _advancedSearchOpen ? " ▴" : " ▾";
+        var mark = !_advancedSearchOpen && HasAdvancedFilter() ? " •" : string.Empty;
+
+        AdvancedSearchButton.Content = _localization["Search.Advanced"] + caret + mark;
+    }
+
+    /// <summary>Whether anything in the hidden row is currently narrowing the list.</summary>
+    private bool HasAdvancedFilter()
+        => _viewModel.Query.Period is not null || _viewModel.Query.Field != OrderSearchField.All;
 
     /// <summary>
     /// Saves the filtered order list as a spreadsheet.

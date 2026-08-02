@@ -27,7 +27,6 @@
   <Text key="Toolbar.HeaderFooter">Añadir o cambiar el encabezado y el pie</Text>
   <Text key="Toolbar.CurrencySetting">Configuración de moneda</Text>
   <Text key="Toolbar.LocalDatabase">Base de datos local</Text>
-  <Text key="Toolbar.Refresh">Actualizar</Text>
   <Text key="Toolbar.Language">Idioma</Text>
   <!-- Singular and plural are separate keys rather than one string with a count: Spanish needs
        "Idioma instalado" against "Idiomas instalados", and this line sits where it will be skimmed. -->
@@ -943,4 +942,8 @@
   <Text key="Permission.Capability.ManageBackups.Detail">Cambiar la programación de copias y sustituir todos los datos por una copia.</Text>
   <!-- v8.0.0 — search, CSV export, recycle bin, backup & recovery -->
   <Text key="RecycleBin.OrderedOn">Tomado el {0}</Text>
+  <Text key="Search.Advanced">Búsqueda avanzada</Text>
+  <Text key="Busy.Deleting">Moviendo a la papelera…</Text>
+  <Text key="Busy.Copying">Copiando pedidos…</Text>
+  <Text key="Csv.Export.Hint">Escribe todos los pedidos de la tienda en una hoja de cálculo. Pulse F5 para actualizar la lista.</Text>
 </Language>

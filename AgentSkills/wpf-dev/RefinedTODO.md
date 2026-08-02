@@ -77,6 +77,26 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-08-02)
 
+### v8.1.0 — advanced-search disclosure, a shared busy indicator, F5, export-all  [DONE]
+
+Follow-ups to v8.0.0, plus the one piece with a life beyond this screen:
+
+- **`BusyTracker` + `Controls/BusyOverlay` + `ThemedProgressBar`** — the reusable "something is
+  happening to the data" module the ask asked for explicitly. State and view are separate so a view
+  model never references a control; the tracker COUNTS rather than flagging, because operations here
+  overlap (a copy ends by reloading) and a bool lets the first to finish clear the indicator while
+  the second is still writing.
+- The date/keyword row folded behind **Advanced search**, with a dot on the button when it hides an
+  active filter — a list quietly narrowed by something off screen is the failure this prevents.
+- **Export replaced Refresh** in the records bar and exports EVERY order; **F5** refreshes.
+- **Backup & Recovery moved inside Local Database.** Nesting a differently-gated item made the parent
+  need `CanUseDataTools || CanManageBackups`, with each child gating itself.
+
+**What this release is actually worth remembering** is in `context.md`: three separate faults that a
+0-warning, 0-error build was blind to and only RENDERING found — a Binding in a template Storyboard
+(fatal at window load), a StaticResource to the theme from a reusable UserControl (fatal at control
+seal), and an animation range that left the bar visibly empty.
+
 ### v8.0.0 — the data release: automatic backup, order search + CSV, a 30-day recycle bin  [DONE]
 
 Came out of a completeness review for a LOCAL single-shop deployment (installed on site, no online

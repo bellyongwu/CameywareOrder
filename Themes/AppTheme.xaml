@@ -224,6 +224,81 @@
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
 
+    <!-- ══ Progress ════════════════════════════════════════════════════════════
+         The stock ProgressBar is a square-cornered grey trough with a green fill that
+         belongs to no palette in this application. Re-templated rather than
+         re-coloured: the indeterminate animation lives in the template, so setting
+         Foreground alone leaves the stock chrome underneath.
+
+         Rounded to its own height, so a 6px bar is a capsule at any width, and clipped
+         so the travelling block cannot square off its ends. -->
+    <Style x:Key="ThemedProgressBar" TargetType="ProgressBar">
+        <Setter Property="Height" Value="6"/>
+        <!-- BorderBrush, not SurfaceMuted: the trough sits on a white card, and the muted surface is
+             a shade off white — a trough nobody can see is a bar with no context. -->
+        <Setter Property="Background" Value="{StaticResource BorderBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Grid x:Name="TemplateRoot">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="3"/>
+                        <Border x:Name="PART_Track" CornerRadius="3" ClipToBounds="True">
+                            <!-- Named PART_Indicator so the determinate mode still works if a caller
+                                 ever sets a Value: WPF measures this element itself. -->
+                            <Rectangle x:Name="PART_Indicator" HorizontalAlignment="Left"
+                                       Fill="{TemplateBinding Foreground}" RadiusX="3" RadiusY="3"/>
+                        </Border>
+                        <Border x:Name="Animation" CornerRadius="3" ClipToBounds="True" Visibility="Collapsed">
+                            <Rectangle x:Name="Runner" Width="70" HorizontalAlignment="Left"
+                                       Fill="{TemplateBinding Foreground}" RadiusX="3" RadiusY="3">
+                                <Rectangle.RenderTransform>
+                                    <TranslateTransform x:Name="RunnerShift"/>
+                                </Rectangle.RenderTransform>
+                            </Rectangle>
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsIndeterminate" Value="True">
+                            <Setter TargetName="PART_Track" Property="Visibility" Value="Collapsed"/>
+                            <Setter TargetName="Animation" Property="Visibility" Value="Visible"/>
+                            <Trigger.EnterActions>
+                                <BeginStoryboard Name="Running">
+                                    <Storyboard RepeatBehavior="Forever">
+                                        <!-- A LITERAL travel distance, not a binding on the track's
+                                             width. A Storyboard inside a ControlTemplate trigger has
+                                             to be freezable, and a Binding anywhere in it makes it
+                                             un-freezable — the template then throws
+                                             "Cannot freeze this Storyboard timeline tree" when the
+                                             dictionary is sealed, which takes the whole window down
+                                             at load rather than failing quietly. Rendering the
+                                             overlay is what caught it.
+
+                                             The range is sized for the bars this application actually
+                                             draws (the busy overlay's is 240 wide). Too GENEROUS a
+                                             range is not free: the track clips, so the runner spends
+                                             the overshoot invisible and the bar reads as broken —
+                                             620 left it off screen more than half the cycle, which
+                                             the render caught. -->
+                                        <DoubleAnimation Storyboard.TargetName="RunnerShift"
+                                                         Storyboard.TargetProperty="X"
+                                                         From="-80" To="330" Duration="0:0:1.2"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <StopStoryboard BeginStoryboardName="Running"/>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="ProgressBar" BasedOn="{StaticResource ThemedProgressBar}"/>
+
     <!-- Sits on a coloured header band, so it is outlined rather than filled. -->
     <Style x:Key="OnHeaderButton" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
         <Setter Property="Background" Value="#26FFFFFF"/>

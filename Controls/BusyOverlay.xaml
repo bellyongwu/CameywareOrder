@@ -1,0 +1,51 @@
+<UserControl x:Class="CameywareOrder.Controls.BusyOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Visibility="Collapsed"
+             Panel.ZIndex="100"
+             IsHitTestVisible="True"
+             Focusable="False">
+    <!-- The visible half of the busy indicator; BusyTracker is the state half.
+
+         Drop it into any panel as the LAST child of a Grid cell and point it at a tracker:
+
+             <ctrl:BusyOverlay Tracker="{Binding Busy}"/>
+
+         It covers whatever it is placed over, so the same control serves a whole window or one card.
+         IsHitTestVisible is deliberately TRUE: while data is being written, clicking the list
+         underneath is exactly what must not happen, and a scrim that swallows the click is the
+         cheapest way to say so.
+
+         Everything is from Themes/AppTheme.xaml — the card border, the progress-bar style and the
+         type styles — so it looks like the rest of the application wherever it lands. -->
+    <!-- Translucent rather than opaque: the row you were looking at stays visible behind the work,
+         which is what makes a two-second operation read as "still here" rather than "gone". -->
+    <Grid Background="#B0FFFFFF">
+        <Border HorizontalAlignment="Center" VerticalAlignment="Center"
+                Background="White" CornerRadius="10"
+                BorderBrush="#E5E7EB" BorderThickness="1"
+                Padding="28,22" MinWidth="280">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.14" Color="#111827"/>
+            </Border.Effect>
+
+            <StackPanel>
+                <TextBlock x:Name="MessageText" HorizontalAlignment="Center"
+                           FontSize="13" FontWeight="SemiBold" Foreground="#374151"
+                           TextWrapping="Wrap" TextAlignment="Center" MaxWidth="360"/>
+
+                <!-- Indeterminate on purpose. Every operation here is a database round trip whose
+                     length is not known in advance, and a percentage that jumps 0 → 100 tells the
+                     user less than a moving bar does. -->
+                <!-- No explicit Style. The theme's implicit `TargetType="ProgressBar"` reaches this
+                     through the live tree at runtime; a `StaticResource` here is resolved while this
+                     control's XAML is being sealed, before the application dictionary is on the
+                     lookup path, and throws at load — which it did, and the render is what caught it.
+                     A DynamicResource would also work; having no style at all is better, because it
+                     cannot then drift from whatever the theme decides a progress bar looks like. -->
+                <ProgressBar x:Name="Bar" Height="6" Width="240" Margin="0,14,0,0"
+                             IsIndeterminate="True"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
