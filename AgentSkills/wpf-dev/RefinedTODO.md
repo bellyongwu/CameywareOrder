@@ -77,6 +77,33 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-08-01)
 
+### v7.0.1 — hotfix after the permissions release  [DONE]
+
+The one real defect: **the main window's month summary obeyed the permission and then stopped
+obeying it.** `ApplyRolePermissions` hid the strip; `RefreshSummaryStrip` showed it again whenever
+the month had figures, and that runs on every order reload. The capability check now lives inside
+`RefreshSummaryStrip`, which is the strip's ONE owner. This is the recorded one-owner rule, broken
+five hours after writing the release that depends on it — the harness now asserts both that the
+owner checks and that nothing else writes the property.
+
+The settlement report gained a **period picker**: one `Calendar` in a popup, `DisplayMode` chosen
+from the chip. Day is an ordinary selection; **Month and Year are read from `DisplayModeChanged`**,
+because a Calendar in Year or Decade mode drills down instead of selecting — the drill-down is the
+choice, and `e.OldMode` is what stops opening the popup from reading as one. ESC closes the report,
+and an open picker takes ESC first.
+
+That surfaced a **latent theme bug**: `CalendarButton` (the month/year cells) had an implicit style
+that had never once applied. `Calendar` hands its cells whatever `CalendarButtonStyle` holds — the
+same trap already documented for `CalendarDayButtonStyle` — so the drill-up views had always been
+stock Aero. Now keyed, set on `ThemedCalendar`, and templated.
+
+Shop picker: Permissions before User Management, and four `Accent*Button` styles (indigo / teal /
+amber / green). Border and text alone were invisible at button size; each carries a soft fill too.
+
+Login and lock screens take `ResizeMode="CanMinimize"`. Login needed `ShowInTaskbar="True"` with it —
+minimising a window that has no taskbar button leaves nothing to click to get it back, which is worse
+than the missing button. The two are asserted as a pair.
+
 ### v7.0.0 — permissions became data  [DONE]
 
 The permission model was three fixed `UserRole` values and named properties comparing against them

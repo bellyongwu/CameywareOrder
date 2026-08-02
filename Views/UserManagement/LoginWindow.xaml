@@ -5,13 +5,18 @@
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Title], Mode=OneWay}"
         Height="600" Width="440"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize"
-        ShowInTaskbar="False"
+        ResizeMode="CanMinimize"
+        ShowInTaskbar="True"
         Icon="/Assets/ICONS/app-icon.ico"
         Background="#F4F5F9">
     <!-- Runs before the DI host exists, so this window is constructed by hand and reaches the
          localization singleton directly, exactly like the language picker it replaces.
-         CenterScreen and an explicit Icon because there is no Owner window yet. -->
+         CenterScreen and an explicit Icon because there is no Owner window yet.
+
+         CanMinimize rather than NoResize: NoResize leaves Close as the only title-bar button, so a
+         sign-in screen could not be put aside for a moment. ShowInTaskbar had to change with it —
+         minimising a window that has no taskbar button hides it with nothing left to click, which
+         would be a worse bug than the one being fixed. The window still cannot be resized. -->
     <Window.Resources>
         <Style x:Key="EnterButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>

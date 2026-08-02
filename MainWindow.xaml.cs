@@ -166,9 +166,6 @@ public partial class MainWindow : Window
         PermissionsMenuItem.Visibility = Show(auth.CanManagePermissions);
         StoreMembersButton.Visibility = Show(auth.CanManageStoreMembers);
 
-        // The month's takings are a report, and the strip is the smallest one the application has.
-        SummaryStrip.Visibility = Show(auth.CanViewReports);
-
         // Hidden when everything below it is: a separator with nothing under it reads as a menu
         // that failed to load.
         ConfigSeparator.Visibility = Show(
@@ -176,6 +173,10 @@ public partial class MainWindow : Window
             || auth.CanViewReports || auth.CanUseDataTools || auth.CanPrintOrderDocuments);
 
         RefreshOrderActions();
+
+        // Re-asked here as well as on every reload: a shop switch can change whether this user may
+        // read reports at all, and no order reload necessarily follows it.
+        RefreshSummaryStrip();
         RefreshSignedInUser();
     }
 
@@ -1021,6 +1022,16 @@ public partial class MainWindow : Window
     /// </remarks>
     private void RefreshSummaryStrip()
     {
+        // THE ONE OWNER of this strip's visibility, and it has to be — the capability check used to
+        // live in ApplyRolePermissions, which runs first and was then overwritten by the "the month
+        // has figures, so show it" line below on the very next order reload. The strip reappeared
+        // for a role that may not read reports, and nothing looked wrong in either method.
+        if (!AuthenticationService.Instance.CanViewReports)
+        {
+            SummaryStrip.Visibility = Visibility.Collapsed;
+            return;
+        }
+
         var period = DateRange.CurrentMonth();
 
         using var scope = _scopeFactory.CreateScope();

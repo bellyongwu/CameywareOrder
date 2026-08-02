@@ -17,6 +17,32 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-01 23:10 — v7.0.1: hotfix after the permissions release  [DONE]
+- Ask: "1.页面清理，在select shop 页面， 把permissions跟user management button 对换。 2. Settlement Report banner on main app should bind the role. 如果这个role不能够view settlement report，这个banner应该不要显示。 3. Settlement Report Panel 的Day 和Month 点击Month -> 应该可以用date month picker选择具体的月份 点击Day -> 应该可以用date month picker选择具体的日期 Year -> 应该可以用date month picker选择具体的年份" + mid-turn: "在select store。的页面给相应的permission 和management buttons相应的button 颜色以作区分" + "in login and lock panel, add a minimize feature near the close button" + "and ESC keyboard accessible fix for settlement report window close."
+- Notes: **(2) was a real defect and the cause is the recorded one-owner rule.** The capability check
+  was in `ApplyRolePermissions`, but `RefreshSummaryStrip` set the strip visible again whenever the
+  month had figures, and it runs on every order reload. Moved the check INTO `RefreshSummaryStrip`
+  (its one owner) and `permcheck` now asserts both halves — that the owner checks, and that nothing
+  else writes that property. Proved it fails by re-adding the second writer.
+  **(3)** `PeriodButton` + a `Popup` holding ONE `Calendar`; `DisplayMode` from the chip
+  (Month/Year/Decade). The two coarse modes are read from `DisplayModeChanged`, not from a
+  selection — a Calendar DRILLS DOWN rather than selecting there, so the drill-down IS the choice;
+  guarded on `e.OldMode` so opening the popup does not read as one. Height pinned to 196 for the
+  coarse modes (a Calendar always measures for seven day rows).
+  **Latent theme bug this surfaced:** `CalendarButton` had an implicit style that had never applied —
+  `Calendar` hands its cells whatever `CalendarButtonStyle` holds, exactly as with
+  `CalendarDayButtonStyle`. Keyed it as `ThemedCalendarButton`, set it on `ThemedCalendar`, and gave
+  it a template so a month is selected in the theme's indigo rather than Aero's blue.
+  **(1)+(colours)** Permissions before User Management; four `Accent*Button` styles in the theme
+  (indigo/teal/amber/green), soft fill AND border — border-only was invisible at that size, found by
+  rendering.
+  **(minimize)** `ResizeMode="CanMinimize"` on login and lock. Login also needed `ShowInTaskbar=True`:
+  minimising a window with no taskbar button hides it with nothing to click. Asserted as a PAIR.
+  **(ESC)** `OnPreviewKeyDown` on the report; an open period popup takes the key first.
+  **Verified:** build 0/0; permcheck 147, datecheck 96, pickupcheck 70, langscope 37; rendered the
+  picker and the period popup. A title bar is not capturable by RenderTargetBitmap, so the minimize
+  change is covered by source assertions instead.
+
 ### 2026-08-01 20:10 — v7.0.0: capability catalog and the permissions panel  [DONE]
 - Ask: "现在在已有系统之上再把功能强化。需求：把尽可能多的可视化功能模块化，比如查看报表功能，更改设置功，等等。。。检查现有的功能，组成集合，调用专门的方法可以开放给相应的用户。还有功能比如，添加删除订单功能，还有只能查看订单功能，等等。现在功能是静态的加载给每个功能用户的。属于预设选项。下一步管理员可以管理以下事项-权限设置 管理员可以通过选择商店页面，也可以通过main application页面，在本地配置的入口进入。点开后可以打开权限设置版面（需要用到已有的所有主题优化过的UI)左边可以展开已有的用户右边可以看到已有的店铺，点开店铺后可以查看权限名称，点开权限可以展开对应的系统功能。可以定义权限，权限对应着相应的功能。>增删查改权限 >定义权限，可以新添加一种权限比如auditor，auditor可以查看报表，但是不能新增订单和更改任何与订单相关的操作和与用户和商店相关的操作。"
 - Decisions (asked, answered by the user):

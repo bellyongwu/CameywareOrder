@@ -11,6 +11,26 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v7.0.1 — 2026-08-01 (hotfix)
+
+Six things reported after v7.0.0 shipped.
+
+- **The month's summary on the main screen now obeys the permission.** It was hidden correctly when
+  the shop opened and then came back on the next refresh — a role without "View the settlement
+  report" could still read the month's takings from the home screen.
+- **Pick a period directly in the settlement report.** Previous and Next stepped one period at a
+  time, which is fine for last month and useless for last March. The period is now a button: click it
+  and choose the day, the month or the year, in a calendar that matches whichever you asked for.
+- **The report closes with ESC**, like every other panel. With the period calendar open, ESC closes
+  that first.
+- **A Minimize button on the sign-in and lock screens.** Both offered only Close.
+- **Permissions and User Management have swapped places** on the shop-picker screen — what a role may
+  do is decided before anybody is put into it — and each administrator button now carries its own
+  colour, so the row can be aimed at without reading all four.
+- **The month and year cells of every calendar** are now sized and coloured like the day cells. They
+  had been left with the operating system's own styling, which only showed once a calendar could be
+  opened straight into the months view.
+
 ### v7.0.0 — 2026-08-01
 
 **Permissions are yours to set.** Until now the application shipped three fixed roles and decided in

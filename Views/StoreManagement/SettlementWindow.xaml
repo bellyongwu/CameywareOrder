@@ -139,8 +139,38 @@
                 <Button x:Name="PreviousButton" DockPanel.Dock="Left" Padding="10,6" Margin="0,0,6,0" Click="OnPreviousClick" Cursor="Hand"/>
                 <Button x:Name="NextButton" DockPanel.Dock="Left" Padding="10,6" Margin="0,0,12,0" Click="OnNextClick" Cursor="Hand"/>
 
-                <TextBlock x:Name="PeriodText" DockPanel.Dock="Right" VerticalAlignment="Center"
-                           FontWeight="SemiBold" Foreground="#111827" Margin="12,0,0,0"/>
+                <!-- The period is a BUTTON, not a caption. Previous / Next walk one step at a time,
+                     which is fine for last month and useless for last March — reaching it took a
+                     dozen clicks and there was no other way to get there. Clicking the period opens
+                     a calendar in the mode that matches the chip: a day grid for Day, the twelve
+                     months for Month, a decade for Year. -->
+                <Button x:Name="PeriodButton" DockPanel.Dock="Right" Click="OnPeriodPickerClick"
+                        Padding="12,6" Margin="12,0,0,0" Cursor="Hand" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="PeriodText" VerticalAlignment="Center"
+                                   FontWeight="SemiBold" Foreground="#111827"/>
+                        <Path Data="M 0 0 L 4 4 L 8 0 Z" Fill="#6B7280" Width="8" Height="4"
+                              Stretch="Fill" VerticalAlignment="Center" Margin="9,2,0,0"/>
+                    </StackPanel>
+                </Button>
+
+                <Popup x:Name="PeriodPopup" PlacementTarget="{Binding ElementName=PeriodButton}"
+                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
+                       PopupAnimation="Fade" HorizontalOffset="-40">
+                    <Border Background="White" BorderBrush="#E5E7EB" BorderThickness="1"
+                            CornerRadius="10" Padding="6" Margin="0,6,10,10">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="14" ShadowDepth="2" Opacity="0.16" Color="#111827"/>
+                        </Border.Effect>
+                        <!-- One Calendar for all three kinds. DisplayMode is set from the chip, and
+                             the two coarse modes are read from DisplayModeChanged rather than from a
+                             selection: a Calendar in Year or Decade mode DRILLS DOWN when a cell is
+                             clicked instead of selecting, so the drill-down IS the choice. -->
+                        <Calendar x:Name="PeriodCalendar"
+                                  SelectedDatesChanged="OnPeriodCalendarSelected"
+                                  DisplayModeChanged="OnPeriodCalendarDisplayModeChanged"/>
+                    </Border>
+                </Popup>
 
                 <!-- Last child, so it fills what the chips and buttons leave: the two date boxes take
                      half the remaining width each and grow with the window, rather than sitting at a

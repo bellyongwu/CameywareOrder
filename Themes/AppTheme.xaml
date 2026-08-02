@@ -181,6 +181,49 @@
         <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
     </Style>
 
+    <!-- ══ Tinted outline buttons ══════════════════════════════════════════════
+         A row of administrator tools reads as one undifferentiated block of grey
+         buttons, and the shop picker had four of them side by side: accounts,
+         permissions, store tools and the demo shop. Same shape, same weight, no
+         way to aim at one without reading all four.
+
+         Outlined rather than filled, following DangerButton: the filled style is
+         reserved for the one action a screen is FOR (here, opening the shop), and
+         four filled buttons beside it would each claim to be that action.
+
+         Named by colour rather than by purpose, because the purpose is the calling
+         screen's business — the theme only offers the palette. -->
+    <!-- Each carries a soft FILL as well as the border. Rendered with the border and text alone,
+         the amber and the green were indistinguishable from the neutral buttons beside them at this
+         size — a distinction only visible on close inspection is not a distinction. -->
+    <Style x:Key="AccentIndigoButton" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
+        <Setter Property="Background" Value="#EEF2FF"/>
+        <Setter Property="BorderBrush" Value="#A5B4FC"/>
+        <Setter Property="Foreground" Value="#4338CA"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="AccentTealButton" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
+        <Setter Property="Background" Value="#ECFEFF"/>
+        <Setter Property="BorderBrush" Value="#67D3E4"/>
+        <Setter Property="Foreground" Value="#0E7490"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="AccentAmberButton" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
+        <Setter Property="Background" Value="#FEF6E0"/>
+        <Setter Property="BorderBrush" Value="#F5C451"/>
+        <Setter Property="Foreground" Value="#B45309"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="AccentGreenButton" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
+        <Setter Property="Background" Value="#EAFBF3"/>
+        <Setter Property="BorderBrush" Value="#7BD1AC"/>
+        <Setter Property="Foreground" Value="#047857"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
     <!-- Sits on a coloured header band, so it is outlined rather than filled. -->
     <Style x:Key="OnHeaderButton" TargetType="Button" BasedOn="{StaticResource ThemedButton}">
         <Setter Property="Background" Value="#26FFFFFF"/>
@@ -685,6 +728,11 @@
              CalendarDayButtonStyle holds, so relying on the implicit lookup left the stock grey
              selection in place. DynamicResource because the style is declared further down. -->
         <Setter Property="CalendarDayButtonStyle" Value="{DynamicResource ThemedCalendarDayButton}"/>
+        <!-- The month/year cells need the SAME treatment, and for the same reason. They had an
+             implicit style that had never once applied — invisible while the drill-up views were
+             only ever passed through on the way to a day, and obvious the moment the settlement
+             report started opening a calendar directly in Year mode to pick a month. -->
+        <Setter Property="CalendarButtonStyle" Value="{DynamicResource ThemedCalendarButton}"/>
         <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
@@ -771,13 +819,51 @@
     <!-- The month and year buttons in the drill-up views. Sized with the day buttons — four columns
          against seven, so the same panel width divides into wider cells — because dropping from days
          to months must not resize the panel it is inside. -->
-    <Style TargetType="CalendarButton">
+    <Style x:Key="ThemedCalendarButton" TargetType="CalendarButton">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="FontSize" Value="{StaticResource FontSizeCalendar}"/>
         <Setter Property="MinWidth" Value="100"/>
         <Setter Property="MinHeight" Value="40"/>
         <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <!-- Templated for the same reason the day button is: the stock month/year cell paints its
+             selection in Aero's pale blue, which is the one colour on the panel belonging to no part
+             of this application. Same three states, same brushes, so a month reads exactly like a
+             day. -->
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="CalendarButton">
+                    <Border x:Name="Bd" CornerRadius="5" Background="Transparent" Margin="2"
+                            BorderThickness="1" BorderBrush="Transparent" SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- A cell outside the decade being shown, in the years view. -->
+                        <Trigger Property="IsInactive" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
+                        </Trigger>
+                        <Trigger Property="HasSelectedDays" Value="True">
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
+                        </Trigger>
+                        <!-- Last, so it wins over hover. -->
+                        <Trigger Property="IsFocused" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter TargetName="Bd" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextOnPrimaryBrush}"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
+
+    <Style TargetType="CalendarButton" BasedOn="{StaticResource ThemedCalendarButton}"/>
 
     <!-- ══ Selection controls: recoloured, NOT re-templated ═════════════════════════════════
          The order editor drives dozens of radios and checkboxes through code (payment methods,

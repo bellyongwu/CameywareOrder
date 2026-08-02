@@ -5,9 +5,13 @@
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Session.Lock.Title], Mode=OneWay}"
         SizeToContent="Height" Width="460"
         WindowStartupLocation="CenterScreen"
-        ResizeMode="NoResize"
+        ResizeMode="CanMinimize"
         Icon="/Assets/ICONS/app-icon.ico"
         Background="{StaticResource PageBackgroundBrush}">
+    <!-- CanMinimize rather than NoResize, so the title bar offers more than Close. Safe here for a
+         reason worth stating: App.LockAsync CLOSES the main window and signs the session out before
+         this appears, so putting the lock screen aside exposes nothing behind it. It keeps its
+         taskbar button (the default), which is what makes a minimised one reachable again. -->
     <!-- The screen a locked session comes back through. It asks for ONE thing — the password of the
          account that locked it — because the whole point of locking rather than signing out is that
          the account and the shop are already settled.

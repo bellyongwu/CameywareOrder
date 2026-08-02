@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
 using CameywareOrder.Controls.Charts;
@@ -123,6 +124,37 @@ public partial class SettlementWindow : Window
         TotalName.Text = _scope["Settlement.Section.Revenue"];
     }
 
+    /// <summary>
+    /// ESC closes the report — the only way out of it was the title-bar X.
+    /// </summary>
+    /// <remarks>
+    /// Every other panel in the application gets this free from a Cancel button carrying
+    /// <c>IsCancel</c>; this one has no Cancel to carry it, because a report is read rather than
+    /// filled in. Handled here instead, and only when nothing nearer has a use for the key: an open
+    /// period picker takes it first, or ESC would dismiss the whole window from under somebody who
+    /// meant to close a drop-down.
+    /// </remarks>
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+
+        if (e.Key == Key.Escape)
+        {
+            if (PeriodPopup.IsOpen)
+            {
+                PeriodPopup.IsOpen = false;
+                e.Handled = true;
+            }
+            else
+            {
+                e.Handled = true;
+                Close();
+            }
+        }
+
+        base.OnPreviewKeyDown(e);
+    }
+
     // ── period ────────────────────────────────────────────────────────────────
 
     private void OnPeriodKindChanged(object sender, RoutedEventArgs e)
@@ -145,6 +177,13 @@ public partial class SettlementWindow : Window
         PreviousButton.IsEnabled = CustomChip.IsChecked is not true;
         NextButton.IsEnabled = PreviousButton.IsEnabled;
 
+        // And so is picking a period: the From / To boxes ARE the choice. The button is hidden
+        // rather than disabled, because a custom range has no single period for it to name.
+        PeriodButton.Visibility = CustomChip.IsChecked is true ? Visibility.Collapsed : Visibility.Visible;
+
+        if (CustomChip.IsChecked is true)
+            PeriodPopup.IsOpen = false;
+
         Reload();
     }
 
@@ -159,6 +198,89 @@ public partial class SettlementWindow : Window
             return;
 
         _period = CustomFromPickers();
+        Reload();
+    }
+
+    /// <summary>
+    /// Opens the period calendar in the mode that matches the chip.
+    /// </summary>
+    /// <remarks>
+    /// <c>DisplayDate</c> is set from the period being replaced, so the calendar opens ON the month
+    /// or year currently shown rather than on today — picking last March should not start from
+    /// August and make the user walk back.
+    ///
+    /// The selection is cleared each time. A Calendar will not raise
+    /// <c>SelectedDatesChanged</c> for a date that is already selected, so re-picking the same day
+    /// after having moved away would do nothing at all.
+    /// </remarks>
+    private void OnPeriodPickerClick(object sender, RoutedEventArgs e)
+    {
+        _loading = true;
+        try
+        {
+            PeriodCalendar.DisplayMode = true switch
+            {
+                _ when DayChip.IsChecked is true => CalendarMode.Month,
+                _ when YearChip.IsChecked is true => CalendarMode.Decade,
+                _ => CalendarMode.Year
+            };
+
+            // A Calendar always measures itself for SEVEN rows of days, so the months view left a
+            // third of the popup empty below the December cell. Pinned for the two coarse modes,
+            // released for the day grid, which needs every one of those rows.
+            PeriodCalendar.Height = PeriodCalendar.DisplayMode == CalendarMode.Month ? double.NaN : 196;
+
+            PeriodCalendar.SelectedDates.Clear();
+            PeriodCalendar.DisplayDate = _period.Start;
+
+            if (DayChip.IsChecked is true)
+                PeriodCalendar.SelectedDate = _period.Start;
+        }
+        finally
+        {
+            _loading = false;
+        }
+
+        PeriodPopup.IsOpen = true;
+    }
+
+    /// <summary>Picking a DAY. The other two kinds never reach here — see the display-mode handler.</summary>
+    private void OnPeriodCalendarSelected(object sender, SelectionChangedEventArgs e)
+    {
+        if (_loading || DayChip.IsChecked is not true || PeriodCalendar.SelectedDate is not { } picked)
+            return;
+
+        Choose(DateRange.Day(picked));
+    }
+
+    /// <summary>
+    /// Picking a MONTH or a YEAR, which a Calendar reports as a drill-down rather than a selection.
+    /// </summary>
+    /// <remarks>
+    /// In Year mode, clicking March moves the calendar to March's day grid; in Decade mode, clicking
+    /// 2024 moves it to 2024's months. Nothing is ever "selected" — so the transition itself is the
+    /// answer, and <c>DisplayDate</c> is the cell that was clicked.
+    ///
+    /// Guarded on the mode it moved FROM, not merely on the one it arrived at: opening the popup
+    /// sets the mode too, and without the guard that would read as a choice the moment the calendar
+    /// appeared.
+    /// </remarks>
+    private void OnPeriodCalendarDisplayModeChanged(object sender, CalendarModeChangedEventArgs e)
+    {
+        if (_loading)
+            return;
+
+        if (MonthChip.IsChecked is true && e.OldMode == CalendarMode.Year)
+            Choose(DateRange.Month(PeriodCalendar.DisplayDate));
+        else if (YearChip.IsChecked is true && e.OldMode == CalendarMode.Decade)
+            Choose(DateRange.Year(PeriodCalendar.DisplayDate));
+    }
+
+    private void Choose(DateRange period)
+    {
+        PeriodPopup.IsOpen = false;
+        _period = period;
+        SyncPickers();
         Reload();
     }
 

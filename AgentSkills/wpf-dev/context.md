@@ -2732,6 +2732,55 @@ COPIES that assembly into the harness's own output. Rebuilding the application a
 and looked like the XAML change had had no effect. **Rebuild the harness after every application
 build**, before trusting a render.
 
+## A Calendar hands its cells the style you SET, never the one you declare (2026-08-01)
+
+`ThemedCalendar` had carried this comment for releases: *"Set EXPLICITLY, not left to the implicit
+style: Calendar hands each day button whatever `CalendarDayButtonStyle` holds."* The month and year
+cells needed exactly the same treatment and had never been given it — a `<Style TargetType="CalendarButton">`
+sat in the theme with a `MinWidth`, a font size and a cursor, and **not one of them had ever
+applied**. Invisible for as long as the drill-up views were only passed through on the way to a day;
+obvious the moment the settlement report started opening a calendar directly in Year mode.
+
+Both properties, always, on any styled `Calendar`:
+
+```xml
+<Setter Property="CalendarDayButtonStyle" Value="{DynamicResource ThemedCalendarDayButton}"/>
+<Setter Property="CalendarButtonStyle"    Value="{DynamicResource ThemedCalendarButton}"/>
+```
+
+Keep the implicit `BasedOn` alias as well, so a raw `Calendar` outside a DatePicker still inherits it.
+
+**A Calendar in Year or Decade mode DRILLS DOWN; it never selects.** Clicking March moves to March's
+day grid, so `SelectedDatesChanged` is silent and there is nothing to read. The transition itself is
+the answer: handle `DisplayModeChanged`, take `DisplayDate` as the cell that was clicked, and guard on
+`e.OldMode` — setting the mode when the popup opens raises the same event and would otherwise register
+as a choice the instant the calendar appeared. Also note a Calendar always measures itself for SEVEN
+rows of days, so the months view leaves a third of the panel empty unless the height is pinned.
+
+## The one-owner rule, broken five hours after being relied on (2026-08-01)
+
+The main window's month-summary strip had its capability check in `ApplyRolePermissions` and its
+"the month has figures, so show it" line in `RefreshSummaryStrip`. Both wrote `Visibility`; the second
+runs on every order reload, so it always won. A role that may not read reports saw the shop's takings
+on the home screen the moment the list refreshed. **Both methods looked correct on their own** — which
+is the whole failure mode, and why the fix is not "add the check in the second place" but "make the
+second place the only place".
+
+Worth asserting in the harness as a PAIR whenever a control's state has both a permission and a data
+condition: the owner must check, and nothing else may write it. The second half is what keeps the trap
+from being rebuilt; verify it by re-adding the removed writer and watching it go red.
+
+## A title bar is not capturable, so assert it from the source (2026-08-01)
+
+`RenderTargetBitmap` draws the client area only. A change to `ResizeMode`, `ShowInTaskbar` or the
+window buttons produces an identical screenshot, so "render it before calling it done" has nothing to
+offer here — the source assertion is the evidence.
+
+And assert the PAIR, not the property: `ResizeMode="CanMinimize"` with `ShowInTaskbar="False"` yields
+a window that can be minimised and then has no button anywhere to restore it. Adding the minimize box
+to the login screen required changing both, because the login screen had deliberately been kept out of
+the taskbar.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies
