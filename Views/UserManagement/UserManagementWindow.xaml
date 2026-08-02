@@ -361,20 +361,19 @@
                                 <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.AssignmentsHint], Mode=OneWay}"
                                            FontSize="12" Foreground="#6B7280" TextWrapping="Wrap" Margin="0,0,0,14"/>
 
-                                <!-- Column captions. Widths are repeated on the rows below; keep the
-                                     two in step or the ticks stop lining up under their labels. -->
+                                <!-- Column captions. The roles are no longer two fixed columns — an
+                                     installation defines as many as it likes — so the right-hand
+                                     caption names the QUESTION and each row answers it with the
+                                     roles that actually exist. -->
                                 <Grid Margin="0,0,0,6">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="220"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="104"/>
-                                        <ColumnDefinition Width="104"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Grid.Column="0" Style="{StaticResource FieldLabel}" Margin="2,0,0,0"
                                                Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.ShopColumn], Mode=OneWay}"/>
-                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center"
-                                               Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Role.Manager], Mode=OneWay}"/>
-                                    <TextBlock Grid.Column="2" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center"
-                                               Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Role.Staff], Mode=OneWay}"/>
+                                    <TextBlock Grid.Column="1" Style="{StaticResource FieldLabel}"
+                                               Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.RoleInShop], Mode=OneWay}"/>
                                 </Grid>
 
                                 <ItemsControl x:Name="AssignmentList">
@@ -383,9 +382,8 @@
                                             <Border BorderBrush="#F3F4F6" BorderThickness="0,0,0,1" Padding="0,9">
                                                 <Grid>
                                                     <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="220"/>
                                                         <ColumnDefinition Width="*"/>
-                                                        <ColumnDefinition Width="104"/>
-                                                        <ColumnDefinition Width="104"/>
                                                     </Grid.ColumnDefinitions>
 
                                                     <StackPanel Grid.Column="0" VerticalAlignment="Center" Margin="2,0,10,0">
@@ -397,10 +395,24 @@
                                                                    TextTrimming="CharacterEllipsis"/>
                                                     </StackPanel>
 
-                                                    <CheckBox Grid.Column="1" IsChecked="{Binding IsManager, Mode=TwoWay}"
-                                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                    <CheckBox Grid.Column="2" IsChecked="{Binding IsStaff, Mode=TwoWay}"
-                                                              HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                    <!-- One tick box per defined role. A WrapPanel, so an
+                                                         installation with six roles moves onto a second
+                                                         line instead of off the edge of the card. -->
+                                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Roles}"
+                                                                  VerticalAlignment="Center">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <WrapPanel/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate>
+                                                                <CheckBox IsChecked="{Binding IsGranted, Mode=TwoWay}"
+                                                                          Content="{Binding Name}" Margin="0,2,18,2"
+                                                                          VerticalContentAlignment="Center"/>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>

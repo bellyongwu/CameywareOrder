@@ -170,6 +170,11 @@
                     <Button x:Name="ManageUsersButton" Margin="0,0,10,0"
                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.UserManagement], Mode=OneWay}"
                             Click="OnManageUsersClick"/>
+                    <!-- Beside the accounts it governs: "who works here" and "what may they do" are
+                         read together, and Local Configuration offers the same pair. -->
+                    <Button x:Name="PermissionsButton" Margin="0,0,10,0"
+                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Permissions], Mode=OneWay}"
+                            Click="OnPermissionsClick"/>
                     <Button x:Name="StoreManagementButton" Margin="0,0,10,0"
                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Title], Mode=OneWay}"
                             Click="OnStoreManagementClick"/>

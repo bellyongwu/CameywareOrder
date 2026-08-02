@@ -11,6 +11,34 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v7.0.0 — 2026-08-01
+
+**Permissions are yours to set.** Until now the application shipped three fixed roles and decided in
+code what each of them could reach. A shop that wanted somebody who reads the settlement report and
+touches nothing else had no way to say so. Now every feature the application gates is a permission
+you can hand out, and a role is simply a named set of them.
+
+- **Local Configuration → Permissions**, and the same button on the shop-picker screen. Administrators
+  only.
+- **Two columns, two questions.** On the left, your people: open one to see the shops they work in and
+  tick the roles they hold in each. On the right, your shops: open one to see the roles, and open a
+  role to see — and change — exactly what it may do.
+- **19 permissions**, grouped as Orders, Reporting, Shop configuration, People and access, and
+  Installation. Creating an order, deleting one, printing a receipt, reading the report, exporting it,
+  editing the measurement terms, and so on: each is now its own tick box.
+- **Define your own roles.** Add one, name it, choose what it may do. **Auditor** is already there as
+  an example — it reads orders and the settlement report and cannot change anything at all. Delete it
+  if you do not want it; the deletion sticks.
+- **Manager and Staff can be adjusted** to suit how your shop actually runs, and put back to how they
+  shipped with one button. They cannot be deleted, because people are assigned to them.
+- **Nothing changed for anybody on upgrade.** Manager and Staff start with exactly the access they had
+  before this release, including Staff still seeing the settlement report. Trim it if you want to —
+  that is what the panel is for.
+- **The screens follow the permissions.** A role without "Edit orders" opens an order read-only and
+  says why; without "Create orders" the New Order button is not there; without "View orders" the list
+  does not load at all. The three permissions that govern accounts and permissions themselves are the
+  administrator's alone and cannot be given away.
+
 ### v6.0.1 — 2026-08-01 (hotfix)
 
 Two things on the settlement report, both reported after v6.0.0 shipped:

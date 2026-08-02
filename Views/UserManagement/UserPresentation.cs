@@ -27,33 +27,23 @@ internal static class UserPresentation
         Frozen("#047857"), Frozen("#BE185D"), Frozen("#7C3AED")
     };
 
-    /// <summary>String-table key naming a role, including the "no role at all" case.</summary>
-    public static string RoleKey(UserRole? role) => role switch
-    {
-        UserRole.Admin => "Shop.Role.Admin",
-        UserRole.Manager => "Shop.Role.Manager",
-        UserRole.Staff => "Shop.Role.Staff",
-        _ => "Shop.Role.None"
-    };
-
-    /// <summary>Localized role name, including the "no role at all" case.</summary>
-    public static string RoleText(LocalizationService localization, UserRole? role)
-    {
-        ArgumentNullException.ThrowIfNull(localization);
-        return localization[RoleKey(role)];
-    }
-
     /// <summary>
     /// Several roles as one phrase — "Manager, Staff" — punctuated the way the current language
-    /// punctuates a list. Empty when the account holds none, so the caller can drop the whole
-    /// clause rather than print empty brackets.
+    /// punctuates a list, and naming the "no role at all" case rather than rendering blank.
     /// </summary>
-    public static string RoleList(LocalizationService localization, IEnumerable<UserRole> roles)
+    /// <remarks>
+    /// A LIST, not a single name, because a membership grants the UNION of its roles: there is no
+    /// longer a strongest one to print, and printing only the first would describe a person by a
+    /// subset of what they can actually do.
+    /// </remarks>
+    public static string RoleList(ILocalizedText text, IEnumerable<RoleDefinition> roles)
     {
-        ArgumentNullException.ThrowIfNull(localization);
+        ArgumentNullException.ThrowIfNull(text);
         ArgumentNullException.ThrowIfNull(roles);
 
-        return localization.JoinList(roles.Select(role => RoleText(localization, role)));
+        var names = roles.Select(role => role.ResolveName(text)).ToList();
+
+        return names.Count == 0 ? text["Shop.Role.None"] : text.JoinList(names);
     }
 
     /// <summary>First character of a name, upper-cased, for an avatar tile.</summary>

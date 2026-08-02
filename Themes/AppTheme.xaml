@@ -1322,4 +1322,114 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <!-- ══ Trees ═══════════════════════════════════════════════════════════════
+         A TreeView had never appeared in the application before the permission
+         panel, so it was drawing itself with the operating system's own chrome:
+         a blue selection bar, a grey border and a white box, none of which
+         belong to anything else on screen.
+
+         Implicit rather than keyed, unlike most of this file. The rest of the
+         theme keys its cards and headings because a window legitimately wants a
+         plain Border sometimes — but nothing in this application ever wants an
+         Aero tree, so the default IS the answer here. -->
+    <Style TargetType="TreeView">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled"/>
+    </Style>
+
+    <!-- The disclosure triangle. Drawn rather than a glyph: Segoe's chevrons are
+         not the same weight across the Windows versions this runs on, and a
+         rotated Path is identical everywhere. -->
+    <Style x:Key="TreeDisclosure" TargetType="ToggleButton">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="Width" Value="18"/>
+        <Setter Property="Height" Value="18"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ToggleButton">
+                    <Border Background="Transparent" SnapsToDevicePixels="True">
+                        <Path x:Name="Arrow" Data="M 0 0 L 4 4 L 0 8 Z"
+                              Fill="#9CA3AF" HorizontalAlignment="Center" VerticalAlignment="Center"
+                              RenderTransformOrigin="0.5,0.5"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsChecked" Value="True">
+                            <!-- The whole transform is replaced rather than an x:Name'd
+                                 RotateTransform being re-angled: a Freezable inside a template is
+                                 not a trigger TARGET, and naming one fails the XAML compile with a
+                                 message about declaration order that has nothing to do with it. -->
+                            <Setter TargetName="Arrow" Property="RenderTransform">
+                                <Setter.Value>
+                                    <RotateTransform Angle="90"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource PrimaryBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Arrow" Property="Fill" Value="{StaticResource PrimaryBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="TreeViewItem">
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TreeViewItem">
+                    <StackPanel>
+                        <!-- The row, not the header text, carries the highlight: a
+                             selection that hugs the words leaves the rest of the
+                             line unpainted and reads as a text selection. -->
+                        <Border x:Name="Row" CornerRadius="8" Background="Transparent"
+                                Padding="4,3" SnapsToDevicePixels="True">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="20"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ToggleButton x:Name="Disclosure" Grid.Column="0"
+                                              Style="{StaticResource TreeDisclosure}"
+                                              ClickMode="Press" VerticalAlignment="Center"
+                                              IsChecked="{Binding IsExpanded, Mode=TwoWay,
+                                                          RelativeSource={RelativeSource TemplatedParent}}"/>
+                                <ContentPresenter x:Name="PART_Header" Grid.Column="1"
+                                                  ContentSource="Header" VerticalAlignment="Center"
+                                                  HorizontalAlignment="Stretch"/>
+                            </Grid>
+                        </Border>
+                        <!-- Indented by the width of the triangle, so a child lines
+                             up under its parent's text rather than under its arrow. -->
+                        <ItemsPresenter x:Name="Children" Margin="20,0,0,0"/>
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="False">
+                            <Setter TargetName="Children" Property="Visibility" Value="Collapsed"/>
+                        </Trigger>
+                        <Trigger Property="HasItems" Value="False">
+                            <Setter TargetName="Disclosure" Property="Visibility" Value="Hidden"/>
+                        </Trigger>
+                        <!-- SourceName, not the item's own IsMouseOver: a TreeViewItem is "moused
+                             over" whenever the pointer is anywhere in its SUBTREE, so the plain
+                             property would light up every ancestor of the row under the cursor. -->
+                        <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Row" Property="Background" Value="#F5F6FA"/>
+                        </Trigger>
+                        <!-- After IsMouseOver on purpose: the pointer is on the row
+                             being clicked, so the hover tint would otherwise win over
+                             the selection at the exact moment it is chosen. -->
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Row" Property="Background" Value="{StaticResource PrimarySoftBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

@@ -66,6 +66,9 @@ public partial class OrderEditWindow : Window
     private readonly LocalizationService _localization;
     private readonly Order? _existing;
     private readonly bool _isReadOnly;
+
+    /// <summary>Read-only because the order is FINISHED, rather than because of what the user may do.</summary>
+    private readonly bool _isFinalized;
     private bool _isRefunded;
     private readonly ObservableCollection<CustomMadeServiceRecord> _customMadeRecords = new();
     private readonly List<ClothingItemEditorRow> _clothingItemRows = new();
@@ -330,7 +333,12 @@ public partial class OrderEditWindow : Window
         _scopeFactory = scopeFactory;
         _localization = localization;
         _existing = existing;
-        _isReadOnly = IsReadOnlyStatus(existing.Status);
+
+        // Two different reasons to refuse an edit, and the notice has to say WHICH: the order is
+        // finished, or this user may read orders but not change them. Both land in the same
+        // read-only mode, because "what the window does" and "why" are separate questions.
+        _isFinalized = IsReadOnlyStatus(existing.Status);
+        _isReadOnly = _isFinalized || !AuthenticationService.Instance.CanEditOrders;
         _isRefunded = existing.IsRefunded;
 
         InitializeCommonControls();
@@ -416,10 +424,19 @@ public partial class OrderEditWindow : Window
     private static bool IsReadOnlyStatus(OrderStatus status)
         => status is OrderStatus.Shipped or OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned;
 
+    /// <summary>Which of the two read-only reasons the notice should state.</summary>
+    private string ReadOnlyNoticeKey
+        => _isFinalized ? "OrderEdit.ReadOnlyNotice" : "OrderEdit.ReadOnlyNoRight";
+
     private void ApplyReadOnlyMode()
     {
         SaveButton.Visibility = Visibility.Collapsed;
         ReadOnlyNotice.Visibility = Visibility.Visible;
+
+        // Assigned rather than left to the XAML binding, which can only name one of the two reasons.
+        // RefreshLocalizedLabels re-applies it, since a code-set value replaces the binding and
+        // would otherwise stop following a language switch.
+        ReadOnlyNotice.Text = _localization[ReadOnlyNoticeKey];
 
         StatusBox.IsEnabled = false;
         PickedUpCheck.IsEnabled = false;
@@ -909,6 +926,9 @@ public partial class OrderEditWindow : Window
             Title = _localization[titleKey];
             TitleText.Text = _localization[titleKey];
         }
+
+        if (_isReadOnly)
+            ReadOnlyNotice.Text = _localization[ReadOnlyNoticeKey];
 
         RefreshCustomMadeButtonLabel();
         ApplyCalendarLanguage();

@@ -1,21 +1,19 @@
 namespace CameywareOrder.Models;
 
 /// <summary>
-/// What a signed-in user is allowed to do.
+/// THE ROLE SET THE APPLICATION USED TO HAVE, kept for one purpose: reading a
+/// <c>credentials.json</c> written before roles became data. Nothing decides anything from this type
+/// any more.
 ///
-/// <see cref="Admin"/> is an ACCOUNT-level property (see <c>CredentialRecord.IsAdministrator</c>) —
-/// it is never assigned to a shop, because an administrator already has every right in every shop.
-/// <see cref="Manager"/> and <see cref="Staff"/> are per-shop: an account holds a set of them per
-/// branch, so the same person can run one shop and take orders in another. Holding both in one shop
-/// is legal and resolves to Manager.
+/// It was three fixed values, and "what may this user do" was a comparison against them
+/// (<c>role == Manager</c>) wrapped in a named property. That is a permission model an installation
+/// cannot change without a new build. Roles are now <see cref="RoleDefinition"/> records in
+/// <c>roles.json</c>, each a set of <see cref="AppCapability"/> values, and a membership names them
+/// by id.
 ///
-/// DECLARATION ORDER IS LOAD-BEARING: the values are ordered strongest-first, and
-/// <c>AuthenticationService.StrongestRole</c> resolves the effective role by taking the minimum.
-/// Inserting a value in the middle would silently re-rank the existing ones.
-///
-/// Decisions are made through named capability properties on <c>AuthenticationService</c>
-/// (<c>CanConfigureShop</c>, <c>CanUseDataTools</c>, …) rather than <c>role == Manager</c>
-/// comparisons scattered through the UI, so a rule change has one home.
+/// DO NOT ADD VALUES HERE. A new role is data — define it in the permission panel. The only reason
+/// this enum still exists is that the numbers below are what old files literally contain, so
+/// deleting it would make those files unreadable.
 /// </summary>
 public enum UserRole
 {
@@ -27,4 +25,24 @@ public enum UserRole
 
     /// <summary>Takes orders in a shop, with no access to its configuration.</summary>
     Staff = 2
+}
+
+/// <summary>
+/// Maps the retired <see cref="UserRole"/> values onto the role ids that replaced them.
+/// </summary>
+/// <remarks>
+/// Lives beside the legacy type rather than with the migration that calls it, because it is only
+/// meaningful as a statement about the OLD shape — and because there are two callers (the version-1
+/// global role and the version-2 flat assignments), which is exactly how a mapping like this comes
+/// to be written twice and then disagree.
+/// </remarks>
+public static class LegacyRoleIds
+{
+    /// <summary>The role id a stored <see cref="UserRole"/> becomes.</summary>
+    public static string For(UserRole role) => role switch
+    {
+        UserRole.Admin => RoleDefinition.AdministratorId,
+        UserRole.Manager => RoleDefinition.ManagerId,
+        _ => RoleDefinition.StaffId
+    };
 }

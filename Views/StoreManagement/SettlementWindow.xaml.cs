@@ -93,6 +93,9 @@ public partial class SettlementWindow : Window
         TitleText.Text = _scope["Settlement.Title"];
         SubtitleText.Text = _scope["Settlement.Subtitle"];
         PrintButton.Content = _scope["Settlement.Print"];
+        PrintButton.Visibility = AuthenticationService.Instance.CanExportReports
+            ? Visibility.Visible
+            : Visibility.Collapsed;
 
         DayChip.Content = _scope["Settlement.Period.Day"];
         MonthChip.Content = _scope["Settlement.Period.Month"];
@@ -300,7 +303,9 @@ public partial class SettlementWindow : Window
 
     private void OnPrintClick(object sender, RoutedEventArgs e)
     {
-        if (_report is not { } report)
+        // Reading the report and taking a copy of it out of the building are separate permissions:
+        // an auditor may well be allowed the first and not the second.
+        if (_report is not { } report || !AuthenticationService.Instance.CanExportReports)
             return;
 
         // The DIALOG is in the operator's own language, never the previewed one — a Save-as they

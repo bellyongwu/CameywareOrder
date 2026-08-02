@@ -884,6 +884,35 @@ strip reads the SAME calculator over the current month, so the two cannot disagr
   templates, no styles to merge, no third-party dependency — and `ChartImage` renders the very same
   element into the PDF, so the printed chart cannot drift from the screen's. Reusable by any panel.
 
+## Permissions (v7.0.0)
+
+Authorization used to be three fixed `UserRole` values and named properties comparing against them.
+It is now data, in five pieces:
+
+- **`Models/UserManagement/AppCapability`** — the enum, plus `CapabilityCatalog`: every gated feature
+  with its group, its `CapabilityScope` (Shop or Installation) and whether it is administrator-only.
+  **The catalog is the product's definition of itself** — a gated feature missing from it can be
+  granted to nobody, and a listed one gated nowhere is a promise the application does not keep.
+  The enum's VALUE NAMES are a compatibility surface: they are written into `roles.json` as text.
+- **`Models/UserManagement/RoleDefinition`** + `BuiltInRoles` — a role is an id, a name (a string-table
+  key for a shipped one, typed text for a custom one) and a capability set. `BuiltInRoles` holds the
+  shipped defaults, which deliberately reproduce the old hard-coded rules exactly.
+- **`Services/UserManagement/RolePermissionStore`** — owns `roles.json` beside `credentials.json` and
+  for the same reason: a role is part of who may use the installation, not a shop's trading data, so
+  Import → Database must not rewrite it. Built-ins are topped up on load; the ADMINISTRATOR is never
+  persisted but regenerated, because it is defined as "every capability there is".
+- **`Services/UserManagement/AuthenticationService`** — `ShopMembership.RoleIds` (file schema 5),
+  `Can(AppCapability)` over a set re-resolved on sign-in, shop bind and any role edit, and the named
+  `CanXxx` properties as readable spellings of it. `DropRole`/`HoldersOf` are what let the store
+  delete a role and withdraw it from its holders in one operation.
+- **`Views/UserManagement/PermissionsWindow`** (+ `PermissionNodes`, `RoleToggle`, and the shared
+  `Controls/RoleCheckList`) — two trees: accounts → shops → roles on the left, shops → roles →
+  capabilities on the right. One `RoleNode` instance is SHARED across shops, since a role is defined
+  once. Reached from Local Configuration and from the shop picker.
+
+`Models/UserManagement/UserRole` remains only so a file written before this release can be read;
+`LegacyRoleIds.For` maps its three values onto ids. Nothing decides anything from it.
+
 ## Key cross-cutting patterns
 
 - All UI text flows through `Languages.xml` / `LocalizationService`.

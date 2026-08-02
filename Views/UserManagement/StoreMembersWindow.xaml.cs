@@ -134,7 +134,7 @@ public partial class StoreMembersWindow : Window
     /// <summary>The second line of a roster row: role, then shift when one is set.</summary>
     private string BuildRowDetail(StoreMember member)
     {
-        var parts = new List<string> { RoleSummary(member.Membership.Roles) };
+        var parts = new List<string> { RoleSummary(member.Membership.RoleIds) };
 
         var shift = FormatShift(member.Membership);
         if (shift.Length > 0)
@@ -143,12 +143,16 @@ public partial class StoreMembersWindow : Window
         return _localization.JoinFragments(parts);
     }
 
-    private string RoleSummary(IReadOnlyList<UserRole> roles)
+    /// <summary>
+    /// The roles this person holds here, named. Resolved through the catalog, so an id left behind
+    /// by a deleted role contributes nothing rather than printing a machine name at somebody.
+    /// </summary>
+    private string RoleSummary(IReadOnlyList<string> roleIds)
     {
-        if (roles.Count == 0)
-            return _localization["Shop.Role.None"];
+        var held = RolePermissionStore.Instance.All()
+            .Where(role => roleIds.Contains(role.Id, StringComparer.OrdinalIgnoreCase));
 
-        return string.Join(" + ", roles.Select(role => UserPresentation.RoleText(_localization, role)));
+        return UserPresentation.RoleList(_localization, held);
     }
 
     private static string FormatShift(ShopMembership membership)
@@ -218,8 +222,7 @@ public partial class StoreMembersWindow : Window
         SetFieldError(PhoneErrorText, null);
         SetFieldError(EmailErrorText, null);
 
-        ManagerCheck.IsChecked = member.Membership.Roles.Contains(UserRole.Manager);
-        StaffCheck.IsChecked = member.Membership.Roles.Contains(UserRole.Staff);
+        RoleList.Load(_localization, member.Membership.RoleIds);
         ActiveCheck.IsChecked = member.Membership.IsActive;
         JoinedDatePicker.SelectedDate = member.Membership.JoinedOn;
 
@@ -263,19 +266,6 @@ public partial class StoreMembersWindow : Window
 
     private static TimeOnly? ReadTime(ComboBox box) => (box.SelectedItem as TimeOption)?.Value;
 
-    private static List<UserRole> ReadRoles(CheckBox managerCheck, CheckBox staffCheck)
-    {
-        var roles = new List<UserRole>();
-
-        if (managerCheck.IsChecked.GetValueOrDefault())
-            roles.Add(UserRole.Manager);
-
-        if (staffCheck.IsChecked.GetValueOrDefault())
-            roles.Add(UserRole.Staff);
-
-        return roles;
-    }
-
     // --- Save / delete ----------------------------------------------------------------------
 
     private void OnSaveClick(object sender, RoutedEventArgs e)
@@ -295,7 +285,7 @@ public partial class StoreMembersWindow : Window
             BirthDatePicker.SelectedDate,
             PhoneField.FullNumber,
             EmailBox.Text,
-            ReadRoles(ManagerCheck, StaffCheck),
+            RoleList.SelectedRoleIds,
             ActiveCheck.IsChecked.GetValueOrDefault(),
             JoinedDatePicker.SelectedDate,
             ReadTime(ShiftStartBox),
@@ -389,8 +379,10 @@ public partial class StoreMembersWindow : Window
         NewPhoneField.ResetTo(_shop);
         NewEmailBox.Clear();
         NewJoinedDatePicker.SelectedDate = DateTime.Today;
-        NewManagerCheck.IsChecked = false;
-        NewStaffCheck.IsChecked = true;
+        // Staff by default, as the fixed pair of boxes did — the commonest hire, and a form that
+        // opens with nothing ticked would refuse to save until the person noticed why.
+        NewRoleList.Load(_localization, null);
+        NewRoleList.SelectOnly(RoleDefinition.StaffId);
         SelectTime(NewShiftStartBox, null);
         SelectTime(NewShiftEndBox, null);
         CreateErrorText.Visibility = Visibility.Collapsed;
@@ -440,7 +432,7 @@ public partial class StoreMembersWindow : Window
             NewBirthDatePicker.SelectedDate,
             NewPhoneField.FullNumber,
             NewEmailBox.Text,
-            ReadRoles(NewManagerCheck, NewStaffCheck),
+            NewRoleList.SelectedRoleIds,
             IsActive: true,
             NewJoinedDatePicker.SelectedDate,
             ReadTime(NewShiftStartBox),

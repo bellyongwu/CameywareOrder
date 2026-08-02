@@ -38,10 +38,12 @@ public sealed class AuthenticationService
     /// Shape of <c>credentials.json</c>. 1 = a single global <c>Role</c> per account; 2 = an
     /// administrator flag plus flat (shop, role) assignments; 3 = one <see cref="ShopMembership"/>
     /// per shop, carrying activation, join date and shift alongside the roles; 4 = a person's name
-    /// split into <c>FirstName</c> and <c>LastName</c>. A file below this version is upgraded in two
-    /// steps — see <see cref="ApplyLegacyShopMemberships"/> for why the second one cannot run here.
+    /// split into <c>FirstName</c> and <c>LastName</c>; 5 = memberships name roles by ID rather than
+    /// by the fixed <see cref="UserRole"/> enum, so an installation can define roles of its own. A
+    /// file below this version is upgraded in two steps — see <see cref="ApplyLegacyShopMemberships"/>
+    /// for why the second one cannot run here.
     /// </summary>
-    private const int CurrentSchemaVersion = 4;
+    private const int CurrentSchemaVersion = 5;
 
     /// <summary>
     /// The account that must always exist. Every other account can be deleted; deleting this one
@@ -88,9 +90,26 @@ public sealed class AuthenticationService
     private readonly CredentialFile _file;
     private Guid? _activeShopPublicId;
 
+    /// <summary>
+    /// What the signed-in user may do right now, resolved once and re-resolved whenever anything it
+    /// depends on moves — the session, the open shop, or the role catalog itself.
+    /// </summary>
+    /// <remarks>
+    /// Cached rather than computed per question because the chrome asks a dozen of these every time a
+    /// menu opens or a shop is switched, and each answer would otherwise walk every membership and
+    /// every role. The cost of the cache is that every mutation has to refresh it — which is why the
+    /// refresh and the change notification are the SAME call (<see cref="RefreshCapabilities"/>)
+    /// rather than two things a new code path could do one of.
+    /// </remarks>
+    private IReadOnlySet<AppCapability> _capabilities = new HashSet<AppCapability>();
+
     private AuthenticationService()
     {
         _file = LoadOrSeed();
+
+        // Editing a role changes what everyone holding it may do, with no sign-in and no shop switch
+        // to notice — so the catalog has to be able to tell us itself.
+        RolePermissionStore.Instance.RolesChanged += (_, _) => RefreshCapabilities();
     }
 
     /// <summary>Raised after the signed-in user or the shop their capabilities resolve against changed.</summary>
@@ -103,78 +122,165 @@ public sealed class AuthenticationService
     public bool IsAdministrator => CurrentUser?.IsAdministrator ?? false;
 
     /// <summary>
-    /// The signed-in user's strongest role in the shop currently open, or null when no shop is open
-    /// or they hold no active role in it. An administrator reports <see cref="UserRole.Admin"/>
+    /// The roles the signed-in user holds in the shop currently open, in catalog order. Empty when
+    /// no shop is open or they hold none there; an administrator reports the administrator role
     /// everywhere.
     /// </summary>
-    public UserRole? CurrentRole => _activeShopPublicId is { } shopId ? RoleFor(shopId) : AdministratorRole();
+    public IReadOnlyList<RoleDefinition> CurrentRoles()
+        => _activeShopPublicId is { } shopId
+            ? RolesFor(shopId)
+            : AdministratorRoles();
 
     /// <summary>
-    /// Named capabilities rather than role comparisons spread through the UI — when the rules grow,
-    /// only these change.
+    /// Whether the signed-in user may do one specific thing, right now.
     /// </summary>
     /// <remarks>
-    /// Creating a shop, moving data in and out of the installation, and managing accounts across all
-    /// shops are administrator work: they act on the installation as a whole rather than on one
-    /// branch, so they cannot be delegated to a role that only exists inside a single shop.
+    /// THE ONE QUESTION THE APPLICATION ASKS. Every gate in the UI routes here, and the named
+    /// properties below are only readable spellings of it — so a rule change is a change to the role
+    /// catalog (data), not to the build.
     /// </remarks>
-    public bool CanCreateShops => IsAdministrator;
+    public bool Can(AppCapability capability) => _capabilities.Contains(capability);
+
+    /// <summary>
+    /// Named capabilities rather than <see cref="Can"/> calls spread through the UI. They read
+    /// better at the call site and they document, in one list, what the application gates at all.
+    /// </summary>
+    public bool CanViewOrders => Can(AppCapability.ViewOrders);
+
+    /// <summary>Start a new order.</summary>
+    public bool CanCreateOrders => Can(AppCapability.CreateOrders);
+
+    /// <summary>Change a saved order. Without it the editor opens read-only, as a finished order does.</summary>
+    public bool CanEditOrders => Can(AppCapability.EditOrders);
+
+    /// <summary>Delete an order, singly or as a batch.</summary>
+    public bool CanDeleteOrders => Can(AppCapability.DeleteOrders);
+
+    /// <summary>Duplicate an order.</summary>
+    public bool CanCopyOrders => Can(AppCapability.CopyOrders);
+
+    /// <summary>Print or download a receipt and a measurement sheet.</summary>
+    public bool CanPrintOrderDocuments => Can(AppCapability.PrintOrderDocuments);
+
+    /// <summary>Open the settlement report, and see the month's figures on the main window.</summary>
+    public bool CanViewReports => Can(AppCapability.ViewReports);
+
+    /// <summary>Print the settlement report or save it as a PDF.</summary>
+    public bool CanExportReports => Can(AppCapability.ExportReports);
+
+    /// <summary>Create a shop, and reach the store-management tools.</summary>
+    public bool CanCreateShops => Can(AppCapability.CreateShops);
 
     /// <summary>Managing every account in the installation and its shop memberships.</summary>
-    public bool CanManageUsers => IsAdministrator;
+    public bool CanManageUsers => Can(AppCapability.ManageUsers);
+
+    /// <summary>Defining roles and what they may do.</summary>
+    public bool CanManagePermissions => Can(AppCapability.ManagePermissions);
 
     /// <summary>
-    /// The Local Database and Import/Export menus, and the database path in the status bar. These read
-    /// replace the whole installation's data, which is not a per-shop action.
+    /// The Local Database and Import/Export menus, and the database path in the status bar. These
+    /// replace the whole installation's data, which is why the capability is installation-scoped.
     /// </summary>
-    public bool CanUseDataTools => IsAdministrator;
+    public bool CanUseDataTools => Can(AppCapability.UseDataTools);
 
-    /// <summary>
-    /// Whether the user may change how the OPEN shop is configured — its settings, currency,
-    /// measurement terms and receipt branding. A manager runs their branch; staff take orders in it.
-    /// </summary>
-    public bool CanConfigureShop => IsAdministrator || CurrentRole == UserRole.Manager;
+    /// <summary>Whether the user may change the OPEN shop's own settings — details, currency, tax.</summary>
+    public bool CanConfigureShop => Can(AppCapability.ConfigureShop);
+
+    /// <summary>Whether the user may edit the open shop's measurement terms.</summary>
+    public bool CanManageMeasurementTerms => Can(AppCapability.ManageMeasurementTerms);
+
+    /// <summary>Whether the user may edit the open shop's product categories.</summary>
+    public bool CanManageProductCatalog => Can(AppCapability.ManageProductCatalog);
+
+    /// <summary>Whether the user may edit the receipt letterhead.</summary>
+    public bool CanManageBranding => Can(AppCapability.ManageBranding);
 
     /// <summary>
     /// Whether the user may manage the OPEN shop's roster: who works there, their role, their shift
     /// and whether they are still active.
     /// </summary>
-    /// <remarks>
-    /// Same holders as <see cref="CanConfigureShop"/> today, but a separate name on purpose — "who
-    /// works here" and "how this shop prices and prints" are different decisions, and the first is
-    /// the one most likely to be delegated further later.
-    /// </remarks>
-    public bool CanManageStoreMembers => IsAdministrator || CurrentRole == UserRole.Manager;
+    public bool CanManageStoreMembers => Can(AppCapability.ManageStoreMembers);
 
     /// <summary>
     /// Whether the user may delete an account outright, as opposed to deactivating a membership.
     /// Deletion is installation-wide — the person may work in branches this user has never seen.
     /// </summary>
-    public bool CanDeleteAccounts => IsAdministrator;
+    public bool CanDeleteAccounts => Can(AppCapability.DeleteAccounts);
 
     /// <summary>
-    /// Whether the user may run the application in ANY shipped language. Only an administrator can,
-    /// because they work across branches; everyone else is confined to the languages their shop
-    /// installs — which may well be several, so this being false does NOT mean "no language toggle".
-    /// <c>ShopLanguages</c> owns that question.
+    /// Whether the user may run the application in ANY shipped language — everyone else is confined
+    /// to the languages their shop installs, which may well be several, so this being false does NOT
+    /// mean "no language toggle". <c>ShopLanguages</c> owns that question.
     /// </summary>
     /// <remarks>
-    /// Named "any" deliberately. As plain <c>CanChooseLanguage</c> it read as the switch that turns
-    /// the toggle on and off, which it stopped being the moment a shop could install more than one
-    /// language. (The login screen stays switchable for everyone regardless — no shop is open there,
-    /// and a user has to be able to read the screen they sign in on.)
+    /// The login screen stays switchable for everyone regardless — no shop is open there, and a user
+    /// has to be able to read the screen they sign in on.
     /// </remarks>
-    public bool CanChooseAnyLanguage => IsAdministrator;
+    public bool CanChooseAnyLanguage => Can(AppCapability.ChooseAnyLanguage);
 
     /// <summary>
-    /// Points the capability properties at a shop. Called from <c>App.ApplyActiveShop</c> BEFORE the
-    /// shop is published to <see cref="ShopContext"/>, so anything reacting to that change already
-    /// sees the new answers.
+    /// Points the capability set at a shop. Called from <c>App.ApplyActiveShop</c> BEFORE the shop is
+    /// published to <see cref="ShopContext"/>, so anything reacting to that change already sees the
+    /// new answers.
     /// </summary>
     public void BindShop(Shop? shop)
     {
         _activeShopPublicId = shop?.PublicId;
+        RefreshCapabilities();
+    }
+
+    /// <summary>
+    /// Re-resolves what the signed-in user may do, then announces it. One call, because a refresh
+    /// without the notification leaves stale chrome and a notification without the refresh reports
+    /// the previous answers.
+    /// </summary>
+    private void RefreshCapabilities()
+    {
+        _capabilities = ResolveCapabilities();
         CapabilitiesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Everything the signed-in user may do: the union of what their roles grant, resolved against
+    /// the right memberships for each capability's scope.
+    /// </summary>
+    /// <remarks>
+    /// Installation-scoped capabilities are answered by ANY active membership, because the screens
+    /// that ask them run with no shop open — the shop picker asks "may this person create a shop"
+    /// before there is a shop to resolve against, and a question that could only be answered "no"
+    /// there is a capability that could never be granted.
+    ///
+    /// The administrator-only three are stripped at the end regardless of what any role claims, so a
+    /// hand-edited <c>roles.json</c> cannot hand out the keys to the installation.
+    /// </remarks>
+    private HashSet<AppCapability> ResolveCapabilities()
+    {
+        if (CurrentUser is null)
+            return new HashSet<AppCapability>();
+
+        if (CurrentUser.IsAdministrator)
+            return new HashSet<AppCapability>(Enum.GetValues<AppCapability>());
+
+        var catalog = RolePermissionStore.Instance;
+        var granted = new HashSet<AppCapability>();
+
+        foreach (var membership in CurrentUser.Memberships.Where(membership => membership.IsActive))
+        {
+            granted.UnionWith(catalog.CapabilitiesFor(membership.RoleIds)
+                .Where(capability =>
+                    CapabilityCatalog.Entry(capability).Scope == CapabilityScope.Installation));
+        }
+
+        if (_activeShopPublicId is { } shopId
+            && CurrentUser.Memberships.FirstOrDefault(membership =>
+                membership.ShopPublicId == shopId && membership.IsActive) is { } inShop)
+        {
+            granted.UnionWith(catalog.CapabilitiesFor(inShop.RoleIds)
+                .Where(capability => CapabilityCatalog.Entry(capability).Scope == CapabilityScope.Shop));
+        }
+
+        granted.RemoveWhere(capability => CapabilityCatalog.Entry(capability).AdministratorOnly);
+        return granted;
     }
 
     /// <summary>
@@ -204,7 +310,7 @@ public sealed class AuthenticationService
             return SignInResult.Failed(SignInFailure.Deactivated);
 
         CurrentUser = ToAccount(record);
-        CapabilitiesChanged?.Invoke(this, EventArgs.Empty);
+        RefreshCapabilities();
         return SignInResult.Succeeded(CurrentUser);
     }
 
@@ -262,7 +368,7 @@ public sealed class AuthenticationService
 
         CurrentUser = ToAccount(record);
         _activeShopPublicId = null;
-        CapabilitiesChanged?.Invoke(this, EventArgs.Empty);
+        RefreshCapabilities();
         return AccountOperationResult.Success;
     }
 
@@ -275,29 +381,45 @@ public sealed class AuthenticationService
     {
         CurrentUser = null;
         _activeShopPublicId = null;
-        CapabilitiesChanged?.Invoke(this, EventArgs.Empty);
+        RefreshCapabilities();
     }
 
     /// <summary>
-    /// The signed-in user's strongest role in a given shop, or null when they hold none there or
-    /// their membership has been deactivated.
+    /// The roles the signed-in user holds in a given shop, in catalog order. Empty when they hold
+    /// none there, when their membership has been deactivated, or when every role they were given
+    /// has since been deleted from the catalog.
     /// </summary>
-    public UserRole? RoleFor(Guid shopPublicId)
+    public IReadOnlyList<RoleDefinition> RolesFor(Guid shopPublicId)
     {
         if (CurrentUser is null)
-            return null;
+            return Array.Empty<RoleDefinition>();
 
         if (CurrentUser.IsAdministrator)
-            return UserRole.Admin;
+            return AdministratorRoles();
 
         var membership = CurrentUser.Memberships
             .FirstOrDefault(candidate => candidate.ShopPublicId == shopPublicId);
 
-        return membership is { IsActive: true } ? StrongestRole(membership.Roles) : null;
+        if (membership is not { IsActive: true })
+            return Array.Empty<RoleDefinition>();
+
+        var catalog = RolePermissionStore.Instance;
+
+        return catalog.All()
+            .Where(role => membership.RoleIds.Contains(role.Id, StringComparer.OrdinalIgnoreCase))
+            .ToList();
     }
 
-    /// <summary>Whether the signed-in user may open a given shop at all.</summary>
-    public bool CanAccessShop(Guid shopPublicId) => RoleFor(shopPublicId) is not null;
+    /// <summary>
+    /// Whether the signed-in user may open a given shop at all: an active membership naming at least
+    /// one role that still exists.
+    /// </summary>
+    /// <remarks>
+    /// "Still exists" is the load-bearing half. A membership whose every role has been deleted grants
+    /// nothing, so letting it open the shop would hand somebody a window with no records, no buttons
+    /// and no explanation — the picker refusing the shop is the truthful version of the same fact.
+    /// </remarks>
+    public bool CanAccessShop(Guid shopPublicId) => RolesFor(shopPublicId).Count > 0;
 
     /// <summary>Filters a shop list down to the ones the signed-in user may open.</summary>
     public List<Shop> FilterAccessibleShops(IEnumerable<Shop> shops)
@@ -351,7 +473,7 @@ public sealed class AuthenticationService
         if (string.IsNullOrEmpty(password))
             return AccountOperationResult.PasswordRequired;
 
-        if (profile.Roles.Count == 0)
+        if (profile.RoleIds.Count == 0)
             return AccountOperationResult.RoleRequired;
 
         if (FindRecord(name) is not null)
@@ -383,7 +505,7 @@ public sealed class AuthenticationService
         if (record.Memberships.TrueForAll(membership => membership.ShopPublicId != shopPublicId))
             return AccountOperationResult.NotFound;
 
-        if (profile.Roles.Count == 0)
+        if (profile.RoleIds.Count == 0)
             return AccountOperationResult.RoleRequired;
 
         // Deactivating yourself in the shop you are standing in would revoke the screen you are
@@ -419,7 +541,7 @@ public sealed class AuthenticationService
             membership.DeactivatedOn = null;
 
         membership.IsActive = profile.IsActive;
-        membership.Roles = profile.Roles.Distinct().OrderBy(role => role).ToList();
+        membership.RoleIds = NormalizeRoleIds(profile.RoleIds);
         membership.JoinedOn = profile.JoinedOn;
         membership.ShiftStart = profile.ShiftStart;
         membership.ShiftEnd = profile.ShiftEnd;
@@ -454,8 +576,13 @@ public sealed class AuthenticationService
         if (target is null || target.IsAdministrator)
             return false;
 
+        // "Shops this user runs" is now a capability question rather than a role comparison: whoever
+        // may manage a shop's roster is the person who may reset the passwords of the people on it.
+        var catalog = RolePermissionStore.Instance;
+
         var managedShops = CurrentUser.Memberships
-            .Where(membership => membership.IsActive && membership.Roles.Contains(UserRole.Manager))
+            .Where(membership => membership.IsActive
+                && catalog.CapabilitiesFor(membership.RoleIds).Contains(AppCapability.ManageStoreMembers))
             .Select(membership => membership.ShopPublicId)
             .ToHashSet();
 
@@ -687,7 +814,7 @@ public sealed class AuthenticationService
     /// membership; a shop absent from the dictionary is not considered at all.
     /// </summary>
     public AccountOperationResult SetShopRoles(
-        string userName, IReadOnlyDictionary<Guid, IReadOnlyList<UserRole>> rolesByShop)
+        string userName, IReadOnlyDictionary<Guid, IReadOnlyList<string>> rolesByShop)
     {
         ArgumentNullException.ThrowIfNull(rolesByShop);
 
@@ -710,11 +837,11 @@ public sealed class AuthenticationService
     }
 
     private static void ApplyShopRoles(
-        CredentialRecord record, Guid shopPublicId, IReadOnlyList<UserRole> roles)
+        CredentialRecord record, Guid shopPublicId, IReadOnlyList<string> roleIds)
     {
         var existing = record.Memberships.Find(m => m.ShopPublicId == shopPublicId);
 
-        if (roles.Count == 0)
+        if (roleIds.Count == 0)
         {
             if (existing is not null)
                 record.Memberships.Remove(existing);
@@ -722,21 +849,74 @@ public sealed class AuthenticationService
             return;
         }
 
-        var ordered = roles.Distinct().OrderBy(role => role).ToList();
+        var ordered = NormalizeRoleIds(roleIds);
 
         if (existing is null)
         {
             record.Memberships.Add(new ShopMembership
             {
                 ShopPublicId = shopPublicId,
-                Roles = ordered,
+                RoleIds = ordered,
                 JoinedOn = DateTime.Today
             });
             return;
         }
 
-        existing.Roles = ordered;
+        existing.RoleIds = ordered;
     }
+
+    /// <summary>
+    /// Role ids as they are stored: de-duplicated case-insensitively and in catalog order, so two
+    /// memberships holding the same roles are written the same way and diff as unchanged.
+    /// </summary>
+    private static List<string> NormalizeRoleIds(IEnumerable<string> roleIds)
+    {
+        var wanted = new HashSet<string>(roleIds, StringComparer.OrdinalIgnoreCase);
+
+        return RolePermissionStore.Instance.All()
+            .Select(role => role.Id)
+            .Where(id => wanted.Contains(id))
+            .ToList();
+    }
+
+    /// <summary>
+    /// How many memberships name a role. What the permission panel tells the administrator before
+    /// they delete one — "this removes it from four people" is a different decision from "nobody
+    /// holds this".
+    /// </summary>
+    public int HoldersOf(string roleId)
+        => _file.Users.Count(record => record.Memberships.Exists(membership =>
+            membership.RoleIds.Contains(roleId, StringComparer.OrdinalIgnoreCase)));
+
+    /// <summary>
+    /// Withdraws a role from everybody who holds it. Called by <c>RolePermissionStore.Delete</c> as
+    /// part of the same operation, so the catalog and the memberships cannot disagree about which
+    /// roles exist.
+    /// </summary>
+    /// <remarks>
+    /// A membership left with NO roles is deliberately kept rather than removed. It renders as "no
+    /// role" on the roster, which is a fact somebody can see and fix; deleting it would quietly
+    /// delist a person from a shop as a side effect of tidying up a role list, and nothing on any
+    /// screen would say that had happened.
+    /// </remarks>
+    public void DropRole(string roleId)
+    {
+        var changed = false;
+
+        foreach (var membership in _file.Users.SelectMany(record => record.Memberships))
+            changed |= membership.RoleIds.RemoveAll(id => IdMatches(id, roleId)) > 0;
+
+        if (!changed)
+            return;
+
+        Save(_file);
+
+        if (CurrentUser is not null && FindRecord(CurrentUser.UserName) is { } current)
+            RefreshCurrentUser(current);
+    }
+
+    private static bool IdMatches(string? left, string? right)
+        => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// Second half of the upgrade from a single global role to per-shop memberships: an account that
@@ -764,7 +944,7 @@ public sealed class AuthenticationService
             if (record.LegacyRole is { } legacy && !record.IsAdministrator)
             {
                 foreach (var shopId in shops)
-                    ApplyShopRoles(record, shopId, new[] { legacy });
+                    ApplyShopRoles(record, shopId, new[] { LegacyRoleIds.For(legacy) });
             }
 
             record.LegacyRole = null;
@@ -781,7 +961,10 @@ public sealed class AuthenticationService
 
     // --- Internals ------------------------------------------------------------------------------
 
-    private UserRole? AdministratorRole() => IsAdministrator ? UserRole.Admin : null;
+    private IReadOnlyList<RoleDefinition> AdministratorRoles()
+        => IsAdministrator
+            ? new[] { BuiltInRoles.Administrator() }
+            : Array.Empty<RoleDefinition>();
 
     private bool IsCurrentUser(string userName)
         => CurrentUser is not null
@@ -805,7 +988,7 @@ public sealed class AuthenticationService
     private void AdoptAsCurrentUser(CredentialRecord record)
     {
         CurrentUser = ToAccount(record);
-        CapabilitiesChanged?.Invoke(this, EventArgs.Empty);
+        RefreshCapabilities();
     }
 
     private CredentialRecord? FindRecord(string userName)
@@ -821,23 +1004,13 @@ public sealed class AuthenticationService
     private static ShopMembership Clone(ShopMembership membership) => new()
     {
         ShopPublicId = membership.ShopPublicId,
-        Roles = new List<UserRole>(membership.Roles),
+        RoleIds = new List<string>(membership.RoleIds),
         IsActive = membership.IsActive,
         JoinedOn = membership.JoinedOn,
         DeactivatedOn = membership.DeactivatedOn,
         ShiftStart = membership.ShiftStart,
         ShiftEnd = membership.ShiftEnd
     };
-
-    /// <summary>
-    /// The strongest of a set of roles. <see cref="UserRole"/> is ordered strongest-first
-    /// (Admin 0, Manager 1, Staff 2), so "strongest" is the minimum — which is what makes holding
-    /// both Manager and Staff in the same shop behave as Manager rather than as an ambiguity.
-    /// </summary>
-    private static UserRole? StrongestRole(IEnumerable<UserRole> roles)
-        // Projected to the NULLABLE enum so an empty set yields null; Min over the non-nullable
-        // enum throws on an empty sequence.
-        => roles.Cast<UserRole?>().Min();
 
     private static bool Verify(string password, CredentialRecord record)
     {
@@ -934,6 +1107,9 @@ public sealed class AuthenticationService
         foreach (var record in file.Users)
             SplitLegacyName(record);
 
+        foreach (var membership in file.Users.SelectMany(record => record.Memberships))
+            MigrateMembershipRoles(membership);
+
         // A version-1 file predates the provisioning record, so everything it already holds counts
         // as provisioned. Without this, seeding would re-add an account the file shows was deleted.
         foreach (var name in file.Users
@@ -994,6 +1170,36 @@ public sealed class AuthenticationService
         record.LastName = legacy[(lastSpace + 1)..].Trim();
     }
 
+    /// <summary>
+    /// Turns a schema-4 membership's fixed <see cref="UserRole"/> list into role IDS.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately does NOT run through <see cref="NormalizeRoleIds"/>, which orders ids by the
+    /// catalog and therefore drops any it does not recognise. That is right for a save and wrong
+    /// here: this runs during the very first load, and dropping an unrecognised id would be a
+    /// migration that discards the thing it was written to preserve.
+    /// </remarks>
+    private static void MigrateMembershipRoles(ShopMembership membership)
+    {
+        if (membership.LegacyRoles is not { Count: > 0 } legacy)
+        {
+            membership.LegacyRoles = null;
+            return;
+        }
+
+        // A record already carrying ids has been through this, or was written by a build that knows
+        // about both — do not overwrite it from the stale field.
+        if (membership.RoleIds.Count == 0)
+        {
+            membership.RoleIds = legacy
+                .Select(LegacyRoleIds.For)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
+        membership.LegacyRoles = null;
+    }
+
     private static void FoldAssignmentsIntoMemberships(CredentialRecord record)
     {
         var grouped = record.LegacyAssignments!
@@ -1001,7 +1207,7 @@ public sealed class AuthenticationService
             .Select(group => new ShopMembership
             {
                 ShopPublicId = group.Key,
-                Roles = group.Select(assignment => assignment.Role).Distinct().OrderBy(role => role).ToList()
+                RoleIds = NormalizeRoleIds(group.Select(assignment => LegacyRoleIds.For(assignment.Role)))
                 // IsActive defaults to true: an assignment that existed was an assignment in force.
             });
 
@@ -1193,25 +1399,33 @@ public sealed record UserAccount(
     public string GreetingName => PersonName.Greeting(FirstName, LastName, UserName);
 
     /// <summary>
-    /// The distinct roles this account holds across the shops it is ACTIVE in, strongest first.
+    /// The distinct roles this account holds across the shops it is ACTIVE in, in catalog order.
     /// </summary>
     /// <remarks>
     /// Active memberships only. A role at a branch that has delisted this person is not a role they
     /// hold, and listing it beside their name would promise access the shop picker will not offer.
-    /// An administrator holds every role everywhere and reports <see cref="UserRole.Admin"/> alone.
+    /// An administrator reports the administrator role alone.
+    ///
+    /// Resolved through the catalog rather than returned as raw ids, so a role that has been deleted
+    /// simply stops being listed instead of showing somebody a name that means nothing.
     ///
     /// A method rather than a property because it builds a new collection on every call: a property
     /// that allocates invites being read in a loop as though it were a field.
     /// </remarks>
-    public IReadOnlyList<UserRole> HeldRoles()
-        => IsAdministrator
-            ? new[] { UserRole.Admin }
-            : Memberships
-                .Where(membership => membership.IsActive)
-                .SelectMany(membership => membership.Roles)
-                .Distinct()
-                .OrderBy(role => role)
-                .ToArray();
+    public IReadOnlyList<RoleDefinition> HeldRoles()
+    {
+        if (IsAdministrator)
+            return new[] { BuiltInRoles.Administrator() };
+
+        var held = Memberships
+            .Where(membership => membership.IsActive)
+            .SelectMany(membership => membership.RoleIds)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return RolePermissionStore.Instance.All()
+            .Where(role => held.Contains(role.Id))
+            .ToArray();
+    }
 }
 
 /// <summary>One person's place in one shop, as the roster screen edits it.</summary>
@@ -1239,7 +1453,7 @@ public sealed record MemberProfile(
     DateTime? BirthDate,
     string? PhoneNumber,
     string? Email,
-    IReadOnlyList<UserRole> Roles,
+    IReadOnlyList<string> RoleIds,
     bool IsActive,
     DateTime? JoinedOn,
     TimeOnly? ShiftStart,
@@ -1271,15 +1485,34 @@ public sealed record AccountProfile(
 /// on that property: this file lives OUTSIDE the database, and whole databases move between
 /// machines, where the local autoincrement ids collide.
 ///
-/// <see cref="Roles"/> is a SET because holding both Manager and Staff in one shop is legal; it
-/// resolves to Manager. Activation lives here rather than on the account because suspending someone
-/// at one branch must not cost them their job at another.
+/// <see cref="RoleIds"/> is a SET because holding several roles in one shop is legal — what the
+/// person may do is the UNION of what those roles grant, which is why there is no longer a
+/// "strongest role" to resolve. Activation lives here rather than on the account because suspending
+/// someone at one branch must not cost them their job at another.
 /// </remarks>
 public sealed class ShopMembership
 {
     public Guid ShopPublicId { get; set; }
 
-    public List<UserRole> Roles { get; set; } = new();
+    /// <summary>
+    /// The roles held here, by <see cref="RoleDefinition.Id"/>. An id naming a role that no longer
+    /// exists grants nothing; the catalog is the authority, not this list.
+    /// </summary>
+    public List<string> RoleIds { get; set; } = new();
+
+    /// <summary>
+    /// The fixed <see cref="UserRole"/> list written by schema versions 2-4, before an installation
+    /// could define roles of its own. Converted to <see cref="RoleIds"/> on load and then cleared.
+    /// </summary>
+    /// <remarks>
+    /// It has to stay declared, for the same reason <c>CredentialRecord.LegacyDisplayName</c> does:
+    /// removing the property would make System.Text.Json discard the value on exactly the load that
+    /// was supposed to migrate it, so every membership in the installation would silently lose its
+    /// roles and the file would be rewritten without them before anybody noticed.
+    /// </remarks>
+    [JsonPropertyName("Roles")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<UserRole>? LegacyRoles { get; set; }
 
     /// <summary>False once the member has been delisted from this shop. Defaults to true.</summary>
     public bool IsActive { get; set; } = true;

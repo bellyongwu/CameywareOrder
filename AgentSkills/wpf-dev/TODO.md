@@ -17,6 +17,41 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-01 20:10 — v7.0.0: capability catalog and the permissions panel  [DONE]
+- Ask: "现在在已有系统之上再把功能强化。需求：把尽可能多的可视化功能模块化，比如查看报表功能，更改设置功，等等。。。检查现有的功能，组成集合，调用专门的方法可以开放给相应的用户。还有功能比如，添加删除订单功能，还有只能查看订单功能，等等。现在功能是静态的加载给每个功能用户的。属于预设选项。下一步管理员可以管理以下事项-权限设置 管理员可以通过选择商店页面，也可以通过main application页面，在本地配置的入口进入。点开后可以打开权限设置版面（需要用到已有的所有主题优化过的UI)左边可以展开已有的用户右边可以看到已有的店铺，点开店铺后可以查看权限名称，点开权限可以展开对应的系统功能。可以定义权限，权限对应着相应的功能。>增删查改权限 >定义权限，可以新添加一种权限比如auditor，auditor可以查看报表，但是不能新增订单和更改任何与订单相关的操作和与用户和商店相关的操作。"
+- Decisions (asked, answered by the user):
+  - ONE installation-wide role catalog; a user is assigned roles per shop. Not per-shop role definitions.
+  - Built-in Manager/Staff are EDITABLE but not deletable. Admin is fully locked.
+  - The user column assigns roles only — no per-user capability overrides, so a capability has one source.
+- Plan:
+  - [x] T1 `AppCapability` + `CapabilityCatalog` — every gated feature as data (group, scope, admin-only)
+  - [x] T2 `RoleDefinition` + `RolePermissionStore` (`roles.json`, built-ins topped up on load)
+  - [x] T3 `AuthenticationService`: memberships hold role IDS (schema 5 + migration), `Can(capability)`
+  - [x] T4 Enforce the new gates: order create/edit/delete/copy, reports, printing
+  - [x] T5 `PermissionsWindow` — users tree | shops→roles→capabilities tree, role CRUD
+  - [x] T6 Entry points: shop picker button + Local Configuration menu item
+  - [x] T7 The two existing role screens become catalog-driven (else a custom role is unassignable and gets DROPPED on save)
+  - [x] T8 Localization in all five languages; `permcheck` harness; render; build 0/0 + Sonar
+  - [x] T9 (mid-turn ask) "The UI of selected users should be redesigned better to fit the main theme.
+        The permission, I meant" — theme the trees and the account column
+- Notes: **New** `Models/UserManagement/AppCapability.cs` (19 capabilities, 5 groups, `Scope`,
+  `AdministratorOnly`), `RoleDefinition.cs` + `BuiltInRoles`, `Services/UserManagement/RolePermissionStore.cs`
+  (`roles.json`), `Controls/RoleCheckList.xaml`, `Views/UserManagement/RoleToggle.cs`,
+  `PermissionNodes.cs`, `PermissionsWindow.xaml(.cs)`.
+  **Changed** `AuthenticationService` (schema 5: `ShopMembership.RoleIds`, legacy `Roles` kept for the
+  migration; `Can()` over a cached set; `DropRole`/`HoldersOf`; `CanSetPasswordFor` now asks the
+  ManageStoreMembers capability instead of comparing to Manager), `UserRole` (legacy only, plus
+  `LegacyRoleIds`), `UserPresentation` (`RoleList` replaces `RoleText`), `ILocalizedText` (+`JoinList`),
+  `StoreMembersWindow` / `UserManagementWindow` (catalog-driven pickers), `MainWindow`,
+  `MainViewModel`, `OrderEditWindow`, `SettlementWindow`, `ShopPickerWindow`, `AppTheme.xaml`
+  (TreeView/TreeViewItem/TreeDisclosure), 5 language files (+71 keys each), README, version 7.0.0.
+  **Verified** build 0/0 with Sonar in-build; `permcheck` 134, `datecheck` 96, `pickupcheck` 70,
+  `langscope` 37; rendered the panel in zh-CN and en-US with both trees opened.
+  **Proved the harness can fail** by adding a `ProbeOnly` capability to the enum: 6 assertions went
+  red (5 language-parity, 1 source-gate) and cleared again when it was removed.
+  **Follow-ups:** `pickupcheck` now installs its own credentials fixture — the real admin password is
+  not knowable, and the order list refuses to load without a signed-in user.
+
 ### 2026-08-01 18:00 — v6.0.1: report spacing and date-box width  [DONE]
 - Ask: "1.目前报表位置的padding 还有问题。2. date time picker 的宽度没有随着input的宽度变化而自由变化。要求只要有日期的地方要随着宽度大小而变，而不是固定宽度。同时要有一个最小值. 做完之后作为一个6.0版本hotfix commit 和push了"
 - Notes: **Spacing** the metric cards had a right margin only, so a WrapPanel spaced them across and

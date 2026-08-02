@@ -23,4 +23,16 @@ public interface ILocalizedText
     /// <see cref="string.Format(string, object[])"/> against the text for <paramref name="key"/>.
     /// </summary>
     string Format(string key, params object[] args);
+
+    /// <summary>
+    /// Joins items the way this language punctuates a list, which is not the same separator in
+    /// every language — see the <c>Format.ListSeparator</c> key.
+    /// </summary>
+    /// <remarks>
+    /// On the interface rather than left to each implementer, and exposed as a JOIN rather than as
+    /// the separator itself, for the reason recorded on <c>LocalizationService.JoinList</c>: a
+    /// caller handed the separator writes its own join, and four of those had already drifted apart
+    /// before the separator became data at all.
+    /// </remarks>
+    string JoinList(IEnumerable<string> values);
 }

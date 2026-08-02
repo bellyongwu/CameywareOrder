@@ -1,0 +1,35 @@
+<UserControl x:Class="CameywareOrder.Controls.RoleCheckList"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- The roles an installation has, offered as tick boxes.
+
+         One control rather than markup repeated per screen, because the list is DATA now: the two
+         roster screens each used to spell out a Manager box and a Staff box, which meant a role
+         defined afterwards could not be granted anywhere — and a save from either screen wrote back
+         only those two, quietly dropping every other role the person held.
+
+         A WrapPanel, not a horizontal StackPanel: the number of roles is whatever the installation
+         defines, and a horizontal StackPanel measures its children against infinite width, so a long
+         list would run off the edge of the card rather than moving onto a second line. -->
+    <ItemsControl x:Name="RoleItems">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <WrapPanel/>
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <!-- Margins on both sides: a WrapPanel spaces items across but its ROWS touch
+                     unless the item carries a bottom margin too. -->
+                <CheckBox IsChecked="{Binding IsGranted, Mode=TwoWay}" Margin="0,0,20,8"
+                          VerticalContentAlignment="Center">
+                    <StackPanel Margin="2,0,0,0">
+                        <TextBlock Text="{Binding Name}" FontSize="13" Foreground="#111827"/>
+                        <TextBlock Text="{Binding Detail}" FontSize="11" Foreground="#9CA3AF"
+                                   Margin="0,1,0,0"/>
+                    </StackPanel>
+                </CheckBox>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</UserControl>

@@ -258,6 +258,9 @@
                         <MenuItem x:Name="ShopSettingsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ShopSettings], Mode=OneWay}" Click="OnShopSettingsClick"/>
                         <!-- Administrators only; accounts span every shop. -->
                         <MenuItem x:Name="UserManagementMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.UserManagement], Mode=OneWay}" Click="OnUserManagementClick"/>
+                        <!-- Beside the accounts it governs: "who works here" and "what may they do"
+                             are read together, and the shop picker offers the same pair. -->
+                        <MenuItem x:Name="PermissionsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Permissions], Mode=OneWay}" Click="OnPermissionsClick"/>
                         <Separator x:Name="ConfigSeparator"/>
                         <!-- Currency Setup used to sit here. The currency is now part of Shop Settings,
                              belongs — it is a property OF a shop, and two places to set one value is
@@ -267,17 +270,22 @@
                         <!-- The shop's ready-made categories. Beside the measurement terms because
                              both answer "what does this branch sell and how is it described". -->
                         <MenuItem x:Name="ProductCatalogMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ProductCatalog], Mode=OneWay}" Click="OnProductCatalogClick"/>
-                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
+                        <MenuItem x:Name="PrintMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
                             <!-- One order per printout: gated on exactly one selected row, the same
-                                 rule the row context menu applies. -->
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick"
+                                 rule the row context menu applies.
+
+                                 The two measurement entries used to bind their own Visibility to
+                                 SelectedOrder.HasCustomMadeService. They are set from code now
+                                 (RefreshOrderActions) because there are two conditions — the order
+                                 has measurements AND the user may print at all — and a code-set
+                                 Visibility REPLACES a binding rather than combining with it, so the
+                                 two rules would have silently taken turns. -->
+                            <MenuItem x:Name="PrintReceiptMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnPrintReceiptClick"
                                       IsEnabled="{Binding HasSingleSelection}"/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnPrintMeasurementsClick"
-                                      IsEnabled="{Binding HasSingleSelection}"
-                                      Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}"/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnPrintReceiptAndMeasurementsClick"
-                                      IsEnabled="{Binding HasSingleSelection}"
-                                      Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}"/>
+                            <MenuItem x:Name="PrintMeasurementsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnPrintMeasurementsClick"
+                                      IsEnabled="{Binding HasSingleSelection}"/>
+                            <MenuItem x:Name="PrintReceiptAndMeasurementsMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnPrintReceiptAndMeasurementsClick"
+                                      IsEnabled="{Binding HasSingleSelection}"/>
                             <!-- Staff print receipts but do not design them; hidden in code. -->
                             <MenuItem x:Name="HeaderFooterMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.HeaderFooter], Mode=OneWay}" Click="OnEditBrandingClick"/>
                         </MenuItem>
@@ -484,7 +492,7 @@
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                            <Button Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Padding="18,8"
+                            <Button x:Name="NewOrderButton" Style="{StaticResource PrimaryButton}" Margin="0,0,8,0" Padding="18,8"
                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.NewOrder], Mode=OneWay}"
                                     Click="OnAddOrderClick"/>
                             <!-- Exactly one row, not "at least one": with a batch selected there is
@@ -493,7 +501,7 @@
                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.EditOrder], Mode=OneWay}"
                                     Click="OnEditOrderClick"
                                     IsEnabled="{Binding HasSingleSelection}"/>
-                            <Button Style="{StaticResource DangerButton}" Margin="0,0,8,0"
+                            <Button x:Name="DeleteOrderButton" Style="{StaticResource DangerButton}" Margin="0,0,8,0"
                                     Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}"
                                     Command="{Binding DeleteOrderCommand}"/>
                             <Button Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Refresh], Mode=OneWay}"
@@ -582,33 +590,31 @@
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE70F;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyOrder], Mode=OneWay}" Click="OnContextCopyClick">
+                            <MenuItem x:Name="CopyContextMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyOrder], Mode=OneWay}" Click="OnContextCopyClick">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE8C8;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Click="OnContextDeleteClick" Style="{StaticResource DangerMenuItem}">
+                            <MenuItem x:Name="DeleteContextMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DeleteOrder], Mode=OneWay}" Click="OnContextDeleteClick" Style="{StaticResource DangerMenuItem}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE74D;" Foreground="{StaticResource DangerBrush}"/>
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <Separator/>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnContextPrintClick"
+                            <Separator x:Name="PrintContextSeparator"/>
+                            <MenuItem x:Name="PrintReceiptContextMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceipt], Mode=OneWay}" Click="OnContextPrintClick"
                                       IsEnabled="{Binding HasSingleSelection}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE749;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnContextPrintMeasurementsClick"
-                                      IsEnabled="{Binding HasSingleSelection}"
-                                      Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}">
+                            <MenuItem x:Name="PrintMeasurementsContextMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintMeasurements], Mode=OneWay}" Click="OnContextPrintMeasurementsClick"
+                                      IsEnabled="{Binding HasSingleSelection}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE1D3;"/>
                                 </MenuItem.Icon>
                             </MenuItem>
-                            <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnContextPrintReceiptAndMeasurementsClick"
-                                      IsEnabled="{Binding HasSingleSelection}"
-                                      Visibility="{Binding SelectedOrder.HasCustomMadeService, Converter={StaticResource BoolToVisibility}}">
+                            <MenuItem x:Name="PrintBothContextMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.PrintReceiptAndMeasurements], Mode=OneWay}" Click="OnContextPrintReceiptAndMeasurementsClick"
+                                      IsEnabled="{Binding HasSingleSelection}">
                                 <MenuItem.Icon>
                                     <TextBlock Style="{StaticResource IconGlyph}" Text="&#xE749;"/>
                                 </MenuItem.Icon>

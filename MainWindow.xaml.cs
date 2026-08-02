@@ -86,9 +86,47 @@ public partial class MainWindow : Window
     {
         var selectedStatus = _viewModel.SelectedOrder?.Status;
         var isReadOnly = selectedStatus.HasValue && IsReadOnlyStatus(selectedStatus.Value);
-        var label = _localization[isReadOnly ? "Toolbar.ViewOrder" : "Toolbar.EditOrder"];
+
+        // "View" rather than "Edit" for a finished order — and for anyone whose role does not let
+        // them change one, which is the same fact about the same button.
+        var label = _localization[isReadOnly || !AuthenticationService.Instance.CanEditOrders
+            ? "Toolbar.ViewOrder"
+            : "Toolbar.EditOrder"];
+
         EditOrderButton.Content = label;
         EditContextMenuItem.Header = label;
+
+        RefreshOrderActions();
+    }
+
+    /// <summary>
+    /// Shows or hides the per-order actions, by capability and by what the selected order is.
+    /// </summary>
+    /// <remarks>
+    /// The two measurement entries carry BOTH conditions, which is why they are set here rather than
+    /// bound in XAML: a code-set <c>Visibility</c> replaces a binding instead of combining with it,
+    /// so leaving the old <c>HasCustomMadeService</c> binding in place and adding a capability gate
+    /// on top would have produced a menu item that obeyed whichever rule had written to it last.
+    /// </remarks>
+    private void RefreshOrderActions()
+    {
+        var auth = AuthenticationService.Instance;
+
+        NewOrderButton.Visibility = Show(auth.CanCreateOrders);
+        DeleteOrderButton.Visibility = Show(auth.CanDeleteOrders);
+        CopyContextMenuItem.Visibility = Show(auth.CanCopyOrders);
+        DeleteContextMenuItem.Visibility = Show(auth.CanDeleteOrders);
+
+        var print = auth.CanPrintOrderDocuments;
+        var measurements = print && _viewModel.SelectedOrder?.HasCustomMadeService is true;
+
+        PrintMenuItem.Visibility = Show(print);
+        PrintContextSeparator.Visibility = Show(print);
+        PrintReceiptContextMenuItem.Visibility = Show(print);
+        PrintMeasurementsMenuItem.Visibility = Show(measurements);
+        PrintReceiptAndMeasurementsMenuItem.Visibility = Show(measurements);
+        PrintMeasurementsContextMenuItem.Visibility = Show(measurements);
+        PrintBothContextMenuItem.Visibility = Show(measurements);
     }
 
     /// <summary>
@@ -107,12 +145,14 @@ public partial class MainWindow : Window
 
         RefreshLanguageScope();
 
-        // A manager configures the shop they run; staff take orders in it.
-        var configure = Show(auth.CanConfigureShop);
-        ShopSettingsMenuItem.Visibility = configure;
-        MeasurementTermsMenuItem.Visibility = configure;
-        ProductCatalogMenuItem.Visibility = configure;
-        HeaderFooterMenuItem.Visibility = configure;
+        // One capability per screen, rather than one "configures the shop" flag covering four of
+        // them: an installation that wants somebody editing the product list but not the tax rate
+        // can now say so, and each menu item names the permission that governs it.
+        ShopSettingsMenuItem.Visibility = Show(auth.CanConfigureShop);
+        MeasurementTermsMenuItem.Visibility = Show(auth.CanManageMeasurementTerms);
+        ProductCatalogMenuItem.Visibility = Show(auth.CanManageProductCatalog);
+        HeaderFooterMenuItem.Visibility = Show(auth.CanManageBranding);
+        SettlementMenuItem.Visibility = Show(auth.CanViewReports);
 
         // Whole-installation tools, and the database path they act on.
         var dataTools = Show(auth.CanUseDataTools);
@@ -123,12 +163,19 @@ public partial class MainWindow : Window
         DataPathValueItem.Visibility = dataTools;
 
         UserManagementMenuItem.Visibility = Show(auth.CanManageUsers);
+        PermissionsMenuItem.Visibility = Show(auth.CanManagePermissions);
         StoreMembersButton.Visibility = Show(auth.CanManageStoreMembers);
+
+        // The month's takings are a report, and the strip is the smallest one the application has.
+        SummaryStrip.Visibility = Show(auth.CanViewReports);
 
         // Hidden when everything below it is: a separator with nothing under it reads as a menu
         // that failed to load.
-        ConfigSeparator.Visibility = Show(auth.CanConfigureShop || auth.CanUseDataTools);
+        ConfigSeparator.Visibility = Show(
+            auth.CanConfigureShop || auth.CanManageMeasurementTerms || auth.CanManageProductCatalog
+            || auth.CanViewReports || auth.CanUseDataTools || auth.CanPrintOrderDocuments);
 
+        RefreshOrderActions();
         RefreshSignedInUser();
     }
 
@@ -152,7 +199,7 @@ public partial class MainWindow : Window
         // person with no name recorded is still addressed as something. The role shown is the one
         // held in the OPEN shop, because that is the one the surrounding chrome has just been gated
         // by; the tooltip carries the login, which is the fact a support call actually needs.
-        var role = UserPresentation.RoleText(_localization, auth.CurrentRole);
+        var role = UserPresentation.RoleList(_localization, auth.CurrentRoles());
         GreetingText.Text = _localization.Format("Main.Greeting", user.GreetingName, role);
         GreetingText.ToolTip = _localization.Format("Shop.Picker.SignedInAs", user.UserName, role);
     }
@@ -723,6 +770,11 @@ public partial class MainWindow : Window
 
     private void OnAddOrderClick(object sender, RoutedEventArgs e)
     {
+        // Gated here as well as by hiding the button. The chrome answers "is this offered"; this
+        // answers "may it happen", and only the second one survives a new call site.
+        if (!AuthenticationService.Instance.CanCreateOrders)
+            return;
+
         var dialog = new OrderEditWindow(_scopeFactory, _localization) { Owner = this };
         if (dialog.ShowDialog() == true)
             _ = _viewModel.LoadOrdersAsync();
@@ -741,7 +793,7 @@ public partial class MainWindow : Window
     private void OnPrintReceiptClick(object sender, RoutedEventArgs e)
     {
         var order = _viewModel.SelectedOrder;
-        if (order is null)
+        if (order is null || !AuthenticationService.Instance.CanPrintOrderDocuments)
             return;
 
         try
@@ -771,6 +823,9 @@ public partial class MainWindow : Window
     // receipt followed (on a new page) by all garment measurements.
     private void PrintMeasurements(bool includeReceipt)
     {
+        if (!AuthenticationService.Instance.CanPrintOrderDocuments)
+            return;
+
         var order = _viewModel.SelectedOrder;
         if (order is null || !order.HasCustomMadeService)
             return;
@@ -942,6 +997,9 @@ public partial class MainWindow : Window
     /// </remarks>
     private void OnSettlementClick(object sender, RoutedEventArgs e)
     {
+        if (!AuthenticationService.Instance.CanViewReports)
+            return;
+
         var window = new SettlementWindow(_scopeFactory, _localization) { Owner = this };
         window.ShowDialog();
         RefreshSummaryStrip();
@@ -1064,6 +1122,24 @@ public partial class MainWindow : Window
 
         // A manager can deactivate their OWN membership from here — the service refuses it for the
         // open shop, but they can still change their roles. Re-gate rather than trust the chrome.
+        ApplyRolePermissions();
+    }
+
+    /// <summary>
+    /// Opens the permission panel, and re-gates this window afterwards.
+    /// </summary>
+    /// <remarks>
+    /// The re-gate is not housekeeping. An administrator can edit the role they themselves hold in
+    /// the open shop, so the menus around this window may describe permissions that stopped existing
+    /// while the panel was on screen.
+    /// </remarks>
+    private void OnPermissionsClick(object sender, RoutedEventArgs e)
+    {
+        if (!AuthenticationService.Instance.CanManagePermissions)
+            return;
+
+        new PermissionsWindow(_localization, _scopeFactory) { Owner = this }.ShowDialog();
+
         ApplyRolePermissions();
     }
 

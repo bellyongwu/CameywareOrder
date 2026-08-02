@@ -316,15 +316,14 @@ public partial class UserManagementWindow : Window
 
         foreach (var shop in _shops)
         {
-            var roles = held.FirstOrDefault(membership => membership.ShopPublicId == shop.PublicId)?.Roles
-                ?? new List<UserRole>();
+            var roleIds = held
+                .FirstOrDefault(membership => membership.ShopPublicId == shop.PublicId)?.RoleIds;
 
             _assignments.Add(new ShopAssignmentRow(
                 shop.PublicId,
                 shop.ResolveName(_localization.CurrentLanguageCode),
                 BuildShopDetails(shop),
-                roles.Contains(UserRole.Manager),
-                roles.Contains(UserRole.Staff)));
+                RoleToggle.ForMembership(_localization, roleIds)));
         }
 
         NoShopsText.Visibility = _shops.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
@@ -492,30 +491,20 @@ public partial class UserManagementWindow : Window
     }
 
     /// <summary>
-    /// The ticked matrix as a role set per shop. Both boxes ticked yields both roles, which is
-    /// exactly how "manager and staff in the same branch" is stored. An empty set means the account
-    /// is not a member of that shop at all.
+    /// The ticked matrix as a role set per shop. Several boxes ticked yields several roles, which is
+    /// exactly how "manager and auditor in the same branch" is stored. An empty set means the
+    /// account is not a member of that shop at all.
     /// </summary>
     /// <remarks>
     /// Only the ROLES are sent: activation, join date and shift belong to the shop's own roster
     /// screen, and this window must not silently reset them while editing something else.
     /// </remarks>
-    private Dictionary<Guid, IReadOnlyList<UserRole>> CollectRoles()
+    private Dictionary<Guid, IReadOnlyList<string>> CollectRoles()
     {
-        var rolesByShop = new Dictionary<Guid, IReadOnlyList<UserRole>>();
+        var rolesByShop = new Dictionary<Guid, IReadOnlyList<string>>();
 
         foreach (var row in _assignments)
-        {
-            var roles = new List<UserRole>();
-
-            if (row.IsManager)
-                roles.Add(UserRole.Manager);
-
-            if (row.IsStaff)
-                roles.Add(UserRole.Staff);
-
-            rolesByShop[row.ShopPublicId] = roles;
-        }
+            rolesByShop[row.ShopPublicId] = RoleToggle.Selected(row.Roles);
 
         return rolesByShop;
     }
@@ -710,18 +699,22 @@ internal sealed class UserListRow
 }
 
 /// <summary>
-/// One row of the shop × role matrix. The two flags are written back by the checkbox bindings, so
-/// this is the only mutable presentation type here.
+/// One row of the shop × role matrix: a shop, and every role this account could hold in it.
 /// </summary>
+/// <remarks>
+/// The matrix used to be two fixed columns, Manager and Staff, with a bool apiece. It is now one
+/// column per row holding as many toggles as the installation has defined roles — the same shape as
+/// the roster screen's picker, because they are answering the same question about the same data.
+/// </remarks>
 internal sealed class ShopAssignmentRow
 {
-    public ShopAssignmentRow(Guid shopPublicId, string shopName, string shopDetails, bool isManager, bool isStaff)
+    public ShopAssignmentRow(
+        Guid shopPublicId, string shopName, string shopDetails, IReadOnlyList<RoleToggle> roles)
     {
         ShopPublicId = shopPublicId;
         ShopName = shopName;
         ShopDetails = shopDetails;
-        IsManager = isManager;
-        IsStaff = isStaff;
+        Roles = roles;
     }
 
     public Guid ShopPublicId { get; }
@@ -730,7 +723,6 @@ internal sealed class ShopAssignmentRow
 
     public string ShopDetails { get; }
 
-    public bool IsManager { get; set; }
-
-    public bool IsStaff { get; set; }
+    /// <summary>Mutable by the checkbox bindings — the tick state IS the edit.</summary>
+    public IReadOnlyList<RoleToggle> Roles { get; }
 }

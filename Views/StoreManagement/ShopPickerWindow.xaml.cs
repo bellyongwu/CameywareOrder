@@ -54,6 +54,13 @@ public partial class ShopPickerWindow : Window
         StoreManagementButton.Visibility = adminVisibility;
         DemoStoreButton.Visibility = adminVisibility;
 
+        // Its own capability rather than the blanket administrator flag, because it IS the screen
+        // where that distinction is made — gating it on anything else would be the panel exempting
+        // itself from the model it defines.
+        PermissionsButton.Visibility = AuthenticationService.Instance.CanManagePermissions
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
         ApplySignedInHeader();
 
         LoadShops(currentShop?.Id);
@@ -148,7 +155,7 @@ public partial class ShopPickerWindow : Window
                 shop,
                 shop.ResolveName(_localization.CurrentLanguageCode),
                 BuildDetails(shop, counts.GetValueOrDefault(shop.Id)),
-                AuthenticationService.Instance.RoleFor(shop.PublicId),
+                AuthenticationService.Instance.RolesFor(shop.PublicId),
                 _localization));
         }
 
@@ -263,6 +270,24 @@ public partial class ShopPickerWindow : Window
         DialogResult = true;
     }
 
+    /// <summary>
+    /// Opens the permission panel from the picker.
+    /// </summary>
+    /// <remarks>
+    /// The shop list is rebuilt afterwards, and that is not cosmetic: a role's capabilities decide
+    /// nothing about which shops are OFFERED, but withdrawing somebody's last role in a branch does,
+    /// and the administrator can do exactly that from the panel — including to themselves.
+    /// </remarks>
+    private void OnPermissionsClick(object sender, RoutedEventArgs e)
+    {
+        if (!AuthenticationService.Instance.CanManagePermissions)
+            return;
+
+        new PermissionsWindow(_localization, _scopeFactory) { Owner = this }.ShowDialog();
+
+        LoadShops((ShopList.SelectedItem as ShopPickerRow)?.Shop.Id);
+    }
+
     private void OnManageUsersClick(object sender, RoutedEventArgs e)
     {
         if (!AuthenticationService.Instance.CanManageUsers)
@@ -346,7 +371,9 @@ internal sealed class ShopPickerRow
     private static readonly Brush NoRoleBadgeBackground = Frozen("#F3F4F6");
     private static readonly Brush NoRoleBadgeForeground = Frozen("#6B7280");
 
-    public ShopPickerRow(Shop shop, string name, string details, UserRole? role, LocalizationService localization)
+    public ShopPickerRow(
+        Shop shop, string name, string details, IReadOnlyList<RoleDefinition> roles,
+        LocalizationService localization)
     {
         Shop = shop;
         Name = name;
@@ -354,9 +381,11 @@ internal sealed class ShopPickerRow
         Initial = UserPresentation.Initial(name);
         AvatarBrush = UserPresentation.AvatarBrush(name);
 
-        RoleText = UserPresentation.RoleText(localization, role);
-        RoleBackground = BadgeBackground(role);
-        RoleForeground = BadgeForeground(role);
+        RoleText = UserPresentation.RoleList(localization, roles);
+
+        var standing = Standing(roles);
+        RoleBackground = BadgeBackground(standing);
+        RoleForeground = BadgeForeground(standing);
     }
 
     public Shop Shop { get; }
@@ -375,21 +404,52 @@ internal sealed class ShopPickerRow
 
     public Brush RoleForeground { get; }
 
-    private static Brush BadgeBackground(UserRole? role) => role switch
+    /// <summary>
+    /// How much standing this card's roles add up to, for the badge colour.
+    /// </summary>
+    /// <remarks>
+    /// Read from the CAPABILITIES rather than from the role's name or id, because an installation
+    /// defines its own roles and a colour keyed on "manager" would leave every one of them the same
+    /// anonymous grey. Whether the person can change how the shop runs is the distinction the badge
+    /// was always drawing; now it asks that question directly.
+    /// </remarks>
+    private static ShopStanding Standing(IReadOnlyList<RoleDefinition> roles)
     {
-        UserRole.Admin => AdminBadgeBackground,
-        UserRole.Manager => ManagerBadgeBackground,
-        UserRole.Staff => StaffBadgeBackground,
+        if (roles.Count == 0)
+            return ShopStanding.None;
+
+        if (roles.Any(role => role.IsAdministratorRole))
+            return ShopStanding.Administrator;
+
+        return roles.Any(role => role.Grants(AppCapability.ConfigureShop))
+            ? ShopStanding.Runs
+            : ShopStanding.Works;
+    }
+
+    private static Brush BadgeBackground(ShopStanding standing) => standing switch
+    {
+        ShopStanding.Administrator => AdminBadgeBackground,
+        ShopStanding.Runs => ManagerBadgeBackground,
+        ShopStanding.Works => StaffBadgeBackground,
         _ => NoRoleBadgeBackground
     };
 
-    private static Brush BadgeForeground(UserRole? role) => role switch
+    private static Brush BadgeForeground(ShopStanding standing) => standing switch
     {
-        UserRole.Admin => AdminBadgeForeground,
-        UserRole.Manager => ManagerBadgeForeground,
-        UserRole.Staff => StaffBadgeForeground,
+        ShopStanding.Administrator => AdminBadgeForeground,
+        ShopStanding.Runs => ManagerBadgeForeground,
+        ShopStanding.Works => StaffBadgeForeground,
         _ => NoRoleBadgeForeground
     };
+
+    /// <summary>What a person's roles amount to in one shop, as far as the badge is concerned.</summary>
+    private enum ShopStanding
+    {
+        None,
+        Works,
+        Runs,
+        Administrator
+    }
 
     private static Brush Frozen(string hex)
     {

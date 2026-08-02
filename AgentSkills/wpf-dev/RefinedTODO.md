@@ -77,6 +77,55 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-08-01)
 
+### v7.0.0 — permissions became data  [DONE]
+
+The permission model was three fixed `UserRole` values and named properties comparing against them
+(`IsAdministrator || CurrentRole == Manager`). That is a set of answers baked into the build: an
+installation wanting a role that reads the settlement report and touches nothing else could not say
+so. Now a role is a **named set of `AppCapability` values** in `roles.json`, and every gate asks
+`AuthenticationService.Can(...)`.
+
+**The shape.** `CapabilityCatalog` is 19 capabilities in 5 groups, each carrying a `Scope` and an
+`AdministratorOnly` flag. `RolePermissionStore` owns `roles.json`; `ShopMembership.RoleIds` (schema 5)
+names roles by id. `UserRole` survives ONLY to read older files — `LegacyRoleIds.For` maps it.
+
+**Decisions, all of which were asked and answered:**
+- ONE installation-wide catalog; users are assigned roles per shop. Per-shop role *definitions* were
+  rejected: "Auditor" would mean two things in two branches and the word would stop being readable.
+- Built-in Manager/Staff are editable but not deletable. The **administrator is never persisted** —
+  it is regenerated from `BuiltInRoles.Administrator()` on every load, because it is defined as
+  "every capability there is" and a stored copy would be frozen as of the release that wrote it.
+- No per-user capability overrides. Roles are the only source, so "why can he do that" has one
+  answer.
+- Auditor is **seeded once** (like the seed accounts) rather than built in, so deleting it sticks.
+
+**Scope is not cosmetic.** A shop-scoped capability resolves against the shop currently open; an
+installation-scoped one against ANY active membership — the shop picker asks "may you create a shop"
+with no shop bound, so a shop-scoped answer there could only ever be "no". `ManageUsers`,
+`DeleteAccounts` and `ManagePermissions` are administrator-only and stripped on the way in AND on the
+way out: a role that could grant capabilities could grant itself everything.
+
+**Fails closed.** A membership naming a deleted role grants nothing, and `CanAccessShop` requires at
+least one role that still RESOLVES — otherwise the shop opens to a window with no records, no buttons
+and no explanation. Deleting a role withdraws it from every holder in the same operation
+(`RolePermissionStore.Delete` → `AuthenticationService.DropRole`), but leaves the membership in place
+with no roles: visible on the roster, and fixable.
+
+**The upgrade takes nothing away.** Manager and Staff ship with exactly what the hard-coded rules
+granted, *including* Staff keeping the settlement report — the Settlement menu was never gated, and a
+permissions release that starts by silently removing a screen from every shop assistant is a
+regression wearing a feature's clothes.
+
+**The two existing role screens had to become catalog-driven**, and this was not optional: they wrote
+back a hard-coded Manager/Staff pair, so saving a member from either would have STRIPPED any other
+role they held. `Controls/RoleCheckList` and `RoleToggle` are the shared picker.
+
+`PermissionsWindow` (Local Configuration → Permissions, and the shop picker) is two trees: accounts →
+shops → role tick boxes on the left, shops → roles → capability tick boxes on the right. **One
+`RoleNode` instance is shared by every shop**, because a copy per shop would show the same role in
+two contradictory states and only one could be saved. Everything writes on Save, never per tick — a
+panel that saved as it went could revoke the administrator's own access mid-edit.
+
 ### v6.0.0 — settlement reporting  [DONE]
 
 Local Configuration → Settlement Report. Opens on **this month**; Day / Year / custom range and

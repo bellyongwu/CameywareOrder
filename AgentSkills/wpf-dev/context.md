@@ -2676,6 +2676,62 @@ Worth reaching for whenever the invariant is "every X must do Y" rather than "X 
 The harness asserts the two windows AGREE on the same inputs, rather than asserting each separately.
 That is what catches a future divergence; two independent assertions both pass while drifting apart.
 
+## A capability gate reaches further than the screen it is on (2026-08-01)
+
+`MainViewModel.LoadOrdersAsync` refuses to load without `CanViewOrders`, which is right — a role that
+may not see customers should not have their records in memory waiting to be bound somewhere else. But
+it means **the view model now depends on a signed-in user**, and `pickupcheck` went red three
+assertions deep the moment it landed: it built the view model directly and measured an empty list.
+
+Two things fall out of that, both reusable:
+
+- The harness could not simply sign in as `admin`/`admin`. The REAL `credentials.json` belongs to
+  whoever installed the application, and its admin password had been changed — the sign-in failed with
+  `InvalidCredentials` and the "fix" looked like a second bug. A harness that needs an identity must
+  **install its own credentials fixture** (back up, write, restore in `finally`) exactly as `permcheck`
+  does. Do not reach for the real one.
+- Assert the gate from BOTH sides in the harness that tripped over it. `pickupcheck` now signs in,
+  checks the list loads, signs out, checks it does not, and signs back in. The failing direction is the
+  one the gate exists for and the one nothing else was covering.
+
+## A code-set `Visibility` REPLACES a binding; it does not combine with it (2026-08-01)
+
+Two of the print menu items bound `Visibility` to `SelectedOrder.HasCustomMadeService`. Adding "and
+the user may print" on top of that is not possible by assigning from code — the assignment clears the
+binding, so the two rules would take turns depending on which wrote last, and the bug would look
+intermittent. Where a control's visibility has **two** conditions, drop the binding and compute both
+in one place (`MainWindow.RefreshOrderActions`). Same rule as the enabled-state one already recorded:
+a property has one owner.
+
+## `IsMouseOver` on a `TreeViewItem` means "anywhere in my subtree" (2026-08-01)
+
+A hover tint triggered on the item's own `IsMouseOver` lights up every ANCESTOR of the row under the
+pointer — four highlighted rows for one cursor. Trigger on the row `Border` inside the template
+instead (`<Trigger SourceName="Row" Property="IsMouseOver">`), which is bounded to the row itself
+because the `ItemsPresenter` is its sibling rather than its child.
+
+Also in that template: **a named `RenderTransform` inside a `ControlTemplate` is not a trigger
+target.** `<RotateTransform x:Name="ArrowRotation"/>` + `<Setter TargetName="ArrowRotation" .../>`
+fails the XAML compile with *"Cannot find the Trigger target … (The target must appear before any
+Setters, Triggers, or Conditions that use it)"*, which sends you looking at declaration ORDER — the
+real cause is that a Freezable is not a nameable template part. Replace the whole transform in the
+setter instead.
+
+## A stretched element with a `MaxWidth` is CENTRED in what is left (2026-08-01)
+
+`HorizontalAlignment` defaults to `Stretch`. Give such an element a `MaxWidth` smaller than its slot
+and WPF centres it in the remainder — so a capability's explanation, sitting under its name in a
+`StackPanel`, drifted ~130 px right and read as a second column. Found by rendering. Any element with
+`MaxWidth` inside a left-aligned block needs `HorizontalAlignment="Left"` said explicitly.
+
+## An assertion harness renders the DLL it copied, not the one you just built (2026-08-01)
+
+The harness projects `<Reference Include="CameywareOrder">` a `HintPath` into `bin/Debug`, and MSBuild
+COPIES that assembly into the harness's own output. Rebuilding the application and re-running
+`demoshot` therefore re-renders the PREVIOUS UI — twice in a row the screenshot came back byte-identical
+and looked like the XAML change had had no effect. **Rebuild the harness after every application
+build**, before trusting a render.
+
 ## Gotchas
 
 - Edit the string tables under `Settings/System/Languages/<code>.lang.xml`; copies

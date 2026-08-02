@@ -252,12 +252,7 @@
 
                             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,4,0,6"
                                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.RoleInShop], Mode=OneWay}"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                                <CheckBox x:Name="NewManagerCheck" Margin="0,0,24,0" VerticalAlignment="Center"
-                                          Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Role.Manager], Mode=OneWay}"/>
-                                <CheckBox x:Name="NewStaffCheck" IsChecked="True" VerticalAlignment="Center"
-                                          Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Role.Staff], Mode=OneWay}"/>
-                            </StackPanel>
+                            <ctrl:RoleCheckList x:Name="NewRoleList" Margin="0,0,0,14"/>
 
                             <TextBlock Style="{StaticResource FieldLabel}" Margin="0,0,0,6"
                                        Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.Shift], Mode=OneWay}"/>
@@ -381,12 +376,7 @@
 
                                     <TextBlock Style="{StaticResource FieldLabel}"
                                                Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Members.RoleInShop], Mode=OneWay}"/>
-                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                                        <CheckBox x:Name="ManagerCheck" Margin="0,0,24,0" VerticalAlignment="Center"
-                                                  Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Role.Manager], Mode=OneWay}"/>
-                                        <CheckBox x:Name="StaffCheck" VerticalAlignment="Center"
-                                                  Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Role.Staff], Mode=OneWay}"/>
-                                    </StackPanel>
+                                    <ctrl:RoleCheckList x:Name="RoleList" Margin="0,0,0,16"/>
 
                                     <CheckBox x:Name="ActiveCheck" Margin="0,0,0,6" Checked="OnActiveChanged"
                                               Unchecked="OnActiveChanged"

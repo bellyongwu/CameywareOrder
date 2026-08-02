@@ -45,12 +45,15 @@ public class MainViewModel : INotifyPropertyChanged
         // Both act on the whole SELECTION, not on the anchor row alone. One command per action
         // whatever the count, so the action bar, the row context menu and the Delete key cannot end
         // up with three different ideas of what "delete" reaches.
+        // The capability is part of CanExecute, not only of whether a button is shown: the Delete
+        // KEY runs this command straight from the list, so a check that lived in the chrome would be
+        // one keystroke away from being bypassed.
         DeleteOrderCommand = new RelayCommand(
             async _ => await ConfirmAndDeleteSelectedAsync(),
-            _ => HasSelection);
+            _ => HasSelection && AuthenticationService.Instance.CanDeleteOrders);
         CopyOrderCommand = new RelayCommand(
             async _ => await CopySelectedAsync(),
-            _ => HasSelection);
+            _ => HasSelection && AuthenticationService.Instance.CanCopyOrders);
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e)
@@ -275,6 +278,18 @@ public class MainViewModel : INotifyPropertyChanged
 
     public async Task LoadOrdersAsync()
     {
+        // Refused at the SOURCE rather than by hiding the list. A role without this capability is
+        // not supposed to know what the shop's customers are called, and a screen that loads every
+        // record and then declines to draw it has already handed them over — to a screenshot, to a
+        // memory dump, to the next feature that binds the collection somewhere else.
+        if (!AuthenticationService.Instance.CanViewOrders)
+        {
+            _allOrders.Clear();
+            RebuildOrdersView();
+            StatusMessage = _localization["Status.Ready"];
+            return;
+        }
+
         try
         {
             StatusMessage = _localization["Status.LoadingOrders"];
