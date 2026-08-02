@@ -24,6 +24,21 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A `Window`'s code-behind belongs under `Views/`, whatever it contains (2026-08-02).** Asked to
+  file the MainWindow partials under `Services/Main/`, they went to `Views/Main/` instead. Two
+  reasons, and the first is mechanical: the SDK pairs `Foo.xaml` with `Foo.xaml.cs` by their being in
+  the SAME folder, so separating them loses the designer association and the `DependentUpon` nesting.
+  The second is the folder scheme itself — `Views`/`Models`/`Services` answer "whose is this?", and a
+  partial of a Window is a view even when one file happens not to touch a control.
+  - The honest test for "is this really a service" is **does it touch an `x:Name` control**. Measured
+    across the five partials: Session 31, OrderList 17, DataTools 0, Printing 0, Receipt 0. Only
+    `Receipt` is genuinely control-free AND state-free (one field, `_localization`), which makes it
+    the one that could become a real `Services/StoreManagement` type beside `MeasurementSheetDocument`.
+    DataTools and Printing use no controls but do use `_viewModel`, `_scopeFactory` and modal dialogs
+    — view orchestration, not services.
+  - Nothing referenced MainWindow by PATH (no pack URI, no `StartupUri`, no csproj item), which is
+    what made the move safe — the same check the v5.0.0 folder split ran first. And `obj/` was
+    deleted afterwards, or the generated partials at the old paths compile alongside the new ones.
 - **Split an overgrown code-behind by MEMBER NAME, never by line range (2026-08-02).** The first
   attempt cut `OrderEditWindow` at line numbers taken from a grep that had matched only some
   signatures, so the boundaries between them were guesses — it sliced through method bodies and

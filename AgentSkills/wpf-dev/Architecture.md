@@ -53,6 +53,19 @@ components are added/renamed or the way pieces fit together changes.
 - **`Global/`** — what belongs to no single shop and no single person: the confirmation dialog, the
   image viewer, the first-run language picker, the installation-wide currency setting, the data
   folder and its migrations, contact validation, money rounding.
+- **`Views/Main/`** (v9.1) — the main window and its five partials. It is the one screen that is not
+  about a shop, a person or a global setting: it is the application's own front door. It sat loose at
+  the repository root until the partials made that seven files; only `App.xaml`/`App.xaml.cs` remain
+  there now.
+  - **Its code-behind lives under `Views/`, not `Services/`.** A partial of a `Window` is a view even
+    when a particular file happens not to touch a control, and `MainWindow.xaml` and
+    `MainWindow.xaml.cs` have to stay in the same folder for the SDK to pair them. `Services/` holds
+    things with no UI at all.
+  - One genuine exception is waiting to be taken: `MainWindow.Receipt.cs` (466 lines) touches **no**
+    `x:Name` control and needs only `ILocalizedText`. It is a headless document builder, exactly like
+    `MeasurementSheetDocument` and `SettlementDocument`, and belongs beside them in
+    `Services/StoreManagement/` as a static type. Its only entry point from the window is
+    `BuildReceiptDocument`.
 
 **The namespaces did NOT change.** Everything under `Views/` is still `CameywareOrder.Views`, and
 likewise for Models and Services. The folders are for a reader; renaming the namespaces would have
