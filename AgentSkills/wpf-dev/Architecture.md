@@ -98,9 +98,21 @@ move.
     name-uniqueness check already honour, plus a `DelistedOnUtc` audit stamp), `Delete` (orders, items,
     the shop row, and the per-shop FILES named after its `PublicId`), `Reinitialize` (every shop —
     accounts, language and global settings deliberately kept, so nobody is locked out), `CountOrders`,
-    `AllShops`, and `CreateDemoShop` (one click, built from the shipped presets, no fabricated orders).
+    `AllShops`, `CreateDemoShop` (one click, built from the shipped presets, seeded with the 100 preset
+    orders and flagged `Shop.IsDemo`; returns a `DemoShopResult` so the panel can report how much
+    history arrived), `HasDemoShop` (at most one demo store per installation — delisted ones count) and
+    `Copy` (v7.1: duplicates a shop's CONFIGURATION and its three per-shop files, never its orders;
+    names the copy with the localized `Store.Copy.Suffix`, numbered on collision, with the number
+    chosen once per shop and applied to every language).
     Every read of `Orders` here says `IgnoreQueryFilters()`: the context confines Orders to the OPEN
     shop, so a cross-shop delete through a normal query silently matches nothing.
+  - `DemoOrders` (static) — the demo store's preset order history: loads
+    `Settings/System/Defaults/demo-orders.json` once (cached, degrading to empty), and `Seed(db, shop,
+    today)` writes it as real orders. Shaped like `TaxJurisdictions` / `PhoneCountries`. Every day in
+    the file is an OFFSET, resolved against the seeding day; `TaxRatePercentFor` supplies a
+    demonstration rate where the shop's location quotes none. Sets `PaymentTaxRules.Active` to the
+    demo shop's own rules for the length of the seed — see `context.md` — and suppresses shop stamping
+    the way `ShopArchive` does.
   - `ShopArchive` (static) — SELECTED shops in and out of one zip: the "download all data" export and
     the file a restore reads. Deliberately not `DatabasePathProvider.ExportDatabaseTo`, which packages
     the whole database file and whose import REPLACES it — restoring one deleted shop would take every
@@ -648,7 +660,9 @@ move.
     the languages as prose with `JoinList` inside a `JoinFragments` strip; the INSTALLED set, not
     the preferred language, because that is what the branch's people will be able to switch
     between), and the user's role in that shop as a badge —
-    with a footer carrying Create Shop / User Management (administrators only), Cancel and Open. The list is
+    with a footer carrying Permissions / User Management / Store Management (administrators only), Cancel
+    and Open. **It creates nothing** (v7.1): Create Shop and Create demo store moved into Store
+    Management, so this window only chooses. The list is
     filtered by `AuthenticationService.FilterAccessibleShops`, and the empty state distinguishes
     "no shops exist" from "none is assigned to you". Row/badge presentation comes from the shared
     `UserPresentation` helper; `ShopPickerRow` is a top-level `internal` type so its `{Binding}`-only
@@ -690,12 +704,17 @@ move.
     to `ValidateForSave`, which is what a harness drives — a `MessageBox` inside a check blocks the
     thread. `ErrorText` at the foot of the window keeps a separate job: a save that THREW.
   - `StoreManagementWindow` — administrator-only shop administration, reached from the Select Shop
-    footer. `SelectionMode="Extended"` (ctrl/shift click), and every action reads the whole selection.
+    footer, and since v7.1 **the one screen that changes which shops exist**: its top card carries
+    Create New Shop, Copy selected stores and Create demo store, which used to sit in the picker's
+    footer. `SelectionMode="Extended"` (ctrl/shift click), and every action reads the whole selection;
+    the list also carries `CopyPasteBinding.Surface`, so Ctrl+C / Ctrl+V duplicate shops.
     Reversible actions (take out of service / put back) sit in a separate card from the destructive ones
     (delete selected / reinitialize), and only the second group goes through `ConfirmDestructiveWindow` —
     keeping them apart is what stops an administrator reaching for delete because it is the button they
     recognise. Performs nothing itself: `ShopAdministration` owns the rules, `ShopArchive` owns the file
-    format. `ShopsChanged` tells the picker whether to reload, so cancelling out costs no refresh.
+    format. `ShopsChanged` tells the picker whether to reload, so cancelling out costs no refresh;
+    `CreatedShop` and `ConfigureTermsRequested` report a shop made here so the picker can select it and
+    the eventual OPENER can run the terms editor.
   - `ConfirmDestructiveWindow` — the gate in front of every irreversible action: a 10-character phrase
     generated per dialog from `RandomNumberGenerator` over an alphabet with **no lookalike pairs**
     (neither half of O/0, I/1/L, S/5, Z/2, B/8, G/6, Q/O), typed case-sensitively before either button
@@ -773,6 +792,16 @@ move.
     **It renders ITSELF in the application's language, never in the previewed one** — a control that
     followed its own preview would turn Japanese the moment Japanese was picked, leaving nothing on
     screen the reader could use to get back.
+  - `CopyPasteBinding` + `ICopyPasteSurface` (v7.1) — the copy/paste keyboard module. An attached
+    `Surface` property installs a `CommandBinding` and a `KeyBinding` for `ApplicationCommands.Copy`
+    and `.Paste` on one control; a screen implements five members (`ClipboardKind`, `CanCopy`,
+    `CopySelection`, `CanPaste`, `Paste`) and declares one line of markup. Attached to the LIST rather
+    than the window so a search box keeps Ctrl+C for its own text. Bound today by `MainWindow`
+    (orders, held under a SHOP-SCOPED kind so a cross-shop paste is refused rather than silently
+    copying nothing) and `StoreManagementWindow` (shops). Both put IDS on the clipboard, never rows.
+    Records held for a paste live in `Services/AppClipboard` — one slot, application-wide, with a
+    `Kind` token; deliberately not the Windows clipboard, since Ctrl+V here means "make another one of
+    these" rather than "insert this text".
   - `CalendarSizing` — attached `MatchOwnerWidth`, which makes a `DatePicker`'s drop-down calendar
     **at least** as wide as its box (a `MinWidth` floor, not a fixed `Width`: the month grid is
     content-sized and a hard width narrower than it needs clips columns off). A behavior rather than
@@ -836,6 +865,9 @@ move.
       because a trailing space is significant — and for the same reason these files must never be
       rewritten with `XDocument.Save`. See context.md before adding to this namespace: some things
       (export filename suffix, currency symbols) deliberately do NOT belong here.
+  - `System/Defaults/demo-orders.json` — the 100 preset orders a demo store is seeded with, read by
+    `DemoOrders`. Days are OFFSETS, never dates, and the names are romanised deliberately (the repo's
+    CJK sweep covers `*.json`). See `context.md` before regenerating it.
   - `System/Defaults/app-defaults.json` — `defaultLanguage`, the fact ABOUT the language set that no
     single language file can own. Read through `Configuration/AppDefaults`, which degrades to a
     fallback on every failure because startup reads it before any window exists.

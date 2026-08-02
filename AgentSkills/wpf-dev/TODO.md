@@ -17,6 +17,50 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-02 — v7.1.0: shop creation moves to Store Management, demo data, copy shop, modular copy/paste  [DONE]
+- Ask: "Midum project fix after the major release v7.1.0:
+  1. for select shop panel,Move the 新建店铺和创建演示店铺到店铺管理界面。
+  2. 创建演示店铺需要创建100条records 这一百条records预设好了，存放在setting里，只能设置一次，安装完毕后此button消失直至店铺被删掉，可以再次创建demo store，演示店铺里的日期需要更新至最新
+  3.在店铺管理种可以选中后，可以复制店铺，复制完的店铺需要添加（复制）作为区分，如果有重名的需要添加复制1 复制2
+
+  快捷键设置
+
+  对于可以复制的界面，除了店铺管理，订单管理的，ctrl+c ctrl+v 可以实现复制功能。 - 要将快捷键管理模块化绑定到可以复制的界面上。
+
+  比如订单管理的所有订单可以多选，单选，可复制，那么复制粘贴功能就可以作为一种模块去加载。"
+- Plan:
+  - [ ] 1. Move `Shop.Picker.CreateNew` and `Store.Demo.Create` out of `ShopPickerWindow`'s footer into `StoreManagementWindow`; reroute `ConfigureTermsRequested` back through the picker.
+  - [ ] 2. Ship 100 preset demo orders as `Settings/System/Defaults/demo-orders.json`, seeded with day OFFSETS so the dates resolve to the seeding day; `Shop.IsDemo` gates the button to one demo shop at a time.
+  - [ ] 3. Copy Shop in Store Management: per-language name suffix, numbered on collision; per-shop files copied, orders NOT.
+  - [ ] 4. A reusable copy/paste keyboard module bound to every copy-capable surface — orders list and Store Management to start.
+  - [x] 5. New keys in all five languages; build 0/0; README release entry.
+- Notes:
+  **Files.** New: `Models/StoreManagement/DemoOrderTemplate.cs`,
+  `Services/StoreManagement/DemoOrders.cs`, `Services/Global/AppClipboard.cs`,
+  `Controls/CopyPasteBinding.cs`, `Settings/System/Defaults/demo-orders.json` (100 records).
+  Changed: `ShopAdministration` (+`HasDemoShop`, +`Copy`, `CreateDemoShop` → `DemoShopResult`),
+  `ReceiptBrandingStore` (+`CopyBrandingBetweenShops`), `Shop` (+`IsDemo`), `App.xaml.cs` (both
+  schema lists), `SystemSettingsPaths` (+`DemoOrdersFile`), `MainViewModel`
+  (`CopySelectedAsync` → `CopyOrdersAsync(ids)`), `MainWindow` (+`ICopyPasteSurface`),
+  `StoreManagementWindow` (+create/copy/demo card, +`ICopyPasteSurface`), `ShopPickerWindow`
+  (two buttons removed, `ConfigureTermsRequested` rerouted), five `*.lang.xml`,
+  `Directory.Build.props` 7.0.1 → 7.1.0, `README.md`.
+  **Verification.** Build 0 warnings / 0 errors (the in-build SonarAnalyzer pass is the whole of the
+  Sonar evidence — no SonarLint or IDE-diagnostics tool is connected in this session, so §9b Gates 1
+  and 2 could not be run as written). Three scratchpad harnesses, all green:
+  `democheck` 41 assertions (schema guard idempotent, 100 orders seeded, dates resolved to today,
+  month-to-date non-empty, stored total == recomputed, settlement cash+card+transfer == received,
+  copy naming plain/1/2, two-in-one-click distinct, delete re-opens the offer),
+  `storerender` (renders both screens + drives `ApplicationCommands.Copy`/`Paste` on the real
+  `StoreList`, credentials.json hash unchanged), `surfacecheck`/`keycheck` (surface pairing, no
+  `Key.C`/`Key.V` outside the module, no CJK outside the language files, 782-key parity in five
+  languages).
+  **Proof of failure.** Removing the `PaymentTaxRules.SetActive` swap in `DemoOrders.Seed` turned
+  "the stored total matches the recomputed one" red; restored and re-run green.
+  **Scope decision reported, not taken:** Copy Shop copies configuration and per-shop files, never
+  orders. Duplicating them would double a branch's revenue in the settlement report and re-issue
+  receipt numbers already given to customers.
+
 ### 2026-08-01 23:10 — v7.0.1: hotfix after the permissions release  [DONE]
 - Ask: "1.页面清理，在select shop 页面， 把permissions跟user management button 对换。 2. Settlement Report banner on main app should bind the role. 如果这个role不能够view settlement report，这个banner应该不要显示。 3. Settlement Report Panel 的Day 和Month 点击Month -> 应该可以用date month picker选择具体的月份 点击Day -> 应该可以用date month picker选择具体的日期 Year -> 应该可以用date month picker选择具体的年份" + mid-turn: "在select store。的页面给相应的permission 和management buttons相应的button 颜色以作区分" + "in login and lock panel, add a minimize feature near the close button" + "and ESC keyboard accessible fix for settlement report window close."
 - Notes: **(2) was a real defect and the cause is the recorded one-owner rule.** The capability check

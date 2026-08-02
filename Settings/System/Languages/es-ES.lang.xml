@@ -108,11 +108,16 @@
 
   <Text key="Store.Demo.Create">Crear tienda de demostración</Text>
   <Text key="Store.Demo.Name">Tienda de demostración</Text>
+  <Text key="Store.Demo.Exists">La tienda de demostración ya existe. Elimínela y la opción volverá a aparecer.</Text>
+  <Text key="Store.Demo.Created">Tienda de demostración creada, con {0} pedido(s) predefinido(s).</Text>
+
+  <Text key="Store.Copy.Suffix">&#32;(copia)</Text>
+  <Text key="Store.Copy.SuffixNumbered">&#32;(copia {0})</Text>
 
   <Text key="Store.Manage.Title">Gestión de tiendas</Text>
-  <Text key="Store.Manage.Subtitle">Retirar una tienda del servicio, descargar sus datos, restaurar una desde un archivo o eliminarla. Ctrl+clic para seleccionar varias; Mayús+clic para un rango.</Text>
+  <Text key="Store.Manage.Subtitle">Crear una tienda, duplicar una, retirar una del servicio, descargar sus datos, restaurar una desde un archivo o eliminarla. Ctrl+clic para seleccionar varias; Mayús+clic para un rango.</Text>
   <Text key="Store.Manage.Close">Cerrar</Text>
-  <Text key="Store.Manage.Empty">Todavía no hay tiendas. Cree una desde la pantalla de selección.</Text>
+  <Text key="Store.Manage.Empty">Todavía no hay tiendas. Cree una con los botones de la derecha.</Text>
   <Text key="Store.Manage.SelectAll">Seleccionar todo</Text>
   <Text key="Store.Manage.ClearSelection">Quitar la selección</Text>
   <Text key="Store.Manage.NothingSelected">Ninguna tienda seleccionada.</Text>
@@ -120,6 +125,13 @@
   <Text key="Store.Manage.OrderCount">{0} pedido(s)</Text>
   <Text key="Store.Manage.Delisted.Badge">Fuera de servicio</Text>
   <Text key="Store.Manage.DelistedOn">Fuera de servicio desde el {0}</Text>
+
+  <Text key="Store.Manage.AddSection">Añadir una tienda</Text>
+  <Text key="Store.Manage.Copy">Duplicar las tiendas seleccionadas</Text>
+  <Text key="Store.Manage.CopyHint">Una copia se lleva los ajustes, el catálogo, las medidas y la cabecera de los recibos, nunca los pedidos. Ctrl+C y luego Ctrl+V hace lo mismo desde la lista.</Text>
+  <Text key="Store.Manage.Copied">{0} tienda(s) duplicada(s).</Text>
+  <Text key="Store.Manage.Created">Tienda «{0}» creada.</Text>
+  <Text key="Store.Manage.NothingToCopy">Esas tiendas ya no existen.</Text>
 
   <Text key="Store.Manage.InService">En servicio</Text>
   <Text key="Store.Manage.Delist">Retirar del servicio</Text>
@@ -167,7 +179,7 @@
   <Text key="Store.Confirm.ReinitializeNow">Reinicializar ahora</Text>
   <Text key="Shop.Picker.CreateNew">Crear una tienda nueva</Text>
   <Text key="Shop.Picker.Cancel">Cancelar</Text>
-  <Text key="Shop.Picker.Empty">Todavía no se ha creado ninguna tienda.</Text>
+  <Text key="Shop.Picker.Empty">Todavía no se ha creado ninguna tienda. Abra Gestión de tiendas abajo para crear una.</Text>
   <Text key="Shop.Picker.OrderCount">{0} pedidos</Text>
   <Text key="Shop.Picker.NoShopForRole">No hay ninguna tienda disponible para tu cuenta. Ponte en contacto con un administrador.</Text>
   <Text key="Shop.Role.Admin">Administrador</Text>

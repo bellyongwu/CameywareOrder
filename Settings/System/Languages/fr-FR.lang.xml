@@ -107,11 +107,16 @@
 
   <Text key="Store.Demo.Create">Créer une boutique de démonstration</Text>
   <Text key="Store.Demo.Name">Boutique de démonstration</Text>
+  <Text key="Store.Demo.Exists">La boutique de démonstration existe déjà. Supprimez-la et la proposition réapparaîtra.</Text>
+  <Text key="Store.Demo.Created">Boutique de démonstration créée, avec {0} commande(s) prédéfinie(s).</Text>
+
+  <Text key="Store.Copy.Suffix">&#32;(copie)</Text>
+  <Text key="Store.Copy.SuffixNumbered">&#32;(copie {0})</Text>
 
   <Text key="Store.Manage.Title">Gestion des boutiques</Text>
-  <Text key="Store.Manage.Subtitle">Retirer une boutique du service, télécharger ses données, en restaurer une depuis un fichier, ou la supprimer. Ctrl+clic pour en sélectionner plusieurs ; Maj+clic pour une plage.</Text>
+  <Text key="Store.Manage.Subtitle">Créer une boutique, en dupliquer une, en retirer une du service, télécharger ses données, en restaurer une depuis un fichier, ou la supprimer. Ctrl+clic pour en sélectionner plusieurs ; Maj+clic pour une plage.</Text>
   <Text key="Store.Manage.Close">Fermer</Text>
-  <Text key="Store.Manage.Empty">Aucune boutique pour l’instant. Créez-en une depuis l’écran de sélection.</Text>
+  <Text key="Store.Manage.Empty">Aucune boutique pour l’instant. Créez-en une avec les boutons à droite.</Text>
   <Text key="Store.Manage.SelectAll">Tout sélectionner</Text>
   <Text key="Store.Manage.ClearSelection">Annuler la sélection</Text>
   <Text key="Store.Manage.NothingSelected">Aucune boutique sélectionnée.</Text>
@@ -119,6 +124,13 @@
   <Text key="Store.Manage.OrderCount">{0} commande(s)</Text>
   <Text key="Store.Manage.Delisted.Badge">Hors service</Text>
   <Text key="Store.Manage.DelistedOn">Hors service depuis le {0}</Text>
+
+  <Text key="Store.Manage.AddSection">Ajouter une boutique</Text>
+  <Text key="Store.Manage.Copy">Dupliquer les boutiques sélectionnées</Text>
+  <Text key="Store.Manage.CopyHint">Une copie reprend les réglages, le catalogue, les mesures et l’en-tête des reçus — jamais les commandes. Ctrl+C puis Ctrl+V fait de même depuis la liste.</Text>
+  <Text key="Store.Manage.Copied">{0} boutique(s) dupliquée(s).</Text>
+  <Text key="Store.Manage.Created">Boutique « {0} » créée.</Text>
+  <Text key="Store.Manage.NothingToCopy">Ces boutiques n’existent plus.</Text>
 
   <Text key="Store.Manage.InService">En service</Text>
   <Text key="Store.Manage.Delist">Retirer du service</Text>
@@ -166,7 +178,7 @@
   <Text key="Store.Confirm.ReinitializeNow">Réinitialiser maintenant</Text>
   <Text key="Shop.Picker.CreateNew">Créer une boutique</Text>
   <Text key="Shop.Picker.Cancel">Annuler</Text>
-  <Text key="Shop.Picker.Empty">Aucune boutique n’a encore été créée.</Text>
+  <Text key="Shop.Picker.Empty">Aucune boutique n’a encore été créée. Ouvrez la Gestion des boutiques ci-dessous pour en créer une.</Text>
   <Text key="Shop.Picker.OrderCount">{0} commandes</Text>
   <Text key="Shop.Picker.NoShopForRole">Aucune boutique n’est disponible pour votre compte. Veuillez contacter un administrateur.</Text>
   <Text key="Shop.Role.Admin">Administrateur</Text>

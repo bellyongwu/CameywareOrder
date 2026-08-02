@@ -110,11 +110,16 @@
 
   <Text key="Store.Demo.Create">デモ店舗を作成</Text>
   <Text key="Store.Demo.Name">デモ店舗</Text>
+  <Text key="Store.Demo.Exists">デモ店舗はすでにあります。削除すると再び作成できます。</Text>
+  <Text key="Store.Demo.Created">デモ店舗を作成しました（既定の注文 {0} 件付き）。</Text>
+
+  <Text key="Store.Copy.Suffix">（コピー）</Text>
+  <Text key="Store.Copy.SuffixNumbered">（コピー{0}）</Text>
 
   <Text key="Store.Manage.Title">店舗管理</Text>
-  <Text key="Store.Manage.Subtitle">店舗の停止、データのダウンロード、ファイルからの復元、削除を行えます。Ctrl+クリックで複数選択、Shift+クリックで範囲選択。</Text>
+  <Text key="Store.Manage.Subtitle">店舗の作成、複製、停止、データのダウンロード、ファイルからの復元、削除を行えます。Ctrl+クリックで複数選択、Shift+クリックで範囲選択。</Text>
   <Text key="Store.Manage.Close">閉じる</Text>
-  <Text key="Store.Manage.Empty">店舗がまだありません。「店舗の選択」画面から作成してください。</Text>
+  <Text key="Store.Manage.Empty">店舗がまだありません。右側のボタンから作成してください。</Text>
   <Text key="Store.Manage.SelectAll">すべて選択</Text>
   <Text key="Store.Manage.ClearSelection">選択を解除</Text>
   <Text key="Store.Manage.NothingSelected">店舗が選択されていません。</Text>
@@ -122,6 +127,13 @@
   <Text key="Store.Manage.OrderCount">注文 {0} 件</Text>
   <Text key="Store.Manage.Delisted.Badge">停止中</Text>
   <Text key="Store.Manage.DelistedOn">{0} から停止中</Text>
+
+  <Text key="Store.Manage.AddSection">店舗を追加</Text>
+  <Text key="Store.Manage.Copy">選択した店舗を複製</Text>
+  <Text key="Store.Manage.CopyHint">複製では設定、商品カテゴリ、採寸項目、レシートの見出しが引き継がれます。注文は引き継がれません。一覧で Ctrl+C のあと Ctrl+V でも同じです。</Text>
+  <Text key="Store.Manage.Copied">{0} 店舗を複製しました。</Text>
+  <Text key="Store.Manage.Created">店舗「{0}」を作成しました。</Text>
+  <Text key="Store.Manage.NothingToCopy">それらの店舗はすでに存在しません。</Text>
 
   <Text key="Store.Manage.InService">稼働状態</Text>
   <Text key="Store.Manage.Delist">店舗を停止する</Text>
@@ -169,7 +181,7 @@
   <Text key="Store.Confirm.ReinitializeNow">今すぐ初期化する</Text>
   <Text key="Shop.Picker.CreateNew">新しい店舗を作成</Text>
   <Text key="Shop.Picker.Cancel">キャンセル</Text>
-  <Text key="Shop.Picker.Empty">店舗はまだ作成されていません。</Text>
+  <Text key="Shop.Picker.Empty">店舗はまだ作成されていません。下の「店舗管理」から作成してください。</Text>
   <Text key="Shop.Picker.OrderCount">注文 {0} 件</Text>
   <Text key="Shop.Picker.NoShopForRole">このアカウントで開ける店舗がありません。管理者にお問い合わせください。</Text>
   <Text key="Shop.Role.Admin">管理者</Text>

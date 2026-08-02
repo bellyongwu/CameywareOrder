@@ -148,6 +148,41 @@ public static class ReceiptBrandingStore
         }
     }
 
+    /// <summary>
+    /// Gives <paramref name="target"/> the header, footer and logo <paramref name="source"/> already
+    /// has — what Copy Shop needs so a duplicated branch prints the receipts it was copied from.
+    /// </summary>
+    /// <remarks>
+    /// Shaped like <c>MeasurementTermsService.CopyConfigBetweenShops</c> and its catalogue twin:
+    /// copies the FILES, so neither shop has to be the open one, and never overwrites — a shop that
+    /// already has branding has been configured. Top level only, matching
+    /// <see cref="AdoptLegacyFolderFor"/>: nothing nests under a shop's folder today, and a recursive
+    /// copy would silently start carrying whatever does later.
+    /// </remarks>
+    public static void CopyBrandingBetweenShops(Shop source, Shop target)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(target);
+
+        try
+        {
+            var from = DirectoryFor(source);
+            var to = DirectoryFor(target);
+
+            if (!Directory.Exists(from) || Directory.Exists(to))
+                return;
+
+            Directory.CreateDirectory(to);
+            foreach (var file in Directory.EnumerateFiles(from))
+                File.Copy(file, Path.Combine(to, Path.GetFileName(file)));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Best-effort, as everywhere else here: the copy prints without a header rather than the
+            // copy itself failing.
+        }
+    }
+
     public static ReceiptBrandingSettings Load()
     {
         try

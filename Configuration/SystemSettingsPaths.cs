@@ -38,6 +38,9 @@ public static class SystemSettingsPaths
     /// <summary>Dial codes and national number lengths per country (see phone-countries.json).</summary>
     public static string PhoneCountriesFile => DefaultsFile("phone-countries.json");
 
+    /// <summary>The preset orders a demo store is seeded with (see demo-orders.json).</summary>
+    public static string DemoOrdersFile => DefaultsFile("demo-orders.json");
+
     /// <summary>
     /// Locates one shipped defaults file, probing the same two roots as <see cref="SystemDirectory"/>
     /// but asking whether THE FILE is there rather than whether a folder is.

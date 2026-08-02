@@ -10,6 +10,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using CameywareOrder.Controls;
 using CameywareOrder.Converters;
 using CameywareOrder.Data;
 using CameywareOrder.Localization;
@@ -22,7 +23,15 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace CameywareOrder;
 
-public partial class MainWindow : Window
+/// <summary>
+/// The order list and everything a shop does with it.
+/// </summary>
+/// <remarks>
+/// Implements <see cref="ICopyPasteSurface"/> so the orders list gets Ctrl+C / Ctrl+V from the shared
+/// <see cref="CopyPasteBinding"/> rather than from a keyboard switch of its own. The five members are
+/// grouped at the foot of this file.
+/// </remarks>
+public partial class MainWindow : Window, ICopyPasteSurface
 {
     private static readonly string ExplorerPath = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.Windows), "explorer.exe");
@@ -2077,6 +2086,52 @@ public partial class MainWindow : Window
         var key = $"{prefix}.{suffix}";
         var localized = _localization[key];
         return string.Equals(localized, key, StringComparison.Ordinal) ? suffix : localized;
+    }
+
+    // ── Copy / paste surface (Ctrl+C, Ctrl+V on the orders list) ──────────────────────────────────
+
+    /// <summary>
+    /// The clipboard kind orders are held under, scoped to the OPEN SHOP.
+    /// </summary>
+    /// <remarks>
+    /// The shop is part of the token, not just a check inside <see cref="CanPaste"/>. Orders copied
+    /// in one branch must not paste into the next: the copy reads its source through a context
+    /// confined to the open shop, so a cross-shop paste would find nothing and report copying zero
+    /// records — a silent no-op reads as a broken feature. Baking the shop into the kind disables
+    /// paste outright the moment the shop changes, which says the same thing before the key is
+    /// pressed.
+    /// </remarks>
+    public string ClipboardKind => $"Orders@{ShopContext.Instance.Current?.PublicId}";
+
+    /// <summary>
+    /// The same gate the Copy action carries: a selection AND the capability. The keyboard reaches
+    /// this without passing any chrome, so the permission has to be checked here too.
+    /// </summary>
+    public bool CanCopy => _viewModel.HasSelection && AuthenticationService.Instance.CanCopyOrders;
+
+    public IReadOnlyList<object> CopySelection()
+        => _viewModel.SelectedOrders.Select(order => (object)order.Id).ToList();
+
+    public bool CanPaste(IReadOnlyList<object> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        return items.Count > 0 && AuthenticationService.Instance.CanCopyOrders;
+    }
+
+    public void Paste(IReadOnlyList<object> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+
+        if (!AuthenticationService.Instance.CanCopyOrders)
+            return;
+
+        var ids = items.OfType<int>().Distinct().ToList();
+        if (ids.Count == 0)
+            return;
+
+        // Not awaited, exactly as CopyOrderCommand is not: the view model reports through
+        // StatusMessage and reloads the list itself.
+        _ = _viewModel.CopyOrdersAsync(ids);
     }
 }
 

@@ -179,23 +179,17 @@
                             Style="{StaticResource AccentTealButton}"
                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.UserManagement], Mode=OneWay}"
                             Click="OnManageUsersClick"/>
-                    <Button x:Name="StoreManagementButton" Margin="0,0,10,0"
+                    <!-- Creating a shop, copying one and seeding the demo store all moved INTO Store
+                         Management. This window chooses a shop; that one decides which shops exist.
+                         Two screens that could both create one is how a list of branches ends up with
+                         a duplicate nobody meant to make. -->
+                    <Button x:Name="StoreManagementButton"
                             Style="{StaticResource AccentAmberButton}"
                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Title], Mode=OneWay}"
                             Click="OnStoreManagementClick"/>
-                    <!-- One click, no form: somewhere to start working immediately. Beside the admin
-                         tools rather than beside "Create shop", because it is a shortcut past the
-                         setup form rather than another way into it. -->
-                    <Button x:Name="DemoStoreButton"
-                            Style="{StaticResource AccentGreenButton}"
-                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Demo.Create], Mode=OneWay}"
-                            Click="OnCreateDemoClick"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button x:Name="CreateButton" Margin="0,0,10,0"
-                            Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.CreateNew], Mode=OneWay}"
-                            Click="OnCreateClick"/>
                     <Button x:Name="CancelButton" Margin="0,0,10,0"
                             Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.Cancel], Mode=OneWay}"
                             Click="OnCancelClick" IsCancel="True"/>

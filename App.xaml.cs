@@ -666,6 +666,10 @@ public partial class App : Application
         // When the shop was taken out of service. NULL is meaningful and is the common case: it means
         // in service, which is what every shop that predates Store Management was.
         ("DelistedOnUtc", "ALTER TABLE Shops ADD COLUMN DelistedOnUtc TEXT NULL; "),
+        // Whether this is the one-click demo store. NOT NULL with a 0 default, which is the honest
+        // answer for every shop that predates it: none of them was created as a demo, so the offer to
+        // create one is correctly still open on an upgraded installation.
+        ("IsDemo", "ALTER TABLE Shops ADD COLUMN IsDemo INTEGER NOT NULL DEFAULT 0; "),
     };
 
     /// <summary>
@@ -718,9 +722,9 @@ public partial class App : Application
         }
 
         // Nothing to open: either every shop has been archived, or — far more likely now that
-        // access is per shop — this account has not been assigned to any. An administrator can
-        // create a shop from the picker; nobody else can, so there is nothing to show them but an
-        // explanation pointing at the person who can fix it.
+        // access is per shop — this account has not been assigned to any. An administrator can reach
+        // Store Management from the picker and create one there; nobody else can, so there is
+        // nothing to show them but an explanation pointing at the person who can fix it.
         if (shops.Count == 0 && !AuthenticationService.Instance.IsAdministrator)
         {
             var localization = LocalizationService.Instance;
@@ -921,7 +925,8 @@ public partial class App : Application
                 InstalledLanguagesJson TEXT NULL,
                 SupportedCurrenciesJson TEXT NULL,
                 LocationCode TEXT NULL,
-                DelistedOnUtc TEXT NULL
+                DelistedOnUtc TEXT NULL,
+                IsDemo INTEGER NOT NULL DEFAULT 0
             );");
 
         // A database created by an earlier build already HAS the table, so CREATE TABLE IF NOT

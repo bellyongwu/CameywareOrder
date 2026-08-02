@@ -75,7 +75,30 @@ treatment too, which is theirs to decide.
 
 ---
 
-## Recent work (2026-08-01)
+## Recent work (2026-08-02)
+
+### v7.1.0 — creating shops moves to Store Management; demo data; copy shop; modular copy/paste  [DONE]
+
+1. **Create Shop and Create Demo Store left the shop picker** for a new *Add a store* card in Store
+   Management. The picker chooses; Store Management decides which shops exist. A shop created there
+   is reported back as `CreatedShop` and SELECTED in the picker rather than closing it — the old
+   Create button closed the picker, which is the wrong guess for an administrator who went in to make
+   two branches. `ConfigureTermsRequested` now travels Setup → Management → Picker → whoever OPENS
+   the shop; none of the three can act on it, because MeasurementTermsService edits the BOUND shop.
+2. **A demo store arrives with 100 preset orders** from `Settings/System/Defaults/demo-orders.json`.
+   `Shop.IsDemo` limits it to one per installation; deleting it brings the button back. See
+   `context.md` for the three rules the data file encodes (offsets not dates, same-day records, a
+   demonstration tax rate) and for why the seeder swaps `PaymentTaxRules.Active`.
+3. **Copy Shop** duplicates configuration and the three per-shop files, never orders. The suffix is a
+   string-table value (`Store.Copy.Suffix` / `.SuffixNumbered`) because it is punctuation as much as a
+   word — zh writes `（复制）`. The number is chosen once per shop and applied to EVERY language, or one
+   shop tells two stories about which copy it is; and the batch adds its own names to the taken set as
+   it goes, the same defect batch Copy Order shipped with once.
+4. **`Controls/CopyPasteBinding` + `ICopyPasteSurface` + `Services/AppClipboard`.** Five members and a
+   declaration in the markup is the whole of what a screen supplies. Attached to the LIST, not the
+   window, so Ctrl+C in a search box still means "copy this text". Bound today to the orders list and
+   Store Management; `surfacecheck` asserts the pairing against the SOURCE so the third such list
+   cannot quietly grow its own `KeyDown` switch.
 
 ### v7.0.1 — hotfix after the permissions release  [DONE]
 

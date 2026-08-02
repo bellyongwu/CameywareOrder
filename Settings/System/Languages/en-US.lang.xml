@@ -110,11 +110,16 @@
 
   <Text key="Store.Demo.Create">Create demo store</Text>
   <Text key="Store.Demo.Name">Demo Store</Text>
+  <Text key="Store.Demo.Exists">The demo store already exists. Delete it and this offer comes back.</Text>
+  <Text key="Store.Demo.Created">Demo store created, with {0} preset order(s).</Text>
+
+  <Text key="Store.Copy.Suffix">&#32;(copy)</Text>
+  <Text key="Store.Copy.SuffixNumbered">&#32;(copy {0})</Text>
 
   <Text key="Store.Manage.Title">Store Management</Text>
-  <Text key="Store.Manage.Subtitle">Take a store out of service, download its data, restore one from a file, or remove it. Ctrl+click to select several; shift+click to select a run.</Text>
+  <Text key="Store.Manage.Subtitle">Create a store, copy one, take one out of service, download its data, restore one from a file, or remove it. Ctrl+click to select several; shift+click to select a run.</Text>
   <Text key="Store.Manage.Close">Close</Text>
-  <Text key="Store.Manage.Empty">No stores exist yet. Create one from the Select Shop screen.</Text>
+  <Text key="Store.Manage.Empty">No stores exist yet. Create one with the buttons on the right.</Text>
   <Text key="Store.Manage.SelectAll">Select all</Text>
   <Text key="Store.Manage.ClearSelection">Clear selection</Text>
   <Text key="Store.Manage.NothingSelected">No store selected.</Text>
@@ -122,6 +127,13 @@
   <Text key="Store.Manage.OrderCount">{0} order(s)</Text>
   <Text key="Store.Manage.Delisted.Badge">Out of service</Text>
   <Text key="Store.Manage.DelistedOn">Out of service since {0}</Text>
+
+  <Text key="Store.Manage.AddSection">Add a store</Text>
+  <Text key="Store.Manage.Copy">Copy selected stores</Text>
+  <Text key="Store.Manage.CopyHint">A copy takes the settings, catalogue, measurement terms and receipt branding — never the orders. Ctrl+C then Ctrl+V does the same from the list.</Text>
+  <Text key="Store.Manage.Copied">{0} store(s) copied.</Text>
+  <Text key="Store.Manage.Created">Store "{0}" created.</Text>
+  <Text key="Store.Manage.NothingToCopy">Those stores no longer exist.</Text>
 
   <Text key="Store.Manage.InService">In service</Text>
   <Text key="Store.Manage.Delist">Take out of service</Text>
@@ -169,7 +181,7 @@
   <Text key="Store.Confirm.ReinitializeNow">Reinitialize now</Text>
   <Text key="Shop.Picker.CreateNew">Create New Shop</Text>
   <Text key="Shop.Picker.Cancel">Cancel</Text>
-  <Text key="Shop.Picker.Empty">No shops have been created yet.</Text>
+  <Text key="Shop.Picker.Empty">No shops have been created yet. Open Store Management below to create one.</Text>
   <Text key="Shop.Picker.OrderCount">{0} orders</Text>
   <Text key="Shop.Picker.NoShopForRole">No shop is available for your account. Please contact an administrator.</Text>
   <Text key="Shop.Role.Admin">Administrator</Text>

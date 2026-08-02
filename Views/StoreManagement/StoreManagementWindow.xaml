@@ -2,8 +2,9 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:loc="clr-namespace:CameywareOrder.Localization"
+        xmlns:ctrl="clr-namespace:CameywareOrder.Controls"
         Title="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Title], Mode=OneWay}"
-        Height="760" Width="1020"
+        Height="880" Width="1020"
         MinHeight="620" MinWidth="900"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
@@ -101,6 +102,7 @@
                         BorderThickness="1" Padding="14">
                     <Grid>
                         <ListBox x:Name="StoreList" SelectionMode="Extended"
+                                 ctrl:CopyPasteBinding.Surface="{Binding RelativeSource={RelativeSource AncestorType=Window}}"
                                  BorderThickness="0" Background="Transparent"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                  ItemContainerStyle="{StaticResource StoreCardContainer}"
@@ -154,7 +156,36 @@
             <!-- ── What you can do to them ──────────────────────────────────── -->
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <!-- Reversible actions first and on their own card. An administrator taking a branch
+                    <!-- Everything that ADDS a shop, in one card and at the top. These two used to sit
+                         in the Select Shop footer, which made that window both a chooser and a creator;
+                         it now only chooses, and every action that changes WHICH SHOPS EXIST is here. -->
+                    <Border Background="White" CornerRadius="10" BorderBrush="#E5E7EB" BorderThickness="1"
+                            Padding="16" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource ActionCaption}"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.AddSection], Mode=OneWay}"/>
+                            <Button x:Name="CreateShopButton" Margin="0,0,0,8" Padding="12,8"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Shop.Picker.CreateNew], Mode=OneWay}"
+                                    Click="OnCreateShopClick"/>
+                            <Button x:Name="CopyShopButton" Margin="0,0,0,8" Padding="12,8" IsEnabled="False"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.Copy], Mode=OneWay}"
+                                    Click="OnCopyShopClick"/>
+                            <!-- One demo store per installation: the button goes when one exists and the
+                                 line under it explains how to get the offer back. Hidden rather than
+                                 disabled, with the reason stated — a greyed-out button with no
+                                 explanation is what generates the support call. -->
+                            <Button x:Name="DemoStoreButton" Padding="12,8"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Demo.Create], Mode=OneWay}"
+                                    Click="OnCreateDemoClick"/>
+                            <TextBlock x:Name="DemoExistsText" Visibility="Collapsed"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Demo.Exists], Mode=OneWay}"
+                                       FontSize="11" Foreground="#9CA3AF" TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Store.Manage.CopyHint], Mode=OneWay}"
+                                       FontSize="11" Foreground="#9CA3AF" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Reversible actions on their own card. An administrator taking a branch
                          out of service should not have to walk past the delete button to do it. -->
                     <Border Background="White" CornerRadius="10" BorderBrush="#E5E7EB" BorderThickness="1"
                             Padding="16" Margin="0,0,0,12">

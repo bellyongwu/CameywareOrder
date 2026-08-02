@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
+using CameywareOrder.Controls;
 using CameywareOrder.Data;
 using CameywareOrder.Localization;
 using CameywareOrder.Models;
@@ -28,9 +29,20 @@ namespace CameywareOrder.Views;
 ///
 /// This window performs nothing itself: `ShopAdministration` owns the rules and `ShopArchive` owns the
 /// file format. What lives here is the selection, the wording, and the order the steps happen in.
+///
+/// It is also where a shop is CREATED, copied, or seeded as the demo store. Those first two used to
+/// sit in the Select Shop footer, which made that window both a chooser and a creator; it now only
+/// chooses, and every action that changes which shops exist is on this one screen.
 /// </remarks>
-public partial class StoreManagementWindow : Window
+public partial class StoreManagementWindow : Window, ICopyPasteSurface
 {
+    /// <summary>The token shops are held under on <see cref="AppClipboard"/>.</summary>
+    /// <remarks>
+    /// Unqualified, unlike the order list's shop-scoped kind: a shop belongs to the installation
+    /// rather than to another shop, so there is no context a copied one could become stale in.
+    /// </remarks>
+    private const string ShopClipboardKind = "Shops";
+
     private readonly LocalizationService _localization;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ObservableCollection<StoreRow> _rows = new();
@@ -48,16 +60,37 @@ public partial class StoreManagementWindow : Window
 
     /// <summary>
     /// True once anything happened that the caller's own shop list cannot still be trusted after — a
-    /// deletion, a restore, a delisting. The picker reloads on that rather than on "was this window
-    /// opened", so cancelling out of everything costs no refresh.
+    /// deletion, a restore, a delisting, a shop created or copied. The picker reloads on that rather
+    /// than on "was this window opened", so cancelling out of everything costs no refresh.
     /// </summary>
     public bool ShopsChanged { get; private set; }
+
+    /// <summary>
+    /// A shop created here, for the caller to adopt as the selection. Null when none was.
+    /// </summary>
+    /// <remarks>
+    /// Reported rather than acted on, like every other outcome this window produces. The shop picker
+    /// is what decides that a newly created shop should be the one selected — this window has no
+    /// opinion about which shop anybody then opens.
+    /// </remarks>
+    public Shop? CreatedShop { get; private set; }
+
+    /// <summary>
+    /// Whether a shop created here asked for its measurement terms to be configured straight away.
+    /// </summary>
+    /// <remarks>
+    /// Passed along untouched from <see cref="ShopSetupWindow"/> to whoever eventually OPENS the
+    /// shop. Neither this window nor the picker can act on it: MeasurementTermsService edits the
+    /// shop that is BOUND, and the new shop is not bound until it is opened.
+    /// </remarks>
+    public bool ConfigureTermsRequested { get; private set; }
 
     // ── list ──────────────────────────────────────────────────────────────────────────────────────
 
     private void LoadStores()
     {
         var shops = ShopAdministration.AllShops(_scopeFactory);
+        bool hasDemo;
 
         _rows.Clear();
         using (var scope = _scopeFactory.CreateScope())
@@ -65,9 +98,18 @@ public partial class StoreManagementWindow : Window
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             foreach (var shop in shops)
                 _rows.Add(BuildRow(shop, ShopAdministration.CountOrders(db, shop.Id)));
+
+            hasDemo = ShopAdministration.HasDemoShop(db);
         }
 
         EmptyText.Visibility = _rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // Re-read on every load rather than once in the constructor: deleting the demo store from
+        // this very panel is what brings the offer back, and the user should not have to close the
+        // window to see it return.
+        DemoStoreButton.Visibility = hasDemo ? Visibility.Collapsed : Visibility.Visible;
+        DemoExistsText.Visibility = hasDemo ? Visibility.Visible : Visibility.Collapsed;
+
         RefreshActionState();
     }
 
@@ -135,11 +177,140 @@ public partial class StoreManagementWindow : Window
         ActivateButton.IsEnabled = selected.Exists(row => row.Shop.IsDelisted);
         DownloadButton.IsEnabled = selected.Count > 0;
         DeleteButton.IsEnabled = selected.Count > 0;
+        CopyShopButton.IsEnabled = selected.Count > 0;
     }
 
     private void OnSelectAllClick(object sender, RoutedEventArgs e) => StoreList.SelectAll();
 
     private void OnClearSelectionClick(object sender, RoutedEventArgs e) => StoreList.UnselectAll();
+
+    // ── adding a shop ─────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The full create-a-shop form. Administrator only, and checked here as well as in the chrome —
+    /// a hidden button is a fact about the UI, not a permission.
+    /// </summary>
+    private void OnCreateShopClick(object sender, RoutedEventArgs e)
+    {
+        if (!AuthenticationService.Instance.CanCreateShops)
+            return;
+
+        var setup = new ShopSetupWindow(_localization, _scopeFactory) { Owner = this };
+        if (setup.ShowDialog() is not true || setup.Shop is null)
+            return;
+
+        CreatedShop = setup.Shop;
+        ConfigureTermsRequested = setup.ConfigureTermsRequested;
+        ShopsChanged = true;
+
+        LoadStores();
+        SelectShops(new[] { setup.Shop.PublicId });
+        ReportSuccess(_localization.Format(
+            "Store.Manage.Created", setup.Shop.ResolveName(_localization.CurrentLanguageCode)));
+    }
+
+    /// <summary>
+    /// One click to a working shop with a hundred orders behind it, so the application can be seen
+    /// running before any real data is typed. At most one per installation — see
+    /// <see cref="ShopAdministration.HasDemoShop"/>.
+    /// </summary>
+    private void OnCreateDemoClick(object sender, RoutedEventArgs e)
+    {
+        if (!AuthenticationService.Instance.CanCreateShops)
+            return;
+
+        DemoShopResult result;
+        using (var scope = _scopeFactory.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            // Re-checked against the database, not against the button's visibility. The window can
+            // have been open while another path created one, and "at most one" has to hold as a
+            // fact about the data rather than about what is on screen.
+            if (ShopAdministration.HasDemoShop(db))
+            {
+                LoadStores();
+                ReportFailure(_localization["Store.Demo.Exists"]);
+                return;
+            }
+
+            result = ShopAdministration.CreateDemoShop(db, _localization);
+        }
+
+        CreatedShop = result.Shop;
+        ShopsChanged = true;
+
+        LoadStores();
+        SelectShops(new[] { result.Shop.PublicId });
+        ReportSuccess(_localization.Format("Store.Demo.Created", result.Orders));
+    }
+
+    private void OnCopyShopClick(object sender, RoutedEventArgs e)
+        => CopyShops(Selected().Select(row => row.Shop.PublicId).ToList());
+
+    /// <summary>
+    /// Duplicates shops by their stable ids, re-reading each from the database first.
+    /// </summary>
+    /// <remarks>
+    /// Re-read rather than copied from the rows for two reasons. The rows hold <c>AsNoTracking</c>
+    /// snapshots taken when the list was last loaded, so a shop edited elsewhere in the meantime
+    /// would be duplicated as it used to be; and a paste can arrive long after the Ctrl+C, naming a
+    /// shop that has since been deleted — which then copies nothing rather than resurrecting it.
+    ///
+    /// Keyed on <see cref="Shop.PublicId"/>, not <c>Id</c>, because that is the id that survives a
+    /// database import and is what the per-shop files are named after.
+    /// </remarks>
+    private void CopyShops(IReadOnlyList<Guid> publicIds)
+    {
+        if (publicIds.Count == 0 || !AuthenticationService.Instance.CanCreateShops)
+            return;
+
+        try
+        {
+            IReadOnlyList<Shop> copies;
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+                // Ordered as the user picked them, not as the database returns them, so the numbered
+                // suffixes follow the order on screen.
+                var sources = publicIds
+                    .Select(publicId => db.Shops.AsNoTracking().FirstOrDefault(shop => shop.PublicId == publicId))
+                    .Where(shop => shop is not null)
+                    .Select(shop => shop!)
+                    .ToList();
+
+                if (sources.Count == 0)
+                {
+                    ReportFailure(_localization["Store.Manage.NothingToCopy"]);
+                    return;
+                }
+
+                copies = ShopAdministration.Copy(db, sources, _localization);
+            }
+
+            ShopsChanged = true;
+            LoadStores();
+            SelectShops(copies.Select(shop => shop.PublicId).ToList());
+            ReportSuccess(_localization.Format("Store.Manage.Copied", copies.Count));
+        }
+        catch (Exception ex) when (ex is DbUpdateException or IOException)
+        {
+            ReportFailure(_localization.Format("Store.Manage.Failed", ex.Message));
+        }
+    }
+
+    /// <summary>Points the list at the given shops, so what an action produced ends up selected.</summary>
+    private void SelectShops(IReadOnlyCollection<Guid> publicIds)
+    {
+        StoreList.UnselectAll();
+
+        foreach (var row in _rows.Where(row => publicIds.Contains(row.Shop.PublicId)))
+            StoreList.SelectedItems.Add(row);
+
+        if (StoreList.SelectedItems.Count > 0)
+            StoreList.ScrollIntoView(StoreList.SelectedItems[^1]);
+    }
 
     // ── reversible ────────────────────────────────────────────────────────────────────────────────
 
@@ -395,6 +566,31 @@ public partial class StoreManagementWindow : Window
     }
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => Close();
+
+    // ── Copy / paste surface (Ctrl+C, Ctrl+V on the store list) ───────────────────────────────────
+
+    public string ClipboardKind => ShopClipboardKind;
+
+    public bool CanCopy => StoreList.SelectedItems.Count > 0;
+
+    /// <summary>
+    /// The stable ids of the selected shops. Ids rather than the rows, for the reason spelled out on
+    /// <see cref="CopyShops"/>: what is pasted is re-read, never resurrected from a snapshot.
+    /// </summary>
+    public IReadOnlyList<object> CopySelection()
+        => Selected().Select(row => (object)row.Shop.PublicId).ToList();
+
+    public bool CanPaste(IReadOnlyList<object> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        return items.Count > 0 && AuthenticationService.Instance.CanCreateShops;
+    }
+
+    public void Paste(IReadOnlyList<object> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        CopyShops(items.OfType<Guid>().Distinct().ToList());
+    }
 
     /// <summary>One shop on screen. Holds the shop so an action can act on it without a second lookup.</summary>
     private sealed record StoreRow(

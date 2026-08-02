@@ -177,6 +177,23 @@ public class Shop
     public bool IsArchived { get; set; }
 
     /// <summary>
+    /// Whether this shop was created as the DEMO store — the one-click shop seeded with a preset
+    /// order history so somebody can see the application working before entering any real data.
+    /// </summary>
+    /// <remarks>
+    /// A flag on the row rather than a name match or an order-count heuristic, because the shop can
+    /// be renamed, delisted, copied and traded in like any other and must still be recognisable as
+    /// the demo one. It is what limits an installation to a single demo store: Store Management
+    /// offers the button only while no shop carries this, so deleting the demo store brings the
+    /// offer back and nothing else does.
+    ///
+    /// NOT copied by Copy Shop. A copy is a new branch that happens to start with the demo's
+    /// settings; treating it as a second demo store would hide the button for a shop the person
+    /// created deliberately, and they would have no way to work out why.
+    /// </remarks>
+    public bool IsDemo { get; set; }
+
+    /// <summary>
     /// This shop's tax rule per payment method, serialized. Null means "never configured", which
     /// reads back as <see cref="PaymentTaxRules.CreateDefault"/> — cash and e-transfer tax free,
     /// both card types at 13% — so an existing shop keeps behaving exactly as it always did.

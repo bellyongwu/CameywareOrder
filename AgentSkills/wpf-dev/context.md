@@ -24,6 +24,66 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **Seeded demo data must carry OFFSETS, not dates (2026-08-02).** A file of absolute dates ages: a
+  year after it ships every demo order is long collected, the pickup queue is empty, nothing is
+  overdue and the settlement report has nothing in its period. `DemoOrderTemplate` stores
+  `OrderDaysAgo` / `PickupDaysAfterOrder` and `DemoOrders.Seed` resolves them against the seeding day.
+  Two rules ride along, and both are invisible until they are wrong:
+  - **The set must include same-day records.** Month-to-date is the settlement report's default, so a
+    set whose smallest offset is 1 produces an empty report on the 1st of every month — the shape that
+    already shipped once. `democheck` asserts `Any(OrderDaysAgo == 0)` rather than "some order is in
+    this month", which would pass on 27 days out of 28 while proving nothing.
+  - **The demo tax rate is a DEMONSTRATION rate, not the preset's.** The shipped Canadian and US
+    entries quote `standardRatePercent: 0` (sales tax is added at settlement), so a demo store seeded
+    straight from them shows zero tax on every order, in the report and on every receipt.
+    `DemoOrders.DemonstrationRatePercent` fills that gap only where the location quotes nothing.
+- **A calculation that reads a process-wide setting cannot be run for a shop that is not open
+  (2026-08-02).** `PaymentTaxRules.Active` is assigned when a shop is OPENED, because every order the
+  app handles belongs to the open shop. Seeding a demo store from Store Management breaks that
+  assumption — a different shop may be open, or none — so every `TotalAmount` came out taxed by the
+  wrong shop's rules and disagreed with what the app recomputed on reload. `DemoOrders.Seed` sets the
+  demo shop's rules active for the length of the seed and restores them in a `finally`. The
+  alternative was a second copy of the tax arithmetic, which is exactly the thing this codebase keeps
+  in one place. **Proved load-bearing:** removing the swap turns `democheck`'s "stored total matches
+  the recomputed one" red.
+- **A shortcut is a MODULE, not a `KeyDown` switch per window (2026-08-02).** `Controls/CopyPasteBinding`
+  is an attached property taking an `ICopyPasteSurface`; a screen answers five questions and declares
+  one line of markup. Four things it took a round trip each to get right:
+  - **Attach to the LIST, never the window.** A window-level binding is reached from anywhere inside
+    it and silently redefines Ctrl+C in the search box, the notes field and every editable combo.
+    Attached to the list, those controls answer first because their own class input bindings are
+    nearer the focused element.
+  - **Install BOTH a `CommandBinding` and a `KeyBinding`.** The command binding executes and gates
+    through `CanExecute`; the input binding guarantees the gesture is translated at that element
+    rather than relying on the command's registered gestures being consulted up the route. Only one
+    can win, so there is no double execution.
+  - **A `RelativeSource AncestorType=Window` binding does not resolve until the window is SHOWN.**
+    Asserting the attached property straight after the constructor reads as "the markup never set it".
+    Show the window first — `storerender` does, and says so at the call site.
+  - **Remove only what a previous assignment installed.** Re-assigning the surface must not stack a
+    second pair of bindings, or one Ctrl+V pastes twice.
+- **The clipboard KIND is where cross-context safety belongs (2026-08-02).** The orders list holds its
+  selection under `Orders@{shop PublicId}`, so copying in one branch and pasting in another finds no
+  match and Paste is simply disabled. Checked inside `CanPaste` instead, the copy would run against a
+  shop-filtered context, find nothing and report "0 copied" — a silent no-op reads as a broken
+  feature. Shops are held under a bare `"Shops"`: a shop belongs to the installation, so there is no
+  context for one to go stale in.
+- **Copy an aggregate by ID, and re-read (2026-08-02).** Both surfaces put ids on the clipboard, never
+  the rows. A paste can arrive long after the copy, naming a record that has since been edited,
+  paged away or deleted — re-reading duplicates what is there NOW and silently skips what is gone,
+  where a snapshot would resurrect a deleted shop as a new one.
+- **A "copy of" suffix is DATA, and its number belongs to the shop rather than to the language
+  (2026-08-02).** `Store.Copy.Suffix` is punctuation as much as a word (zh writes `（复制）`, en needs a
+  leading `&#32;` so a whitespace-trimming editor cannot eat it). The collision number is chosen once
+  from every name of every shop and applied to all languages at once: picked per language, a shop
+  whose English name collides and whose French one does not comes out "(copy)" in one and "(copy 2)"
+  in the next. The batch adds its own new names to the taken set as it goes — two copies made in one
+  click would otherwise both be "(copy)", the same defect batch Copy Order shipped with.
+- **A harness runs against ITS OWN copy of the DLL (2026-08-02).** A scratchpad harness copies
+  `CameywareOrder.dll` into its output at build time, so rebuilding the APPLICATION and re-running the
+  harness exe exercises the previous build. A proof-of-failure ran green for exactly that reason
+  before the harness was rebuilt — the "compiled and PASSED against stale code" trap, in a new
+  disguise. Rebuild the harness after every application change.
 - **A horizontal StackPanel measures its children against INFINITE width (2026-08-01).** So a star
   column inside one never grows, and a control set to stretch sits at its minimum forever. The
   settlement report's date range looked pinned because it was inside one; a `DockPanel` with the

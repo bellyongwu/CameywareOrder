@@ -44,15 +44,13 @@ public partial class ShopPickerWindow : Window
 
         ShopList.ItemsSource = _rows;
 
-        // Creating a shop and managing accounts are an administrator's job. Hidden rather than
-        // disabled: a greyed-out button invites a support call, an absent one reads as "not your job".
+        // Managing shops and accounts is an administrator's job. Hidden rather than disabled: a
+        // greyed-out button invites a support call, an absent one reads as "not your job".
         var adminVisibility = AuthenticationService.Instance.IsAdministrator
             ? Visibility.Visible
             : Visibility.Collapsed;
-        CreateButton.Visibility = adminVisibility;
         ManageUsersButton.Visibility = adminVisibility;
         StoreManagementButton.Visibility = adminVisibility;
-        DemoStoreButton.Visibility = adminVisibility;
 
         // Its own capability rather than the blanket administrator flag, because it IS the screen
         // where that distinction is made — gating it on anything else would be the panel exempting
@@ -252,24 +250,6 @@ public partial class ShopPickerWindow : Window
         DialogResult = true;
     }
 
-    private void OnCreateClick(object sender, RoutedEventArgs e)
-    {
-        // Defence in depth: the button is hidden for non-administrators, but the check belongs
-        // where the action happens, not only where it is offered.
-        if (!AuthenticationService.Instance.CanCreateShops)
-            return;
-
-        var setup = new ShopSetupWindow(_localization, _scopeFactory) { Owner = this };
-        if (setup.ShowDialog() is not true || setup.Shop is null)
-            return;
-
-        // A shop you just created is the one you want to work in, so this closes the picker rather
-        // than dropping the user back into a list to hunt for it.
-        SelectedShop = setup.Shop;
-        ConfigureTermsRequested = setup.ConfigureTermsRequested;
-        DialogResult = true;
-    }
-
     /// <summary>
     /// Opens the permission panel from the picker.
     /// </summary>
@@ -312,9 +292,17 @@ public partial class ShopPickerWindow : Window
     }
 
     /// <summary>
-    /// Store Management: delist, delete, download, restore, reinitialise. Administrator only, and gated
-    /// again in the service — the button being hidden is presentation, not authorisation.
+    /// Store Management: create, copy, delist, delete, download, restore, reinitialise. Administrator
+    /// only, and gated again in the service — the button being hidden is presentation, not
+    /// authorisation.
     /// </summary>
+    /// <remarks>
+    /// A shop CREATED there comes back as <c>CreatedShop</c> and is selected here, because a shop you
+    /// have just made is the one you meant to work in. It does not close the picker the way the old
+    /// Create button did: the administrator may well have gone in to create two branches, or to
+    /// create one and delist another, and slamming the window shut on the first of those is a worse
+    /// guess than leaving them one click from Open.
+    /// </remarks>
     private void OnStoreManagementClick(object sender, RoutedEventArgs e)
     {
         if (!AuthenticationService.Instance.IsAdministrator)
@@ -323,29 +311,18 @@ public partial class ShopPickerWindow : Window
         var management = new StoreManagementWindow(_localization, _scopeFactory) { Owner = this };
         management.ShowDialog();
 
-        // Only when something actually happened. A shop may have been deleted, restored or delisted, and
-        // this list would otherwise offer one that no longer exists or has been taken out of service.
-        if (management.ShopsChanged)
-            LoadShops((ShopList.SelectedItem as ShopPickerRow)?.Shop.Id);
-    }
+        // Carried through even when nothing else changed: it belongs to whoever eventually OPENS the
+        // new shop, which is a later step than this one.
+        if (management.ConfigureTermsRequested)
+            ConfigureTermsRequested = true;
 
-    /// <summary>
-    /// One click to a working shop, built from the shipped defaults. Selected on return, so the next
-    /// click is Open.
-    /// </summary>
-    private void OnCreateDemoClick(object sender, RoutedEventArgs e)
-    {
-        if (!AuthenticationService.Instance.CanCreateShops)
+        // Only when something actually happened. A shop may have been created, copied, deleted,
+        // restored or delisted, and this list would otherwise offer one that no longer exists, or
+        // omit one that now does.
+        if (!management.ShopsChanged)
             return;
 
-        Shop demo;
-        using (var scope = _scopeFactory.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            demo = ShopAdministration.CreateDemoShop(db, _localization);
-        }
-
-        LoadShops(demo.Id);
+        LoadShops(management.CreatedShop?.Id ?? (ShopList.SelectedItem as ShopPickerRow)?.Shop.Id);
     }
 
     private void OnCancelClick(object sender, RoutedEventArgs e) => DialogResult = false;

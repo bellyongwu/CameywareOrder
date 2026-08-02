@@ -11,6 +11,36 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v7.1.0 — 2026-08-02
+
+**Everything that changes which shops exist now lives in one screen.** Select Shop is a chooser
+again; Store Management is where a shop is created, copied, taken out of service or removed.
+
+- **Create New Shop and Create demo store have moved into Store Management**, into a new *Add a
+  store* card at the top of its action column. Select Shop no longer creates anything — two screens
+  that could both make a shop is how a branch list ends up with a duplicate nobody meant to create.
+  A shop you create there is selected for you when you come back, so it is still one click to Open.
+- **The demo store now arrives with a hundred orders.** It used to be an empty shop with sensible
+  settings, which showed you the screens and none of the work: no takings, no pickup queue, nothing
+  in the settlement report. The hundred orders cover four months of trade — alterations, ready-made
+  and made-to-measure, some collected, some still open, a few refunded — and **their dates are
+  worked out from the day you create it**, so the demo store always looks like a shop that is
+  trading today rather than one that closed whenever this version was built.
+- **One demo store at a time.** The button disappears once you have one and comes back the moment
+  you delete it, so the demo history can never quietly turn up twice in your figures. Deleting the
+  demo store removes its hundred orders with it, exactly as deleting any shop does.
+- **Copy a shop.** Select one or several in Store Management and press Copy. Each copy takes the
+  original's settings, currencies, languages, tax rules, product categories, measurement terms and
+  receipt header — and **none of its orders**, which belong to the branch that took them. The copy is
+  named after the original with *(copy)* after it, and *(copy 1)*, *(copy 2)* and so on when that
+  name is already in use. It starts its own receipt numbering at 1.
+- **Ctrl+C and Ctrl+V copy records.** In Store Management, copy the selected shops and paste to
+  duplicate them; in the order list, copy the selected orders and paste to duplicate those. The same
+  keys, doing the same thing, on both screens — and on any list that gains the ability later, because
+  the shortcut is one shared piece of the application rather than something each screen spells out
+  for itself. Copying in one shop and pasting in another is refused: an order belongs to the branch
+  that took it.
+
 ### v7.0.1 — 2026-08-01 (hotfix)
 
 Six things reported after v7.0.0 shipped.

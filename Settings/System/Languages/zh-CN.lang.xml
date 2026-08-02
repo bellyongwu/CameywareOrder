@@ -114,11 +114,16 @@
 
   <Text key="Store.Demo.Create">创建演示店铺</Text>
   <Text key="Store.Demo.Name">演示店铺</Text>
+  <Text key="Store.Demo.Exists">演示店铺已存在。删除后即可再次创建。</Text>
+  <Text key="Store.Demo.Created">演示店铺已创建，并预置了 {0} 笔订单。</Text>
+
+  <Text key="Store.Copy.Suffix">（复制）</Text>
+  <Text key="Store.Copy.SuffixNumbered">（复制{0}）</Text>
 
   <Text key="Store.Manage.Title">店铺管理</Text>
-  <Text key="Store.Manage.Subtitle">可将店铺停用、下载其数据、从文件恢复，或将其删除。按住 Ctrl 单击可多选，按住 Shift 单击可选中连续多项。</Text>
+  <Text key="Store.Manage.Subtitle">可新建店铺、复制店铺、将店铺停用、下载其数据、从文件恢复，或将其删除。按住 Ctrl 单击可多选，按住 Shift 单击可选中连续多项。</Text>
   <Text key="Store.Manage.Close">关闭</Text>
-  <Text key="Store.Manage.Empty">尚无店铺。请在「选择店铺」界面创建。</Text>
+  <Text key="Store.Manage.Empty">尚无店铺。请使用右侧按钮创建。</Text>
   <Text key="Store.Manage.SelectAll">全选</Text>
   <Text key="Store.Manage.ClearSelection">取消选择</Text>
   <Text key="Store.Manage.NothingSelected">未选择任何店铺。</Text>
@@ -126,6 +131,13 @@
   <Text key="Store.Manage.OrderCount">{0} 笔订单</Text>
   <Text key="Store.Manage.Delisted.Badge">已停用</Text>
   <Text key="Store.Manage.DelistedOn">自 {0} 起停用</Text>
+
+  <Text key="Store.Manage.AddSection">新增店铺</Text>
+  <Text key="Store.Manage.Copy">复制所选店铺</Text>
+  <Text key="Store.Manage.CopyHint">复制会带上设置、商品类别、量体项目与票据抬头，但不会复制订单。在列表中按 Ctrl+C 再按 Ctrl+V 效果相同。</Text>
+  <Text key="Store.Manage.Copied">已复制 {0} 家店铺。</Text>
+  <Text key="Store.Manage.Created">店铺「{0}」已创建。</Text>
+  <Text key="Store.Manage.NothingToCopy">这些店铺已不存在。</Text>
 
   <Text key="Store.Manage.InService">启用状态</Text>
   <Text key="Store.Manage.Delist">停用店铺</Text>
@@ -173,7 +185,7 @@
   <Text key="Store.Confirm.ReinitializeNow">立即重新初始化</Text>
   <Text key="Shop.Picker.CreateNew">新建店铺</Text>
   <Text key="Shop.Picker.Cancel">取消</Text>
-  <Text key="Shop.Picker.Empty">尚未创建任何店铺。</Text>
+  <Text key="Shop.Picker.Empty">尚未创建任何店铺。请打开下方的「店铺管理」创建。</Text>
   <Text key="Shop.Picker.OrderCount">订单 {0} 笔</Text>
   <Text key="Shop.Picker.NoShopForRole">当前没有可用的店铺，请联系管理员。</Text>
   <Text key="Shop.Role.Admin">管理员</Text>

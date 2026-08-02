@@ -552,9 +552,23 @@ public class MainViewModel : INotifyPropertyChanged
     /// batched save would hand every copy in the selection the same number, which is the defect
     /// this feature would otherwise have introduced at scale.
     /// </remarks>
-    public async Task<int> CopySelectedAsync()
+    public Task<int> CopySelectedAsync()
+        => CopyOrdersAsync(_selectedOrders.Select(order => order.Id).Distinct().ToList());
+
+    /// <summary>
+    /// Copies an explicit set of orders and selects the copies. Returns how many were written.
+    /// </summary>
+    /// <remarks>
+    /// Takes IDS rather than the orders themselves because the two callers hold different things: the
+    /// Copy action copies what is selected right now, while a Ctrl+V pastes what Ctrl+C put on
+    /// <c>AppClipboard</c> — records that may since have been paged away, re-sorted or filtered out
+    /// of the list. An id survives all of that, and an id that has since been deleted simply copies
+    /// nothing.
+    /// </remarks>
+    public async Task<int> CopyOrdersAsync(IReadOnlyList<int> ids)
     {
-        var ids = _selectedOrders.Select(order => order.Id).Distinct().ToList();
+        ArgumentNullException.ThrowIfNull(ids);
+
         if (ids.Count == 0) return 0;
 
         var copyIds = new List<int>();

@@ -1,0 +1,3095 @@
+{
+  "version": 1,
+  "orders": [
+    {
+      "customerName": "Amelia Chen",
+      "phoneNumber": "+1 647-555-0180",
+      "email": "amelia.chen@example.com",
+      "address": "151 Bloor Street East, Mississauga",
+      "status": "Completed",
+      "orderDaysAgo": 179,
+      "pickupDaysAfterOrder": 31,
+      "notes": null,
+      "customMade": {
+        "deposit": 376,
+        "depositMethod": "CreditCard",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "dress",
+        "measurements": {
+          "length": "87",
+          "bust": "104",
+          "underBust": "86",
+          "waist": "102",
+          "hip": "108",
+          "shoulder": "50",
+          "sleeve": "60"
+        },
+        "price": 940
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Yusuf Sorensen",
+      "phoneNumber": "+1 416-555-0188",
+      "email": "yusuf.sorensen@example.com",
+      "address": "128 Dundas Street West, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 177,
+      "pickupDaysAfterOrder": 15,
+      "notes": null,
+      "alteration": {
+        "subtotal": 265,
+        "deposit": 132.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 240,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "70",
+          "chest": "91",
+          "waist": "82",
+          "shoulder": "45",
+          "sleeve": "63",
+          "sitAround": "103"
+        },
+        "price": 600
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Zara Rossi",
+      "phoneNumber": "+1 647-555-0183",
+      "email": "zara.rossi@example.com",
+      "address": "212 Front Street East, Markham",
+      "status": "Cancelled",
+      "orderDaysAgo": 173,
+      "pickupDaysAfterOrder": 28,
+      "notes": null,
+      "statusReasonCategory": "PriceTooHigh",
+      "customMade": {
+        "deposit": 560,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "blouse",
+        "measurements": {
+          "length": "85",
+          "bust": "88",
+          "waist": "101",
+          "shoulder": "41",
+          "sleeve": "61",
+          "neck": "43"
+        },
+        "price": 1120
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Yara Silva",
+      "phoneNumber": "+1 905-555-0199",
+      "email": "yara.silva@example.com",
+      "address": "306 Adelaide Street West, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 173,
+      "pickupDaysAfterOrder": 24,
+      "notes": null,
+      "alteration": {
+        "subtotal": 250,
+        "deposit": 75,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 510,
+        "deposit": 153,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Qipao",
+          "quantity": 2,
+          "unitPrice": 255
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Umar Duarte",
+      "phoneNumber": "+1 289-555-0181",
+      "email": "umar.duarte@example.com",
+      "address": "681 Danforth Avenue, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 160,
+      "pickupDaysAfterOrder": 26,
+      "notes": "Second fitting booked for the following week.",
+      "alteration": {
+        "subtotal": 315,
+        "deposit": 157.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Caleb Lam",
+      "phoneNumber": "+1 437-555-0190",
+      "email": "caleb.lam@example.com",
+      "address": "680 College Street, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 156,
+      "pickupDaysAfterOrder": 9,
+      "notes": "Paid the deposit in store, balance on collection.",
+      "alteration": {
+        "subtotal": 200,
+        "deposit": 100,
+        "depositMethod": "CreditCard",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 590,
+        "deposit": 295,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Jackets",
+          "quantity": 2,
+          "unitPrice": 295
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Marco Hoffmann",
+      "phoneNumber": "+1 905-555-0176",
+      "email": "marco.hoffmann@example.com",
+      "address": "816 Bathurst Street, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 151,
+      "pickupDaysAfterOrder": 10,
+      "notes": "Paid the deposit in store, balance on collection.",
+      "customMade": {
+        "deposit": 370,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "shirt",
+        "measurements": {
+          "length": "69",
+          "chest": "95",
+          "shoulder": "42",
+          "sleeve": "65",
+          "neck": "42",
+          "cuff": "28",
+          "sitAround": "103"
+        },
+        "price": 740
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Viktor Lindqvist",
+      "phoneNumber": "+1 905-555-0177",
+      "email": "viktor.lindqvist@example.com",
+      "address": "593 Front Street East, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 151,
+      "pickupDaysAfterOrder": 11,
+      "notes": "Lining replaced in the same colour.",
+      "alteration": {
+        "subtotal": 115,
+        "deposit": 46,
+        "depositMethod": "Cash",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 240,
+        "deposit": 120,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Jackets",
+          "quantity": 2,
+          "unitPrice": 120
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Bianca Hoffmann",
+      "phoneNumber": "+1 289-555-0196",
+      "email": "bianca.hoffmann@example.com",
+      "address": "926 Front Street East, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 149,
+      "pickupDaysAfterOrder": 25,
+      "notes": null,
+      "alteration": {
+        "subtotal": 220,
+        "deposit": 88,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Kenji Lam",
+      "phoneNumber": "+1 289-555-0173",
+      "email": "kenji.lam@example.com",
+      "address": "23 Danforth Avenue, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 145,
+      "pickupDaysAfterOrder": 7,
+      "notes": "Rush job — agreed on a shorter turnaround.",
+      "alteration": {
+        "subtotal": 175,
+        "deposit": 87.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 330,
+        "deposit": 99,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Qipao",
+          "quantity": 3,
+          "unitPrice": 85
+        },
+        {
+          "productId": "Qipao",
+          "quantity": 1,
+          "unitPrice": 75
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Julia Rossi",
+      "phoneNumber": "+1 905-555-0184",
+      "email": "julia.rossi@example.com",
+      "address": "69 College Street, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 143,
+      "pickupDaysAfterOrder": 21,
+      "notes": "Collect on a Saturday if possible.",
+      "alteration": {
+        "subtotal": 265,
+        "deposit": 79.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 416,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "blouse",
+        "measurements": {
+          "length": "74",
+          "bust": "95",
+          "waist": "79",
+          "shoulder": "45",
+          "sleeve": "66",
+          "neck": "38"
+        },
+        "price": 1040
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Adrian Petrov",
+      "phoneNumber": "+1 905-555-0182",
+      "email": "adrian.petrov@example.com",
+      "address": "746 King Street West, Markham",
+      "status": "Completed",
+      "orderDaysAgo": 141,
+      "pickupDaysAfterOrder": 23,
+      "notes": "Sleeve buttons to be kept as they are.",
+      "clothing": {
+        "subtotal": 345,
+        "deposit": 172.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Qipao",
+          "quantity": 2,
+          "unitPrice": 50
+        },
+        {
+          "productId": "Jackets",
+          "quantity": 1,
+          "unitPrice": 245
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Dora Sorensen",
+      "phoneNumber": "+1 289-555-0187",
+      "email": "dora.sorensen@example.com",
+      "address": "864 Front Street East, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 141,
+      "pickupDaysAfterOrder": 16,
+      "notes": "Customer asked to keep the original hem allowance.",
+      "alteration": {
+        "subtotal": 95,
+        "deposit": 47.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 480,
+        "depositMethod": "Etransfer",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "blouse",
+        "measurements": {
+          "length": "105",
+          "bust": "106",
+          "waist": "79",
+          "shoulder": "48",
+          "sleeve": "63",
+          "neck": "43"
+        },
+        "price": 960
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Liam Kowalski",
+      "phoneNumber": "+1 905-555-0192",
+      "email": "liam.kowalski@example.com",
+      "address": "358 Front Street East, Mississauga",
+      "status": "Cancelled",
+      "orderDaysAgo": 137,
+      "pickupDaysAfterOrder": 20,
+      "notes": "Collect on a Saturday if possible.",
+      "statusReasonCategory": "ServiceUnsatisfactory",
+      "clothing": {
+        "subtotal": 1530,
+        "deposit": 459,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "TiesBowtie",
+          "quantity": 2,
+          "unitPrice": 390
+        },
+        {
+          "productId": "Jackets",
+          "quantity": 2,
+          "unitPrice": 375
+        }
+      ],
+      "customMade": {
+        "deposit": 550,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "shirt",
+        "measurements": {
+          "length": "73",
+          "chest": "95",
+          "shoulder": "41",
+          "sleeve": "59",
+          "neck": "36",
+          "cuff": "22",
+          "sitAround": "99"
+        },
+        "price": 1100
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Zara Nakamura",
+      "phoneNumber": "+1 416-555-0185",
+      "email": "zara.nakamura@example.com",
+      "address": "668 Front Street East, Markham",
+      "status": "Completed",
+      "orderDaysAgo": 131,
+      "pickupDaysAfterOrder": 29,
+      "notes": null,
+      "customMade": {
+        "deposit": 366,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "dress",
+        "measurements": {
+          "length": "95",
+          "bust": "82",
+          "underBust": "79",
+          "waist": "89",
+          "hip": "118",
+          "shoulder": "48",
+          "sleeve": "59"
+        },
+        "price": 1220
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Daniel Hoffmann",
+      "phoneNumber": "+1 437-555-0191",
+      "email": "daniel.hoffmann@example.com",
+      "address": "838 Front Street East, Toronto",
+      "status": "Cancelled",
+      "orderDaysAgo": 129,
+      "pickupDaysAfterOrder": 24,
+      "notes": "Rush job — agreed on a shorter turnaround.",
+      "statusReasonCategory": "PriceTooHigh",
+      "alteration": {
+        "subtotal": 110,
+        "deposit": 33,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "clothing": {
+        "subtotal": 1315,
+        "deposit": 394.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "Qipao",
+          "quantity": 1,
+          "unitPrice": 275
+        },
+        {
+          "productId": "TiesBowtie",
+          "quantity": 2,
+          "unitPrice": 365
+        },
+        {
+          "productId": "Jackets",
+          "quantity": 1,
+          "unitPrice": 310
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Zara Okonkwo",
+      "phoneNumber": "+1 437-555-0194",
+      "email": "zara.okonkwo@example.com",
+      "address": "314 College Street, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 127,
+      "pickupDaysAfterOrder": 19,
+      "notes": "Customer asked to keep the original hem allowance.",
+      "alteration": {
+        "subtotal": 240,
+        "deposit": 96,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 260,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "vest",
+        "measurements": {
+          "length": "106",
+          "chest": "103",
+          "waist": "76",
+          "shoulder": "40",
+          "sitAround": "106"
+        },
+        "price": 520
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Julia Moreau",
+      "phoneNumber": "+1 416-555-0198",
+      "email": "julia.moreau@example.com",
+      "address": "979 Yonge Street, North York",
+      "status": "Completed",
+      "orderDaysAgo": 120,
+      "pickupDaysAfterOrder": 16,
+      "notes": "Fabric supplied by the customer.",
+      "alteration": {
+        "subtotal": 310,
+        "deposit": 93,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 420,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "vest",
+        "measurements": {
+          "length": "99",
+          "chest": "104",
+          "waist": "89",
+          "shoulder": "43",
+          "sitAround": "108"
+        },
+        "price": 1400
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Grace Petrov",
+      "phoneNumber": "+1 416-555-0172",
+      "email": "grace.petrov@example.com",
+      "address": "256 Queen Street West, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 117,
+      "pickupDaysAfterOrder": 25,
+      "notes": null,
+      "customMade": {
+        "deposit": 438,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "shirt",
+        "measurements": {
+          "length": "80",
+          "chest": "108",
+          "shoulder": "48",
+          "sleeve": "62",
+          "neck": "45",
+          "cuff": "25",
+          "sitAround": "107"
+        },
+        "price": 1460
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Henry Lindqvist",
+      "phoneNumber": "+1 647-555-0179",
+      "email": "henry.lindqvist@example.com",
+      "address": "130 Front Street East, Markham",
+      "status": "Completed",
+      "orderDaysAgo": 113,
+      "pickupDaysAfterOrder": 30,
+      "notes": "Sleeve buttons to be kept as they are.",
+      "clothing": {
+        "subtotal": 2735,
+        "deposit": 820.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "LeatherShoes",
+          "quantity": 1,
+          "unitPrice": 425
+        },
+        {
+          "productId": "TiesBowtie",
+          "quantity": 3,
+          "unitPrice": 360
+        },
+        {
+          "productId": "Jackets",
+          "quantity": 3,
+          "unitPrice": 410
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Zeno Whitfield",
+      "phoneNumber": "+1 905-555-0174",
+      "email": "zeno.whitfield@example.com",
+      "address": "3 Front Street East, North York",
+      "status": "Returned",
+      "orderDaysAgo": 111,
+      "pickupDaysAfterOrder": 31,
+      "notes": null,
+      "statusReasonCategory": "ProductIssue",
+      "alteration": {
+        "subtotal": 115,
+        "deposit": 57.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Karin Whitfield",
+      "phoneNumber": "+1 905-555-0175",
+      "email": "karin.whitfield@example.com",
+      "address": "573 College Street, Mississauga",
+      "status": "Completed",
+      "orderDaysAgo": 109,
+      "pickupDaysAfterOrder": 7,
+      "notes": "Second fitting booked for the following week.",
+      "alteration": {
+        "subtotal": 265,
+        "deposit": 79.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Wesley Delgado",
+      "phoneNumber": "+1 647-555-0189",
+      "email": "wesley.delgado@example.com",
+      "address": "127 Adelaide Street West, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 106,
+      "pickupDaysAfterOrder": 9,
+      "notes": null,
+      "clothing": {
+        "subtotal": 1265,
+        "deposit": 632.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "TiesBowtie",
+          "quantity": 1,
+          "unitPrice": 455
+        },
+        {
+          "productId": "Qipao",
+          "quantity": 3,
+          "unitPrice": 270
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Amelia Moreau",
+      "phoneNumber": "+1 416-555-0186",
+      "email": "amelia.moreau@example.com",
+      "address": "34 Queen Street West, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 105,
+      "pickupDaysAfterOrder": 25,
+      "notes": "Matching trousers to follow on a separate order.",
+      "alteration": {
+        "subtotal": 145,
+        "deposit": 72.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Bianca Hughes",
+      "phoneNumber": "+1 416-555-0195",
+      "email": "bianca.hughes@example.com",
+      "address": "311 Bloor Street East, Markham",
+      "status": "Completed",
+      "orderDaysAgo": 102,
+      "pickupDaysAfterOrder": 31,
+      "notes": null,
+      "customMade": {
+        "deposit": 808,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "blouse",
+        "measurements": {
+          "length": "90",
+          "bust": "84",
+          "waist": "80",
+          "shoulder": "44",
+          "sleeve": "60",
+          "neck": "42"
+        },
+        "price": 2020
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Marco Marchetti",
+      "phoneNumber": "+1 289-555-0193",
+      "email": "marco.marchetti@example.com",
+      "address": "278 Bloor Street East, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 100,
+      "pickupDaysAfterOrder": 28,
+      "notes": null,
+      "alteration": {
+        "subtotal": 295,
+        "deposit": 88.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 265,
+        "deposit": 132.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Qipao",
+          "quantity": 1,
+          "unitPrice": 265
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Elena Vargas",
+      "phoneNumber": "+1 437-555-0178",
+      "email": "elena.vargas@example.com",
+      "address": "636 Bloor Street East, Etobicoke",
+      "status": "Returned",
+      "orderDaysAgo": 98,
+      "pickupDaysAfterOrder": 15,
+      "notes": null,
+      "statusReasonCategory": "PriceTooHigh",
+      "customMade": {
+        "deposit": 630,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "dress",
+        "measurements": {
+          "length": "109",
+          "bust": "88",
+          "underBust": "89",
+          "waist": "74",
+          "hip": "99",
+          "shoulder": "45",
+          "sleeve": "64"
+        },
+        "price": 2100
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Vera Moreau",
+      "phoneNumber": "+1 905-555-0197",
+      "email": "vera.moreau@example.com",
+      "address": "199 College Street, North York",
+      "status": "Completed",
+      "orderDaysAgo": 94,
+      "pickupDaysAfterOrder": 14,
+      "notes": "Customer asked to keep the original hem allowance.",
+      "alteration": {
+        "subtotal": 235,
+        "deposit": 117.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Sofia Duarte",
+      "phoneNumber": "+1 437-555-0144",
+      "email": "sofia.duarte@example.com",
+      "address": "498 Spadina Avenue, Mississauga",
+      "status": "Completed",
+      "orderDaysAgo": 90,
+      "pickupDaysAfterOrder": 25,
+      "notes": null,
+      "alteration": {
+        "subtotal": 120,
+        "deposit": 36,
+        "depositMethod": "Cash",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Petra Novak",
+      "phoneNumber": "+1 905-555-0147",
+      "email": "petra.novak@example.com",
+      "address": "565 Adelaide Street West, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 85,
+      "pickupDaysAfterOrder": 23,
+      "notes": null,
+      "customMade": {
+        "deposit": 430,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "qipao",
+        "measurements": {
+          "length": "108",
+          "bust": "108",
+          "underBust": "80",
+          "waist": "74",
+          "hip": "107",
+          "shoulder": "49",
+          "neck": "36",
+          "sleeve": "63"
+        },
+        "price": 860
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Xenia Marchetti",
+      "phoneNumber": "+1 416-555-0168",
+      "email": "xenia.marchetti@example.com",
+      "address": "102 Yonge Street, North York",
+      "status": "Cancelled",
+      "orderDaysAgo": 85,
+      "pickupDaysAfterOrder": 10,
+      "notes": "Sleeve buttons to be kept as they are.",
+      "statusReasonCategory": "CustomerDoesNotWant",
+      "clothing": {
+        "subtotal": 810,
+        "deposit": 405,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "Jackets",
+          "quantity": 2,
+          "unitPrice": 250
+        },
+        {
+          "productId": "Other",
+          "quantity": 1,
+          "unitPrice": 160
+        },
+        {
+          "productId": "Other",
+          "quantity": 3,
+          "unitPrice": 50
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Tara Baptiste",
+      "phoneNumber": "+1 905-555-0150",
+      "email": "tara.baptiste@example.com",
+      "address": "742 Dundas Street West, North York",
+      "status": "Completed",
+      "orderDaysAgo": 82,
+      "pickupDaysAfterOrder": 25,
+      "notes": "Matching trousers to follow on a separate order.",
+      "alteration": {
+        "subtotal": 185,
+        "deposit": 74,
+        "depositMethod": "Etransfer",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Rafael Hughes",
+      "phoneNumber": "+1 416-555-0159",
+      "email": "rafael.hughes@example.com",
+      "address": "94 Spadina Avenue, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 82,
+      "pickupDaysAfterOrder": 19,
+      "notes": "Matching trousers to follow on a separate order.",
+      "alteration": {
+        "subtotal": 140,
+        "deposit": 42,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 1440,
+        "deposit": 720,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Other",
+          "quantity": 2,
+          "unitPrice": 395
+        },
+        {
+          "productId": "Jackets",
+          "quantity": 3,
+          "unitPrice": 195
+        },
+        {
+          "productId": "Jackets",
+          "quantity": 1,
+          "unitPrice": 65
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Vera Okonkwo",
+      "phoneNumber": "+1 437-555-0164",
+      "email": "vera.okonkwo@example.com",
+      "address": "307 Yonge Street, North York",
+      "status": "Completed",
+      "orderDaysAgo": 79,
+      "pickupDaysAfterOrder": 31,
+      "notes": null,
+      "customMade": {
+        "deposit": 168,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "qipao",
+        "measurements": {
+          "length": "83",
+          "bust": "96",
+          "underBust": "86",
+          "waist": "105",
+          "hip": "96",
+          "shoulder": "46",
+          "neck": "39",
+          "sleeve": "59"
+        },
+        "price": 560
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Yusuf Lindqvist",
+      "phoneNumber": "+1 289-555-0153",
+      "email": "yusuf.lindqvist@example.com",
+      "address": "714 College Street, Scarborough",
+      "status": "Cancelled",
+      "orderDaysAgo": 78,
+      "pickupDaysAfterOrder": 8,
+      "notes": null,
+      "statusReasonCategory": "Other",
+      "statusReason": "Customer moved away before collection.",
+      "clothing": {
+        "subtotal": 305,
+        "deposit": 152.5,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "Jackets",
+          "quantity": 1,
+          "unitPrice": 165
+        },
+        {
+          "productId": "TiesBowtie",
+          "quantity": 2,
+          "unitPrice": 70
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Tara Okonkwo",
+      "phoneNumber": "+1 437-555-0171",
+      "email": "tara.okonkwo@example.com",
+      "address": "676 Yonge Street, Mississauga",
+      "status": "Completed",
+      "orderDaysAgo": 70,
+      "pickupDaysAfterOrder": 8,
+      "notes": "Fabric supplied by the customer.",
+      "alteration": {
+        "subtotal": 105,
+        "deposit": 52.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Mila Sorensen",
+      "phoneNumber": "+1 437-555-0156",
+      "email": "mila.sorensen@example.com",
+      "address": "650 King Street West, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 69,
+      "pickupDaysAfterOrder": 16,
+      "notes": "Customer asked to keep the original hem allowance.",
+      "alteration": {
+        "subtotal": 180,
+        "deposit": 54,
+        "depositMethod": "Etransfer",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 1705,
+        "deposit": 852.5,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Other",
+          "quantity": 3,
+          "unitPrice": 440
+        },
+        {
+          "productId": "LeatherShoes",
+          "quantity": 1,
+          "unitPrice": 385
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Rosa Marchetti",
+      "phoneNumber": "+1 437-555-0170",
+      "email": "rosa.marchetti@example.com",
+      "address": "596 Dundas Street West, Mississauga",
+      "status": "Completed",
+      "orderDaysAgo": 66,
+      "pickupDaysAfterOrder": 13,
+      "notes": "Matching trousers to follow on a separate order.",
+      "alteration": {
+        "subtotal": 245,
+        "deposit": 122.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Chloe Novak",
+      "phoneNumber": "+1 437-555-0146",
+      "email": "chloe.novak@example.com",
+      "address": "107 Danforth Avenue, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 65,
+      "pickupDaysAfterOrder": 27,
+      "notes": "Rush job — agreed on a shorter turnaround.",
+      "alteration": {
+        "subtotal": 55,
+        "deposit": 16.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 550,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "qipao",
+        "measurements": {
+          "length": "92",
+          "bust": "82",
+          "underBust": "85",
+          "waist": "82",
+          "hip": "107",
+          "shoulder": "50",
+          "neck": "41",
+          "sleeve": "63"
+        },
+        "price": 1100
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Olivia Moreau",
+      "phoneNumber": "+1 437-555-0152",
+      "email": "olivia.moreau@example.com",
+      "address": "436 Adelaide Street West, Markham",
+      "status": "Completed",
+      "orderDaysAgo": 65,
+      "pickupDaysAfterOrder": 31,
+      "notes": "Lining replaced in the same colour.",
+      "clothing": {
+        "subtotal": 2710,
+        "deposit": 1355,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "LeatherShoes",
+          "quantity": 3,
+          "unitPrice": 370
+        },
+        {
+          "productId": "Other",
+          "quantity": 3,
+          "unitPrice": 395
+        },
+        {
+          "productId": "Qipao",
+          "quantity": 1,
+          "unitPrice": 415
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Olivia Vargas",
+      "phoneNumber": "+1 289-555-0165",
+      "email": "olivia.vargas@example.com",
+      "address": "801 Bloor Street East, Mississauga",
+      "status": "Completed",
+      "orderDaysAgo": 65,
+      "pickupDaysAfterOrder": 27,
+      "notes": "Paid the deposit in store, balance on collection.",
+      "customMade": {
+        "deposit": 290,
+        "depositMethod": "Cash",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "blouse",
+        "measurements": {
+          "length": "101",
+          "bust": "93",
+          "waist": "84",
+          "shoulder": "42",
+          "sleeve": "65",
+          "neck": "43"
+        },
+        "price": 580
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Emil Tanaka",
+      "phoneNumber": "+1 437-555-0169",
+      "email": "emil.tanaka@example.com",
+      "address": "93 Dundas Street West, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 64,
+      "pickupDaysAfterOrder": 19,
+      "notes": null,
+      "clothing": {
+        "subtotal": 400,
+        "deposit": 120,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Other",
+          "quantity": 2,
+          "unitPrice": 200
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Zeno Sorensen",
+      "phoneNumber": "+1 647-555-0158",
+      "email": "zeno.sorensen@example.com",
+      "address": "852 Bloor Street East, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 63,
+      "pickupDaysAfterOrder": 13,
+      "notes": "Paid the deposit in store, balance on collection.",
+      "customMade": {
+        "deposit": 228,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "76",
+          "chest": "89",
+          "waist": "87",
+          "shoulder": "45",
+          "sleeve": "59",
+          "sitAround": "110"
+        },
+        "price": 760
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Olivia Delgado",
+      "phoneNumber": "+1 437-555-0154",
+      "email": "olivia.delgado@example.com",
+      "address": "61 Bloor Street East, North York",
+      "status": "Completed",
+      "orderDaysAgo": 61,
+      "pickupDaysAfterOrder": 16,
+      "notes": null,
+      "clothing": {
+        "subtotal": 1815,
+        "deposit": 544.5,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "TiesBowtie",
+          "quantity": 1,
+          "unitPrice": 315
+        },
+        {
+          "productId": "Qipao",
+          "quantity": 2,
+          "unitPrice": 275
+        },
+        {
+          "productId": "Jackets",
+          "quantity": 2,
+          "unitPrice": 475
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Ulrike Hughes",
+      "phoneNumber": "+1 905-555-0151",
+      "email": "ulrike.hughes@example.com",
+      "address": "843 College Street, Markham",
+      "status": "Completed",
+      "orderDaysAgo": 57,
+      "pickupDaysAfterOrder": 20,
+      "notes": "Matching trousers to follow on a separate order.",
+      "clothing": {
+        "subtotal": 2315,
+        "deposit": 694.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Jackets",
+          "quantity": 1,
+          "unitPrice": 280
+        },
+        {
+          "productId": "Qipao",
+          "quantity": 3,
+          "unitPrice": 405
+        },
+        {
+          "productId": "Qipao",
+          "quantity": 2,
+          "unitPrice": 410
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Liam Ferreira",
+      "phoneNumber": "+1 905-555-0148",
+      "email": "liam.ferreira@example.com",
+      "address": "791 Adelaide Street West, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 53,
+      "pickupDaysAfterOrder": 14,
+      "notes": null,
+      "clothing": {
+        "subtotal": 1500,
+        "deposit": 450,
+        "depositMethod": "CreditCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "TiesBowtie",
+          "quantity": 2,
+          "unitPrice": 335
+        },
+        {
+          "productId": "TiesBowtie",
+          "quantity": 1,
+          "unitPrice": 455
+        },
+        {
+          "productId": "Qipao",
+          "quantity": 3,
+          "unitPrice": 125
+        }
+      ],
+      "customMade": {
+        "deposit": 990,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "blouse",
+        "measurements": {
+          "length": "87",
+          "bust": "86",
+          "waist": "101",
+          "shoulder": "46",
+          "sleeve": "63",
+          "neck": "38"
+        },
+        "price": 1980
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Mila Kowalski",
+      "phoneNumber": "+1 437-555-0162",
+      "email": "mila.kowalski@example.com",
+      "address": "678 Dundas Street West, Mississauga",
+      "status": "Completed",
+      "orderDaysAgo": 53,
+      "pickupDaysAfterOrder": 28,
+      "notes": "Fabric supplied by the customer.",
+      "alteration": {
+        "subtotal": 120,
+        "deposit": 60,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 1420,
+        "deposit": 426,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Other",
+          "quantity": 1,
+          "unitPrice": 140
+        },
+        {
+          "productId": "TiesBowtie",
+          "quantity": 1,
+          "unitPrice": 140
+        },
+        {
+          "productId": "Jackets",
+          "quantity": 3,
+          "unitPrice": 380
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Zara Vargas",
+      "phoneNumber": "+1 437-555-0149",
+      "email": "zara.vargas@example.com",
+      "address": "270 King Street West, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 52,
+      "pickupDaysAfterOrder": 8,
+      "notes": null,
+      "alteration": {
+        "subtotal": 90,
+        "deposit": 27,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Marco Lindqvist",
+      "phoneNumber": "+1 437-555-0155",
+      "email": "marco.lindqvist@example.com",
+      "address": "161 Queen Street West, Mississauga",
+      "status": "Completed",
+      "orderDaysAgo": 52,
+      "pickupDaysAfterOrder": 26,
+      "notes": "Sleeve buttons to be kept as they are.",
+      "customMade": {
+        "deposit": 624,
+        "depositMethod": "DebitCard",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "73",
+          "chest": "114",
+          "waist": "81",
+          "shoulder": "46",
+          "sleeve": "60",
+          "sitAround": "100"
+        },
+        "price": 2080
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Elena Delgado",
+      "phoneNumber": "+1 905-555-0167",
+      "email": "elena.delgado@example.com",
+      "address": "644 Danforth Avenue, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 49,
+      "pickupDaysAfterOrder": 11,
+      "notes": "Matching trousers to follow on a separate order.",
+      "customMade": {
+        "deposit": 240,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "86",
+          "chest": "100",
+          "waist": "70",
+          "shoulder": "49",
+          "sleeve": "57",
+          "sitAround": "104"
+        },
+        "price": 800
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Felix Duarte",
+      "phoneNumber": "+1 416-555-0166",
+      "email": "felix.duarte@example.com",
+      "address": "522 Adelaide Street West, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 45,
+      "pickupDaysAfterOrder": 11,
+      "notes": "Second fitting booked for the following week.",
+      "alteration": {
+        "subtotal": 305,
+        "deposit": 152.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 565,
+        "deposit": 282.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "LeatherShoes",
+          "quantity": 1,
+          "unitPrice": 100
+        },
+        {
+          "productId": "TiesBowtie",
+          "quantity": 3,
+          "unitPrice": 155
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Amelia Andersen",
+      "phoneNumber": "+1 647-555-0145",
+      "email": "amelia.andersen@example.com",
+      "address": "319 Queen Street West, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 44,
+      "pickupDaysAfterOrder": 9,
+      "notes": "Customer prefers a slightly looser fit through the waist.",
+      "alteration": {
+        "subtotal": 255,
+        "deposit": 102,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 444,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "blouse",
+        "measurements": {
+          "length": "76",
+          "bust": "106",
+          "waist": "99",
+          "shoulder": "48",
+          "sleeve": "60",
+          "neck": "35"
+        },
+        "price": 1480
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Quentin Vargas",
+      "phoneNumber": "+1 437-555-0163",
+      "email": "quentin.vargas@example.com",
+      "address": "523 Eglinton Avenue West, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 38,
+      "pickupDaysAfterOrder": 26,
+      "notes": "Customer prefers a slightly looser fit through the waist.",
+      "customMade": {
+        "deposit": 880,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "112",
+          "chest": "99",
+          "waist": "100",
+          "shoulder": "43",
+          "sleeve": "60",
+          "sitAround": "95"
+        },
+        "price": 1760
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Amelia Wong",
+      "phoneNumber": "+1 905-555-0161",
+      "email": "amelia.wong@example.com",
+      "address": "762 Bloor Street East, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 36,
+      "pickupDaysAfterOrder": 10,
+      "notes": "Lining replaced in the same colour.",
+      "alteration": {
+        "subtotal": 240,
+        "deposit": 96,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 780,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "88",
+          "chest": "91",
+          "waist": "108",
+          "shoulder": "44",
+          "sleeve": "56",
+          "sitAround": "114"
+        },
+        "price": 1560
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Mila Sorensen",
+      "phoneNumber": "+1 289-555-0157",
+      "email": "mila.sorensen@example.com",
+      "address": "3 Queen Street West, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 31,
+      "pickupDaysAfterOrder": 21,
+      "notes": null,
+      "clothing": {
+        "subtotal": 1245,
+        "deposit": 373.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Other",
+          "quantity": 3,
+          "unitPrice": 335
+        },
+        {
+          "productId": "Other",
+          "quantity": 3,
+          "unitPrice": 80
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Samuel Rossi",
+      "phoneNumber": "+1 437-555-0160",
+      "email": "samuel.rossi@example.com",
+      "address": "934 Dundas Street West, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 31,
+      "pickupDaysAfterOrder": 16,
+      "notes": "Lining replaced in the same colour.",
+      "alteration": {
+        "subtotal": 105,
+        "deposit": 31.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Noah Chen",
+      "phoneNumber": "+1 289-555-0138",
+      "email": "noah.chen@example.com",
+      "address": "479 Bloor Street East, Toronto",
+      "status": "Cancelled",
+      "orderDaysAgo": 30,
+      "pickupDaysAfterOrder": 26,
+      "notes": "Lining replaced in the same colour.",
+      "statusReasonCategory": "CustomerDoesNotWant",
+      "alteration": {
+        "subtotal": 185,
+        "deposit": 55.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "customMade": {
+        "deposit": 290,
+        "depositMethod": "DebitCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "85",
+          "chest": "103",
+          "waist": "79",
+          "shoulder": "46",
+          "sleeve": "62",
+          "sitAround": "104"
+        },
+        "price": 580
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Isabel Kowalski",
+      "phoneNumber": "+1 289-555-0123",
+      "email": "isabel.kowalski@example.com",
+      "address": "660 Bathurst Street, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 29,
+      "pickupDaysAfterOrder": 8,
+      "notes": "Sleeve buttons to be kept as they are.",
+      "alteration": {
+        "subtotal": 105,
+        "deposit": 42,
+        "depositMethod": "Cash",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 540,
+        "deposit": 270,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Qipao",
+          "quantity": 2,
+          "unitPrice": 120
+        },
+        {
+          "productId": "LeatherShoes",
+          "quantity": 1,
+          "unitPrice": 300
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Rafael Ferreira",
+      "phoneNumber": "+1 647-555-0136",
+      "email": "rafael.ferreira@example.com",
+      "address": "252 Bloor Street East, Markham",
+      "status": "Completed",
+      "orderDaysAgo": 28,
+      "pickupDaysAfterOrder": 15,
+      "notes": "Matching trousers to follow on a separate order.",
+      "clothing": {
+        "subtotal": 235,
+        "deposit": 117.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "LeatherShoes",
+          "quantity": 1,
+          "unitPrice": 235
+        }
+      ],
+      "customMade": {
+        "deposit": 520,
+        "depositMethod": "Cash",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "shirt",
+        "measurements": {
+          "length": "99",
+          "chest": "104",
+          "shoulder": "47",
+          "sleeve": "58",
+          "neck": "43",
+          "cuff": "28",
+          "sitAround": "108"
+        },
+        "price": 1040
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Henry Andersen",
+      "phoneNumber": "+1 289-555-0137",
+      "email": "henry.andersen@example.com",
+      "address": "419 Danforth Avenue, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 26,
+      "pickupDaysAfterOrder": 31,
+      "notes": "Fabric supplied by the customer.",
+      "alteration": {
+        "subtotal": 110,
+        "deposit": 55,
+        "depositMethod": "CreditCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 1110,
+        "deposit": 333,
+        "depositMethod": "Etransfer",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Qipao",
+          "quantity": 3,
+          "unitPrice": 200
+        },
+        {
+          "productId": "TiesBowtie",
+          "quantity": 3,
+          "unitPrice": 170
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Amelia Lindqvist",
+      "phoneNumber": "+1 905-555-0132",
+      "email": "amelia.lindqvist@example.com",
+      "address": "751 Bathurst Street, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 24,
+      "pickupDaysAfterOrder": 31,
+      "notes": "Second fitting booked for the following week.",
+      "alteration": {
+        "subtotal": 190,
+        "deposit": 95,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Zara Tanaka",
+      "phoneNumber": "+1 289-555-0134",
+      "email": "zara.tanaka@example.com",
+      "address": "656 Bloor Street East, Mississauga",
+      "status": "Cancelled",
+      "orderDaysAgo": 22,
+      "pickupDaysAfterOrder": 7,
+      "notes": "Lining replaced in the same colour.",
+      "statusReasonCategory": "PriceTooHigh",
+      "customMade": {
+        "deposit": 648,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "71",
+          "chest": "92",
+          "waist": "75",
+          "shoulder": "40",
+          "sleeve": "60",
+          "sitAround": "113"
+        },
+        "price": 2160
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Julia Hughes",
+      "phoneNumber": "+1 416-555-0122",
+      "email": "julia.hughes@example.com",
+      "address": "3 Bathurst Street, Mississauga",
+      "status": "Completed",
+      "orderDaysAgo": 20,
+      "pickupDaysAfterOrder": 27,
+      "notes": "Rush job — agreed on a shorter turnaround.",
+      "clothing": {
+        "subtotal": 990,
+        "deposit": 297,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Jackets",
+          "quantity": 2,
+          "unitPrice": 415
+        },
+        {
+          "productId": "Other",
+          "quantity": 1,
+          "unitPrice": 160
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Kenji Lindqvist",
+      "phoneNumber": "+1 289-555-0135",
+      "email": "kenji.lindqvist@example.com",
+      "address": "12 Bathurst Street, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 20,
+      "pickupDaysAfterOrder": 31,
+      "notes": "Sleeve buttons to be kept as they are.",
+      "alteration": {
+        "subtotal": 225,
+        "deposit": 112.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 420,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "78",
+          "chest": "96",
+          "waist": "71",
+          "shoulder": "50",
+          "sleeve": "61",
+          "sitAround": "106"
+        },
+        "price": 840
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Petra Silva",
+      "phoneNumber": "+1 905-555-0143",
+      "email": "petra.silva@example.com",
+      "address": "888 Dundas Street West, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 20,
+      "pickupDaysAfterOrder": 15,
+      "notes": "Paid the deposit in store, balance on collection.",
+      "clothing": {
+        "subtotal": 1335,
+        "deposit": 667.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "TiesBowtie",
+          "quantity": 3,
+          "unitPrice": 245
+        },
+        {
+          "productId": "LeatherShoes",
+          "quantity": 3,
+          "unitPrice": 200
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Tomas Wong",
+      "phoneNumber": "+1 289-555-0131",
+      "email": "tomas.wong@example.com",
+      "address": "42 Queen Street West, Toronto",
+      "status": "Processing",
+      "orderDaysAgo": 19,
+      "pickupDaysAfterOrder": 29,
+      "notes": "Customer asked to keep the original hem allowance.",
+      "alteration": {
+        "subtotal": 105,
+        "deposit": 42,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "clothing": {
+        "subtotal": 435,
+        "deposit": 217.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "LeatherShoes",
+          "quantity": 1,
+          "unitPrice": 435
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Lucia Baptiste",
+      "phoneNumber": "+1 905-555-0125",
+      "email": "lucia.baptiste@example.com",
+      "address": "725 Yonge Street, Markham",
+      "status": "Completed",
+      "orderDaysAgo": 17,
+      "pickupDaysAfterOrder": 21,
+      "notes": "Paid the deposit in store, balance on collection.",
+      "clothing": {
+        "subtotal": 270,
+        "deposit": 81,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "TiesBowtie",
+          "quantity": 2,
+          "unitPrice": 135
+        }
+      ],
+      "customMade": {
+        "deposit": 310,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "99",
+          "chest": "89",
+          "waist": "101",
+          "shoulder": "41",
+          "sleeve": "56",
+          "sitAround": "115"
+        },
+        "price": 620
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Kenji Tanaka",
+      "phoneNumber": "+1 289-555-0127",
+      "email": "kenji.tanaka@example.com",
+      "address": "780 Eglinton Avenue West, North York",
+      "status": "Completed",
+      "orderDaysAgo": 16,
+      "pickupDaysAfterOrder": 10,
+      "notes": null,
+      "alteration": {
+        "subtotal": 50,
+        "deposit": 25,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 3060,
+        "deposit": 1530,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Other",
+          "quantity": 2,
+          "unitPrice": 255
+        },
+        {
+          "productId": "Qipao",
+          "quantity": 3,
+          "unitPrice": 450
+        },
+        {
+          "productId": "Other",
+          "quantity": 3,
+          "unitPrice": 400
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Yusuf Whitfield",
+      "phoneNumber": "+1 437-555-0139",
+      "email": "yusuf.whitfield@example.com",
+      "address": "769 Adelaide Street West, North York",
+      "status": "Processing",
+      "orderDaysAgo": 16,
+      "pickupDaysAfterOrder": 11,
+      "notes": null,
+      "alteration": {
+        "subtotal": 230,
+        "deposit": 69,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Grace Lam",
+      "phoneNumber": "+1 905-555-0120",
+      "email": "grace.lam@example.com",
+      "address": "77 Adelaide Street West, Markham",
+      "status": "Processing",
+      "orderDaysAgo": 15,
+      "pickupDaysAfterOrder": 9,
+      "notes": "Rush job — agreed on a shorter turnaround.",
+      "alteration": {
+        "subtotal": 260,
+        "deposit": 104,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "clothing": {
+        "subtotal": 1020,
+        "deposit": 306,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "TiesBowtie",
+          "quantity": 1,
+          "unitPrice": 160
+        },
+        {
+          "productId": "LeatherShoes",
+          "quantity": 2,
+          "unitPrice": 430
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Caleb Lindqvist",
+      "phoneNumber": "+1 416-555-0121",
+      "email": "caleb.lindqvist@example.com",
+      "address": "882 Bathurst Street, Mississauga",
+      "status": "Completed",
+      "orderDaysAgo": 14,
+      "pickupDaysAfterOrder": 29,
+      "notes": "Sleeve buttons to be kept as they are.",
+      "clothing": {
+        "subtotal": 540,
+        "deposit": 162,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Qipao",
+          "quantity": 1,
+          "unitPrice": 135
+        },
+        {
+          "productId": "TiesBowtie",
+          "quantity": 1,
+          "unitPrice": 405
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Umar Nakamura",
+      "phoneNumber": "+1 647-555-0126",
+      "email": "umar.nakamura@example.com",
+      "address": "310 Spadina Avenue, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 14,
+      "pickupDaysAfterOrder": 10,
+      "notes": "Rush job — agreed on a shorter turnaround.",
+      "clothing": {
+        "subtotal": 1130,
+        "deposit": 565,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "LeatherShoes",
+          "quantity": 2,
+          "unitPrice": 160
+        },
+        {
+          "productId": "LeatherShoes",
+          "quantity": 2,
+          "unitPrice": 405
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Xenia Ferreira",
+      "phoneNumber": "+1 289-555-0130",
+      "email": "xenia.ferreira@example.com",
+      "address": "916 Dundas Street West, Toronto",
+      "status": "Completed",
+      "orderDaysAgo": 14,
+      "pickupDaysAfterOrder": 26,
+      "notes": "Collect on a Saturday if possible.",
+      "clothing": {
+        "subtotal": 1395,
+        "deposit": 697.5,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Qipao",
+          "quantity": 3,
+          "unitPrice": 465
+        }
+      ],
+      "customMade": {
+        "deposit": 642,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "blouse",
+        "measurements": {
+          "length": "108",
+          "bust": "92",
+          "waist": "91",
+          "shoulder": "50",
+          "sleeve": "64",
+          "neck": "44"
+        },
+        "price": 2140
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Chloe Chen",
+      "phoneNumber": "+1 905-555-0124",
+      "email": "chloe.chen@example.com",
+      "address": "353 Dundas Street West, Etobicoke",
+      "status": "Completed",
+      "orderDaysAgo": 13,
+      "pickupDaysAfterOrder": 15,
+      "notes": "Collect on a Saturday if possible.",
+      "alteration": {
+        "subtotal": 240,
+        "deposit": 72,
+        "depositMethod": "DebitCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 864,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "pants",
+        "measurements": {
+          "waist": "102",
+          "hip": "90",
+          "inseam": "76",
+          "outseam": "108",
+          "thigh": "63",
+          "knee": "46",
+          "bottom": "39",
+          "rise": "27"
+        },
+        "price": 2160
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Rafael Chen",
+      "phoneNumber": "+1 905-555-0133",
+      "email": "rafael.chen@example.com",
+      "address": "533 Bathurst Street, Scarborough",
+      "status": "Completed",
+      "orderDaysAgo": 13,
+      "pickupDaysAfterOrder": 13,
+      "notes": null,
+      "alteration": {
+        "subtotal": 125,
+        "deposit": 37.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "clothing": {
+        "subtotal": 2035,
+        "deposit": 610.5,
+        "depositMethod": "DebitCard",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "Jackets",
+          "quantity": 3,
+          "unitPrice": 405
+        },
+        {
+          "productId": "Jackets",
+          "quantity": 2,
+          "unitPrice": 410
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Lucia Ferreira",
+      "phoneNumber": "+1 289-555-0142",
+      "email": "lucia.ferreira@example.com",
+      "address": "843 King Street West, North York",
+      "status": "Completed",
+      "orderDaysAgo": 13,
+      "pickupDaysAfterOrder": 14,
+      "notes": "Paid the deposit in store, balance on collection.",
+      "alteration": {
+        "subtotal": 50,
+        "deposit": 15,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "customMade": {
+        "deposit": 900,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "dress",
+        "measurements": {
+          "length": "68",
+          "bust": "102",
+          "underBust": "78",
+          "waist": "101",
+          "hip": "89",
+          "shoulder": "45",
+          "sleeve": "56"
+        },
+        "price": 1800
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Vera Chen",
+      "phoneNumber": "+1 437-555-0141",
+      "email": "vera.chen@example.com",
+      "address": "63 Spadina Avenue, Etobicoke",
+      "status": "Processing",
+      "orderDaysAgo": 11,
+      "pickupDaysAfterOrder": 21,
+      "notes": null,
+      "alteration": {
+        "subtotal": 60,
+        "deposit": 18,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "clothing": {
+        "subtotal": 1295,
+        "deposit": 647.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "TiesBowtie",
+          "quantity": 2,
+          "unitPrice": 70
+        },
+        {
+          "productId": "LeatherShoes",
+          "quantity": 3,
+          "unitPrice": 385
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Felix Andersen",
+      "phoneNumber": "+1 437-555-0129",
+      "email": "felix.andersen@example.com",
+      "address": "138 Adelaide Street West, Etobicoke",
+      "status": "Processing",
+      "orderDaysAgo": 10,
+      "pickupDaysAfterOrder": 20,
+      "notes": "Rush job — agreed on a shorter turnaround.",
+      "clothing": {
+        "subtotal": 630,
+        "deposit": 189,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "LeatherShoes",
+          "quantity": 2,
+          "unitPrice": 110
+        },
+        {
+          "productId": "Other",
+          "quantity": 1,
+          "unitPrice": 410
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Marco Petrov",
+      "phoneNumber": "+1 416-555-0128",
+      "email": "marco.petrov@example.com",
+      "address": "932 King Street West, Etobicoke",
+      "status": "Processing",
+      "orderDaysAgo": 9,
+      "pickupDaysAfterOrder": 20,
+      "notes": "Rush job — agreed on a shorter turnaround.",
+      "clothing": {
+        "subtotal": 1210,
+        "deposit": 363,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "Jackets",
+          "quantity": 3,
+          "unitPrice": 90
+        },
+        {
+          "productId": "TiesBowtie",
+          "quantity": 2,
+          "unitPrice": 470
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Lucia Andersen",
+      "phoneNumber": "+1 437-555-0140",
+      "email": "lucia.andersen@example.com",
+      "address": "848 Eglinton Avenue West, Markham",
+      "status": "Processing",
+      "orderDaysAgo": 8,
+      "pickupDaysAfterOrder": 29,
+      "notes": null,
+      "alteration": {
+        "subtotal": 285,
+        "deposit": 114,
+        "depositMethod": "CreditCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Elena Lindqvist",
+      "phoneNumber": "+1 289-555-0106",
+      "email": "elena.lindqvist@example.com",
+      "address": "568 Front Street East, Toronto",
+      "status": "Processing",
+      "orderDaysAgo": 6,
+      "pickupDaysAfterOrder": 18,
+      "notes": "Lining replaced in the same colour.",
+      "clothing": {
+        "subtotal": 1405,
+        "deposit": 421.5,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "TiesBowtie",
+          "quantity": 2,
+          "unitPrice": 445
+        },
+        {
+          "productId": "Other",
+          "quantity": 2,
+          "unitPrice": 95
+        },
+        {
+          "productId": "Qipao",
+          "quantity": 1,
+          "unitPrice": 325
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Karin Nakamura",
+      "phoneNumber": "+1 437-555-0113",
+      "email": "karin.nakamura@example.com",
+      "address": "832 Spadina Avenue, Scarborough",
+      "status": "Processing",
+      "orderDaysAgo": 6,
+      "pickupDaysAfterOrder": 29,
+      "notes": "Lining replaced in the same colour.",
+      "alteration": {
+        "subtotal": 140,
+        "deposit": 56,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Ulrike Baptiste",
+      "phoneNumber": "+1 647-555-0105",
+      "email": "ulrike.baptiste@example.com",
+      "address": "166 Front Street East, Toronto",
+      "status": "Processing",
+      "orderDaysAgo": 5,
+      "pickupDaysAfterOrder": 21,
+      "notes": null,
+      "alteration": {
+        "subtotal": 215,
+        "deposit": 86,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Ivan Novak",
+      "phoneNumber": "+1 289-555-0112",
+      "email": "ivan.novak@example.com",
+      "address": "520 Adelaide Street West, Toronto",
+      "status": "Shipped",
+      "orderDaysAgo": 5,
+      "pickupDaysAfterOrder": 22,
+      "notes": "Sleeve buttons to be kept as they are.",
+      "alteration": {
+        "subtotal": 270,
+        "deposit": 81,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Mila Sorensen",
+      "phoneNumber": "+1 647-555-0119",
+      "email": "mila.sorensen@example.com",
+      "address": "310 Adelaide Street West, Toronto",
+      "status": "Shipped",
+      "orderDaysAgo": 5,
+      "pickupDaysAfterOrder": 8,
+      "notes": "Second fitting booked for the following week.",
+      "clothing": {
+        "subtotal": 1140,
+        "deposit": 342,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "items": [
+        {
+          "productId": "LeatherShoes",
+          "quantity": 3,
+          "unitPrice": 195
+        },
+        {
+          "productId": "LeatherShoes",
+          "quantity": 3,
+          "unitPrice": 105
+        },
+        {
+          "productId": "TiesBowtie",
+          "quantity": 1,
+          "unitPrice": 240
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Amelia Lam",
+      "phoneNumber": "+1 647-555-0104",
+      "email": "amelia.lam@example.com",
+      "address": "269 Dundas Street West, Scarborough",
+      "status": "Processing",
+      "orderDaysAgo": 4,
+      "pickupDaysAfterOrder": 29,
+      "notes": "Paid the deposit in store, balance on collection.",
+      "alteration": {
+        "subtotal": 290,
+        "deposit": 116,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Liam Andersen",
+      "phoneNumber": "+1 905-555-0111",
+      "email": "liam.andersen@example.com",
+      "address": "144 King Street West, North York",
+      "status": "Processing",
+      "orderDaysAgo": 4,
+      "pickupDaysAfterOrder": 32,
+      "notes": null,
+      "alteration": {
+        "subtotal": 285,
+        "deposit": 85.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Gustav Wong",
+      "phoneNumber": "+1 905-555-0118",
+      "email": "gustav.wong@example.com",
+      "address": "262 Danforth Avenue, Markham",
+      "status": "Shipped",
+      "orderDaysAgo": 4,
+      "pickupDaysAfterOrder": 10,
+      "notes": null,
+      "alteration": {
+        "subtotal": 150,
+        "deposit": 60,
+        "depositMethod": "CreditCard",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": true
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Emil Andersen",
+      "phoneNumber": "+1 437-555-0103",
+      "email": "emil.andersen@example.com",
+      "address": "154 Bloor Street East, Toronto",
+      "status": "Shipped",
+      "orderDaysAgo": 3,
+      "pickupDaysAfterOrder": 7,
+      "notes": "Customer prefers a slightly looser fit through the waist.",
+      "customMade": {
+        "deposit": 624,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": true,
+        "garmentId": "dress",
+        "measurements": {
+          "length": "74",
+          "bust": "99",
+          "underBust": "73",
+          "waist": "79",
+          "hip": "92",
+          "shoulder": "46",
+          "sleeve": "64"
+        },
+        "price": 1560
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Yara Hoffmann",
+      "phoneNumber": "+1 647-555-0110",
+      "email": "yara.hoffmann@example.com",
+      "address": "922 Danforth Avenue, Toronto",
+      "status": "Processing",
+      "orderDaysAgo": 3,
+      "pickupDaysAfterOrder": 23,
+      "notes": null,
+      "alteration": {
+        "subtotal": 260,
+        "deposit": 78,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Tomas Lindqvist",
+      "phoneNumber": "+1 289-555-0117",
+      "email": "tomas.lindqvist@example.com",
+      "address": "483 Front Street East, Etobicoke",
+      "status": "Processing",
+      "orderDaysAgo": 3,
+      "pickupDaysAfterOrder": 26,
+      "notes": "Rush job — agreed on a shorter turnaround.",
+      "clothing": {
+        "subtotal": 325,
+        "deposit": 162.5,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "Qipao",
+          "quantity": 2,
+          "unitPrice": 65
+        },
+        {
+          "productId": "Qipao",
+          "quantity": 3,
+          "unitPrice": 65
+        }
+      ],
+      "customMade": {
+        "deposit": 890,
+        "depositMethod": "DebitCard",
+        "finalMethod": "DebitCard",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "shirt",
+        "measurements": {
+          "length": "74",
+          "chest": "94",
+          "shoulder": "43",
+          "sleeve": "57",
+          "neck": "37",
+          "cuff": "23",
+          "sitAround": "97"
+        },
+        "price": 1780
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Yara Duarte",
+      "phoneNumber": "+1 905-555-0102",
+      "email": "yara.duarte@example.com",
+      "address": "23 Bathurst Street, Mississauga",
+      "status": "Processing",
+      "orderDaysAgo": 2,
+      "pickupDaysAfterOrder": 30,
+      "notes": "Second fitting booked for the following week.",
+      "alteration": {
+        "subtotal": 150,
+        "deposit": 45,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Kenji Ferreira",
+      "phoneNumber": "+1 905-555-0109",
+      "email": "kenji.ferreira@example.com",
+      "address": "736 Front Street East, Scarborough",
+      "status": "Processing",
+      "orderDaysAgo": 2,
+      "pickupDaysAfterOrder": 25,
+      "notes": null,
+      "customMade": {
+        "deposit": 880,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "jacket",
+        "measurements": {
+          "length": "79",
+          "chest": "97",
+          "waist": "74",
+          "shoulder": "49",
+          "sleeve": "64",
+          "sitAround": "96"
+        },
+        "price": 1760
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Sofia Tanaka",
+      "phoneNumber": "+1 416-555-0116",
+      "email": "sofia.tanaka@example.com",
+      "address": "823 Front Street East, Markham",
+      "status": "Processing",
+      "orderDaysAgo": 2,
+      "pickupDaysAfterOrder": 31,
+      "notes": null,
+      "alteration": {
+        "subtotal": 70,
+        "deposit": 21,
+        "depositMethod": "Cash",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    },
+    {
+      "customerName": "Samuel Baptiste",
+      "phoneNumber": "+1 416-555-0101",
+      "email": "samuel.baptiste@example.com",
+      "address": "295 Yonge Street, Mississauga",
+      "status": "Processing",
+      "orderDaysAgo": 1,
+      "pickupDaysAfterOrder": 26,
+      "notes": null,
+      "customMade": {
+        "deposit": 498,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "dress",
+        "measurements": {
+          "length": "109",
+          "bust": "103",
+          "underBust": "74",
+          "waist": "79",
+          "hip": "102",
+          "shoulder": "49",
+          "sleeve": "66"
+        },
+        "price": 1660
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Sofia Moreau",
+      "phoneNumber": "+1 416-555-0108",
+      "email": "sofia.moreau@example.com",
+      "address": "355 Danforth Avenue, North York",
+      "status": "Processing",
+      "orderDaysAgo": 1,
+      "pickupDaysAfterOrder": 20,
+      "notes": "Sleeve buttons to be kept as they are.",
+      "alteration": {
+        "subtotal": 200,
+        "deposit": 80,
+        "depositMethod": "CreditCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "customMade": {
+        "deposit": 624,
+        "depositMethod": "DebitCard",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "dress",
+        "measurements": {
+          "length": "75",
+          "bust": "95",
+          "underBust": "72",
+          "waist": "71",
+          "hip": "95",
+          "shoulder": "49",
+          "sleeve": "66"
+        },
+        "price": 1560
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Daniel Delgado",
+      "phoneNumber": "+1 289-555-0115",
+      "email": "daniel.delgado@example.com",
+      "address": "394 King Street West, Mississauga",
+      "status": "Processing",
+      "orderDaysAgo": 1,
+      "pickupDaysAfterOrder": 12,
+      "notes": "Matching trousers to follow on a separate order.",
+      "customMade": {
+        "deposit": 360,
+        "depositMethod": "Etransfer",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "qipao",
+        "measurements": {
+          "length": "74",
+          "bust": "107",
+          "underBust": "88",
+          "waist": "91",
+          "hip": "108",
+          "shoulder": "42",
+          "neck": "41",
+          "sleeve": "64"
+        },
+        "price": 720
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Grace Lindqvist",
+      "phoneNumber": "+1 437-555-0100",
+      "email": "grace.lindqvist@example.com",
+      "address": "691 Danforth Avenue, Toronto",
+      "status": "Processing",
+      "orderDaysAgo": 0,
+      "pickupDaysAfterOrder": 25,
+      "notes": "Second fitting booked for the following week.",
+      "clothing": {
+        "subtotal": 1870,
+        "deposit": 561,
+        "depositMethod": "CreditCard",
+        "finalMethod": "Etransfer",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "items": [
+        {
+          "productId": "TiesBowtie",
+          "quantity": 3,
+          "unitPrice": 440
+        },
+        {
+          "productId": "Other",
+          "quantity": 2,
+          "unitPrice": 275
+        }
+      ],
+      "serviceType": "ReadyMade"
+    },
+    {
+      "customerName": "Elena Duarte",
+      "phoneNumber": "+1 905-555-0107",
+      "email": "elena.duarte@example.com",
+      "address": "50 Bloor Street East, North York",
+      "status": "Processing",
+      "orderDaysAgo": 0,
+      "pickupDaysAfterOrder": 16,
+      "notes": "Matching trousers to follow on a separate order.",
+      "customMade": {
+        "deposit": 564,
+        "depositMethod": "DebitCard",
+        "finalMethod": "CreditCard",
+        "depositReceived": true,
+        "cleared": false,
+        "garmentId": "qipao",
+        "measurements": {
+          "length": "75",
+          "bust": "98",
+          "underBust": "86",
+          "waist": "83",
+          "hip": "117",
+          "shoulder": "41",
+          "neck": "41",
+          "sleeve": "63"
+        },
+        "price": 1880
+      },
+      "serviceType": "CustomMade"
+    },
+    {
+      "customerName": "Benjamin Petrov",
+      "phoneNumber": "+1 647-555-0114",
+      "email": "benjamin.petrov@example.com",
+      "address": "311 Adelaide Street West, Etobicoke",
+      "status": "Processing",
+      "orderDaysAgo": 0,
+      "pickupDaysAfterOrder": 31,
+      "notes": "Sleeve buttons to be kept as they are.",
+      "alteration": {
+        "subtotal": 245,
+        "deposit": 122.5,
+        "depositMethod": "CreditCard",
+        "finalMethod": "Cash",
+        "depositReceived": true,
+        "cleared": false
+      },
+      "serviceType": "Alterations"
+    }
+  ]
+}
