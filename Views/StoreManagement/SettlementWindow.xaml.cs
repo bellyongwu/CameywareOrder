@@ -482,12 +482,9 @@ public partial class SettlementWindow : Window
         => CurrencySettingService.GetSymbol(_report?.Currency ?? CurrencyType.CAD)
            + amount.ToString("N2", CultureInfo.InvariantCulture);
 
-    private string LineName(ServiceLine line) => _scope[line switch
-    {
-        ServiceLine.Alterations => "ServiceType.Alterations",
-        ServiceLine.CustomMade => "ServiceType.CustomMade",
-        _ => "ServiceType.ReadyMade"
-    }];
+    // Through ServiceLines.NameKey, which is the one owner of the mapping — the CSV export heads its
+    // columns from the same place, so a line cannot be called one thing here and another there.
+    private string LineName(ServiceLine line) => _scope[ServiceLines.NameKey(line)];
 
     private string MethodName(PaymentMethod method) => _scope[$"PaymentMethod.{method}"];
 

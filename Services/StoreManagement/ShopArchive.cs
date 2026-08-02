@@ -44,10 +44,14 @@ public static class ShopArchive
 
         var shopIds = shops.Select(shop => shop.Id).ToList();
 
-        // IgnoreQueryFilters: these are other shops than the open one, and the filter would return none.
+        // IgnoreQueryFilters: these are other shops than the open one, and the filter would return
+        // none. It drops the deletion condition too, so that one is restated (v8.0) — an archive is
+        // the shop's records, and an order in the recycle bin is one the shop has struck off.
+        // Carrying it would make a restore resurrect somebody's bin on another machine, where the
+        // retention window that was about to purge it no longer applies.
         var orders = db.Orders.AsNoTracking().IgnoreQueryFilters()
             .Include(order => order.Items)
-            .Where(order => shopIds.Contains(order.ShopId))
+            .Where(order => shopIds.Contains(order.ShopId) && order.DeletedOnUtc == null)
             .ToList();
 
         if (File.Exists(targetPath))

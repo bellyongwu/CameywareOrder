@@ -130,6 +130,26 @@ public static class BuiltInRoles
         AppCapability.ExportReports
     };
 
+    /// <summary>
+    /// Order work a MANAGER gets and a staff member does not (v8.0).
+    /// </summary>
+    /// <remarks>
+    /// Both are destructive or disclosing in a way ordinary order work is not: the recycle bin is
+    /// where a record is removed beyond recovery and where every order anybody has deleted can be
+    /// read, and the export walks out of the building with the whole customer list in one file.
+    /// Deleting an order, by contrast, is now reversible and so costs less than it used to.
+    ///
+    /// This only decides what a FRESH installation starts with. An upgraded one keeps whatever its
+    /// roles already stored — <c>TopUpBuiltIns</c> restores missing ROLES, never missing capabilities
+    /// — because a role's capability set is the shop's own statement and an upgrade that quietly
+    /// widened it would be a permissions release that starts by overruling permissions.
+    /// </remarks>
+    private static readonly AppCapability[] SeniorOrderWork =
+    {
+        AppCapability.ManageRecycleBin,
+        AppCapability.ExportOrders
+    };
+
     private static readonly AppCapability[] ShopConfiguration =
     {
         AppCapability.ConfigureShop,
@@ -145,9 +165,15 @@ public static class BuiltInRoles
         isBuiltIn: true, Enum.GetValues<AppCapability>());
 
     /// <summary>Runs one shop: its orders, its reports and its configuration.</summary>
+    /// <remarks>
+    /// Not <c>ManageBackups</c>. A restore replaces EVERY shop's data at once, so on a multi-branch
+    /// installation one manager putting their own branch back would take the others with it. It is
+    /// grantable — a single-shop installation where the manager is the owner will want to grant it —
+    /// but it is not something to hand out by default.
+    /// </remarks>
     public static RoleDefinition Manager() => new(
         RoleDefinition.ManagerId, customName: null, nameKey: "Shop.Role.Manager",
-        isBuiltIn: true, OrderWork.Concat(ShopConfiguration));
+        isBuiltIn: true, OrderWork.Concat(SeniorOrderWork).Concat(ShopConfiguration));
 
     /// <summary>Takes orders in one shop, with no access to how it is configured.</summary>
     public static RoleDefinition Staff() => new(

@@ -29,8 +29,27 @@ public enum AppCapability
     /// <summary>Change a saved order. Without it the editor still opens, read-only.</summary>
     EditOrders,
 
-    /// <summary>Delete an order, singly or as a batch.</summary>
+    /// <summary>Delete an order, singly or as a batch. Since v8.0 that means sending it to the bin.</summary>
     DeleteOrders,
+
+    /// <summary>
+    /// Open the recycle bin: put a deleted order back, or destroy one for good.
+    /// </summary>
+    /// <remarks>
+    /// Separate from <see cref="DeleteOrders"/> on purpose, and it is the more serious of the two.
+    /// Deleting is now reversible, so it costs little; the bin is where a record is removed BEYOND
+    /// recovery, and it is also where every order anyone has ever deleted can be read. A shop that
+    /// lets its staff tidy the list has not thereby agreed to let them empty the bin.
+    /// </remarks>
+    ManageRecycleBin,
+
+    /// <summary>Export the order list as a spreadsheet.</summary>
+    /// <remarks>
+    /// Its own capability rather than riding on <see cref="ViewOrders"/>: reading the list on screen
+    /// and walking out with the whole customer database in one file are different acts, and the
+    /// second is the one a shop would want to keep to itself.
+    /// </remarks>
+    ExportOrders,
 
     /// <summary>Duplicate an existing order into a new one.</summary>
     CopyOrders,
@@ -70,6 +89,15 @@ public enum AppCapability
 
     /// <summary>The Local Database and Import / Export menus, which act on the whole installation.</summary>
     UseDataTools,
+
+    /// <summary>
+    /// Change the backup schedule and restore the installation from a safety copy.
+    /// </summary>
+    /// <remarks>
+    /// Installation-scoped, because a backup covers every shop at once and a restore replaces every
+    /// shop's data at once — the panel is reachable with any shop open and answers for all of them.
+    /// </remarks>
+    ManageBackups,
 
     /// <summary>Run the application in any shipped language, not only the ones the shop installs.</summary>
     ChooseAnyLanguage,
@@ -149,8 +177,10 @@ public static class CapabilityCatalog
         Shop(AppCapability.CreateOrders, CapabilityGroup.Orders),
         Shop(AppCapability.EditOrders, CapabilityGroup.Orders),
         Shop(AppCapability.DeleteOrders, CapabilityGroup.Orders),
+        Shop(AppCapability.ManageRecycleBin, CapabilityGroup.Orders),
         Shop(AppCapability.CopyOrders, CapabilityGroup.Orders),
         Shop(AppCapability.PrintOrderDocuments, CapabilityGroup.Orders),
+        Shop(AppCapability.ExportOrders, CapabilityGroup.Orders),
 
         Shop(AppCapability.ViewReports, CapabilityGroup.Reporting),
         Shop(AppCapability.ExportReports, CapabilityGroup.Reporting),
@@ -167,6 +197,7 @@ public static class CapabilityCatalog
 
         Installation(AppCapability.CreateShops),
         Installation(AppCapability.UseDataTools),
+        Installation(AppCapability.ManageBackups),
         Installation(AppCapability.ChooseAnyLanguage)
     };
 

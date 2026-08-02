@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Windows;
@@ -201,7 +202,17 @@ public partial class App : Application
             await EnsureShopSchemaAsync(db);
             await EnsureShopBootstrapAsync(db, localization);
             await MigrateLegacyUserMembershipsAsync(db);
+            PurgeExpiredRecycleBin(db);
         }
+
+        // The safety copy, once the schema is settled and BEFORE any window opens.
+        //
+        // The ordering is the whole point and both halves of it matter. After the migrations, so the
+        // copy is of a database this build can actually read back — restoring a pre-migration file
+        // into a newer build works, restoring a half-migrated one does not. Before the main window,
+        // so nothing is writing while the file is being copied: a backup taken mid-transaction is a
+        // backup that looks fine until the day it is needed.
+        RunScheduledBackup();
 
         // Open a shop before anything shop-scoped can run.
         ShopContext.Instance.Initialize(_host.Services.GetRequiredService<IServiceScopeFactory>());
@@ -626,7 +637,60 @@ public partial class App : Application
         // way: the form requires it from now on, but there is no record of what was promised for an
         // order taken before the field existed, and a made-up date would drive the list's colours.
         ("ExpectedPickupDate", "ALTER TABLE Orders ADD COLUMN ExpectedPickupDate TEXT NULL; "),
+        // When an order was sent to the recycle bin. NULL means live, which is what every order
+        // written before v8.0 is — none of them was ever deleted, so no backfill is needed and the
+        // query filter added alongside this column changes nothing for an existing database.
+        ("DeletedOnUtc", "ALTER TABLE Orders ADD COLUMN DeletedOnUtc TEXT NULL; "),
     };
+
+    /// <summary>
+    /// Takes the scheduled safety copy if one is due (v8.0).
+    /// </summary>
+    /// <remarks>
+    /// Swallows everything. This runs before there is a window to report on, and a machine whose disk
+    /// is full or whose backup folder is locked by a virus scanner must still be able to open the
+    /// shop — a shop that cannot take orders because it could not take a backup has been made worse
+    /// by the feature meant to protect it. <see cref="BackupService"/> already traces the reason, and
+    /// the Data Protection panel shows when the last one actually succeeded, which is where a
+    /// silently failing schedule becomes visible.
+    /// </remarks>
+    private static void RunScheduledBackup()
+    {
+        try
+        {
+            BackupService.RunIfDue(DateTime.UtcNow);
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"[startup] scheduled backup skipped: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Removes orders that have been in the recycle bin longer than this installation allows (v8.0).
+    /// </summary>
+    /// <remarks>
+    /// Installation-wide, across every shop, which is why it runs here rather than when a shop opens:
+    /// a per-shop purge would leave every branch except the one somebody happened to open that
+    /// morning accumulating deleted rows for ever.
+    ///
+    /// Before the backup, deliberately — so the copy taken moments later reflects what the
+    /// application actually holds, rather than carrying rows it has just decided to destroy and would
+    /// destroy again on the next launch after a restore.
+    /// </remarks>
+    private static void PurgeExpiredRecycleBin(AppDbContext db)
+    {
+        try
+        {
+            var removed = OrderRecycleBin.PurgeExpired(db, DateTime.UtcNow);
+            if (removed > 0)
+                Trace.TraceInformation($"[startup] recycle bin purged {removed} order(s)");
+        }
+        catch (Exception ex)
+        {
+            Trace.TraceWarning($"[startup] recycle-bin purge skipped: {ex.Message}");
+        }
+    }
 
     /// <summary>
     /// Columns added to Shops after that table first shipped. The CREATE TABLE guard in

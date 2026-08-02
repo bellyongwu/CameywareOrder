@@ -159,6 +159,15 @@ public sealed class AuthenticationService
     /// <summary>Duplicate an order.</summary>
     public bool CanCopyOrders => Can(AppCapability.CopyOrders);
 
+    /// <summary>Open the recycle bin: restore a deleted order, or destroy one for good.</summary>
+    public bool CanManageRecycleBin => Can(AppCapability.ManageRecycleBin);
+
+    /// <summary>Export the order list as a spreadsheet.</summary>
+    public bool CanExportOrders => Can(AppCapability.ExportOrders);
+
+    /// <summary>Change the backup schedule and restore the installation from a safety copy.</summary>
+    public bool CanManageBackups => Can(AppCapability.ManageBackups);
+
     /// <summary>Print or download a receipt and a measurement sheet.</summary>
     public bool CanPrintOrderDocuments => Can(AppCapability.PrintOrderDocuments);
 

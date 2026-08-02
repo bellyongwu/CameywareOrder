@@ -146,6 +146,32 @@ public class Order
     /// API, which has no signed-in user. Callers omit the line rather than printing an empty one.
     /// </remarks>
     public string? LastModifiedBy { get; set; }
+
+    /// <summary>
+    /// When this order was sent to the recycle bin, or null while it is a live order (v8.0).
+    /// </summary>
+    /// <remarks>
+    /// Deleting an order is now REVERSIBLE for a configured window — see
+    /// <c>Services/OrderRecycleBin</c> and <c>DataProtectionSettings.RecycleBinDays</c>. A nullable
+    /// stamp rather than a bool, and the same shape as <c>Shop.DelistedOnUtc</c>, because "deleted"
+    /// and "deleted on the 3rd" are different answers and only the second survives being asked next
+    /// month — the purge needs the date, and so does the person deciding whether to restore.
+    ///
+    /// Null on every order written before this column existed, which is exactly right: none of them
+    /// was in a bin. `AppDbContext` excludes non-null rows from every ordinary query, so a screen has
+    /// to ask for them deliberately (<c>IgnoreQueryFilters</c>) to see one — the reason the audit of
+    /// every such call site is recorded in `context.md`.
+    /// </remarks>
+    public DateTime? DeletedOnUtc { get; set; }
+
+    /// <summary>Whether this order is in the recycle bin rather than live.</summary>
+    [NotMapped]
+    public bool IsDeleted => DeletedOnUtc is not null;
+
+    /// <summary>The day it was deleted, in the shop's own time. Null while it is live.</summary>
+    [NotMapped]
+    public DateTime? DeletedOnLocal => DeletedOnUtc?.ToLocalTime();
+
     public CurrencyType CurrencyType { get; set; } = CurrencyType.CAD;
 
     /// <summary>

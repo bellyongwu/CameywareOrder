@@ -145,13 +145,25 @@ public class AppDbContext : DbContext
             // than a migration. The index is what the shop-filtered order list actually needs.
             entity.HasIndex(e => e.ShopId);
 
-            // Every read of Orders anywhere in the app — the list, search, printing, the GraphQL
-            // resolvers — is confined to the open shop by this one line, so a future query cannot
-            // leak another shop's data by forgetting a Where clause. IgnoreQueryFilters() is the
-            // deliberate escape hatch for a cross-shop view later.
+            // Every read of Orders anywhere in the app — the list, search, printing, the settlement
+            // report, the GraphQL resolvers — passes through this one line. It answers TWO questions,
+            // and both are "what does this shop consider its orders":
+            //
+            //   ShopId       — confines every query to the open shop, so a future one cannot leak
+            //                  another shop's data by forgetting a Where clause.
+            //   DeletedOnUtc — excludes anything in the recycle bin (v8.0). A deleted order must
+            //                  vanish from the list, the search, the receipts and above all the
+            //                  settlement report: money the shop has struck off cannot go on being
+            //                  counted as revenue until the purge gets round to it.
+            //
+            // IgnoreQueryFilters() is the deliberate escape hatch and it drops BOTH conditions at
+            // once, which is a trap worth stating: a caller that wanted only the cross-shop half now
+            // silently gets deleted rows too. Every existing call site was audited when this second
+            // condition arrived — see `context.md` — and each now says which of the two it meant.
+            //
             // NOTE: Find/FindAsync bypass query filters (they are key lookups), so any code path
-            // using them must check the shop itself.
-            entity.HasQueryFilter(e => e.ShopId == _shopId);
+            // using them must check the shop AND the deletion stamp itself.
+            entity.HasQueryFilter(e => e.ShopId == _shopId && e.DeletedOnUtc == null);
 
             entity.HasMany(e => e.Items)
                   .WithOne(i => i.Order)

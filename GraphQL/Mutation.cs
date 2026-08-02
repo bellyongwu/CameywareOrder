@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using CameywareOrder.Data;
 using CameywareOrder.Models;
+using CameywareOrder.Services;
 
 namespace CameywareOrder.GraphQL;
 
@@ -92,16 +93,21 @@ public class Mutation
     }
 
     /// <summary>
-    /// Deletes an order and all its items (cascade).
+    /// Sends an order to the recycle bin, where it stays recoverable for the installation's
+    /// retention window.
     /// </summary>
-    public static async Task<bool> DeleteOrderAsync(int id, AppDbContext context)
+    /// <remarks>
+    /// Through <c>OrderRecycleBin</c>, the same path the order list uses, so there is no way in to
+    /// this application that still destroys a record outright — least of all an unattended API
+    /// caller, which is the one that would do it a thousand times before anybody noticed.
+    ///
+    /// The name is unchanged: to a caller this still means "delete this order", and it still stops
+    /// appearing in every query. What changed is only how long the row survives behind that.
+    /// </remarks>
+    public static bool DeleteOrder(int id, AppDbContext context)
     {
-        var order = await context.Orders.FirstOrDefaultAsync(o => o.Id == id);
-        if (order is null) return false;
-
-        context.Orders.Remove(order);
-        await context.SaveChangesAsync();
-        return true;
+        ArgumentNullException.ThrowIfNull(context);
+        return OrderRecycleBin.Delete(context, new[] { id }, DateTime.UtcNow) > 0;
     }
 
     /// <summary>

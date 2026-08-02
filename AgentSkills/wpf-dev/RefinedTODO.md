@@ -77,6 +77,40 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-08-02)
 
+### v8.0.0 — the data release: automatic backup, order search + CSV, a 30-day recycle bin  [DONE]
+
+Came out of a completeness review for a LOCAL single-shop deployment (installed on site, no online
+database). Three findings, all on the data side:
+
+- **No automatic backup existed at all.** One is taken before a destructive import and nowhere else,
+  so a shop that never touches Import/Export has zero. Local SQLite plus no backup is one disk
+  failure away from losing the whole trading history.
+- **No search by order number and no spreadsheet export.** The list matched customer name and phone
+  only, and the only export was a zip of the database — useless to a bookkeeper.
+- **No recovery from a delete.** Confirmed, but permanent.
+
+Design rule for the release: ONE definition per concept. The filter is a model shared by the list,
+the export and the bin; the backup reuses the existing package format rather than a second copy
+routine; the two retentions are one settings store and one panel.
+
+**What it added.** `Order.DeletedOnUtc` + a second condition on the Orders query filter;
+`OrderRecycleBin` (the ONE place an order is deleted from — the list, the Delete key and the GraphQL
+mutation all route through it); `DataProtectionSettings`/`DataProtectionStore` (per-installation, one
+file, one panel for both retentions); `BackupService` (run-if-due at startup before any window opens,
+reusing `ExportDatabaseTo`/`ImportDatabaseFrom` unchanged); `OrderQuery` (text + field + status +
+period, replacing two view-model fields and three `if`s the export could not have called); `CsvWriter`
++ `OrderCsvExport`; `DataProtectionWindow` + `RecycleBinWindow`; three capabilities.
+
+**The lesson worth carrying forward is the AUDIT** — see `context.md`. A second condition on a query
+filter changes every `IgnoreQueryFilters()` caller at once, because dropping the filter drops both
+halves. Four callers needed the shop half restated and one, `OrderNumberFormatter.IsTaken`, was a live
+defect: a binned order's receipt number read as free.
+
+**Not covered by a harness, deliberately and stated at the call site:** writing and restoring a real
+backup. Both copy the machine's real LocalAppData and there is no seam to redirect it.
+
+
+
 ### v7.1.0 — creating shops moves to Store Management; demo data; copy shop; modular copy/paste  [DONE]
 
 1. **Create Shop and Create Demo Store left the shop picker** for a new *Add a store* card in Store

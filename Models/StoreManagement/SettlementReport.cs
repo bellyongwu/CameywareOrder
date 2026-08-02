@@ -13,6 +13,37 @@ public enum ServiceLine
     Clothing
 }
 
+/// <summary>What the three service lines are called, and the order they are reported in.</summary>
+/// <remarks>
+/// One owner for both facts. The name mapping used to be a private switch inside
+/// <c>SettlementWindow</c>; the CSV export is the second consumer, and a second copy would let the
+/// spreadsheet head a column with a different word from the report beside it — the classic way a
+/// figure comes to be called two things depending on which screen produced it.
+///
+/// A switch rather than <c>$"ServiceLine.{line}"</c> so a line added to the enum fails to COMPILE
+/// here rather than silently rendering its raw name on a printed report. The keys are the
+/// <c>ServiceType.*</c> ones the rest of the application already uses for the same three things —
+/// note <see cref="ServiceLine.Clothing"/> is <c>ServiceType.ReadyMade</c>, which is why this cannot
+/// be derived from the value's name.
+/// </remarks>
+public static class ServiceLines
+{
+    /// <summary>The three lines, in reporting order.</summary>
+    public static readonly IReadOnlyList<ServiceLine> All = new[]
+    {
+        ServiceLine.Alterations, ServiceLine.CustomMade, ServiceLine.Clothing
+    };
+
+    /// <summary>The string-table key naming a line.</summary>
+    public static string NameKey(ServiceLine line) => line switch
+    {
+        ServiceLine.Alterations => "ServiceType.Alterations",
+        ServiceLine.CustomMade => "ServiceType.CustomMade",
+        ServiceLine.Clothing => "ServiceType.ReadyMade",
+        _ => "ServiceType.Alterations"
+    };
+}
+
 /// <summary>One service line's money over a period.</summary>
 /// <param name="Line">Which line.</param>
 /// <param name="PreTax">Charged before tax.</param>

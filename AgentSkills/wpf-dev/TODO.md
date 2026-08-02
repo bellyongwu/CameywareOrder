@@ -17,6 +17,73 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-02 — v8.0.0: the data release — automatic backup, order search + CSV, a 30-day recycle bin  [DONE]
+- Ask: "根据你的意见可以生成下一次需要添加的新功能：自动备份和支持订单查询+CSV导出订单等功能。还有添加保留三十天内删除的订单等操作（可恢复）把这些做一个较大的版本更新，面向数据面的新功能。要求模块化设计，以及避免代码重复。如有需要添加新界面，可视界面需采用主题色调。如有问题可以随时告知。采用skill wpf-dev 开发。"
+- Context: this came out of a completeness review of the product for a LOCAL single-shop deployment
+  installed on site, with no online database planned. The three findings it acts on were: no
+  automatic backup at all (one is taken only before a destructive import, so a shop that never uses
+  Import/Export has none), no way to search by order number and no spreadsheet export, and no
+  recovery from a mistaken delete.
+- Plan:
+  - [ ] 1. `Order.DeletedOnUtc` soft delete + both schema lists + the shop query filter; audit every
+        `IgnoreQueryFilters` caller so a shop delete, an archive export and the settlement report each
+        keep the answer they should have.
+  - [ ] 2. `DataProtectionSettings` + per-installation store: backup on/off, interval, how many to
+        keep, and how long a deleted order stays recoverable. One store, one panel — the two
+        retentions are one decision to a shop owner.
+  - [ ] 3. `BackupService`: run-if-due at startup, run now, list, restore, prune. REUSES
+        `DatabasePathProvider.ExportDatabaseTo` / `ImportDatabaseFrom` rather than writing a second
+        copy routine — the package format and its zip-slip guard already exist.
+  - [ ] 4. `OrderQuery`: ONE filter definition (text + which field + date range + status), shared by
+        the list, the CSV export and the recycle bin. Replaces `SearchText` + `StatusFilter`, which
+        are two halves of the same thing living in the view model.
+  - [ ] 5. `CsvWriter` (RFC 4180 + UTF-8 BOM, or Excel mangles every non-ASCII name) and
+        `OrderCsvExport` reading `Order.MoneyFor(line)` so the sheet cannot disagree with the receipt.
+  - [ ] 6. Recycle bin: delete becomes soft, a startup purge removes anything past the retention
+        window, restore puts it back.
+  - [ ] 7. New `AppCapability` values — a gated feature absent from the catalog can be granted to
+        nobody.
+  - [ ] 8. `DataProtectionWindow` + `RecycleBinWindow`, both from `AppTheme.xaml` only; search scope
+        and date range in the existing filter bar.
+  - [x] 9. Keys in five languages; harnesses; renders; README; companions.
+- Notes:
+  **New files.** `Models/Global/DataProtectionSettings`, `Models/StoreManagement/OrderQuery`,
+  `Services/Global/DataProtectionStore`, `Services/Global/BackupService`, `Services/Global/CsvWriter`,
+  `Services/StoreManagement/OrderRecycleBin`, `Services/StoreManagement/OrderCsvExport`,
+  `Converters/SearchFieldNameConverter`, `Views/Global/DataProtectionWindow`,
+  `Views/StoreManagement/RecycleBinWindow`.
+  **Changed.** `Order` (+`DeletedOnUtc`/`IsDeleted`/`DeletedOnLocal`), `AppDbContext` (filter now
+  `ShopId && DeletedOnUtc == null`), `App` (+startup purge, +scheduled backup, +column guard),
+  `OrderNumberFormatter` (`IsTaken` takes the shop), `ShopAdministration.CountOrders`,
+  `ShopArchive.Export`, `ShopPickerWindow` counts, `UserDataPaths` (+`BackupPackagePattern`, prunes
+  it), `SettlementReport` (+`ServiceLines`), `SettlementWindow.LineName` (now delegates),
+  `MainViewModel` (query model replaces two filter fields; delete is soft; +export),
+  `MainWindow` (+two-row filter bar, +two menu entries, +three gates), `AppCapability`/`RoleDefinition`/
+  `AuthenticationService` (+3 capabilities), `Mutation.DeleteOrder` (soft), five `*.lang.xml`
+  (+85 keys, 2 rewritten), `Directory.Build.props` 8.0.0, `README.md`.
+  **THE AUDIT IS THE POINT OF THIS ENTRY.** Adding a second condition to the Orders query filter
+  changed every `IgnoreQueryFilters()` caller, because dropping the filter drops BOTH halves. Each was
+  re-read and now restates what it meant. One was a real defect found that way and nothing else would
+  have: `OrderNumberFormatter.IsTaken` asked through the filter, so a binned order's receipt number
+  read as FREE and would have been re-issued — two orders with one number the moment the first was
+  restored. It also had to keep the shop half by hand, or two branches sharing a prefix would start
+  skipping each other's numbers.
+  **Verification.** Build 0/0 after deleting `obj/` (the `.g.cs` files went missing mid-session — the
+  recorded staleness, not a code fault). `datacheck` 56 assertions, `democheck` 41, `storerender`
+  (four panels rendered + the copy/paste commands driven, credentials.json hash unchanged),
+  `keycheck` 866-key parity, `surfacecheck` clean. §9b Gates 1 and 2 still not runnable — no IDE
+  diagnostics and no SonarLint tool in this session; the in-build analyzer is the whole of the Sonar
+  evidence.
+  **Proof of failure.** Reverting `IsTaken` to the filtered query turned "a BINNED order's receipt
+  number is still taken" red. The first version of that assertion was a FIXTURE ON A FALLBACK PATH —
+  it binned a four-month-old order and reserved a number today, which cannot collide whatever the code
+  does — and was rewritten to reserve twice from the same instant.
+  **Coverage boundary, stated not assumed:** `BackupService.RunNow`/`Restore` are not driven by a
+  harness. They copy `UserDataPaths.Root`, which resolves to the machine's real LocalAppData with no
+  seam to redirect, so exercising them would write into the user's own installation. What IS driven:
+  the schedule, the pruning (explicit-root overload), and the package format, which is reused
+  unchanged from the Import/Export menu.
+
 ### 2026-08-02 — v7.1.0: shop creation moves to Store Management, demo data, copy shop, modular copy/paste  [DONE]
 - Ask: "Midum project fix after the major release v7.1.0:
   1. for select shop panel,Move the 新建店铺和创建演示店铺到店铺管理界面。

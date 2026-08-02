@@ -106,6 +106,27 @@ move.
     chosen once per shop and applied to every language).
     Every read of `Orders` here says `IgnoreQueryFilters()`: the context confines Orders to the OPEN
     shop, so a cross-shop delete through a normal query silently matches nothing.
+  - `OrderRecycleBin` (static, v8.0) — **the one place an order is deleted from**. `Delete` stamps
+    `Order.DeletedOnUtc` (the query filter then hides it everywhere), `Restore` clears it, `List` /
+    `Count` read the open shop's bin, `PurgeForever` removes rows and their attached images for good,
+    and `PurgeExpired` applies the retention window across EVERY shop at startup. The orders list, the
+    Delete key and the GraphQL `deleteOrder` mutation all route through it, so no path still destroys a
+    record outright. Every method reaches rows the filter hides, so each says `IgnoreQueryFilters()`
+    and then restates by hand whichever half of the filter it still meant.
+  - `BackupService` (static, v8.0) — the scheduled safety copy: `RunIfDue` at startup, `RunNow`,
+    `List`, `Restore`, and pruning delegated to `UserDataPaths.PruneBackups`. Writes NO new format —
+    a backup is the package `DatabasePathProvider.ExportDatabaseTo` produces and a restore is
+    `ImportDatabaseFrom`, which already backs up what it replaces and already guards zip-slip.
+    `BackupEntry` / `BackupKind` / `BackupResult` are what the panel lists and reports.
+  - `DataProtectionStore` (singleton, v8.0) — owns `Config/data-protection.json`: the backup schedule,
+    how many copies to keep, and how long the recycle bin holds an order. One live instance, because
+    the startup backup stamps `LastBackupUtc` while the settings panel may hold an older snapshot.
+  - `CsvWriter` (`Services/Global`, v8.0) — RFC 4180 quoting plus a UTF-8 BOM, without which Excel
+    mangles every non-ASCII name; neutralises a leading `=`/`+`/`-`/`@` against CSV injection.
+    Reusable by anything needing a sheet.
+  - `OrderCsvExport` (v8.0) — the order spreadsheet. Every figure comes from `Order.MoneyFor(line)`
+    and its siblings, never recomputed, so the sheet cannot disagree with the receipt; headers reuse
+    the ORDER LIST's own string-table keys.
   - `DemoOrders` (static) — the demo store's preset order history: loads
     `Settings/System/Defaults/demo-orders.json` once (cached, degrading to empty), and `Seed(db, shop,
     today)` writes it as real orders. Shaped like `TaxJurisdictions` / `PhoneCountries`. Every day in
@@ -715,6 +736,18 @@ move.
     format. `ShopsChanged` tells the picker whether to reload, so cancelling out costs no refresh;
     `CreatedShop` and `ConfigureTermsRequested` report a shop made here so the picker can select it and
     the eventual OPENER can run the terms editor.
+  - `RecycleBinWindow` (v8.0) — the open shop's deleted orders, shaped after `StoreManagementWindow`:
+    the same card list, the same selection summary, the same split between a reversible action and a
+    destructive one in its own red card. Rows carry a badge saying how many days are left, amber until
+    the last three and then red. Performs nothing — `OrderRecycleBin` owns every rule — and the
+    destructive half goes through `ConfirmDestructiveWindow`. Reports `OrdersChanged`.
+  - `DataProtectionWindow` (`Views/Global`, v8.0) — the backup schedule, the recycle-bin retention and
+    the safety copies on this machine, in one panel because a shop owner experiences them as one
+    question. No Save button: each setting is one independent choice, written on change through
+    `DataProtectionStore.Save`, guarded by a `_loading` flag so seeding the four pickers does not
+    write four times. Restore goes through `ConfirmDestructiveWindow` (it replaces EVERY shop's data);
+    deleting one copy is an ordinary Yes/No, or the typed phrase would come to mean nothing. Reports
+    `DataRestored`.
   - `ConfirmDestructiveWindow` — the gate in front of every irreversible action: a 10-character phrase
     generated per dialog from `RandomNumberGenerator` over an alphabet with **no lookalike pairs**
     (neither half of O/0, I/1/L, S/5, Z/2, B/8, G/6, Q/O), typed case-sensitively before either button
@@ -948,6 +981,12 @@ It is now data, in five pieces:
 ## Key cross-cutting patterns
 
 - All UI text flows through `Languages.xml` / `LocalizationService`.
+- **The Orders query filter answers TWO questions (v8.0): which shop, and not-in-the-bin.**
+  `IgnoreQueryFilters()` drops both at once, so every caller has to restate whichever half it still
+  meant — see `context.md` for the audit and for the receipt-number defect it found. `OrderQuery` is
+  the one definition of what the shop is currently LOOKING at, shared by the list, the count badge and
+  the CSV export; deleting an order is soft and routes through `OrderRecycleBin` from every path,
+  including the GraphQL mutation.
 - **Authorization is per shop and re-evaluated on every shop switch.** Decisions go through the
   named capability properties on `AuthenticationService`, never `role == Manager` comparisons in the
   UI. Chrome is HIDDEN rather than disabled, and every hidden action still re-checks its capability

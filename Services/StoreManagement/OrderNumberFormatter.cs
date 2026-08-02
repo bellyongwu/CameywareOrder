@@ -1,5 +1,6 @@
 using CameywareOrder.Data;
 using CameywareOrder.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace CameywareOrder.Services;
 
@@ -56,7 +57,7 @@ public static class OrderNumberFormatter
 
         // Bounded so a corrupt counter cannot spin: 10,000 collisions in a row means the format
         // itself is producing duplicates, and the caller's own uniqueness check is the backstop.
-        for (var attempt = 0; attempt < 10_000 && IsTaken(db, candidate); attempt++)
+        for (var attempt = 0; attempt < 10_000 && IsTaken(db, shop, candidate); attempt++)
         {
             sequence++;
             candidate = Compose(shop, now, sequence);
@@ -84,7 +85,7 @@ public static class OrderNumberFormatter
         var candidate = Compose(shop, now, sequence: 0);
 
         // Same bound and the same reasoning as the sequential scan above.
-        for (var attempt = 0; attempt < 10_000 && IsTaken(db, candidate); attempt++)
+        for (var attempt = 0; attempt < 10_000 && IsTaken(db, shop, candidate); attempt++)
         {
             now = now.AddSeconds(1);
             candidate = Compose(shop, now, sequence: 0);
@@ -186,8 +187,24 @@ public static class OrderNumberFormatter
         return int.TryParse(tail, out var value) ? value : null;
     }
 
-    private static bool IsTaken(AppDbContext db, string orderNumber)
-        => db.Orders.Any(order => order.OrderNumber == orderNumber);
+    /// <summary>
+    /// Whether this shop has already issued a number — including to an order now in the recycle bin.
+    /// </summary>
+    /// <remarks>
+    /// <c>IgnoreQueryFilters</c> with the shop restated by hand, because a query filter is
+    /// all-or-nothing and only ONE of its two conditions should be dropped here (v8.0):
+    ///
+    /// - the DELETION half must go. An order in the bin still holds its receipt number — that number
+    ///   is on a slip the customer is carrying, and the order can be restored at any point in the
+    ///   retention window. Asking through the ordinary filter reports it free, hands it to the next
+    ///   order, and produces two orders with one number the moment the first comes back.
+    /// - the SHOP half must stay. Receipt runs are per shop by design: two branches sharing a prefix
+    ///   each number from 1, and a global check would make the second skip past the first's numbers
+    ///   for no reason the shop could see.
+    /// </remarks>
+    private static bool IsTaken(AppDbContext db, Shop shop, string orderNumber)
+        => db.Orders.IgnoreQueryFilters()
+            .Any(order => order.ShopId == shop.Id && order.OrderNumber == orderNumber);
 
     /// <summary>Joins the parts with "-", skipping any that are empty so a blank prefix leaves no stray dash.</summary>
     private static string Join(params string[] parts)

@@ -62,16 +62,21 @@ public static class ShopAdministration
         db.SaveChanges();
     }
 
-    /// <summary>How many orders a shop holds — what the panel shows before offering to delete it.</summary>
+    /// <summary>How many LIVE orders a shop holds — what the panel shows before offering to delete it.</summary>
     /// <remarks>
     /// `IgnoreQueryFilters` because this counts a shop that is NOT the open one, which is every shop in
     /// the list bar at most one. Without it the count reads zero and a delete confirmation would
     /// cheerfully report that there is nothing to lose.
+    ///
+    /// Dropping the filter drops BOTH its conditions, so the deletion one is restated here (v8.0):
+    /// an order already in the recycle bin is one the shop has struck off, and counting it would
+    /// describe the branch as holding records its own list does not show.
     /// </remarks>
     public static int CountOrders(AppDbContext db, int shopId)
     {
         ArgumentNullException.ThrowIfNull(db);
-        return db.Orders.IgnoreQueryFilters().Count(order => order.ShopId == shopId);
+        return db.Orders.IgnoreQueryFilters()
+            .Count(order => order.ShopId == shopId && order.DeletedOnUtc == null);
     }
 
     /// <summary>

@@ -162,9 +162,11 @@ public partial class MainWindow : Window, ICopyPasteSurface
         ProductCatalogMenuItem.Visibility = Show(auth.CanManageProductCatalog);
         HeaderFooterMenuItem.Visibility = Show(auth.CanManageBranding);
         SettlementMenuItem.Visibility = Show(auth.CanViewReports);
+        RecycleBinMenuItem.Visibility = Show(auth.CanManageRecycleBin);
 
         // Whole-installation tools, and the database path they act on.
         var dataTools = Show(auth.CanUseDataTools);
+        DataProtectionMenuItem.Visibility = Show(auth.CanManageBackups);
         LocalDatabaseMenuItem.Visibility = dataTools;
         ImportExportMenuItem.Visibility = dataTools;
         DataPathSeparator.Visibility = dataTools;
@@ -179,7 +181,12 @@ public partial class MainWindow : Window, ICopyPasteSurface
         // that failed to load.
         ConfigSeparator.Visibility = Show(
             auth.CanConfigureShop || auth.CanManageMeasurementTerms || auth.CanManageProductCatalog
-            || auth.CanViewReports || auth.CanUseDataTools || auth.CanPrintOrderDocuments);
+            || auth.CanViewReports || auth.CanUseDataTools || auth.CanPrintOrderDocuments
+            || auth.CanManageRecycleBin || auth.CanManageBackups);
+
+        // Exporting the whole customer list in one file is a different act from reading it on screen,
+        // so it carries its own capability rather than riding on ViewOrders.
+        ExportCsvButton.Visibility = Show(auth.CanExportOrders);
 
         RefreshOrderActions();
 
@@ -2086,6 +2093,95 @@ public partial class MainWindow : Window, ICopyPasteSurface
         var key = $"{prefix}.{suffix}";
         var localized = _localization[key];
         return string.Equals(localized, key, StringComparison.Ordinal) ? suffix : localized;
+    }
+
+    // ── Search, export and the two data panels (v8.0) ─────────────────────────────────────────────
+
+    private void OnClearFiltersClick(object sender, RoutedEventArgs e) => _viewModel.ClearQuery();
+
+    /// <summary>
+    /// Saves the filtered order list as a spreadsheet.
+    /// </summary>
+    /// <remarks>
+    /// The dialog lives here and the content lives in the view model — the split this codebase makes
+    /// everywhere a file is written, because a view model that opens a dialog cannot be driven by a
+    /// harness.
+    ///
+    /// An EMPTY result is refused before the dialog rather than after it. A shop that has filtered
+    /// down to nothing and pressed Export should be told so, not handed a file picker and then a
+    /// header row.
+    /// </remarks>
+    private void OnExportCsvClick(object sender, RoutedEventArgs e)
+    {
+        if (!AuthenticationService.Instance.CanExportOrders)
+            return;
+
+        var (csv, fileName, rowCount) = _viewModel.BuildOrderExport();
+
+        if (rowCount == 0)
+        {
+            _viewModel.StatusMessage = _localization["Csv.Export.Nothing"];
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Filter = _localization["Csv.Export.Filter"],
+            Title = _localization["Csv.Export.Action"],
+            FileName = fileName,
+        };
+
+        // GetValueOrDefault rather than `is true`: the bool? is CONSUMED as a bool here, and Sonar
+        // flags `is true` in that position (S1125). Behaviourally identical for bool?.
+        if (!dialog.ShowDialog(this).GetValueOrDefault())
+            return;
+
+        try
+        {
+            csv.Save(dialog.FileName);
+            _viewModel.ReportExport(succeeded: true,
+                _localization.Format("Csv.Export.Rows", rowCount, dialog.FileName));
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            _viewModel.ReportExport(succeeded: false, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Opens the recycle bin, and reloads the list if anything came back from it or went for good.
+    /// </summary>
+    private void OnRecycleBinClick(object sender, RoutedEventArgs e)
+    {
+        if (!AuthenticationService.Instance.CanManageRecycleBin)
+            return;
+
+        var bin = new RecycleBinWindow(_localization, _scopeFactory) { Owner = this };
+        bin.ShowDialog();
+
+        if (bin.OrdersChanged)
+            _viewModel.LoadOrdersCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// Opens the data-protection panel.
+    /// </summary>
+    /// <remarks>
+    /// A restore performed there replaces the whole database — including the shop this window has
+    /// open — so the list is reloaded afterwards. It is NOT enough on its own: the shop row itself
+    /// may now be a different one, which is why the panel says to reopen the shop. Reloading is what
+    /// stops the screen showing rows that no longer exist in the meantime.
+    /// </remarks>
+    private void OnDataProtectionClick(object sender, RoutedEventArgs e)
+    {
+        if (!AuthenticationService.Instance.CanManageBackups)
+            return;
+
+        var panel = new DataProtectionWindow(_localization) { Owner = this };
+        panel.ShowDialog();
+
+        if (panel.DataRestored)
+            _viewModel.LoadOrdersCommand.Execute(null);
     }
 
     // ── Copy / paste surface (Ctrl+C, Ctrl+V on the orders list) ──────────────────────────────────

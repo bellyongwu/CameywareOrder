@@ -20,6 +20,7 @@
     <Window.Resources>
         <conv:NullToVisibilityConverter x:Key="NullToVisibility"/>
         <conv:OrderStatusToLocalizedTextConverter x:Key="OrderStatusToLocalizedTextConverter"/>
+        <conv:SearchFieldNameConverter x:Key="SearchFieldName"/>
         <conv:LocalizationLookupConverter x:Key="LocalizationLookupConverter"/>
         <conv:CustomMadeRecordSummaryConverter x:Key="CustomMadeRecordSummaryConverter"/>
         <conv:CurrencyAmountConverter x:Key="CurrencyAmountConverter"/>
@@ -271,6 +272,11 @@
                         <!-- The shop's ready-made categories. Beside the measurement terms because
                              both answer "what does this branch sell and how is it described". -->
                         <MenuItem x:Name="ProductCatalogMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.ProductCatalog], Mode=OneWay}" Click="OnProductCatalogClick"/>
+                        <!-- The shop's own deleted orders, so it sits with the shop's things rather
+                             than with the installation-wide tools below. Its own capability: deleting
+                             is reversible now and costs little, while this is where a record goes
+                             beyond recovery — and where every order anyone has deleted can be read. -->
+                        <MenuItem x:Name="RecycleBinMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.RecycleBin], Mode=OneWay}" Click="OnRecycleBinClick"/>
                         <MenuItem x:Name="PrintMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Print], Mode=OneWay}">
                             <!-- One order per printout: gated on exactly one selected row, the same
                                  rule the row context menu applies.
@@ -292,6 +298,11 @@
                         </MenuItem>
                         <!-- The next two act on the whole installation rather than on one shop, so
                              they are administrator-only; hidden in code. -->
+                        <!-- Backups and how long the bin keeps things: one panel, because to a shop
+                             owner they are one question. Above the database tools rather than inside
+                             them — this is the entry somebody reaches for when something has already
+                             gone wrong, and it should not be nested. -->
+                        <MenuItem x:Name="DataProtectionMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.DataProtection], Mode=OneWay}" Click="OnDataProtectionClick"/>
                         <MenuItem x:Name="LocalDatabaseMenuItem" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LocalDatabase], Mode=OneWay}">
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.CopyDataPath], Mode=OneWay}" Click="OnCopyDataPathClick"/>
                             <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.RevealDataFile], Mode=OneWay}" Click="OnRevealDataFileClick"/>
@@ -511,8 +522,18 @@
                     </Grid>
                 </Border>
 
+                <!-- Two rows since v8.0. The search grew a FIELD selector and a date range, which one
+                     row could not hold without either wrapping unpredictably or pushing the font
+                     slider off the right of a narrow window. Row 0 is what the bar has always been;
+                     row 1 is the narrowing that used not to exist. -->
                 <Border Grid.Row="2" Background="White" BorderBrush="#E5E7EB" BorderThickness="1" CornerRadius="10" Padding="16,12" Margin="0,0,0,10">
-                    <Grid>
+                  <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="260"/>
@@ -554,6 +575,60 @@
                             <TextBlock Text="{Binding Value, ElementName=RecordFontSizeSlider, StringFormat={}{0:0}px}" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="40"/>
                         </StackPanel>
                     </Grid>
+
+                    <!-- Where to look, and over what period. -->
+                    <Grid Grid.Row="1" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Field.Label], Mode=OneWay}"/>
+                        <ComboBox x:Name="SearchFieldBox" Grid.Column="1" Width="150" VerticalAlignment="Center"
+                                  ItemsSource="{Binding SearchFieldOptions}"
+                                  SelectedItem="{Binding SearchField}"
+                                  AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Field.Label], Mode=OneWay}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource SearchFieldName}}"/>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="16,0,8,0"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.From], Mode=OneWay}"/>
+                        <!-- No Width: the drop-down calendar is floored at the box's width, so a box
+                             pinned narrower than the calendar needs leaves it hanging off. The floor
+                             lives in the themed picker; a call site only has to not override it. -->
+                        <DatePicker x:Name="FromDatePicker" Grid.Column="3" VerticalAlignment="Center"
+                                    SelectedDate="{Binding FromDate}"/>
+
+                        <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="12,0,8,0"
+                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.To], Mode=OneWay}"/>
+                        <DatePicker x:Name="ToDatePicker" Grid.Column="5" VerticalAlignment="Center"
+                                    SelectedDate="{Binding ToDate}"/>
+
+                        <Button x:Name="ClearFiltersButton" Grid.Column="6" Margin="16,0,0,0" Padding="12,5"
+                                VerticalAlignment="Center"
+                                IsEnabled="{Binding HasQuery}"
+                                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Clear], Mode=OneWay}"
+                                Click="OnClearFiltersClick"/>
+
+                        <!-- Right-aligned and away from the filters: it acts on what they produced
+                             rather than being one of them. -->
+                        <Button x:Name="ExportCsvButton" Grid.Column="7" HorizontalAlignment="Right"
+                                Padding="12,5" VerticalAlignment="Center"
+                                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Csv.Export.Action], Mode=OneWay}"
+                                Click="OnExportCsvClick"/>
+                    </Grid>
+                  </Grid>
                 </Border>
 
                 <!-- Both scrollbars are Auto. Nothing in a row wraps, so a window too narrow for the

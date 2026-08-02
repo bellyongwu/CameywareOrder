@@ -31,8 +31,18 @@ public static class UserDataPaths
     /// <summary>Per-machine settings files: credentials, currency, language preference.</summary>
     public static string ConfigDirectory => Path.Combine(Root, "Config");
 
-    /// <summary>Safety copies taken before a destructive import. See <see cref="PruneBackups"/>.</summary>
+    /// <summary>
+    /// Safety copies: the ones taken before a destructive import, and the scheduled packages the
+    /// application writes for itself (v8.0). See <see cref="PruneBackups"/>.
+    /// </summary>
     public static string BackupsDirectory => Path.Combine(Root, "Backups");
+
+    /// <summary>
+    /// File-name pattern of a scheduled backup package. Declared HERE rather than in the service
+    /// that writes them, because <see cref="PruneBackups"/> is what deletes them and a pattern known
+    /// to the writer but not the pruner is a folder that grows forever.
+    /// </summary>
+    public const string BackupPackagePattern = "backup-*.zip";
 
     /// <summary>
     /// Attached document images.
@@ -172,6 +182,11 @@ public static class UserDataPaths
         try
         {
             Prune(Directory.GetFiles(backups, "orders.db.bak-*"), File.GetLastWriteTimeUtc, File.Delete);
+            // The scheduled backups (v8.0). A separate pattern rather than a third owner of the
+            // pruning rule: these are whole packages and the pre-import copies are bare database
+            // files, so "keep the newest N" has to be counted per kind or one sort of backup would
+            // push the other out.
+            Prune(Directory.GetFiles(backups, BackupPackagePattern), File.GetLastWriteTimeUtc, File.Delete);
             Prune(
                 Directory.GetDirectories(backups, "Documents.bak-*"),
                 Directory.GetLastWriteTimeUtc,

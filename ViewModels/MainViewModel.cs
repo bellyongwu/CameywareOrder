@@ -21,7 +21,16 @@ public class MainViewModel : INotifyPropertyChanged
     private Order? _selectedOrder;
     private List<Order> _selectedOrders = new();
     private string _statusMessage;
-    private string _searchText = string.Empty;
+
+    /// <summary>
+    /// What the shop is currently looking for. ONE object rather than a field per filter, so the
+    /// list, the count badge and the CSV export cannot end up applying different rules — see
+    /// <see cref="OrderQuery"/>. The properties below are the binding surface onto it.
+    /// </summary>
+    private OrderQuery _query = OrderQuery.Empty;
+
+    private DateTime? _fromDate;
+    private DateTime? _toDate;
     private StatusFilterOption _selectedStatusFilter;
     private int _pageSize = 20;
     private int _currentPage = 1;
@@ -145,20 +154,132 @@ public class MainViewModel : INotifyPropertyChanged
     /// </summary>
     public event EventHandler<IReadOnlyList<Order>>? SelectionRequested;
 
-    public string SearchText
+    /// <summary>
+    /// The query the list is showing. Assigning it rebuilds the list and resets to page one.
+    /// </summary>
+    /// <remarks>
+    /// Exposed as a whole so the CSV export can take exactly what is on screen. Every filter property
+    /// below writes through here rather than holding its own field, which is what stops the two
+    /// drifting: before this, the search text and the status filter were separate fields matched by
+    /// separate <c>if</c>s inside <c>RebuildOrdersView</c>, and adding a third filter meant adding a
+    /// third <c>if</c> in a method the export could not call.
+    /// </remarks>
+    public OrderQuery Query
     {
-        get => _searchText;
-        set
+        get => _query;
+        private set
         {
-            if (_searchText == value)
+            if (_query == value)
                 return;
 
-            _searchText = value;
+            _query = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(HasQuery));
             _currentPage = 1;
             RebuildOrdersView();
         }
     }
+
+    /// <summary>Whether anything is being filtered — what the "clear" button is enabled by.</summary>
+    public bool HasQuery => !_query.IsEmpty;
+
+    public string SearchText
+    {
+        get => _query.Text ?? string.Empty;
+        set => Query = _query with { Text = value };
+    }
+
+    /// <summary>Which part of an order the search looks in.</summary>
+    public IReadOnlyList<OrderSearchField> SearchFieldOptions { get; } =
+        Enum.GetValues<OrderSearchField>();
+
+    public OrderSearchField SearchField
+    {
+        get => _query.Field;
+        set => Query = _query with { Field = value };
+    }
+
+    /// <summary>
+    /// Only orders taken on or after this day, or null for no lower bound.
+    /// </summary>
+    /// <remarks>
+    /// Two nullable days rather than a <see cref="DateRange"/> on the binding surface, because a date
+    /// picker can legitimately be half-filled while the user is still typing the other one. They are
+    /// composed into a range — the same model the settlement report uses, so "March" means the same
+    /// span on both screens — only once at least one end is set.
+    /// </remarks>
+    public DateTime? FromDate
+    {
+        get => _fromDate;
+        set
+        {
+            if (_fromDate == value)
+                return;
+
+            _fromDate = value?.Date;
+            OnPropertyChanged();
+            ApplyPeriod();
+        }
+    }
+
+    public DateTime? ToDate
+    {
+        get => _toDate;
+        set
+        {
+            if (_toDate == value)
+                return;
+
+            _toDate = value?.Date;
+            OnPropertyChanged();
+            ApplyPeriod();
+        }
+    }
+
+    /// <summary>
+    /// Composes the two pickers into the query's period.
+    /// </summary>
+    /// <remarks>
+    /// An open end is filled with the other end's extreme rather than left unbounded: "from the 3rd"
+    /// means the 3rd onwards, and <c>DateRange</c> is a closed span by construction. A pair the user
+    /// has entered backwards is SWAPPED rather than refused — they meant a span between two days, and
+    /// an empty list with no explanation is a worse answer than the obvious one.
+    /// </remarks>
+    private void ApplyPeriod()
+    {
+        if (_fromDate is null && _toDate is null)
+        {
+            Query = _query with { Period = null };
+            return;
+        }
+
+        var first = _fromDate ?? _toDate!.Value;
+        var last = _toDate ?? _fromDate!.Value;
+
+        if (first > last)
+            (first, last) = (last, first);
+
+        Query = _query with { Period = DateRange.Custom(first, last) };
+    }
+
+    /// <summary>Clears every filter at once.</summary>
+    public void ClearQuery()
+    {
+        _fromDate = null;
+        _toDate = null;
+        _selectedStatusFilter = StatusFilterOptions[0];
+
+        OnPropertyChanged(nameof(FromDate));
+        OnPropertyChanged(nameof(ToDate));
+        OnPropertyChanged(nameof(SelectedStatusFilter));
+        OnPropertyChanged(nameof(SearchText));
+        OnPropertyChanged(nameof(SearchField));
+
+        Query = OrderQuery.Empty;
+    }
+
+    /// <summary>Every order matching the current query, across every page — what the export takes.</summary>
+    public IReadOnlyList<Order> FilteredOrders => _query.Apply(_allOrders);
 
     public IReadOnlyList<StatusFilterOption> StatusFilterOptions { get; } = new StatusFilterOption[]
     {
@@ -180,8 +301,7 @@ public class MainViewModel : INotifyPropertyChanged
 
             _selectedStatusFilter = value;
             OnPropertyChanged();
-            _currentPage = 1;
-            RebuildOrdersView();
+            Query = _query with { Status = value.Value };
         }
     }
 
@@ -403,22 +523,10 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void RebuildOrdersView()
     {
-        var query = _allOrders.AsEnumerable();
-
-        if (!string.IsNullOrWhiteSpace(SearchText))
-        {
-            var keyword = SearchText.Trim();
-            query = query.Where(order =>
-                order.CustomerName.Contains(keyword, StringComparison.OrdinalIgnoreCase)
-                || order.PhoneNumber.Contains(keyword, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (SelectedStatusFilter?.Value is { } status)
-        {
-            query = query.Where(order => order.Status == status);
-        }
-
-        var filtered = query.ToList();
+        // Through the query model, which is the ONE definition of what the shop is looking at. The
+        // three `if`s that used to live here were the same rule written a second time, and the CSV
+        // export could not have called them.
+        var filtered = _query.Apply(_allOrders);
         _filteredCount = filtered.Count;
 
         // Apply the active column sort across the whole filtered set before paging so
@@ -494,39 +602,44 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Deletes every selected order and reloads the list. Returns how many rows were actually
-    /// removed, which is not always the count that was selected — another machine, or another
-    /// window, may have deleted one already.
+    /// Sends every selected order to the recycle bin and reloads the list. Returns how many rows
+    /// actually moved, which is not always the count that was selected — another window may have
+    /// deleted one already.
     /// </summary>
+    /// <remarks>
+    /// Since v8.0 this REMOVES NOTHING. It routes through <see cref="OrderRecycleBin.Delete"/>, which
+    /// stamps <c>DeletedOnUtc</c> and leaves the row where it is; the query filter takes it off every
+    /// screen and the retention window decides when it really goes. The wording the user sees changed
+    /// with it — see <c>Delete.ConfirmMessage</c> — because a confirmation that still says
+    /// "permanently" would be describing a behaviour the application no longer has, and the next
+    /// person to read it would trust the message over the code.
+    /// </remarks>
     public async Task<int> DeleteSelectedAsync()
     {
         var ids = _selectedOrders.Select(order => order.Id).Distinct().ToList();
         if (ids.Count == 0) return 0;
 
+        var deletedNumber = ids.Count == 1 ? _selectedOrders[0].OrderNumber : null;
+
         try
         {
-            using var scope = _scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            // A query, not FindAsync: Find is a key lookup and bypasses the shop query filter, so a
-            // stale selection left over from a shop switch could delete another shop's order. The
-            // whole batch goes in ONE SaveChanges — a failure part way through then leaves the list
-            // exactly as it was, rather than half deleted with no record of where it stopped.
-            var orders = await db.Orders.Where(order => ids.Contains(order.Id)).ToListAsync();
-            if (orders.Count > 0)
+            int moved;
+            using (var scope = _scopeFactory.CreateScope())
             {
-                db.Orders.RemoveRange(orders);
-                await db.SaveChangesAsync();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                moved = OrderRecycleBin.Delete(db, ids, DateTime.UtcNow);
             }
 
-            var deletedNumber = orders.Count == 1 ? orders[0].OrderNumber : null;
+            if (moved != 1)
+                deletedNumber = null;
+
             await LoadOrdersAsync();
 
             StatusMessage = deletedNumber is not null
                 ? _localization.Format("Status.Deleted", deletedNumber)
-                : _localization.Format("Status.DeletedCount", orders.Count);
+                : _localization.Format("Status.DeletedCount", moved);
 
-            return orders.Count;
+            return moved;
         }
         catch (Exception ex)
         {
@@ -534,6 +647,42 @@ public class MainViewModel : INotifyPropertyChanged
             return 0;
         }
     }
+
+    /// <summary>
+    /// Builds a spreadsheet of exactly what the list is currently showing, and a file name for it.
+    /// </summary>
+    /// <remarks>
+    /// EXACTLY what the list shows — <see cref="FilteredOrders"/>, not <c>_allOrders</c> and not the
+    /// visible page. A file with more rows than the screen it was taken from is the version nobody
+    /// re-checks; a file with only the current page is one somebody quietly bases a quarter's
+    /// accounts on.
+    ///
+    /// Returns the writer rather than saving it: choosing where a file goes means a dialog, and a
+    /// view model that opens one cannot be driven by a harness. The window owns the dialog, this owns
+    /// the content — the same split as the delete confirmation above.
+    /// </remarks>
+    public (CsvWriter Csv, string FileName, int RowCount) BuildOrderExport()
+    {
+        var orders = FilteredOrders;
+
+        return (
+            OrderCsvExport.Build(orders, _localization),
+            OrderCsvExport.SuggestFileName(
+                ShopContext.Instance.Current, _localization.CurrentLanguageCode, orders.Count),
+            orders.Count);
+    }
+
+    /// <summary>
+    /// Reports the outcome of an export on the status bar, in one place for both paths.
+    /// </summary>
+    /// <remarks>
+    /// The success message arrives already composed (the caller knows the row count and the path),
+    /// while the failure wraps a raw exception message in a sentence. A pass-through
+    /// <c>"{0}"</c> key for the success half would be a string-table entry identical in every
+    /// language, which is indistinguishable from a translation that was never done.
+    /// </remarks>
+    public void ReportExport(bool succeeded, string detail)
+        => StatusMessage = succeeded ? detail : _localization.Format("Csv.Export.Failed", detail);
 
     // Statuses that represent a finished order (Shipped is now also read-only/finalized,
     // same as Completed/Cancelled/Returned). Copying such an order starts a fresh

@@ -11,6 +11,42 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v8.0.0 — 2026-08-02
+
+**The data release.** Three things a shop running this on one computer needs and did not have: a
+backup that happens by itself, a way to find and export orders, and a way back from a mistaken
+delete.
+
+- **The application backs itself up.** A safety copy used to be taken only when you imported a
+  database — so a shop that never used Import/Export had none at all. It now copies itself on a
+  schedule (once a day out of the box), keeping the last ten copies. The copy runs **when the
+  application starts, never while somebody is working**, and holds the whole database and every
+  attached image. **Local Configuration → Backup & Recovery** shows when the last one ran, lets you
+  take one on the spot, and has an *Open the folder* button — a backup that never leaves the computer
+  does not survive the computer, so put one on a USB stick now and then.
+- **Restore from any copy.** Pick one, type the confirmation phrase, and every shop's data is
+  replaced by it. What is being replaced is itself copied first, so restoring the wrong file can be
+  undone.
+- **Deleting an order is no longer permanent.** It goes to a **Recycle Bin** (Local Configuration →
+  Recycle Bin) and can be put back exactly as it was, receipt number included, for **30 days** —
+  adjustable, or set to keep them until you empty the bin yourself. After that it is removed when the
+  application next starts. Emptying the bin, and *Delete for good*, are the only places in the
+  application where a record cannot be recovered afterwards, and both ask you to type a phrase first.
+- **Search by order number.** The search box matched the customer's name and phone number only, which
+  is not what a customer standing at the counter is holding. It now looks in the receipt number, the
+  name, the phone, the email, the address and the notes — with a *Look in* box to narrow it to one of
+  those — and a **From / To** date range beside it.
+- **Export the orders as a spreadsheet.** *Export CSV* writes **exactly what the list is showing**,
+  filters and all: one row per order, per-service subtotals and tax, what was received and what is
+  still owed. It opens correctly in Excel in every language the application ships. The figures come
+  from the same place the receipt does, so the sheet and the paper cannot disagree.
+
+**Three new permissions** — *Recycle bin*, *Export orders* and *Backup and recovery*. On a **new**
+installation the manager gets the first two and the administrator gets all three. On an **existing**
+installation nothing is granted automatically: your roles keep exactly the permissions you gave them,
+so an administrator should hand out the new ones in Local Configuration → Permissions. That is
+deliberate — an upgrade should not quietly widen what anybody is allowed to do.
+
 ### v7.1.0 — 2026-08-02
 
 **Everything that changes which shops exist now lives in one screen.** Select Shop is a chooser

@@ -140,9 +140,12 @@ public partial class ShopPickerWindow : Window
 
         // IgnoreQueryFilters is essential: AppDbContext filters Orders to the ACTIVE shop, so
         // without it every shop in this list would report the open shop's order count (and zero on
-        // the startup path, where no shop is active yet).
+        // the startup path, where no shop is active yet). It also drops the recycle-bin condition,
+        // so that one is restated — a card saying "12 orders" must mean the twelve the branch's list
+        // will actually show.
         var counts = db.Orders
             .IgnoreQueryFilters()
+            .Where(order => order.DeletedOnUtc == null)
             .GroupBy(order => order.ShopId)
             .Select(group => new { ShopId = group.Key, Count = group.Count() })
             .ToDictionary(entry => entry.ShopId, entry => entry.Count);

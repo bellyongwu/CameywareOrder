@@ -24,6 +24,54 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **Adding a second condition to a QUERY FILTER changes every `IgnoreQueryFilters()` caller at once
+  (2026-08-02).** `Orders` was filtered on `ShopId`; v8.0 made it `ShopId && DeletedOnUtc == null`.
+  The escape hatch is all-or-nothing, so every existing caller — which had reached for it to drop the
+  SHOP half — silently began seeing recycled rows too. All five were re-read and each now restates by
+  hand whichever half it still meant. One was a real defect that nothing else would have found:
+  - **`OrderNumberFormatter.IsTaken` asked through the filter**, so a binned order's receipt number
+    read as FREE and would have been handed to the next order — two orders with one number the moment
+    the first was restored, and that number is on a slip the customer is carrying. It now ignores the
+    filter and restates the SHOP condition, because receipt runs are per shop: a global check would
+    make a second branch skip past the first's numbers for no reason anybody could see.
+  - The other four: the shop's order count, the picker's per-shop count and the archive export all
+    exclude binned rows (a shop's "12 orders" must mean the twelve its list shows, and a restore must
+    not resurrect somebody's bin on another machine); the shop DELETE keeps taking everything.
+  - Generalises: before adding a condition to a filter, grep for the escape hatch and read every hit.
+    The compiler cannot help here — every one of them still compiles and still runs.
+- **An assertion about a collision must be driven at ONE INSTANT (2026-08-02).** The first version of
+  the receipt-number check binned a four-month-old order and reserved a number today. It passed
+  before the fix and after it, because a timestamp number composed today never collides with one
+  composed in April — a fixture sitting on a fallback path, testing nothing. Reserving twice from the
+  SAME moment is what exercises the scan. Watch for this shape wherever a test's own inputs make the
+  failure mode unreachable.
+- **Delete became reversible, so the WORDING had to move with it (2026-08-02).** `Delete.ConfirmMessage`
+  said "this action cannot be undone" and now says the order moves to the recycle bin. A confirmation
+  describing behaviour the application no longer has is worse than none: the next person to read it
+  trusts the message over the code. Conversely the bin's own destructive card says plainly that
+  nothing there can be recovered, because that is now the only place where it is true.
+- **Two settings that a user experiences as ONE question share a store and a panel (2026-08-02).**
+  Backup cadence/retention and recycle-bin retention are both "what happens if something goes wrong".
+  Split across two panels, each answers half. `DataProtectionSettings` is per INSTALLATION — how much
+  disk to spend on safety copies is a property of the machine, not of a shop, and a shop carried to
+  another PC must not bring the old machine's schedule with it.
+- **A backup runs at STARTUP, after the migrations and before the first window (2026-08-02).** After,
+  so the copy is of a database this build can read back; before, so nothing is writing while the file
+  is copied — a backup taken mid-transaction looks fine until the day it is needed. It swallows every
+  failure (a shop that cannot take orders because it could not take a backup has been made worse by
+  the feature meant to protect it), and the panel's "last backup" line is where a silently failing
+  schedule becomes visible. It writes NO new format: a backup is the package `ExportDatabaseTo`
+  already produces and a restore is `ImportDatabaseFrom`, which already backs up what it replaces.
+- **A CSV writer for a multilingual application MUST emit a UTF-8 BOM (2026-08-02).** Excel on Windows
+  reads a BOM-less file as the system ANSI codepage, so every Chinese, Japanese, French and Spanish
+  name becomes mojibake — on the one machine the shop will actually open it on. Also neutralise a
+  leading `=`, `+`, `-` or `@`: a spreadsheet treats such a cell as a FORMULA, which makes any stored
+  text an injection vector the moment the file is opened.
+- **An export must take what the LIST shows, which is why the filter had to become a model
+  (2026-08-02).** The search text and the status filter were two view-model fields matched by two
+  `if`s inside `RebuildOrdersView` — a private method the export could not call. `OrderQuery` is the
+  one definition and `MainViewModel.FilteredOrders` is what the export reads. A file with more rows
+  than the screen it came from is the version nobody re-checks.
 - **Seeded demo data must carry OFFSETS, not dates (2026-08-02).** A file of absolute dates ages: a
   year after it ships every demo order is long collected, the pickup queue is empty, nothing is
   overdue and the settlement report has nothing in its period. `DemoOrderTemplate` stores
