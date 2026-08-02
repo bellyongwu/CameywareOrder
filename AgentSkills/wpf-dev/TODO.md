@@ -17,6 +17,35 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-02 — v9.2.0: first-run hardening, then a second project rating  [IN PROGRESS]
+- Ask: "5. First-run hardening — the seeded admin/admin, manager/manager, staff/staff and the test1/test2 accounts still ship. Flagged in the earlier review, still open. resolve this. After that Do another full rating on the current project. see if there are still running defects at first. then rating the usability and maintanable"
+- Context: item 5 of the improvement list from the v9.1.0 review. A fresh installation ships FIVE
+  accounts whose password equals their user name, one of which is the permanent administrator.
+  `MustChangePassword` is already stored on every record and set by `CreateRecord` — and is read by
+  nothing at all. The flag exists; the enforcement never did.
+- Plan:
+  - [ ] 1. Stop shipping the four convenience accounts. Only the administrator is seeded.
+  - [ ] 2. Enforce `MustChangePassword` at sign-in: refuse the session, demand a new password first.
+  - [ ] 3. Password rules in ONE place — cannot equal the user name, minimum length — so the forced
+        change cannot be satisfied by retyping the default.
+  - [ ] 4. An administrative reset must RE-ARM the flag; only a self-service change clears it.
+        Make it a required parameter so the compiler enumerates the call sites.
+  - [ ] 5. Existing installations: on load, mark any account still verifying against its old seed
+        password as must-change. Do not delete accounts on upgrade — that is the shop's data.
+  - [ ] 6. Localize every new string in all five languages; new UI uses the theme.
+  - [ ] 7. Harness coverage, proven red before green.
+  - [x] 8. Then: full rating — running defects first, then usability and maintainability.
+- Notes: `SeedAccounts` is one entry. `WritePassword` is the single write path and the only caller of
+  `CheckPassword`; `SetPassword(…, requireChange:)` is required, not defaulted, so the compiler
+  enumerated the two call sites. `ChangeOwnPassword` proves the current password and needs no session,
+  which is what lets the sign-in screen refuse the session and still offer a way through. File schema
+  6 arms the flag on existing installations by VERIFYING the shipped password, not by matching the
+  name. New: `Tests/AuthCheck` (39 assertions, proven red on three separately broken guarantees);
+  `uicheck` renders the sign-in screen in both states plus the change step in French. `uicheck` had to
+  touch the singleton BEFORE its baseline hash — the schema upgrade on first read is a legitimate
+  write. Five new keys × 5 languages plus `Session.Lock.PasswordChanged`. Build 0/0, SUITE GREEN
+  (56 + 39 + 41 + uicheck + keycheck + surfacecheck).
+
 ### 2026-08-02 — v9.1.0: restructure the two overgrown code-behinds, and move the harnesses into the repo  [IN PROGRESS]
 - Ask: "I would like you to help to refactoring and restructoring the code base, split them by functions by logical and more maintanable. e.g. split the classes into files referenced for money calculation, documents.etc" + "Point 3 I am not sure the issue. do what you think is reasonable. probably that is what you suggested to move the tests into the repo"
 - Context: from a complexity review. `OrderEditWindow.xaml.cs` is 3,850 lines / 180 methods and

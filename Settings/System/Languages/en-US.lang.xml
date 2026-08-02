@@ -76,6 +76,9 @@
   <Text key="Login.SignIn">Sign In</Text>
   <Text key="Login.Failed">Incorrect user name or password.</Text>
   <Text key="Login.Language">Language</Text>
+  <Text key="Login.PasswordChangeTitle">Choose a new password</Text>
+  <Text key="Login.PasswordChangeMessage">This account still uses the password it was created with. Choose one of your own to continue.</Text>
+  <Text key="Login.SetPassword">Set Password and Sign In</Text>
   <Text key="LanguageSelection.Welcome">Welcome</Text>
   <Text key="LanguageSelection.WelcomeMessage">Welcome to the Cameyware Order System</Text>
   <Text key="LanguageSelection.Enter">Enter System</Text>
@@ -101,6 +104,7 @@
   <Text key="Session.Lock.Unlock">Unlock</Text>
   <Text key="Session.Lock.SignOutInstead">Not you? Sign out instead</Text>
   <Text key="Session.Lock.WrongPassword">Incorrect password.</Text>
+  <Text key="Session.Lock.PasswordChanged">Your password was changed elsewhere. Sign out and sign in again to set a new one.</Text>
   <Text key="SignOut.Failed">Sign out failed. You are still signed in; try again, and restart the application if it keeps happening.</Text>
   <Text key="Shop.Picker.Title">Select Shop</Text>
   <Text key="Shop.Picker.Prompt">Shops you can open</Text>
@@ -231,6 +235,8 @@
   <Text key="Users.Error.NameTaken">That user name is already taken.</Text>
   <Text key="Users.Error.PasswordRequired">Enter a password.</Text>
   <Text key="Users.Error.PasswordMismatch">The two passwords do not match.</Text>
+  <Text key="Users.Error.PasswordTooShort">The password must be at least {0} characters long.</Text>
+  <Text key="Users.Error.PasswordSameAsUserName">The password cannot be the same as the user name.</Text>
   <Text key="Users.Error.Protected">That account is protected and cannot be changed this way.</Text>
   <Text key="Users.Error.NotFound">That account no longer exists.</Text>
   <Text key="Login.Deactivated">Your account has been deactivated. Please contact your manager.</Text>

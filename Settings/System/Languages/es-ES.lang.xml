@@ -74,6 +74,9 @@
   <Text key="Login.SignIn">Iniciar sesión</Text>
   <Text key="Login.Failed">El nombre de usuario o la contraseña no son correctos.</Text>
   <Text key="Login.Language">Idioma</Text>
+  <Text key="Login.PasswordChangeTitle">Elija una nueva contraseña</Text>
+  <Text key="Login.PasswordChangeMessage">Esta cuenta todavía usa la contraseña con la que fue creada. Elija una propia para continuar.</Text>
+  <Text key="Login.SetPassword">Establecer contraseña e iniciar sesión</Text>
   <Text key="LanguageSelection.Welcome">Bienvenido</Text>
   <Text key="LanguageSelection.WelcomeMessage">Bienvenido al sistema de pedidos de Cameyware</Text>
   <Text key="LanguageSelection.Enter">Entrar en el sistema</Text>
@@ -99,6 +102,7 @@
   <Text key="Session.Lock.Unlock">Desbloquear</Text>
   <Text key="Session.Lock.SignOutInstead">¿No eres tú? Cerrar sesión</Text>
   <Text key="Session.Lock.WrongPassword">La contraseña no es correcta.</Text>
+  <Text key="Session.Lock.PasswordChanged">Su contraseña se cambió en otro lugar. Cierre la sesión y vuelva a iniciarla para establecer una nueva.</Text>
   <Text key="SignOut.Failed">No se pudo cerrar la sesión. Sigues con la sesión iniciada; inténtalo de nuevo y reinicia la aplicación si el problema continúa.</Text>
   <Text key="Shop.Picker.Title">Seleccionar tienda</Text>
   <Text key="Shop.Picker.Prompt">Tiendas que puedes abrir</Text>
@@ -229,6 +233,8 @@
   <Text key="Users.Error.NameTaken">Ese nombre de usuario ya está en uso.</Text>
   <Text key="Users.Error.PasswordRequired">Escribe una contraseña.</Text>
   <Text key="Users.Error.PasswordMismatch">Las dos contraseñas no coinciden.</Text>
+  <Text key="Users.Error.PasswordTooShort">La contraseña debe tener al menos {0} caracteres.</Text>
+  <Text key="Users.Error.PasswordSameAsUserName">La contraseña no puede ser igual al nombre de usuario.</Text>
   <Text key="Users.Error.Protected">Esa cuenta está protegida y no se puede cambiar de esta forma.</Text>
   <Text key="Users.Error.NotFound">Esa cuenta ya no existe.</Text>
   <Text key="Login.Deactivated">Tu cuenta se ha desactivado. Ponte en contacto con tu gerente.</Text>

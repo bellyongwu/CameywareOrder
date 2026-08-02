@@ -169,10 +169,21 @@ move.
     `RoleFor` / `CanAccessShop` / `FilterAccessibleShops` answer per shop and ignore deactivated
     memberships; `StrongestRole` takes the MINIMUM `UserRole` because the enum is ordered
     strongest-first. `Authenticate` returns a `SignInResult` whose `SignInFailure` distinguishes bad
-    credentials from an account deactivated in EVERY shop it belongs to. Roster CRUD
+    credentials from an account deactivated in EVERY shop it belongs to, and (v9.2) from one that
+    still carries a password somebody else chose. Roster CRUD
     (`ListMembers` / `AddMember` / `UpdateMember` / `CanSetPasswordFor` → `AccountOperationResult`)
     backs Store Members; installation-wide CRUD (`CreateAccount` / `DeleteAccount` / `SetPassword` /
     `SetShopRoles` / `UpdateAccountContact`) backs User Management.
+    **Passwords (v9.2, file schema 6).** `SeedAccounts` is ONE entry — the administrator; `manager`,
+    `staff`, `test1` and `test2` no longer ship. `WritePassword` is the single write path and the
+    only caller of `CheckPassword` (minimum length, and never the user name), so
+    `SetPassword` / `ChangeOwnPassword` / `CreateAccount` / `AddMember` cannot disagree about the
+    policy. `MustChangePassword` is now enforced: `Authenticate` refuses a session while it is set,
+    `SetPassword(…, requireChange:)` — required, not defaulted — arms it, and `ChangeOwnPassword`
+    (which proves the current password rather than needing a session) is the only thing that clears
+    it. `HistoricalSeedPasswords` is read once, by the schema-6 upgrade, to arm the flag on an
+    existing installation still using a shipped password; it verifies rather than matching on name,
+    and must never shrink.
     A person's name is **`FirstName` + `LastName`** (schema 4; the old single `DisplayName` is
     split on load — see context.md for the rule and why it is conservative). `PersonName` composes
     them: `Full`, `Label` (name, or the login when there is none — never blank) and `Greeting` (the
@@ -1032,15 +1043,22 @@ without somebody reading the output.
 
 - **`Tests/DataCheck`** — the recycle bin and its purge, the shared `OrderQuery`, the CSV writer and
   export, the backup schedule and pruning. 56 assertions.
+- **`Tests/AuthCheck`** (v9.2) — what the product ships as a credential, the password policy, the
+  schema-6 arming of shipped passwords, and the sign-in gate. 39 assertions. It reads the machine's
+  REAL `credentials.json` — there is no seam to redirect `UserDataPaths.Root` — so it works the way
+  described in context.md: the rules are pure statics and are called directly; the refusal paths run
+  on a throwaway instance and return before any save; one section writes and restores in a `finally`,
+  and the before/after hash is what proves it.
 - **`Tests/DemoCheck`** — the schema guards, the demo store and its seeded history, Copy Shop's
   naming. 41 assertions.
-- **`Tests/UiCheck`** — constructs real windows: renders six panels, drives the Copy/Paste commands on
-  a live list, asserts the Local Database menu's structure, and asserts it wrote NEITHER
-  `credentials.json` nor `roles.json`.
+- **`Tests/UiCheck`** — constructs real windows: renders eight panels (including the sign-in screen
+  in both states, and its forced-change step in French — the longest of the five), drives the
+  Copy/Paste commands on a live list, asserts the Local Database menu's structure, and asserts it
+  wrote NEITHER `credentials.json` nor `roles.json`.
 - **`Tests/Scripts/keycheck.js`** — string-table parity, placeholder parity, and that a new key is
   actually translated. **`surfacecheck.js`** — copy/paste surfaces paired against the SOURCE, no
   window handling `Key.C`/`Key.V` itself, no CJK outside the language files.
-- **`Tests/RepoPaths.cs`** — linked into all three, finds the repository from the running assembly so
+- **`Tests/RepoPaths.cs`** — linked into all four, finds the repository from the running assembly so
   nothing hard-codes a drive letter.
 
 Three things about the setup that are load-bearing:

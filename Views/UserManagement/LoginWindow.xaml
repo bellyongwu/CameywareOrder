@@ -117,32 +117,56 @@
             </Grid>
         </Border>
 
-        <StackPanel Grid.Row="1" Margin="32,24,32,0">
-            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.UserName], Mode=OneWay}"
-                       Style="{StaticResource FieldLabelStyle}"/>
-            <TextBox x:Name="UserNameBox" Style="{StaticResource FieldTextBoxStyle}" Margin="0,0,0,16"/>
-
-            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Password], Mode=OneWay}"
-                       Style="{StaticResource FieldLabelStyle}"/>
-            <PasswordBox x:Name="PasswordBox" Style="{StaticResource FieldPasswordStyle}"/>
-
-            <TextBlock x:Name="ErrorText" Foreground="#B91C1C" FontSize="12" TextWrapping="Wrap"
-                       Visibility="Collapsed" Margin="0,10,0,0"/>
-
-            <!-- Language lives here because this is now the first screen. Without it a fresh
-                 install on a new machine would be stuck in the default language with no way to
-                 change it before signing in.
-
-                 Stacked label-over-input like the two fields above it, not set side by side. It is
-                 a third field on this form and now looks like one: as a horizontal pair with a
-                 smaller, greyer label it read as a footnote hanging off the password box. -->
-            <StackPanel Margin="0,20,0,0">
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Language], Mode=OneWay}"
+        <!-- Two panels in one cell, one visible at a time. A separate window would have been the
+             other option and is worse here: this one runs before the DI host, has no Owner to
+             centre on, and the change is not a detour from signing in — it IS signing in, for an
+             account that has never had a password of its own. -->
+        <Grid Grid.Row="1" Margin="32,24,32,0">
+            <StackPanel x:Name="CredentialPanel">
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.UserName], Mode=OneWay}"
                            Style="{StaticResource FieldLabelStyle}"/>
-                <ComboBox x:Name="LanguageBox" Style="{StaticResource FieldComboStyle}"
-                          SelectionChanged="OnLanguageChanged"/>
+                <TextBox x:Name="UserNameBox" Style="{StaticResource FieldTextBoxStyle}" Margin="0,0,0,16"/>
+
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Password], Mode=OneWay}"
+                           Style="{StaticResource FieldLabelStyle}"/>
+                <PasswordBox x:Name="PasswordBox" Style="{StaticResource FieldPasswordStyle}"/>
+
+                <TextBlock x:Name="ErrorText" Foreground="#B91C1C" FontSize="12" TextWrapping="Wrap"
+                           Visibility="Collapsed" Margin="0,10,0,0"/>
+
+                <!-- Language lives here because this is now the first screen. Without it a fresh
+                     install on a new machine would be stuck in the default language with no way to
+                     change it before signing in.
+
+                     Stacked label-over-input like the two fields above it, not set side by side. It is
+                     a third field on this form and now looks like one: as a horizontal pair with a
+                     smaller, greyer label it read as a footnote hanging off the password box. -->
+                <StackPanel Margin="0,20,0,0">
+                    <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.Language], Mode=OneWay}"
+                               Style="{StaticResource FieldLabelStyle}"/>
+                    <ComboBox x:Name="LanguageBox" Style="{StaticResource FieldComboStyle}"
+                              SelectionChanged="OnLanguageChanged"/>
+                </StackPanel>
             </StackPanel>
-        </StackPanel>
+
+            <StackPanel x:Name="PasswordChangePanel" Visibility="Collapsed">
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.PasswordChangeTitle], Mode=OneWay}"
+                           FontSize="16" FontWeight="Bold" Foreground="#1F2937" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.PasswordChangeMessage], Mode=OneWay}"
+                           FontSize="12" Foreground="#6B7280" TextWrapping="Wrap" Margin="0,6,0,20"/>
+
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.NewPassword], Mode=OneWay}"
+                           Style="{StaticResource FieldLabelStyle}"/>
+                <PasswordBox x:Name="NewPasswordBox" Style="{StaticResource FieldPasswordStyle}" Margin="0,0,0,16"/>
+
+                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Users.ConfirmPassword], Mode=OneWay}"
+                           Style="{StaticResource FieldLabelStyle}"/>
+                <PasswordBox x:Name="ConfirmPasswordBox" Style="{StaticResource FieldPasswordStyle}"/>
+
+                <TextBlock x:Name="ChangeErrorText" Foreground="#B91C1C" FontSize="12" TextWrapping="Wrap"
+                           Visibility="Collapsed" Margin="0,10,0,0"/>
+            </StackPanel>
+        </Grid>
 
         <Button Grid.Row="2" x:Name="SignInButton"
                 Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Login.SignIn], Mode=OneWay}"

@@ -42,6 +42,15 @@ internal static class Program
         // would rewrite an installation's whole permission model from a screenshot run.
         var credentials = UserDataPaths.ResolveConfigFile("credentials.json");
         var roles = UserDataPaths.ResolveConfigFile("roles.json");
+
+        // Touched BEFORE the baseline hash, deliberately. The singleton reads credentials.json in its
+        // type initializer, and a file written by an older build is UPGRADED and saved on that first
+        // read — a legitimate one-time write that any launch of the application would also perform.
+        // Hashing first and touching second made a schema bump look like this harness scribbling on
+        // the user's accounts. What is being asserted is that the RUN writes nothing, so the baseline
+        // is taken once the file is at the current schema.
+        _ = AuthenticationService.Instance;
+
         var before = HashOf(credentials);
         var rolesBefore = HashOf(roles);
 
@@ -88,6 +97,33 @@ internal static class Program
         Show(permissions, 1180, 800);
         SelectFirst(permissions, "RoleList");
         Render(permissions, Path.Combine(outDir, "permissions.png"), 1180, 800);
+
+        // The sign-in screen in both of its states. The second one is a panel nobody sees until a
+        // fresh installation's first launch, which is precisely the screen that must not be the one
+        // nobody looked at.
+        var login = new LoginWindow(localization);
+        Show(login, 440, 600);
+        Render(login, Path.Combine(outDir, "login.png"), 440, 600);
+
+        var changing = new LoginWindow(localization);
+        Show(changing, 440, 600);
+        typeof(LoginWindow)
+            .GetMethod("ShowPasswordChangeStep", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(changing, null);
+        Render(changing, Path.Combine(outDir, "login-password-change.png"), 440, 600);
+
+        // And again in French, which is the longest of the five for all three of these strings —
+        // "Définir le mot de passe et se connecter" on a 376px button. A label clipped mid-word has
+        // got through here twice before, both times on a screen that compiled and passed.
+        var was = localization.CurrentLanguageCode;
+        localization.SetLanguage("fr-FR");
+        var french = new LoginWindow(localization);
+        Show(french, 440, 600);
+        typeof(LoginWindow)
+            .GetMethod("ShowPasswordChangeStep", BindingFlags.NonPublic | BindingFlags.Instance)!
+            .Invoke(french, null);
+        Render(french, Path.Combine(outDir, "login-password-change-fr.png"), 440, 600);
+        localization.SetLanguage(was);
 
         // The main window, for the two-row filter bar the search and export added to it.
         var viewModel = new CameywareOrder.ViewModels.MainViewModel(scopeFactory, localization);

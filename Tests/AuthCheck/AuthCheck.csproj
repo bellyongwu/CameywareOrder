@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A ProjectReference, not a HintPath to bin/Debug — see DataCheck.csproj for the run that once
+    passed against a stale build directory.
+  -->
+  <PropertyGroup>
+    <AssemblyName>authcheck</AssemblyName>
+    <RootNamespace>AuthCheck</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RepoPaths.cs" Link="RepoPaths.cs"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CameywareOrder.csproj"/>
+  </ItemGroup>
+
+</Project>

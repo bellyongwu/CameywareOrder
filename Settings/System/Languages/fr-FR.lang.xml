@@ -73,6 +73,9 @@
   <Text key="Login.SignIn">Se connecter</Text>
   <Text key="Login.Failed">Nom d’utilisateur ou mot de passe incorrect.</Text>
   <Text key="Login.Language">Langue</Text>
+  <Text key="Login.PasswordChangeTitle">Choisissez un nouveau mot de passe</Text>
+  <Text key="Login.PasswordChangeMessage">Ce compte utilise encore le mot de passe avec lequel il a été créé. Choisissez le vôtre pour continuer.</Text>
+  <Text key="Login.SetPassword">Définir le mot de passe et se connecter</Text>
   <Text key="LanguageSelection.Welcome">Bienvenue</Text>
   <Text key="LanguageSelection.WelcomeMessage">Bienvenue dans le système de commandes Cameyware</Text>
   <Text key="LanguageSelection.Enter">Entrer dans le système</Text>
@@ -98,6 +101,7 @@
   <Text key="Session.Lock.Unlock">Déverrouiller</Text>
   <Text key="Session.Lock.SignOutInstead">Ce n’est pas vous ? Se déconnecter</Text>
   <Text key="Session.Lock.WrongPassword">Mot de passe incorrect.</Text>
+  <Text key="Session.Lock.PasswordChanged">Votre mot de passe a été modifié ailleurs. Déconnectez-vous puis reconnectez-vous pour en définir un nouveau.</Text>
   <Text key="SignOut.Failed">Échec de la déconnexion. Vous êtes toujours connecté ; réessayez, et redémarrez l’application si le problème persiste.</Text>
   <Text key="Shop.Picker.Title">Sélectionner une boutique</Text>
   <Text key="Shop.Picker.Prompt">Boutiques que vous pouvez ouvrir</Text>
@@ -228,6 +232,8 @@
   <Text key="Users.Error.NameTaken">Ce nom d’utilisateur est déjà pris.</Text>
   <Text key="Users.Error.PasswordRequired">Saisissez un mot de passe.</Text>
   <Text key="Users.Error.PasswordMismatch">Les deux mots de passe ne correspondent pas.</Text>
+  <Text key="Users.Error.PasswordTooShort">Le mot de passe doit comporter au moins {0} caractères.</Text>
+  <Text key="Users.Error.PasswordSameAsUserName">Le mot de passe ne peut pas être identique au nom d'utilisateur.</Text>
   <Text key="Users.Error.Protected">Ce compte est protégé et ne peut pas être modifié de cette façon.</Text>
   <Text key="Users.Error.NotFound">Ce compte n’existe plus.</Text>
   <Text key="Login.Deactivated">Votre compte a été désactivé. Veuillez contacter votre responsable.</Text>

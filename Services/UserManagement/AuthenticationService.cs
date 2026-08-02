@@ -39,11 +39,13 @@ public sealed class AuthenticationService
     /// administrator flag plus flat (shop, role) assignments; 3 = one <see cref="ShopMembership"/>
     /// per shop, carrying activation, join date and shift alongside the roles; 4 = a person's name
     /// split into <c>FirstName</c> and <c>LastName</c>; 5 = memberships name roles by ID rather than
-    /// by the fixed <see cref="UserRole"/> enum, so an installation can define roles of its own. A
-    /// file below this version is upgraded in two steps — see <see cref="ApplyLegacyShopMemberships"/>
-    /// for why the second one cannot run here.
+    /// by the fixed <see cref="UserRole"/> enum, so an installation can define roles of its own;
+    /// 6 = <see cref="CredentialRecord.MustChangePassword"/> is enforced, and the upgrade arms it on
+    /// every account still carrying the password this product once shipped it with. A file below
+    /// this version is upgraded in two steps — see <see cref="ApplyLegacyShopMemberships"/> for why
+    /// the second one cannot run here.
     /// </summary>
-    private const int CurrentSchemaVersion = 5;
+    private const int CurrentSchemaVersion = 6;
 
     /// <summary>
     /// The account that must always exist. Every other account can be deleted; deleting this one
@@ -52,25 +54,68 @@ public sealed class AuthenticationService
     private const string AdministratorUserName = "admin";
 
     /// <summary>
+    /// The initial password of the one seeded account, valid for exactly one sign-in: the record is
+    /// created with <see cref="CredentialRecord.MustChangePassword"/> set, so
+    /// <see cref="Authenticate"/> refuses to open a session until it has been replaced.
+    /// </summary>
+    private const string AdministratorInitialPassword = "admin";
+
+    /// <summary>
     /// Accounts created ONCE, on the first load that does not already record them as provisioned.
-    /// Their password matches their user name.
     ///
     /// "Once" is the whole point: topping these up on every load — which is what this did before
     /// accounts could be managed in the UI — would resurrect an account the administrator had
     /// deliberately deleted. <see cref="CredentialFile.ProvisionedAccounts"/> is the record that
     /// makes a deletion stick. <see cref="AdministratorUserName"/> is deliberately exempt.
-    ///
-    /// test1 / test2 are created with NO roles at all, so a fresh installation has two accounts to
-    /// exercise the assignment screen with.
     /// </summary>
+    /// <remarks>
+    /// ONE account, and that is a deliberate reduction. Until v9.2.0 this also seeded
+    /// <c>manager</c>, <c>staff</c>, <c>test1</c> and <c>test2</c>, each with its user name as its
+    /// password — four standing credentials on every installation, present so a developer had
+    /// accounts to click through the assignment screen with. That is a development convenience
+    /// billed to every shop that installs the product, and the roster screen creates real staff
+    /// accounts anyway. They are gone; <see cref="HistoricalSeedPasswords"/> is what deals with the
+    /// installations that already have them.
+    /// </remarks>
     private static readonly (string UserName, string Password, bool IsAdministrator)[] SeedAccounts =
     {
-        (AdministratorUserName, "admin", true),
-        ("manager", "manager", false),
-        ("staff", "staff", false),
-        ("test1", "test1", false),
-        ("test2", "test2", false)
+        (AdministratorUserName, AdministratorInitialPassword, true)
     };
+
+    /// <summary>
+    /// Every user name this product has ever seeded, with the password it seeded it with.
+    /// </summary>
+    /// <remarks>
+    /// Read once, by the schema-6 upgrade, to find accounts on an EXISTING installation that are
+    /// still signed into with the password that shipped. Those are marked must-change; nothing is
+    /// deleted. An account named <c>staff</c> may well be a real person by now — the shop's data is
+    /// not ours to remove because we regret having created it — but a shipped password is a
+    /// published password, and the one thing we can do about it is refuse to let it open a session
+    /// again.
+    ///
+    /// This list must never shrink. An entry removed from it is an installation that keeps a known
+    /// credential forever, and nothing anywhere would report it.
+    /// </remarks>
+    private static readonly (string UserName, string Password)[] HistoricalSeedPasswords =
+    {
+        (AdministratorUserName, AdministratorInitialPassword),
+        ("manager", "manager"),
+        ("staff", "staff"),
+        ("test1", "test1"),
+        ("test2", "test2")
+    };
+
+    /// <summary>
+    /// The shortest password the application will store.
+    /// </summary>
+    /// <remarks>
+    /// Public because the screens quote it: a rule the user is only told about by being refused is
+    /// a rule they discover twice. The number appears on screen through
+    /// <c>Users.Error.PasswordTooShort</c>, which is formatted with this constant rather than
+    /// spelling it out in five languages — a translated "at least eight characters" is a lie the
+    /// moment this line changes.
+    /// </remarks>
+    public const int MinimumPasswordLength = 8;
 
     // PBKDF2-HMAC-SHA256. Stored per record so the cost can be raised later without invalidating
     // existing accounts.
@@ -302,6 +347,11 @@ public sealed class AuthenticationService
     /// An unknown user name and a wrong password report the SAME failure, or the dialog becomes a
     /// user-name oracle. A deactivated account is reported distinctly: the credential was right and
     /// the person needs to be told to talk to their manager rather than to keep retyping.
+    ///
+    /// A record demanding a password change is refused too, and refused BEFORE the session exists:
+    /// the alternative — hand out the session and ask nicely — is a prompt that can be closed, and
+    /// the whole point is that the shipped password buys nothing. <see cref="ChangeOwnPassword"/>
+    /// is the way through, and it needs no session because it takes the current password itself.
     /// </remarks>
     public SignInResult Authenticate(string userName, string password)
     {
@@ -318,12 +368,45 @@ public sealed class AuthenticationService
         if (!Verify(password, record))
             return SignInResult.Failed(SignInFailure.InvalidCredentials);
 
+        // Before the password check, deliberately: somebody every shop has delisted should be told
+        // that, not walked through choosing a password for an account they cannot use.
         if (IsLockedOut(record))
             return SignInResult.Failed(SignInFailure.Deactivated);
+
+        if (record.MustChangePassword)
+            return SignInResult.Failed(SignInFailure.PasswordChangeRequired);
 
         CurrentUser = ToAccount(record);
         RefreshCapabilities();
         return SignInResult.Succeeded(CurrentUser);
+    }
+
+    /// <summary>
+    /// Replaces one's OWN password, proving the current one rather than relying on a session. On
+    /// success the account no longer owes a change, so the caller can sign in with the new password
+    /// immediately.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately usable with nobody signed in. The path that most needs it is the sign-in screen
+    /// refusing a shipped password, where by construction there is no session yet — a method that
+    /// required one would have to be reached by first granting the thing it exists to withhold.
+    ///
+    /// It is not an authorization hole: knowing the current password is exactly the credential
+    /// <see cref="Authenticate"/> asks for. What it cannot do is anything else — no role, no
+    /// membership, no other account.
+    /// </remarks>
+    public AccountOperationResult ChangeOwnPassword(
+        string userName, string currentPassword, string newPassword)
+    {
+        var record = FindRecord(userName);
+
+        if (record is null || !Verify(currentPassword, record))
+            return AccountOperationResult.NotFound;
+
+        if (IsLockedOut(record))
+            return AccountOperationResult.Deactivated;
+
+        return WritePassword(record, newPassword, requireChange: false);
     }
 
     /// <summary>
@@ -482,8 +565,10 @@ public sealed class AuthenticationService
         if (string.IsNullOrEmpty(name))
             return AccountOperationResult.UserNameRequired;
 
-        if (string.IsNullOrEmpty(password))
-            return AccountOperationResult.PasswordRequired;
+        var rejection = CheckPassword(name, password);
+
+        if (rejection != AccountOperationResult.Success)
+            return rejection;
 
         if (profile.RoleIds.Count == 0)
             return AccountOperationResult.RoleRequired;
@@ -763,8 +848,10 @@ public sealed class AuthenticationService
         if (string.IsNullOrEmpty(name))
             return AccountOperationResult.UserNameRequired;
 
-        if (string.IsNullOrEmpty(password))
-            return AccountOperationResult.PasswordRequired;
+        var rejection = CheckPassword(name, password);
+
+        if (rejection != AccountOperationResult.Success)
+            return rejection;
 
         if (FindRecord(name) is not null)
             return AccountOperationResult.UserNameTaken;
@@ -798,25 +885,77 @@ public sealed class AuthenticationService
         return AccountOperationResult.Success;
     }
 
-    /// <summary>Replaces an account's password. Allowed for every account, including the administrator.</summary>
-    public AccountOperationResult SetPassword(string userName, string password)
+    /// <summary>
+    /// Replaces an account's password on somebody else's behalf. Allowed for every account,
+    /// including the administrator.
+    /// </summary>
+    /// <param name="requireChange">
+    /// Whether the account must replace this password before it can sign in again. REQUIRED rather
+    /// than defaulted, and that is the point: a default would let a new call site inherit whichever
+    /// answer happened to be written here, and the two callers want opposite things. An
+    /// administrator handing over a password wants <c>true</c> — they have just read it aloud, and
+    /// the person it belongs to should be the only one who knows the next one. A harness pinning a
+    /// fixture password wants <c>false</c>, because it then signs in with it.
+    /// </param>
+    public AccountOperationResult SetPassword(string userName, string password, bool requireChange)
     {
         var record = FindRecord(userName);
 
         if (record is null)
             return AccountOperationResult.NotFound;
 
-        if (string.IsNullOrEmpty(password))
-            return AccountOperationResult.PasswordRequired;
+        return WritePassword(record, password, requireChange);
+    }
+
+    /// <summary>
+    /// The ONE place a password is written. Both entry points come through here, so the policy
+    /// cannot hold on one path and not the other.
+    /// </summary>
+    private AccountOperationResult WritePassword(
+        CredentialRecord record, string password, bool requireChange)
+    {
+        var rejection = CheckPassword(record.UserName, password);
+
+        if (rejection != AccountOperationResult.Success)
+            return rejection;
 
         var salt = RandomNumberGenerator.GetBytes(SaltByteCount);
         record.Iterations = DefaultIterations;
         record.Salt = Convert.ToBase64String(salt);
         record.Hash = Convert.ToBase64String(DeriveHash(password, salt, DefaultIterations));
-        record.MustChangePassword = false;
+        record.MustChangePassword = requireChange;
 
         Save(_file);
         RefreshCurrentUser(record);
+        return AccountOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Whether a password may be stored for an account, and why not when it may not.
+    /// </summary>
+    /// <remarks>
+    /// Two rules, and the second is the one that matters. A minimum length is ordinary hygiene; the
+    /// bar on a password equal to its user name is what makes a forced change mean something,
+    /// because otherwise the answer to "replace <c>admin</c>/<c>admin</c>" is to type <c>admin</c>
+    /// again and the whole mechanism has moved the problem by one dialog.
+    ///
+    /// Case-insensitive, matching how a user name is resolved everywhere else: <c>Admin</c> is the
+    /// same login as <c>admin</c>, so it is the same bad password.
+    /// </remarks>
+    private static AccountOperationResult CheckPassword(string userName, string password)
+    {
+        if (string.IsNullOrEmpty(password))
+            return AccountOperationResult.PasswordRequired;
+
+        if (password.Length < MinimumPasswordLength)
+            return AccountOperationResult.PasswordTooShort;
+
+        if (string.Equals(password.Trim(), (userName ?? string.Empty).Trim(),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return AccountOperationResult.PasswordSameAsUserName;
+        }
+
         return AccountOperationResult.Success;
     }
 
@@ -1122,6 +1261,8 @@ public sealed class AuthenticationService
         foreach (var membership in file.Users.SelectMany(record => record.Memberships))
             MigrateMembershipRoles(membership);
 
+        ArmShippedPasswords(file);
+
         // A version-1 file predates the provisioning record, so everything it already holds counts
         // as provisioned. Without this, seeding would re-add an account the file shows was deleted.
         foreach (var name in file.Users
@@ -1136,6 +1277,33 @@ public sealed class AuthenticationService
             file.SchemaVersion = CurrentSchemaVersion;
 
         return true;
+    }
+
+    /// <summary>
+    /// Schema 6: marks every account still signed into with the password this product shipped it
+    /// with as owing a change. Existing installations only — a fresh file has nothing to find.
+    /// </summary>
+    /// <remarks>
+    /// Verifying rather than trusting the name. An installation that has been running for a year
+    /// may well have given <c>staff</c> a real password months ago, and demanding a change from
+    /// somebody who already did the right thing is a support call about a security fix. So each
+    /// candidate is checked against the password it was created with, and only a match is armed.
+    ///
+    /// This is the expensive part of the upgrade — one PBKDF2 derivation per matching name, at
+    /// 100,000 iterations. It runs on the ONE load that upgrades the file and never again, which is
+    /// why it lives in <see cref="UpgradeAccountShape"/> behind the version check rather than in
+    /// <see cref="LoadOrSeed"/> where it would cost that on every launch forever.
+    /// </remarks>
+    private static void ArmShippedPasswords(CredentialFile file)
+    {
+        foreach (var (userName, password) in HistoricalSeedPasswords)
+        {
+            var record = file.Users.Find(candidate =>
+                string.Equals(candidate.UserName, userName, StringComparison.OrdinalIgnoreCase));
+
+            if (record is not null && !record.MustChangePassword && Verify(password, record))
+                record.MustChangePassword = true;
+        }
     }
 
     /// <summary>
@@ -1318,7 +1486,14 @@ public enum SignInFailure
     InvalidCredentials,
 
     /// <summary>The credential was correct, but every shop this account belongs to has deactivated it.</summary>
-    Deactivated
+    Deactivated,
+
+    /// <summary>
+    /// The credential was correct and the account is in good standing, but the password it was
+    /// created with has to be replaced before it opens a session. Not an error to apologise for —
+    /// the caller's job is to collect a new password, not to report a failure.
+    /// </summary>
+    PasswordChangeRequired
 }
 
 /// <summary>Outcome of a sign-in attempt.</summary>
@@ -1343,6 +1518,12 @@ public enum AccountOperationResult
 
     /// <summary>The account or the change is not editable — an administrator, or your own account.</summary>
     Protected,
+
+    /// <summary>Shorter than <see cref="AuthenticationService.MinimumPasswordLength"/>.</summary>
+    PasswordTooShort,
+
+    /// <summary>The password is the user name, which is how this product used to ship accounts.</summary>
+    PasswordSameAsUserName,
 
     /// <summary>Every shop this account belongs to has delisted it, so it cannot be signed in to.</summary>
     Deactivated
@@ -1598,7 +1779,15 @@ public sealed class CredentialRecord
     public string Salt { get; set; } = string.Empty;
     public string Hash { get; set; } = string.Empty;
 
-    /// <summary>Reserved: seeded true for new accounts, not yet enforced anywhere.</summary>
+    /// <summary>
+    /// Whether this account must replace its password before it can sign in again.
+    /// </summary>
+    /// <remarks>
+    /// Set when an account is created and when an administrator resets a password — in both cases
+    /// somebody other than the account's owner chose the value and knows it. Cleared only by
+    /// <see cref="AuthenticationService.ChangeOwnPassword"/>, which is the only path where the
+    /// person typing the new password is the person it belongs to.
+    /// </remarks>
     public bool MustChangePassword { get; set; }
 
     public DateTime CreatedAtUtc { get; set; }

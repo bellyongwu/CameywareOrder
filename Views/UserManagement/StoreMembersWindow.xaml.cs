@@ -324,12 +324,14 @@ public partial class StoreMembersWindow : Window
             return false;
         }
 
-        var result = AuthenticationService.Instance.SetPassword(userName, password);
+        // requireChange: a manager handing over a password knows it, so the member replaces it on
+        // their next sign-in. Same rule as the account screen.
+        var result = AuthenticationService.Instance.SetPassword(userName, password, requireChange: true);
 
         if (result == AccountOperationResult.Success)
             return true;
 
-        ShowError(ErrorKey(result));
+        ShowError(ErrorKey(result), AuthenticationService.MinimumPasswordLength);
         return false;
     }
 
@@ -443,7 +445,12 @@ public partial class StoreMembersWindow : Window
 
         if (result != AccountOperationResult.Success)
         {
-            ShowCreateError(ErrorKey(result));
+            // Formatted here rather than inside the helper: this one already carries an
+            // alreadyLocalized flag for the contact-validation messages, and a second optional
+            // parameter beside it would be two ways of saying the same thing.
+            ShowCreateError(
+                _localization.Format(ErrorKey(result), AuthenticationService.MinimumPasswordLength),
+                alreadyLocalized: true);
             return;
         }
 
@@ -476,6 +483,8 @@ public partial class StoreMembersWindow : Window
         AccountOperationResult.UserNameRequired => "Users.Error.NameRequired",
         AccountOperationResult.UserNameTaken => "Users.Error.NameTaken",
         AccountOperationResult.PasswordRequired => "Users.Error.PasswordRequired",
+        AccountOperationResult.PasswordTooShort => "Users.Error.PasswordTooShort",
+        AccountOperationResult.PasswordSameAsUserName => "Users.Error.PasswordSameAsUserName",
         AccountOperationResult.RoleRequired => "Members.Error.RoleRequired",
         AccountOperationResult.NotFound => "Users.Error.NotFound",
         _ => "Members.Error.Protected"
@@ -490,10 +499,12 @@ public partial class StoreMembersWindow : Window
         StatusText.Text = _localization.Format(key, args);
     }
 
-    private void ShowError(string key)
+    // Takes arguments for the same reason as its twin in UserManagementWindow: the password-policy
+    // messages quote the minimum length, and Format on a message with no placeholder is a no-op.
+    private void ShowError(string key, params object[] args)
     {
         StatusText.Foreground = ErrorBrush;
-        StatusText.Text = _localization[key];
+        StatusText.Text = _localization.Format(key, args);
     }
 
     // --- Contact details --------------------------------------------------------------------

@@ -482,11 +482,13 @@ public partial class UserManagementWindow : Window
             return false;
         }
 
-        var result = AuthenticationService.Instance.SetPassword(userName, password);
+        // requireChange: an administrator has just chosen and read out a password for somebody else,
+        // so it is a handover credential, not their password. They replace it on first sign-in.
+        var result = AuthenticationService.Instance.SetPassword(userName, password, requireChange: true);
         if (result == AccountOperationResult.Success)
             return true;
 
-        ShowError(ErrorKey(result));
+        ShowError(ErrorKey(result), AuthenticationService.MinimumPasswordLength);
         return false;
     }
 
@@ -571,7 +573,7 @@ public partial class UserManagementWindow : Window
 
         if (result != AccountOperationResult.Success)
         {
-            ShowCreateError(ErrorKey(result));
+            ShowCreateError(ErrorKey(result), AuthenticationService.MinimumPasswordLength);
             return;
         }
 
@@ -591,6 +593,8 @@ public partial class UserManagementWindow : Window
         AccountOperationResult.UserNameRequired => "Users.Error.NameRequired",
         AccountOperationResult.UserNameTaken => "Users.Error.NameTaken",
         AccountOperationResult.PasswordRequired => "Users.Error.PasswordRequired",
+        AccountOperationResult.PasswordTooShort => "Users.Error.PasswordTooShort",
+        AccountOperationResult.PasswordSameAsUserName => "Users.Error.PasswordSameAsUserName",
         AccountOperationResult.NotFound => "Users.Error.NotFound",
         AccountOperationResult.Deactivated => "Users.Error.SignInAsDeactivated",
         _ => "Users.Error.Protected"
@@ -606,15 +610,18 @@ public partial class UserManagementWindow : Window
         StatusText.Text = _localization.Format(key, args);
     }
 
-    private void ShowError(string key)
+    // The password-policy messages quote the minimum length, so these take arguments like ShowStatus
+    // rather than a bare lookup. Format on a message with no placeholder returns it unchanged, so
+    // the call sites that have nothing to pass do not have to care.
+    private void ShowError(string key, params object[] args)
     {
         StatusText.Foreground = ErrorBrush;
-        StatusText.Text = _localization[key];
+        StatusText.Text = _localization.Format(key, args);
     }
 
-    private void ShowCreateError(string key)
+    private void ShowCreateError(string key, params object[] args)
     {
-        CreateErrorText.Text = _localization[key];
+        CreateErrorText.Text = _localization.Format(key, args);
         CreateErrorText.Visibility = Visibility.Visible;
     }
 

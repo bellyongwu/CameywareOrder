@@ -58,12 +58,17 @@ public partial class LockScreenWindow : Window
 
         if (result.User is null)
         {
-            // Same single message as the login window for a wrong password, and the same distinct
-            // one for an account deactivated while it was locked — that credential IS right and
-            // retyping it will never help.
-            ShowError(result.Failure == SignInFailure.Deactivated
-                ? "Login.Deactivated"
-                : "Session.Lock.WrongPassword");
+            // Same single message as the login window for a wrong password, and distinct ones for
+            // the two cases where the credential IS right and retyping it will never help:
+            // deactivated while locked, and — reachable because an administrator can reset a
+            // password at any moment — a reset that now demands a change this window cannot offer.
+            // Calling either of those "incorrect password" would send somebody hunting for a typo.
+            ShowError(result.Failure switch
+            {
+                SignInFailure.Deactivated => "Login.Deactivated",
+                SignInFailure.PasswordChangeRequired => "Session.Lock.PasswordChanged",
+                _ => "Session.Lock.WrongPassword"
+            });
             return;
         }
 

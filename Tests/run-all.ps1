@@ -42,6 +42,13 @@ Step "datacheck  (recycle bin, order query, CSV, backup schedule)" {
     dotnet run --project Tests\DataCheck\DataCheck.csproj -v quiet --nologo -nodeReuse:false
 }
 
+# Reads the machine's real credentials.json (there is no seam to redirect it) and asserts it is
+# left byte for byte as it found it. One section writes; it restores in a finally and the hash check
+# at the end is what proves it.
+Step "authcheck  (what ships as a credential, and the password policy)" {
+    dotnet run --project Tests\AuthCheck\AuthCheck.csproj -v quiet --nologo -nodeReuse:false
+}
+
 Step "democheck  (demo store, seeded history, copy shop)" {
     dotnet run --project Tests\DemoCheck\DemoCheck.csproj -v quiet --nologo -nodeReuse:false
 }

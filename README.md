@@ -11,6 +11,33 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.2.0 — 2026-08-02
+
+**The application no longer ships with accounts anyone can guess.** Until now a new installation was
+created with five sign-ins whose password was simply their name — `admin`/`admin`, `manager`/`manager`,
+`staff`/`staff`, and two test accounts. They were there so the software could be demonstrated before
+any real staff existed. Anybody who knew the product knew them.
+
+- **Only the administrator account is created now.** Staff accounts are made the way they should be:
+  by you, on the Store Members screen, when there is somebody to make one for.
+- **The first sign-in makes you choose a password.** `admin`/`admin` still gets you in the very first
+  time, on the machine the installer set up — and then the screen asks you to set a real password
+  before it will go any further. There is nothing to remember to do afterwards.
+- **The same applies when somebody sets a password for you.** A manager creating an account, or
+  resetting a forgotten password, is choosing a temporary one — they have just said it out loud. The
+  person it belongs to is asked to replace it the next time they sign in, so only they know it.
+- **A password must be at least 8 characters and cannot be your user name.**
+
+**If you are already running an earlier version, read this.** On the next launch the application
+checks whether any of those five accounts is *still* using the password it shipped with. Any that is
+will be asked for a new password at its next sign-in — including `admin`, if it has never been
+changed. **Nothing is deleted and no account is locked out**: an account whose password you already
+changed is left completely alone, and one you renamed or gave a real password to months ago will not
+notice this release at all.
+
+If you have been signing in as `admin`/`admin`, have the new password ready before you next open the
+application.
+
 ### v9.1.0 — 2026-08-02
 
 **Nothing in this release changes what the application does.** It is housekeeping, and it is the kind

@@ -41,17 +41,29 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 ## Open
 
-Nothing in flight. Everything through **v5.0.0 is committed and pushed to `main`**.
+Nothing in flight.
 
-**The harness suite is GONE from disk (2026-08-01).** It lived in a previous session's scratchpad,
-which has been cleaned up; only `batchcheck`, `datecheck` and `langscope` survive. Treat "the suite
-is green" as unverifiable until the harnesses are rebuilt — the lessons they encode are in this file
-and in `context.md`, but the assertions are not.
+**The suite lives in `Tests/` and runs with `Tests\run-all.ps1` (v9.1.0).** It supersedes the
+scratchpad harnesses that were lost with a previous session's temp folder; what survived of them is
+the lessons in this file and in `context.md`, not the assertions. Four harnesses plus two source
+sweeps, and the runner exits non-zero so it can gate a release.
 
-**Neither quality GATE has been runnable for two releases (2026-08-01).** No IDE-diagnostics tool and
-no SonarLint tool is connected in this session, so Gate 1 and Gate 2 of `SKILL.md` §9b cannot be
-performed as written. The in-build `SonarAnalyzer.CSharp` pass is the whole of the Sonar evidence for
-v4.3.0 and v5.0.0. Say so rather than reporting the gates as clean.
+**Neither quality GATE has been runnable since 2026-08-01.** No IDE-diagnostics tool and no SonarLint
+tool is connected in this session, so Gate 1 and Gate 2 of `SKILL.md` §9b cannot be performed as
+written. The in-build `SonarAnalyzer.CSharp` pass is the whole of the Sonar evidence from v4.3.0
+onward. Say so rather than reporting the gates as clean.
+
+**Open items the user has been told about and has not yet decided:**
+
+- **GraphQL.** `GraphQL/*.cs` performs zero authentication and zero capability checks, and the host
+  has no `UseAuthorization`. Two options offered: delete it, or keep it off by default behind a
+  setting and route every mutation through `AuthenticationService.Can(...)`. Not chosen.
+- **Five languages.** ~4,500 translated values carried forward on every string added.
+- **`MainWindow.Receipt.cs` → `Services/StoreManagement/`.** 466 lines, 0 `x:Name` controls, one
+  field (`_localization`), single entry point `BuildReceiptDocument`. A real extraction, not a move.
+- **Self-service password change from inside the application.** v9.2.0 added one on the sign-in
+  screen for the forced case only. A staff member who simply wants to change their password still
+  has to ask a manager. Reported, not built.
 
 **Fixed 2026-07-30:** `langcheck`'s "installs every shipped language" pair was FLAPPING — red, then
 green for several runs, then red — because it asserted on live shop data that `storecheck` rewrites
@@ -76,6 +88,32 @@ treatment too, which is theirs to decide.
 ---
 
 ## Recent work (2026-08-02)
+
+### v9.2.0 — first-run hardening: the product stops shipping guessable accounts  [DONE]
+
+A fresh installation used to be created with five sign-ins whose password was their user name —
+`admin`, `manager`, `staff`, `test1`, `test2` — the last four purely so a developer had accounts to
+click through the assignment screen with. Only `admin` is seeded now.
+
+`CredentialRecord.MustChangePassword` had existed since the credential file did, was written on every
+account, and was **read by nothing**; its own doc comment said "not yet enforced anywhere". Most of
+this release is that enforcement, not new state — see `context.md`.
+
+- `WritePassword` is the ONE write path and the only caller of `CheckPassword`, so creation, an
+  administrator's reset, the roster's "add someone" and the forced change cannot disagree about the
+  policy. The rule that matters is **not the length minimum** but "may not be the user name" —
+  without it the answer to replacing `admin`/`admin` is to type `admin` again.
+- `Authenticate` refuses the session while the flag is set. `ChangeOwnPassword` proves the CURRENT
+  password rather than needing a session, which is what lets the sign-in screen withhold the session
+  and still offer a way through; the change step is a second panel in `LoginWindow`, not a new window
+  (it runs before the DI host and has no Owner).
+- `SetPassword(…, requireChange:)` is REQUIRED, not defaulted — the two callers want opposite
+  answers, same reasoning as the tax-mode parameter in `SKILL.md` §4a.
+- File schema 6 arms the flag on EXISTING installations by verifying the shipped password against the
+  stored hash, never by matching the account's name. Nothing is deleted, and a shop that changed its
+  passwords a year ago notices nothing.
+- `Tests/AuthCheck` (39 assertions), proven red against three separately broken guarantees. `uicheck`
+  renders the sign-in screen in both states, and the change step in French — the longest of the five.
 
 ### v9.1.0 — the two overgrown code-behinds split, and the harnesses moved into the repo  [DONE]
 

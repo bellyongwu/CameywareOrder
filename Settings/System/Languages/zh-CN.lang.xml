@@ -78,6 +78,9 @@
   <Text key="Login.SignIn">登录</Text>
   <Text key="Login.Failed">用户名或密码不正确。</Text>
   <Text key="Login.Language">语言</Text>
+  <Text key="Login.PasswordChangeTitle">设置新密码</Text>
+  <Text key="Login.PasswordChangeMessage">此账户仍在使用创建时的初始密码，请设置属于您自己的密码后继续。</Text>
+  <Text key="Login.SetPassword">设置密码并登录</Text>
   <Text key="LanguageSelection.Welcome">欢迎</Text>
   <Text key="LanguageSelection.WelcomeMessage">欢迎使用 Cameyware 订单管理系统</Text>
   <Text key="LanguageSelection.Enter">进入系统</Text>
@@ -105,6 +108,7 @@
   <Text key="Session.Lock.Unlock">解锁</Text>
   <Text key="Session.Lock.SignOutInstead">不是本人？改为退出登录</Text>
   <Text key="Session.Lock.WrongPassword">密码不正确。</Text>
+  <Text key="Session.Lock.PasswordChanged">您的密码已在别处更改。请退出登录后重新登录以设置新密码。</Text>
   <Text key="SignOut.Failed">退出登录失败。您仍处于登录状态；请重试，若问题持续请重启应用程序。</Text>
   <Text key="Shop.Picker.Title">选择店铺</Text>
   <Text key="Shop.Picker.Prompt">可进入的店铺</Text>
@@ -235,6 +239,8 @@
   <Text key="Users.Error.NameTaken">该用户名已被使用。</Text>
   <Text key="Users.Error.PasswordRequired">请输入密码。</Text>
   <Text key="Users.Error.PasswordMismatch">两次输入的密码不一致。</Text>
+  <Text key="Users.Error.PasswordTooShort">密码长度至少需要 {0} 个字符。</Text>
+  <Text key="Users.Error.PasswordSameAsUserName">密码不能与用户名相同。</Text>
   <Text key="Users.Error.Protected">该账户受保护，无法通过此方式修改。</Text>
   <Text key="Users.Error.NotFound">该账户已不存在。</Text>
   <Text key="Login.Deactivated">您的账户已被停用，请联系店长。</Text>

@@ -76,6 +76,9 @@
   <Text key="Login.SignIn">ログイン</Text>
   <Text key="Login.Failed">ユーザー名またはパスワードが正しくありません。</Text>
   <Text key="Login.Language">言語</Text>
+  <Text key="Login.PasswordChangeTitle">新しいパスワードを設定</Text>
+  <Text key="Login.PasswordChangeMessage">このアカウントは作成時のパスワードのままです。続行するにはご自身のパスワードを設定してください。</Text>
+  <Text key="Login.SetPassword">パスワードを設定してサインイン</Text>
   <Text key="LanguageSelection.Welcome">ようこそ</Text>
   <Text key="LanguageSelection.WelcomeMessage">Cameyware 注文システムへようこそ</Text>
   <Text key="LanguageSelection.Enter">システムに入る</Text>
@@ -101,6 +104,7 @@
   <Text key="Session.Lock.Unlock">ロック解除</Text>
   <Text key="Session.Lock.SignOutInstead">ご本人でない場合はログアウト</Text>
   <Text key="Session.Lock.WrongPassword">パスワードが正しくありません。</Text>
+  <Text key="Session.Lock.PasswordChanged">パスワードが別の場所で変更されました。サインアウトしてから再度サインインし、新しいパスワードを設定してください。</Text>
   <Text key="SignOut.Failed">ログアウトできませんでした。ログインしたままです。もう一度お試しいただき、問題が続く場合はアプリケーションを再起動してください。</Text>
   <Text key="Shop.Picker.Title">店舗を選択</Text>
   <Text key="Shop.Picker.Prompt">開くことができる店舗</Text>
@@ -231,6 +235,8 @@
   <Text key="Users.Error.NameTaken">そのユーザー名はすでに使われています。</Text>
   <Text key="Users.Error.PasswordRequired">パスワードを入力してください。</Text>
   <Text key="Users.Error.PasswordMismatch">2 つのパスワードが一致しません。</Text>
+  <Text key="Users.Error.PasswordTooShort">パスワードは {0} 文字以上で入力してください。</Text>
+  <Text key="Users.Error.PasswordSameAsUserName">パスワードにユーザー名と同じ文字列は使用できません。</Text>
   <Text key="Users.Error.Protected">このアカウントは保護されているため、この方法では変更できません。</Text>
   <Text key="Users.Error.NotFound">このアカウントはすでに存在しません。</Text>
   <Text key="Login.Deactivated">アカウントが無効化されています。マネージャーにお問い合わせください。</Text>

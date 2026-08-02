@@ -17,6 +17,12 @@ public partial class LoginWindow : Window
     private readonly LocalizationService _localization;
     private bool _isLoadingLanguages;
 
+    // The credential that was accepted but is not allowed to open a session yet. Held so the change
+    // step can prove it to ChangeOwnPassword without asking the user to type it a second time —
+    // they typed it thirty seconds ago and re-asking reads as a system that did not believe them.
+    private string? _pendingUserName;
+    private string _pendingPassword = string.Empty;
+
     public LoginWindow(LocalizationService localization)
     {
         InitializeComponent();
@@ -70,9 +76,34 @@ public partial class LoginWindow : Window
         _localization.SetLanguage(code);
     }
 
+    /// <summary>
+    /// The single button, which does whichever of the two things the window is currently asking
+    /// for. One button rather than two because only one can be <c>IsDefault</c> — WPF hands Enter to
+    /// the first one registered in the focus scope, so a hidden second default would quietly steal
+    /// the key from the panel actually on screen.
+    /// </summary>
     private void OnSignInClick(object sender, RoutedEventArgs e)
     {
-        var result = AuthenticationService.Instance.Authenticate(UserNameBox.Text.Trim(), PasswordBox.Password);
+        if (_pendingUserName is not null)
+            SubmitNewPassword(_pendingUserName);
+        else
+            SubmitCredential();
+    }
+
+    private void SubmitCredential()
+    {
+        var userName = UserNameBox.Text.Trim();
+        var result = AuthenticationService.Instance.Authenticate(userName, PasswordBox.Password);
+
+        if (result.Failure == SignInFailure.PasswordChangeRequired)
+        {
+            // Not a failure to report. The credential was right; the account simply still carries
+            // the password somebody else chose for it, and this is the step that ends that.
+            _pendingUserName = userName;
+            _pendingPassword = PasswordBox.Password;
+            ShowPasswordChangeStep();
+            return;
+        }
 
         if (result.User is null)
         {
@@ -91,5 +122,70 @@ public partial class LoginWindow : Window
 
         SignedInUser = result.User;
         DialogResult = true;
+    }
+
+    private void ShowPasswordChangeStep()
+    {
+        ErrorText.Visibility = Visibility.Collapsed;
+        ChangeErrorText.Visibility = Visibility.Collapsed;
+        NewPasswordBox.Clear();
+        ConfirmPasswordBox.Clear();
+
+        CredentialPanel.Visibility = Visibility.Collapsed;
+        PasswordChangePanel.Visibility = Visibility.Visible;
+        SignInButton.Content = _localization["Login.SetPassword"];
+
+        NewPasswordBox.Focus();
+    }
+
+    /// <summary>
+    /// Writes the new password and, on success, signs in with it — the user asked to sign in, and
+    /// making them type the credential they have just chosen would be a second gate for no reason.
+    /// </summary>
+    private void SubmitNewPassword(string userName)
+    {
+        if (!string.Equals(NewPasswordBox.Password, ConfirmPasswordBox.Password, StringComparison.Ordinal))
+        {
+            ShowChangeError("Users.Error.PasswordMismatch");
+            return;
+        }
+
+        var change = AuthenticationService.Instance.ChangeOwnPassword(
+            userName, _pendingPassword, NewPasswordBox.Password);
+
+        if (change != AccountOperationResult.Success)
+        {
+            ShowChangeError(ChangeErrorKey(change));
+            return;
+        }
+
+        var result = AuthenticationService.Instance.Authenticate(userName, NewPasswordBox.Password);
+
+        if (result.User is null)
+        {
+            // Cannot happen from here — the password was just written and verified — but a silent
+            // no-op on a button is the worst possible answer, so say something and go back to the
+            // start rather than leaving the user pressing a button that does nothing.
+            ShowChangeError("Login.Failed");
+            return;
+        }
+
+        SignedInUser = result.User;
+        DialogResult = true;
+    }
+
+    private static string ChangeErrorKey(AccountOperationResult result) => result switch
+    {
+        AccountOperationResult.PasswordRequired => "Users.Error.PasswordRequired",
+        AccountOperationResult.PasswordTooShort => "Users.Error.PasswordTooShort",
+        AccountOperationResult.PasswordSameAsUserName => "Users.Error.PasswordSameAsUserName",
+        AccountOperationResult.Deactivated => "Login.Deactivated",
+        _ => "Login.Failed"
+    };
+
+    private void ShowChangeError(string key)
+    {
+        ChangeErrorText.Text = _localization.Format(key, AuthenticationService.MinimumPasswordLength);
+        ChangeErrorText.Visibility = Visibility.Visible;
     }
 }
