@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A ProjectReference, not a HintPath to bin/Debug.
+
+    Fourteen harnesses once pointed at a stale build directory and so compiled and PASSED against
+    code from an earlier session — the worst failure mode a test can have, because it is green. A
+    project reference makes the build order the compiler's problem: the harness cannot run against
+    an application it did not just build.
+  -->
+  <PropertyGroup>
+    <AssemblyName>datacheck</AssemblyName>
+    <RootNamespace>DataCheck</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RepoPaths.cs" Link="RepoPaths.cs"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CameywareOrder.csproj"/>
+  </ItemGroup>
+
+</Project>
+

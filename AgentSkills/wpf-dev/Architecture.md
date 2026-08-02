@@ -523,6 +523,17 @@ move.
       give every copy the same number.
   - `RelayCommand` — `ICommand` helper.
 - **Views/**
+  - **The two big code-behinds are PARTIALS split by responsibility (v9.1).** `OrderEditWindow` was
+    3,850 lines and `MainWindow` 2,001; between them a fifth of the codebase, and where a new
+    maintainer's first task lands. Now:
+    `OrderEditWindow.{Money,Splits,Validation,Save,Status,Records,Inputs}.cs` and
+    `MainWindow.{Receipt,Printing,DataTools,Session,OrderList}.cs`, leaving 1,752 and 155 lines in the
+    originals — construction, wiring and the copy/paste surface.
+    Partials rather than extracted helper types **on purpose**: almost every method touches `x:Name`
+    controls that live on the generated partial, so extracting would mean threading dozens of
+    controls through a signature, and SonarLint's single-file pass cannot see those generated fields
+    (S2325 false positives — SKILL §9a). A partial moves the code without moving what it can reach,
+    and the XAML event wiring keeps resolving because it is still one class.
   - `MainWindow` — split into a SYSTEM bar (Local Configuration on the left; greeting, language, Store Members and
     Sign Out on the right) and a RECORDS panel that owns its own action bar (Add / Edit / Delete / Refresh plus a
     count badge bound to `MainViewModel.FilteredCount`, and beside it a `WarningSoftBrush` badge
@@ -999,6 +1010,38 @@ its tree node types were deleted with the trees.
 
 `Models/UserManagement/UserRole` remains only so a file written before this release can be read;
 `LegacyRoleIds.For` maps its three values onto ids. Nothing decides anything from it.
+
+## Tests/ (v9.1)
+
+The assertion suite lives in the repository, not in a scratchpad. `Tests\run-all.ps1` builds the
+application and runs everything; it exits non-zero if anything fails, so it can gate a release
+without somebody reading the output.
+
+- **`Tests/DataCheck`** — the recycle bin and its purge, the shared `OrderQuery`, the CSV writer and
+  export, the backup schedule and pruning. 56 assertions.
+- **`Tests/DemoCheck`** — the schema guards, the demo store and its seeded history, Copy Shop's
+  naming. 41 assertions.
+- **`Tests/UiCheck`** — constructs real windows: renders six panels, drives the Copy/Paste commands on
+  a live list, asserts the Local Database menu's structure, and asserts it wrote NEITHER
+  `credentials.json` nor `roles.json`.
+- **`Tests/Scripts/keycheck.js`** — string-table parity, placeholder parity, and that a new key is
+  actually translated. **`surfacecheck.js`** — copy/paste surfaces paired against the SOURCE, no
+  window handling `Key.C`/`Key.V` itself, no CJK outside the language files.
+- **`Tests/RepoPaths.cs`** — linked into all three, finds the repository from the running assembly so
+  nothing hard-codes a drive letter.
+
+Three things about the setup that are load-bearing:
+
+- **`ProjectReference`, never a `HintPath` into `bin/Debug`.** Fourteen harnesses once pointed at a
+  stale output directory and so compiled and PASSED against code from an earlier session — green, and
+  wrong. A project reference makes the build order the compiler's problem.
+- **`Tests/Directory.Build.props` deliberately does NOT import the root one**, which is what keeps the
+  product's version number and the zero-tolerance Sonar pass off test code. A harness legitimately
+  does things the application must not — reflection into private methods, fixture data, assertions
+  that read as duplication.
+- **The app's csproj `Compile Remove="Tests\**"`.** It sits at the repository root and the SDK globs
+  `**/*.cs` from there, so without the removal every harness — each with its own `Main` — is swept
+  into the shipped executable.
 
 ## Key cross-cutting patterns
 

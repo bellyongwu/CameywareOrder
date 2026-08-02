@@ -17,6 +17,43 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-02 — v9.1.0: restructure the two overgrown code-behinds, and move the harnesses into the repo  [IN PROGRESS]
+- Ask: "I would like you to help to refactoring and restructoring the code base, split them by functions by logical and more maintanable. e.g. split the classes into files referenced for money calculation, documents.etc" + "Point 3 I am not sure the issue. do what you think is reasonable. probably that is what you suggested to move the tests into the repo"
+- Context: from a complexity review. `OrderEditWindow.xaml.cs` is 3,850 lines / 180 methods and
+  `MainWindow.xaml.cs` is 2,001; between them they are a fifth of the whole codebase. Neither is
+  over-engineering — it is overgrowth, and it is where a new maintainer's first task lands.
+- Plan:
+  - [ ] 1. Harnesses into `Tests/` FIRST, so the refactor happens under something that can catch it.
+        They must be excluded from the app csproj's default globbing, and kept out of the root
+        `Directory.Build.props` analyzer pass (test code is held to a different standard).
+  - [ ] 2. Extract from `OrderEditWindow` the parts that are genuinely NOT control-bound.
+  - [ ] 3. Split the rest into PARTIAL files by responsibility. Partials rather than helper classes
+        for anything touching `x:Name` controls — see SKILL §9a: extracting that logic produces an
+        S2325 false positive and needs dozens of controls threaded through a signature.
+  - [ ] 4. Same for `MainWindow`.
+  - [x] 5. Build 0/0, whole suite green, renders unchanged, release.
+- Notes:
+  **Result.** `OrderEditWindow.xaml.cs` 3,850 → 1,752 across seven partials
+  (Money 738, Splits 432, Status 295, Validation 290, Save 209, Records 151, Inputs 109).
+  `MainWindow.xaml.cs` 2,001 → 155 across five (Session 510, Receipt 466, DataTools 432,
+  OrderList 371, Printing 185). The largest file in the repository is now 1,752 lines, was 3,850.
+  **Tests moved in** as `Tests/{DataCheck,DemoCheck,UiCheck}` + `Tests/Scripts/*.js` +
+  `Tests/run-all.ps1`, all four in the solution. Three setup decisions are load-bearing and are in
+  `Architecture.md`: ProjectReference not HintPath, a `Tests/Directory.Build.props` that does NOT
+  import the root one, and `Compile Remove="Tests\**"` in the app csproj (without which every harness
+  `Main` is swept into the shipped exe).
+  **The first split attempt FAILED and was reverted** — it cut by line range and sliced through
+  method bodies. The lesson, and the two traps in the working member-based splitter, are in
+  `context.md`; so is the reason these are partials rather than extracted classes.
+  **Verification.** Build 0/0; `Tests\run-all.ps1` green end to end (datacheck 56, democheck 41,
+  uicheck renders + credentials/roles untouched, keycheck, surfacecheck). The suite was moved in
+  BEFORE the refactor deliberately, so the restructuring happened under something that could catch it.
+  §9b Gates 1 and 2 still not runnable; SonarLint IS now analysing the in-repo JavaScript and those
+  findings were cleared.
+  **Left undone, deliberately:** `OrderEditWindow.xaml.cs` is still 1,752 lines (construction, the
+  read-only/refund lock, service panels, clothing rows). It is no longer the outlier and splitting it
+  further would be shape for its own sake.
+
 ### 2026-08-02 — v9.0.0: per-shop role instances, the permission panel redesigned, a visible progress floor  [DONE]
 - Ask: "用户体验和权限设置框架部分重构：现在看不出数据操作在更新，保持一个至少0.25s的progress 时间…… 其次，权限设置版面，在店铺与权限种感觉有些拖沓。店铺和权限版面分开。-权限设置，可以添加和删除权限，权限是一个总体集合，单独与各个店。-权限可以被拖拽到相应的店铺中去。-保留管理员店长和员工三个基础权限设置不变。-每个权限对于每个店铺名称一样，但是可能职责不一样…… -他们的初始化可以一样，但是对于每一个实例，都可以进行更改。 重新redesign一下，界面优化且简洁明了"
   + mid-turn: "·重新redesign一下，界面优化且简洁明了· 这具体只是指代权限设置版面"

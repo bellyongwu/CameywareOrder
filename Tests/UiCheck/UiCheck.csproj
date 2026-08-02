@@ -1,0 +1,27 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- See Tests/DataCheck/DataCheck.csproj for why this is a ProjectReference. -->
+  <PropertyGroup>
+    <AssemblyName>uicheck</AssemblyName>
+    <RootNamespace>UiCheck</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      The application's windows declare Icon="/Assets/ICONS/app-icon.ico", and a pack URI without an
+      assembly name resolves against the ENTRY assembly — this one. Without its own copy every window
+      this harness constructs throws "Cannot locate resource" from InitializeComponent.
+    -->
+    <Resource Include="Assets\ICONS\app-icon.ico"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RepoPaths.cs" Link="RepoPaths.cs"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CameywareOrder.csproj"/>
+  </ItemGroup>
+
+</Project>
+

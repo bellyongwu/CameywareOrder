@@ -77,6 +77,23 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-08-02)
 
+### v9.1.0 — the two overgrown code-behinds split, and the harnesses moved into the repo  [DONE]
+
+No behaviour change. `OrderEditWindow` 3,850 → 1,752 lines across seven partials, `MainWindow`
+2,001 → 155 across five; the largest file in the repository is now 1,752 rather than 3,850.
+`Tests/` holds the three harnesses, the two source-sweep scripts and `run-all.ps1`, all in the
+solution.
+
+**The suite was moved in BEFORE the refactor on purpose** — restructuring under something that can
+catch you is the whole point, and it did stay green through both splits.
+
+Two durable lessons in `context.md`: split by MEMBER NAME rather than line range (the line-range
+attempt sliced through method bodies and was reverted), and use PARTIALS rather than extracted
+classes for WPF code-behind, because almost every method touches `x:Name` controls.
+
+Also recorded there: three csproj/props decisions that keep test code out of the shipped exe and out
+of the product's Sonar gate.
+
 ### v9.0.0 — per-shop role instances, the permission panel redesigned  [DONE]
 
 **A role is a NAME the installation shares; what it allows is per shop.** This reverses the v7.0.0

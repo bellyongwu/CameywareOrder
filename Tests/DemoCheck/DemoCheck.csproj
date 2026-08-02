@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- See Tests/DataCheck/DataCheck.csproj for why this is a ProjectReference. -->
+  <PropertyGroup>
+    <AssemblyName>democheck</AssemblyName>
+    <RootNamespace>DemoCheck</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\RepoPaths.cs" Link="RepoPaths.cs"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\CameywareOrder.csproj"/>
+  </ItemGroup>
+
+</Project>
+

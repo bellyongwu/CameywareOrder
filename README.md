@@ -11,6 +11,22 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.1.0 — 2026-08-02
+
+**Nothing in this release changes what the application does.** It is housekeeping, and it is the kind
+that decides how expensive the *next* feature is.
+
+- The two largest files in the project were doing far too much each — the order form was 3,850 lines
+  and the main window 2,001. They are now split by subject (money, payment splits, validation, saving,
+  status, measurement records; and receipt, printing, data tools, session, order list), so somebody
+  fixing a tax figure opens a file about money rather than scrolling past the printing code.
+- **The test suite now lives in the project**, and runs with one command. Until now the checks that
+  guard a release were kept outside it, which meant they could be skipped by accident. There are 97
+  automated assertions plus the screen renders and the translation checks.
+
+If you are running v9.0.0, there is no reason to hurry — but there is also nothing to be careful
+about: the data, the settings and the permissions are untouched.
+
 ### v9.0.0 — 2026-08-02
 
 **A role is now a job title, not a fixed list of powers.** Until this release a role meant exactly the

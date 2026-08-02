@@ -24,6 +24,28 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **Split an overgrown code-behind by MEMBER NAME, never by line range (2026-08-02).** The first
+  attempt cut `OrderEditWindow` at line numbers taken from a grep that had matched only some
+  signatures, so the boundaries between them were guesses — it sliced through method bodies and
+  produced eleven syntax errors. The working tool walks the class body tracking brace depth (with
+  strings, chars and comments scrubbed first, or a `{` inside a literal shifts every boundary after
+  it), collects whole members, and selects them BY NAME. A name does not drift when anything above it
+  changes, and an unknown name FAILS THE RUN rather than silently leaving the member behind.
+  - Its own trap: the name-finder first matched prose inside a multi-line `[SuppressMessage]`
+    justification — `"Named from XAML (EventSetter …)"` yielded the member name `XAML`. Anchor the
+    match to a line that BEGINS with a declaration keyword.
+  - The generated partials need their own `using` block, and it will not be the original's: three
+    files failed on `TextBoxBase`, `Converters` and `AsNoTracking` because those usings served
+    members that moved elsewhere. Expect one build round to settle them.
+  - Reconcile the line counts (moved + kept == original). A splitter that loses or duplicates a
+    member can still compile.
+- **PARTIALS, not extracted classes, for WPF code-behind (2026-08-02).** Almost every method in these
+  files touches `x:Name` controls that live on the generated partial. Extracting them into a helper
+  type means threading dozens of controls through a signature, and SonarLint's single-file pass
+  cannot see the generated fields so it flags every extracted method S2325 (SKILL §9a says the same,
+  from the other direction). A partial file moves the code without moving what it can reach, and
+  `Click="OnX"` keeps resolving because it is still one class. Reserve real extraction for logic that
+  touches no control — which in these two files was almost nothing.
 - **A ROLE IS A NAME; WHAT IT ALLOWS IS PER SHOP (2026-08-02, v9.0).** This REVERSES the v7.0.0
   decision recorded as "ONE installation-wide catalog … per-shop role definitions were considered and
   rejected". The reason it was reversed: a branch that also runs the workshop and a concession counter

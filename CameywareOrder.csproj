@@ -15,6 +15,23 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!--
+      The assertion harnesses live in Tests/ and must NOT be compiled into the application.
+
+      This project sits at the repository root and the SDK globs **/*.cs from there, so without these
+      removals every harness — with its own Main, its reflection into private methods and its
+      fixture data — would be swept into the shipped executable. It would not even fail to build
+      loudly: it would produce an app with several entry points and a compiler error about which one
+      to use, which reads as a project-file problem rather than what it is.
+    -->
+    <Compile Remove="Tests\**" />
+    <None Remove="Tests\**" />
+    <EmbeddedResource Remove="Tests\**" />
+    <Page Remove="Tests\**" />
+    <Resource Remove="Tests\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="HotChocolate.AspNetCore" Version="13.9.14" />
     <PackageReference Include="HotChocolate.Data.EntityFramework" Version="13.9.14" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.*" />

@@ -1,0 +1,34 @@
+<Project>
+
+  <!--
+    Deliberately does NOT import the repository root's Directory.Build.props.
+
+    MSBuild stops at the NEAREST Directory.Build.props, so this file's existence is what keeps the
+    harnesses out of the root one. Two things live there that must not apply here:
+
+      Version / AssemblyVersion   the release number of the PRODUCT. A harness carrying it would
+                                  claim to be the application in its own file details.
+      SonarAnalyzer.CSharp        the zero-tolerance quality gate. Test code is held to a different
+                                  standard on purpose: a harness deliberately does things the
+                                  application never should — reflection into private methods, fixed
+                                  fixture data, assertions that read like duplication — and clearing
+                                  those flags would mean writing worse tests to satisfy a rule
+                                  written for shipping code.
+
+    If a root-level property IS wanted here later, import it explicitly rather than deleting this
+    file; deleting it silently re-enables both of the above.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>Exe</OutputType>
+
+    <!-- The harnesses construct real windows, so they need WPF even when they never render one. -->
+    <UseWPF>true</UseWPF>
+
+    <!-- Never packed, never shipped, and not something a `dotnet publish` of the app should reach. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

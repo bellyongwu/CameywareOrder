@@ -13,3 +13,7 @@ publish/
 # User-specific files
 *.user
 *.suo
+
+# What the harnesses write while they run: rendered screenshots, throwaway databases, exported
+# sheets. The harnesses themselves ARE in the repository; only their output is not.
+Tests/.artifacts/
