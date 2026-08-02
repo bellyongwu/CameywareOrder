@@ -17,6 +17,34 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-02 — v9.0.0: per-shop role instances, the permission panel redesigned, a visible progress floor  [DONE]
+- Ask: "用户体验和权限设置框架部分重构：现在看不出数据操作在更新，保持一个至少0.25s的progress 时间…… 其次，权限设置版面，在店铺与权限种感觉有些拖沓。店铺和权限版面分开。-权限设置，可以添加和删除权限，权限是一个总体集合，单独与各个店。-权限可以被拖拽到相应的店铺中去。-保留管理员店长和员工三个基础权限设置不变。-每个权限对于每个店铺名称一样，但是可能职责不一样…… -他们的初始化可以一样，但是对于每一个实例，都可以进行更改。 重新redesign一下，界面优化且简洁明了"
+  + mid-turn: "·重新redesign一下，界面优化且简洁明了· 这具体只是指代权限设置版面"
+- Notes:
+  **THIS REVERSES A RECORDED v7.0.0 DECISION** — "one installation-wide catalog; per-shop role
+  definitions were considered and rejected". `context.md` now carries the reversal and why, rather
+  than both statements sitting there contradicting each other.
+  **Model.** `RoleRecord.ShopInstances` (shop PublicId → capabilities); ABSENT means "use the
+  default", so the change is additive and needs no migration. `RolePermissionStore` +
+  `CapabilitiesFor(roleIds, shopPublicId)`, `CapabilitiesFor(role, shopPublicId)`, `AddInstance`,
+  `RemoveInstance`, `SetInstanceCapabilities`, `HasInstance`, `ShopsWithInstance`, `DropShop`.
+  `AuthenticationService` resolves each membership against ITS OWN shop.
+  `ShopAdministration.Delete` calls `DropShop`.
+  **UI.** `PermissionsWindow` rebuilt as three columns (catalogue → where varied → what it allows),
+  with drag-and-drop from column 1 to column 2 at the system drag threshold. `PermissionNodes.cs`
+  deleted with the trees; `Permission.Accounts`/`.AccountsHint` pruned; three existing keys
+  RELABELLED because their values still described the old layout (caught by rendering, not by
+  building); +34 new keys in five languages.
+  **UX.** `BusyTracker.MinimumVisible` = 250 ms, with `IsBusy` extended to cover the hold — without
+  that the last dispose hides the overlay and the timer has nothing to keep up.
+  **Verification.** Build 0/0; datacheck 56; surfacecheck and keycheck clean; the permission panel
+  rendered and asserted NOT to write `roles.json` or `credentials.json` (a permission screen that
+  saved on load would rewrite an installation's whole model from a screenshot run).
+  **Process.** A `node -e` script through bash was mangled twice — the skill's `git commit -F` rule
+  generalises to any multi-line script with quoting; write it to a file. And `obj/` staleness after a
+  clean needs `dotnet build-server shutdown`, recorded in v8.1.0.
+  §9b Gates 1 and 2 remain unrunnable in this session.
+
 ### 2026-08-02 — v8.1.0: advanced-search disclosure, a shared busy indicator, F5, export-all  [DONE]
 - Ask: "l小的改动，添加高级搜索， 点开后在新的一行可以进行日期和关键字搜索。 第二，清楚筛选的按钮现在不符合theme 的button，另外给加一个背景色"
   + mid-turn: "导出CSV 改为导出所有订单 替换刷新的按钮， 并且在主界面按F5即可刷新所有order，并且提供一个progress bar， 表明正在刷新。 另外progress bar将会作为所有数据处理的一个通用的模块，表明正在做数据处理。无论刷新，添加还是更改数据。"

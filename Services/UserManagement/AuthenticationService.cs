@@ -273,9 +273,12 @@ public sealed class AuthenticationService
         var catalog = RolePermissionStore.Instance;
         var granted = new HashSet<AppCapability>();
 
+        // Each membership's roles are resolved AGAINST THAT MEMBERSHIP'S OWN SHOP (v9.0): a role is a
+        // name the installation shares, but what it grants can be varied per branch, so "Manager at
+        // the Kensington workroom" is not necessarily the same set as "Manager downtown".
         foreach (var membership in CurrentUser.Memberships.Where(membership => membership.IsActive))
         {
-            granted.UnionWith(catalog.CapabilitiesFor(membership.RoleIds)
+            granted.UnionWith(catalog.CapabilitiesFor(membership.RoleIds, membership.ShopPublicId)
                 .Where(capability =>
                     CapabilityCatalog.Entry(capability).Scope == CapabilityScope.Installation));
         }
@@ -284,7 +287,7 @@ public sealed class AuthenticationService
             && CurrentUser.Memberships.FirstOrDefault(membership =>
                 membership.ShopPublicId == shopId && membership.IsActive) is { } inShop)
         {
-            granted.UnionWith(catalog.CapabilitiesFor(inShop.RoleIds)
+            granted.UnionWith(catalog.CapabilitiesFor(inShop.RoleIds, shopId)
                 .Where(capability => CapabilityCatalog.Entry(capability).Scope == CapabilityScope.Shop));
         }
 

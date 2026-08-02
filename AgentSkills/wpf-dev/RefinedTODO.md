@@ -77,6 +77,24 @@ treatment too, which is theirs to decide.
 
 ## Recent work (2026-08-02)
 
+### v9.0.0 — per-shop role instances, the permission panel redesigned  [DONE]
+
+**A role is a NAME the installation shares; what it allows is per shop.** This reverses the v7.0.0
+decision that per-shop role definitions were not worth having — see `context.md` for the reversal and
+the reason (a branch that runs a workshop and a concession counter cannot share one Manager, and the
+only escape under the old model was a second role with a second name for the same job).
+
+`RoleRecord.ShopInstances` maps a shop's `PublicId` to its own capability list and **absent means "use
+the default"**, which is why the change is additive and needs no migration. The administrator can
+never carry an instance.
+
+The panel is three columns now — catalogue → where varied → what it allows — with a role DRAGGED onto
+a shop to give it an instance. Accounts left the screen; assigning people is User Management's job,
+and having two screens do it was half of what made this one sprawl. `PermissionNodes.cs` went with
+the trees.
+
+Also: `BusyTracker.MinimumVisible` (250 ms) so a fast operation is actually seen.
+
 ### v8.1.0 — advanced-search disclosure, a shared busy indicator, F5, export-all  [DONE]
 
 Follow-ups to v8.0.0, plus the one piece with a life beyond this screen:

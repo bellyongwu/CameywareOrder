@@ -787,11 +787,9 @@
   <!-- Permissions: the role catalog, and what each role may do. Capability keys are built from the
        AppCapability value name, so they must match it exactly. -->
   <Text key="Toolbar.Permissions">権限設定</Text>
-  <Text key="Permission.Subtitle">各ロールでできることを定義し、店舗ごとに担当ロールを割り当てます。</Text>
-  <Text key="Permission.Accounts">アカウント</Text>
-  <Text key="Permission.AccountsHint">アカウントを開くと所属店舗が表示されます。各店舗で担当するロールにチェックを入れてください。</Text>
-  <Text key="Permission.Roles">店舗とロール</Text>
-  <Text key="Permission.RolesHint">店舗を開くとロール、ロールを開くと対応する機能が表示されます。ロールの定義は一つで、どの店舗でも同じ意味です。</Text>
+  <Text key="Permission.Subtitle">各役割にできることを決め、業務が異なる店舗では個別に調整します。</Text>
+  <Text key="Permission.Roles">役割</Text>
+  <Text key="Permission.RolesHint">システム全体で共通の一覧です。役割はどの店舗でも同じ職種を指しますが、できることは店舗ごとに調整できます。</Text>
   <Text key="Permission.NewRoleName">新しいロール名</Text>
   <Text key="Permission.AddRole">ロールを追加</Text>
   <Text key="Permission.Rename">名前を変更</Text>
@@ -947,4 +945,39 @@
   <Text key="Busy.Deleting">ごみ箱に移動しています…</Text>
   <Text key="Busy.Copying">注文を複製しています…</Text>
   <Text key="Csv.Export.Hint">この店舗のすべての注文を表計算ファイルに書き出します。F5 キーで一覧を更新できます。</Text>
+  <!-- v9.0.0 — the redesigned permission panel -->
+  <Text key="Permission.Shops">店舗</Text>
+  <Text key="Permission.ShopsHint">役割をここにドラッグすると、その店舗だけの内容を持たせられます。ドラッグしていない店舗は既定の内容を使います。</Text>
+  <Text key="Permission.RemoveInstance">既定に戻す</Text>
+  <Text key="Permission.RemoveInstanceConfirm">「{0}」の {1} における内容を破棄して既定に戻しますか？</Text>
+  <Text key="Permission.InstanceAdded">「{0}」は {1} で独自の内容を持つようになりました。</Text>
+  <Text key="Permission.InstanceRemoved">「{0}」は {1} で既定の内容に戻りました。</Text>
+  <Text key="Permission.AlreadyVaried">「{0}」は {1} ですでに独自の内容を持っています。</Text>
+  <Text key="Permission.DropOnAShop">役割は店舗の上にドロップしてください。</Text>
+  <Text key="Permission.UsesDefault">既定の内容を使用</Text>
+  <Text key="Permission.UsesOwnSet">ここでは独自の内容</Text>
+  <Text key="Permission.State.Default">既定</Text>
+  <Text key="Permission.State.Varied">変更あり</Text>
+  <Text key="Permission.GrantsCount">{0} 件を許可</Text>
+  <Text key="Permission.VariedIn">{0} 店舗で変更</Text>
+  <Text key="Permission.Locked">固定</Text>
+  <Text key="Permission.PickARole">左側で役割を選んでください。</Text>
+  <Text key="Permission.AdminNotVaried">管理者はすべての店舗ですべての権限を持ち、変更できません。</Text>
+  <Text key="Permission.EditingDefault">{0} — 既定</Text>
+  <Text key="Permission.EditingInstance">{0}（{1}）</Text>
+  <Text key="Permission.EditingDefaultHint">これは、個別に変更していないすべての店舗での内容です。</Text>
+  <Text key="Permission.EditingInstanceHint">ここでの変更はこの店舗にのみ適用され、他の店舗は変わりません。</Text>
+  <Text key="Permission.Apply">適用</Text>
+  <Text key="Permission.DefaultSaved">「{0}」の既定の内容を保存しました。</Text>
+  <Text key="Permission.InstanceSaved">{1} の「{0}」を保存しました。</Text>
+  <Text key="Permission.DefaultsRestored">「{0}」を出荷時の内容に戻しました。</Text>
+  <Text key="Permission.RoleAdded">役割「{0}」を追加しました。</Text>
+  <Text key="Permission.RoleRenamed">「{0}」に名前を変更しました。</Text>
+  <Text key="Permission.RoleDeleted">役割「{0}」を削除しました。</Text>
+  <Text key="Permission.DeleteConfirm">役割「{0}」を削除しますか？現在は誰も持っていません。</Text>
+  <Text key="Permission.DeleteConfirmHeld">役割「{0}」を削除しますか？{1} 名が持っており、失われます。</Text>
+  <Text key="Permission.NameRequired">役割には名前が必要です。</Text>
+  <Text key="Permission.NameTaken">同じ名前の役割がすでにあります。</Text>
+  <Text key="Permission.RoleGone">その役割はすでに存在しません。</Text>
+  <Text key="Permission.RoleProtected">その役割は変更できません。</Text>
 </Language>

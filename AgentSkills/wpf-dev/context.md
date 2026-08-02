@@ -24,6 +24,37 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A ROLE IS A NAME; WHAT IT ALLOWS IS PER SHOP (2026-08-02, v9.0).** This REVERSES the v7.0.0
+  decision recorded as "ONE installation-wide catalog … per-shop role definitions were considered and
+  rejected". The reason it was reversed: a branch that also runs the workshop and a concession counter
+  cannot share one definition of Manager, and the only way out under the old model was a second role
+  with a second name for the same job — which is worse, because a person moving between branches then
+  changes title.
+  - `RoleRecord.ShopInstances` is `shopPublicId → capabilities`, and **absent means "use the
+    default"**. That is what makes it additive: every role written before it has an empty dictionary
+    and behaves exactly as it did, so the upgrade needs no migration and changes nothing until
+    somebody varies one. Same fallback rule as `Shop.InstalledLanguagesJson`.
+  - Keyed on `PublicId`, never `Shop.Id` — the local autoincrement is reassigned by a database
+    import, and a key that moved would hand one branch another branch's permissions.
+  - `AuthenticationService` resolves each membership against ITS OWN shop, not against the open one:
+    an installation-scoped capability is answered by every active membership, and reading them all
+    against whichever shop happens to be open would grant one branch's variation everywhere.
+  - The administrator can never carry an instance. It is regenerated rather than stored (defined as
+    "every capability there is"), so a branch able to narrow it is a branch able to lock the
+    installation's owner out.
+  - Deleting a shop must call `RolePermissionStore.DropShop`. Per-shop state living inside another
+    file is not swept by the per-shop FILE deletion, and a restored archive with the same `PublicId`
+    would otherwise inherit permissions nobody remembers setting.
+- **An indicator needs a MINIMUM visible time, or fast work reads as no work (2026-08-02).** Most
+  operations here finish inside one frame, so the busy overlay appeared and vanished without ever
+  being seen and the screen looked like it had ignored the click. `BusyTracker.MinimumVisible` holds
+  it 250 ms. Two things that make it honest: the hold is on the INDICATOR only — the data is already
+  written and nothing waits — and `IsBusy` has to include the hold, or the last scope's dispose hides
+  the overlay and leaves the timer with nothing to keep up.
+- **A `node -e` script through bash is mangled exactly as a commit heredoc is (2026-08-02).** The
+  skill's rule about `git commit -F` generalises to every multi-line script with quoting in it:
+  apostrophes, guillemets and CJK brackets all came back as shell syntax errors, and one run silently
+  wrote a broken TODO entry. Write the script to a FILE with the Write tool and run the file.
 - **A Storyboard inside a ControlTemplate trigger must be FREEZABLE, so it cannot contain a Binding
   (2026-08-02).** `ThemedProgressBar`'s indeterminate sweep animated `To="{Binding ActualWidth,
   ElementName=TemplateRoot}"` so it would look the same at any width. WPF freezes template

@@ -787,11 +787,9 @@
   <!-- Permissions: the role catalog, and what each role may do. Capability keys are built from the
        AppCapability value name, so they must match it exactly. -->
   <Text key="Toolbar.Permissions">Permissions</Text>
-  <Text key="Permission.Subtitle">Define what each role may do, and give people their roles in each shop.</Text>
-  <Text key="Permission.Accounts">Accounts</Text>
-  <Text key="Permission.AccountsHint">Open an account to see the shops it belongs to, and tick the roles it holds in each.</Text>
-  <Text key="Permission.Roles">Shops and roles</Text>
-  <Text key="Permission.RolesHint">Open a shop to see the roles, and a role to see what it may do. A role is defined once and means the same thing in every shop.</Text>
+  <Text key="Permission.Subtitle">Define what each role may do, and adjust it for a shop where the job is different.</Text>
+  <Text key="Permission.Roles">Roles</Text>
+  <Text key="Permission.RolesHint">One list for the whole installation. A role means the same job everywhere; what it allows can be adjusted per shop.</Text>
   <Text key="Permission.NewRoleName">New role name</Text>
   <Text key="Permission.AddRole">Add role</Text>
   <Text key="Permission.Rename">Rename</Text>
@@ -947,4 +945,39 @@
   <Text key="Busy.Deleting">Moving to the recycle bin…</Text>
   <Text key="Busy.Copying">Copying orders…</Text>
   <Text key="Csv.Export.Hint">Writes every order this shop holds to a spreadsheet. Press F5 to refresh the list.</Text>
+  <!-- v9.0.0 — the redesigned permission panel -->
+  <Text key="Permission.Shops">Shops</Text>
+  <Text key="Permission.ShopsHint">Drag a role here to give it its own set in that shop. A shop with none uses the role’s default.</Text>
+  <Text key="Permission.RemoveInstance">Use the default again</Text>
+  <Text key="Permission.RemoveInstanceConfirm">Discard the set “{0}” has in {1} and go back to its default?</Text>
+  <Text key="Permission.InstanceAdded">“{0}” now has its own set in {1}.</Text>
+  <Text key="Permission.InstanceRemoved">“{0}” uses its default in {1} again.</Text>
+  <Text key="Permission.AlreadyVaried">“{0}” already has its own set in {1}.</Text>
+  <Text key="Permission.DropOnAShop">Drop the role onto a shop.</Text>
+  <Text key="Permission.UsesDefault">Uses the default set</Text>
+  <Text key="Permission.UsesOwnSet">Has its own set here</Text>
+  <Text key="Permission.State.Default">Default</Text>
+  <Text key="Permission.State.Varied">Adjusted</Text>
+  <Text key="Permission.GrantsCount">Allows {0}</Text>
+  <Text key="Permission.VariedIn">adjusted in {0} shop(s)</Text>
+  <Text key="Permission.Locked">Fixed</Text>
+  <Text key="Permission.PickARole">Pick a role on the left.</Text>
+  <Text key="Permission.AdminNotVaried">The administrator is every permission there is, in every shop, and cannot be adjusted.</Text>
+  <Text key="Permission.EditingDefault">{0} — default</Text>
+  <Text key="Permission.EditingInstance">{0} in {1}</Text>
+  <Text key="Permission.EditingDefaultHint">This is what the role allows in every shop that has not been adjusted.</Text>
+  <Text key="Permission.EditingInstanceHint">This changes the role in this shop only. Every other shop is left as it is.</Text>
+  <Text key="Permission.Apply">Apply</Text>
+  <Text key="Permission.DefaultSaved">Saved the default set for “{0}”.</Text>
+  <Text key="Permission.InstanceSaved">Saved “{0}” in {1}.</Text>
+  <Text key="Permission.DefaultsRestored">“{0}” is back to the set it ships with.</Text>
+  <Text key="Permission.RoleAdded">Added the role “{0}”.</Text>
+  <Text key="Permission.RoleRenamed">Renamed to “{0}”.</Text>
+  <Text key="Permission.RoleDeleted">Deleted the role “{0}”.</Text>
+  <Text key="Permission.DeleteConfirm">Delete the role “{0}”? Nobody holds it.</Text>
+  <Text key="Permission.DeleteConfirmHeld">Delete the role “{0}”? {1} person(s) hold it and will lose it.</Text>
+  <Text key="Permission.NameRequired">A role needs a name.</Text>
+  <Text key="Permission.NameTaken">Another role already goes by that name.</Text>
+  <Text key="Permission.RoleGone">That role no longer exists.</Text>
+  <Text key="Permission.RoleProtected">That role cannot be changed.</Text>
 </Language>

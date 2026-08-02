@@ -377,6 +377,11 @@ public static class ShopAdministration
     {
         TryDeleteFile(MeasurementTermsService.FilePathFor(shop));
         TryDeleteDirectory(ReceiptBrandingStore.DirectoryFor(shop));
+
+        // Per-shop ROLE instances live in roles.json rather than in a file of their own, so they are
+        // not swept by the two calls above and would otherwise accumulate for ever — and a restored
+        // archive carrying the same PublicId would inherit permissions nobody remembers setting.
+        RolePermissionStore.Instance.DropShop(shop.PublicId);
     }
 
     private static void TryDeleteFile(string path)

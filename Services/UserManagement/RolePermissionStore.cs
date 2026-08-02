@@ -67,21 +67,164 @@ public sealed class RolePermissionStore
         => roleId is null ? null : All().FirstOrDefault(role => IdMatches(role.Id, roleId));
 
     /// <summary>
-    /// Every capability granted by a set of role ids. An id that resolves to nothing contributes
-    /// nothing — a membership naming a deleted role fails CLOSED rather than falling back to a
-    /// default set somebody would have to guess at.
+    /// Every capability granted by a set of role ids, IN A GIVEN SHOP.
     /// </summary>
-    public IReadOnlySet<AppCapability> CapabilitiesFor(IEnumerable<string> roleIds)
+    /// <remarks>
+    /// A role is a NAME the whole installation shares; what it lets somebody do can differ from
+    /// branch to branch. "Manager" means the same job everywhere, but the branch that also runs the
+    /// workshop may let its manager edit the product catalogue while the concession inside a
+    /// department store does not. Both are still Manager, and a person moving between them keeps one
+    /// title.
+    ///
+    /// <paramref name="shopPublicId"/> null, or a shop with no instance of its own, resolves to the
+    /// role's DEFAULT set — which is exactly the behaviour every installation had before per-shop
+    /// instances existed, so an upgrade changes nothing until somebody deliberately varies one.
+    ///
+    /// An id that resolves to no role contributes nothing: a membership naming a deleted role fails
+    /// CLOSED rather than falling back to a default set somebody would have to guess at.
+    /// </remarks>
+    public IReadOnlySet<AppCapability> CapabilitiesFor(IEnumerable<string> roleIds, Guid? shopPublicId = null)
     {
         ArgumentNullException.ThrowIfNull(roleIds);
 
         var granted = new HashSet<AppCapability>();
 
-        foreach (var role in roleIds.Select(Find).OfType<RoleDefinition>())
-            granted.UnionWith(role.Capabilities);
+        foreach (var roleId in roleIds)
+        {
+            if (Find(roleId) is not { } role)
+                continue;
+
+            granted.UnionWith(CapabilitiesFor(role, shopPublicId));
+        }
 
         return granted;
     }
+
+    /// <summary>
+    /// What one role grants in one shop: its instance there, or its default where it has none.
+    /// </summary>
+    public IReadOnlyCollection<AppCapability> CapabilitiesFor(RoleDefinition role, Guid? shopPublicId)
+    {
+        ArgumentNullException.ThrowIfNull(role);
+
+        // The administrator is regenerated rather than stored (it is defined as "every capability
+        // there is"), so it has no record to carry an instance and must never acquire one — a branch
+        // able to narrow the administrator is a branch able to lock the installation's owner out of
+        // it.
+        if (role.IsAdministratorRole || shopPublicId is not { } shop)
+            return role.Capabilities;
+
+        var record = FindRecord(role.Id);
+        if (record is null || !record.ShopInstances.TryGetValue(Key(shop), out var stored))
+            return role.Capabilities;
+
+        return stored.Select(ParseCapability).OfType<AppCapability>().ToList();
+    }
+
+    /// <summary>Whether this role has been given an instance of its own in this shop.</summary>
+    public bool HasInstance(string roleId, Guid shopPublicId)
+        => FindRecord(roleId)?.ShopInstances.ContainsKey(Key(shopPublicId)) is true;
+
+    /// <summary>Every shop this role has been varied in.</summary>
+    public IReadOnlyList<Guid> ShopsWithInstance(string roleId)
+    {
+        var record = FindRecord(roleId);
+        if (record is null)
+            return Array.Empty<Guid>();
+
+        return record.ShopInstances.Keys
+            .Select(key => Guid.TryParse(key, out var id) ? id : Guid.Empty)
+            .Where(id => id != Guid.Empty)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Gives a role an instance in a shop, seeded from its current default set.
+    /// </summary>
+    /// <remarks>
+    /// Seeded rather than empty — the ask is "they can start the same and then be changed". An
+    /// instance created empty would silently strip everyone holding that role in that branch of
+    /// everything the moment it was created, which is the opposite of what dragging a role onto a
+    /// shop is meant to express.
+    ///
+    /// Already having one is success, not an error: the caller asked for the role to be varied there
+    /// and it is.
+    /// </remarks>
+    public RoleOperationResult AddInstance(string roleId, Guid shopPublicId)
+    {
+        if (Find(roleId) is not { } role || role.IsAdministratorRole)
+            return RoleOperationResult.Protected;
+
+        var record = FindRecord(roleId);
+        if (record is null)
+            return RoleOperationResult.NotFound;
+
+        if (record.ShopInstances.ContainsKey(Key(shopPublicId)))
+            return RoleOperationResult.Success;
+
+        record.ShopInstances[Key(shopPublicId)] =
+            role.Capabilities.Select(capability => capability.ToString()).ToList();
+
+        Save();
+        return RoleOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Removes a role's instance in a shop, so it falls back to the role's default set again.
+    /// </summary>
+    public RoleOperationResult RemoveInstance(string roleId, Guid shopPublicId)
+    {
+        var record = FindRecord(roleId);
+        if (record is null)
+            return RoleOperationResult.NotFound;
+
+        if (record.ShopInstances.Remove(Key(shopPublicId)))
+            Save();
+
+        return RoleOperationResult.Success;
+    }
+
+    /// <summary>Sets what a role grants in ONE shop, leaving its default and every other shop alone.</summary>
+    public RoleOperationResult SetInstanceCapabilities(
+        string roleId, Guid shopPublicId, IEnumerable<AppCapability> capabilities)
+    {
+        ArgumentNullException.ThrowIfNull(capabilities);
+
+        if (Find(roleId) is not { } role || role.IsAdministratorRole)
+            return RoleOperationResult.Protected;
+
+        var record = FindRecord(roleId);
+        if (record is null)
+            return RoleOperationResult.NotFound;
+
+        record.ShopInstances[Key(shopPublicId)] =
+            Grantable(capabilities).Select(capability => capability.ToString()).ToList();
+
+        Save();
+        return RoleOperationResult.Success;
+    }
+
+    /// <summary>
+    /// Drops every instance belonging to a shop — called when that shop is deleted.
+    /// </summary>
+    /// <remarks>
+    /// Per-shop state keyed on <c>PublicId</c> that outlives its shop is the same leak the per-shop
+    /// FILES have: the id is reused by nothing, but the entries accumulate for ever and a restored
+    /// archive carrying the same PublicId would inherit settings nobody remembers making.
+    /// </remarks>
+    public void DropShop(Guid shopPublicId)
+    {
+        var key = Key(shopPublicId);
+        var changed = false;
+
+        foreach (var record in _file.Roles)
+            changed |= record.ShopInstances.Remove(key);
+
+        if (changed)
+            Save();
+    }
+
+    private static string Key(Guid shopPublicId) => shopPublicId.ToString("D");
 
     /// <summary>Whether a name is already taken by a role other than <paramref name="ignoringId"/>.</summary>
     /// <remarks>
@@ -449,5 +592,24 @@ public sealed class RoleRecord
 
     public bool IsBuiltIn { get; set; }
 
+    /// <summary>What this role grants by default, everywhere it has not been varied.</summary>
     public List<string> Capabilities { get; set; } = new();
+
+    /// <summary>
+    /// What this role grants in ONE shop, keyed on that shop's <c>PublicId</c> — the per-shop
+    /// instances (v9.0).
+    /// </summary>
+    /// <remarks>
+    /// A role is a NAME the installation shares; what the job actually involves can differ by branch.
+    /// An entry here overrides <see cref="Capabilities"/> for that shop and for nothing else.
+    ///
+    /// ABSENT MEANS "USE THE DEFAULT", which is what makes this additive: every role written before
+    /// this existed has an empty dictionary and therefore behaves in every shop exactly as it did.
+    /// The file needs no migration and an older build reading a newer file simply ignores the field.
+    ///
+    /// Keyed on <c>PublicId</c> rather than <c>Shop.Id</c> for the reason the per-shop FILES are —
+    /// <c>Id</c> is a local autoincrement that a database import reassigns, and a key that moved
+    /// would hand one branch another branch's permissions.
+    /// </remarks>
+    public Dictionary<string, List<string>> ShopInstances { get; set; } = new();
 }

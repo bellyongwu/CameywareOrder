@@ -984,6 +984,19 @@ It is now data, in five pieces:
   capabilities on the right. One `RoleNode` instance is SHARED across shops, since a role is defined
   once. Reached from Local Configuration and from the shop picker.
 
+**v9.0 — a role's capabilities are PER SHOP.** `RoleRecord.ShopInstances` maps a shop's `PublicId` to
+its own capability list; absent means "use the role's default", which is what every installation had
+before. `RolePermissionStore` gained `CapabilitiesFor(roleIds, shopPublicId)`, `AddInstance`,
+`RemoveInstance`, `SetInstanceCapabilities`, `HasInstance`, `ShopsWithInstance` and `DropShop` (called
+from `ShopAdministration.Delete`). `AuthenticationService` resolves each membership against ITS OWN
+shop. The administrator can never carry an instance — see `context.md`.
+
+`PermissionsWindow` was rebuilt around it: **three columns** — the role catalogue (add / rename /
+delete), the shops the selected role is varied in (a role is DRAGGED onto one), and one capability
+editor whose heading names whether it is editing the role's default or one shop's instance. Accounts
+left the screen entirely; assigning a person to a role is User Management's. `PermissionNodes.cs` and
+its tree node types were deleted with the trees.
+
 `Models/UserManagement/UserRole` remains only so a file written before this release can be read;
 `LegacyRoleIds.For` maps its three values onto ids. Nothing decides anything from it.
 

@@ -786,11 +786,9 @@
   <!-- Permissions: the role catalog, and what each role may do. Capability keys are built from the
        AppCapability value name, so they must match it exactly. -->
   <Text key="Toolbar.Permissions">Permisos</Text>
-  <Text key="Permission.Subtitle">Defina qué permite cada rol y asigne a cada persona sus roles en cada tienda.</Text>
-  <Text key="Permission.Accounts">Cuentas</Text>
-  <Text key="Permission.AccountsHint">Abra una cuenta para ver sus tiendas y marque los roles que tiene en cada una.</Text>
-  <Text key="Permission.Roles">Tiendas y roles</Text>
-  <Text key="Permission.RolesHint">Abra una tienda para ver los roles, y un rol para ver qué permite. Un rol se define una sola vez y significa lo mismo en todas las tiendas.</Text>
+  <Text key="Permission.Subtitle">Defina lo que puede hacer cada rol y adáptelo a una tienda donde el trabajo sea distinto.</Text>
+  <Text key="Permission.Roles">Roles</Text>
+  <Text key="Permission.RolesHint">Una sola lista para toda la instalación. Un rol es el mismo puesto en todas partes; lo que permite se puede adaptar por tienda.</Text>
   <Text key="Permission.NewRoleName">Nombre del nuevo rol</Text>
   <Text key="Permission.AddRole">Añadir rol</Text>
   <Text key="Permission.Rename">Cambiar nombre</Text>
@@ -946,4 +944,39 @@
   <Text key="Busy.Deleting">Moviendo a la papelera…</Text>
   <Text key="Busy.Copying">Copiando pedidos…</Text>
   <Text key="Csv.Export.Hint">Escribe todos los pedidos de la tienda en una hoja de cálculo. Pulse F5 para actualizar la lista.</Text>
+  <!-- v9.0.0 — the redesigned permission panel -->
+  <Text key="Permission.Shops">Tiendas</Text>
+  <Text key="Permission.ShopsHint">Arrastre un rol aquí para darle su propio conjunto en esa tienda. Si no, la tienda usa el conjunto predeterminado.</Text>
+  <Text key="Permission.RemoveInstance">Volver al predeterminado</Text>
+  <Text key="Permission.RemoveInstanceConfirm">¿Descartar el conjunto de «{0}» en {1} y volver al predeterminado?</Text>
+  <Text key="Permission.InstanceAdded">«{0}» ahora tiene su propio conjunto en {1}.</Text>
+  <Text key="Permission.InstanceRemoved">«{0}» vuelve a usar su conjunto predeterminado en {1}.</Text>
+  <Text key="Permission.AlreadyVaried">«{0}» ya tiene su propio conjunto en {1}.</Text>
+  <Text key="Permission.DropOnAShop">Suelte el rol sobre una tienda.</Text>
+  <Text key="Permission.UsesDefault">Usa el conjunto predeterminado</Text>
+  <Text key="Permission.UsesOwnSet">Tiene su propio conjunto aquí</Text>
+  <Text key="Permission.State.Default">Predet.</Text>
+  <Text key="Permission.State.Varied">Adaptado</Text>
+  <Text key="Permission.GrantsCount">Permite {0}</Text>
+  <Text key="Permission.VariedIn">adaptado en {0} tienda(s)</Text>
+  <Text key="Permission.Locked">Fijo</Text>
+  <Text key="Permission.PickARole">Elija un rol a la izquierda.</Text>
+  <Text key="Permission.AdminNotVaried">El administrador tiene todos los permisos en todas las tiendas y no se puede adaptar.</Text>
+  <Text key="Permission.EditingDefault">{0} — predeterminado</Text>
+  <Text key="Permission.EditingInstance">{0} en {1}</Text>
+  <Text key="Permission.EditingDefaultHint">Esto es lo que el rol permite en todas las tiendas sin adaptar.</Text>
+  <Text key="Permission.EditingInstanceHint">Esto cambia el rol solo en esta tienda. Las demás no se ven afectadas.</Text>
+  <Text key="Permission.Apply">Aplicar</Text>
+  <Text key="Permission.DefaultSaved">Se guardó el conjunto predeterminado de «{0}».</Text>
+  <Text key="Permission.InstanceSaved">Se guardó «{0}» en {1}.</Text>
+  <Text key="Permission.DefaultsRestored">«{0}» ha vuelto a su conjunto original.</Text>
+  <Text key="Permission.RoleAdded">Se añadió el rol «{0}».</Text>
+  <Text key="Permission.RoleRenamed">Renombrado a «{0}».</Text>
+  <Text key="Permission.RoleDeleted">Se eliminó el rol «{0}».</Text>
+  <Text key="Permission.DeleteConfirm">¿Eliminar el rol «{0}»? Nadie lo tiene.</Text>
+  <Text key="Permission.DeleteConfirmHeld">¿Eliminar el rol «{0}»? {1} persona(s) lo tienen y lo perderán.</Text>
+  <Text key="Permission.NameRequired">Un rol necesita un nombre.</Text>
+  <Text key="Permission.NameTaken">Ya hay otro rol con ese nombre.</Text>
+  <Text key="Permission.RoleGone">Ese rol ya no existe.</Text>
+  <Text key="Permission.RoleProtected">Ese rol no se puede cambiar.</Text>
 </Language>

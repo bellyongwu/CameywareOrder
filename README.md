@@ -11,6 +11,32 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.0.0 — 2026-08-02
+
+**A role is now a job title, not a fixed list of powers.** Until this release a role meant exactly the
+same thing in every shop, so a branch that also runs the workshop and a concession counter inside a
+department store had to share one definition of "Manager" — or invent a second role with a second
+name for the same job.
+
+- **The same role can allow different things in different shops.** "Manager" is still Manager
+  everywhere, and somebody moving between branches keeps one title; what the job actually involves is
+  now yours to set per shop.
+- **Drag a role onto a shop** in the middle column to give it its own set there. It starts as a copy
+  of the role's normal set, and you change it from there. A shop you have not adjusted simply uses
+  the role's normal set — which is what every shop does today, so **nothing changes when you
+  upgrade** until you deliberately adjust one. *Use the default again* undoes it.
+- **Add and delete roles** from the left column, and rename them. Deleting one tells you how many
+  people hold it first. **Administrator, Manager and Staff stay as they are** — Administrator is
+  every permission there is and cannot be narrowed, in any shop.
+- **The permissions screen has been redesigned.** It used to be two trees that both started from the
+  shop, so a role was something you found underneath one, twice, in two different shapes. It is now
+  three plain columns, left to right in the order the work is done: **which roles exist → where each
+  one is adjusted → what it allows.** Assigning a person to a role has moved out entirely; that is
+  User Management's job and having two screens do it was half of what made this one feel long.
+- **Progress is visible again.** Refreshing, copying and deleting show the indicator for at least a
+  quarter of a second, so a fast operation no longer flashes past too quickly to notice. Nothing waits
+  on it — the work is already done; only the indicator lingers.
+
 ### v8.1.0 — 2026-08-02
 
 Follow-ups to the data release, and one new piece the rest of the application will build on.

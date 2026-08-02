@@ -788,11 +788,9 @@
   <!-- Permissions: the role catalog, and what each role may do. Capability keys are built from the
        AppCapability value name, so they must match it exactly. -->
   <Text key="Toolbar.Permissions">Autorisations</Text>
-  <Text key="Permission.Subtitle">Définissez ce que chaque rôle autorise, et attribuez à chacun ses rôles dans chaque boutique.</Text>
-  <Text key="Permission.Accounts">Comptes</Text>
-  <Text key="Permission.AccountsHint">Ouvrez un compte pour voir ses boutiques, puis cochez les rôles qu’il y détient.</Text>
-  <Text key="Permission.Roles">Boutiques et rôles</Text>
-  <Text key="Permission.RolesHint">Ouvrez une boutique pour voir les rôles, et un rôle pour voir ce qu’il autorise. Un rôle est défini une seule fois et signifie la même chose dans toutes les boutiques.</Text>
+  <Text key="Permission.Subtitle">Définissez ce que chaque rôle peut faire, et adaptez-le à une boutique où le travail diffère.</Text>
+  <Text key="Permission.Roles">Rôles</Text>
+  <Text key="Permission.RolesHint">Une seule liste pour toute l’installation. Un rôle désigne le même poste partout ; ce qu’il autorise peut être adapté par boutique.</Text>
   <Text key="Permission.NewRoleName">Nom du nouveau rôle</Text>
   <Text key="Permission.AddRole">Ajouter un rôle</Text>
   <Text key="Permission.Rename">Renommer</Text>
@@ -948,4 +946,39 @@
   <Text key="Busy.Deleting">Déplacement vers la corbeille…</Text>
   <Text key="Busy.Copying">Copie des commandes…</Text>
   <Text key="Csv.Export.Hint">Écrit toutes les commandes de la boutique dans une feuille de calcul. Appuyez sur F5 pour actualiser la liste.</Text>
+  <!-- v9.0.0 — the redesigned permission panel -->
+  <Text key="Permission.Shops">Boutiques</Text>
+  <Text key="Permission.ShopsHint">Faites glisser un rôle ici pour lui donner son propre jeu dans cette boutique. Sans cela, la boutique utilise le jeu par défaut.</Text>
+  <Text key="Permission.RemoveInstance">Revenir au jeu par défaut</Text>
+  <Text key="Permission.RemoveInstanceConfirm">Abandonner le jeu de « {0} » dans {1} et revenir à son jeu par défaut ?</Text>
+  <Text key="Permission.InstanceAdded">« {0} » a désormais son propre jeu dans {1}.</Text>
+  <Text key="Permission.InstanceRemoved">« {0} » utilise de nouveau son jeu par défaut dans {1}.</Text>
+  <Text key="Permission.AlreadyVaried">« {0} » a déjà son propre jeu dans {1}.</Text>
+  <Text key="Permission.DropOnAShop">Déposez le rôle sur une boutique.</Text>
+  <Text key="Permission.UsesDefault">Utilise le jeu par défaut</Text>
+  <Text key="Permission.UsesOwnSet">A son propre jeu ici</Text>
+  <Text key="Permission.State.Default">Défaut</Text>
+  <Text key="Permission.State.Varied">Adapté</Text>
+  <Text key="Permission.GrantsCount">Autorise {0}</Text>
+  <Text key="Permission.VariedIn">adapté dans {0} boutique(s)</Text>
+  <Text key="Permission.Locked">Fixe</Text>
+  <Text key="Permission.PickARole">Choisissez un rôle à gauche.</Text>
+  <Text key="Permission.AdminNotVaried">L’administrateur possède toutes les permissions dans toutes les boutiques et ne peut pas être adapté.</Text>
+  <Text key="Permission.EditingDefault">{0} — jeu par défaut</Text>
+  <Text key="Permission.EditingInstance">{0} dans {1}</Text>
+  <Text key="Permission.EditingDefaultHint">Voici ce que le rôle autorise dans toutes les boutiques non adaptées.</Text>
+  <Text key="Permission.EditingInstanceHint">Ceci ne change le rôle que dans cette boutique. Les autres restent inchangées.</Text>
+  <Text key="Permission.Apply">Appliquer</Text>
+  <Text key="Permission.DefaultSaved">Jeu par défaut de « {0} » enregistré.</Text>
+  <Text key="Permission.InstanceSaved">« {0} » enregistré dans {1}.</Text>
+  <Text key="Permission.DefaultsRestored">« {0} » est revenu à son jeu d’origine.</Text>
+  <Text key="Permission.RoleAdded">Rôle « {0} » ajouté.</Text>
+  <Text key="Permission.RoleRenamed">Renommé en « {0} ».</Text>
+  <Text key="Permission.RoleDeleted">Rôle « {0} » supprimé.</Text>
+  <Text key="Permission.DeleteConfirm">Supprimer le rôle « {0} » ? Personne ne le détient.</Text>
+  <Text key="Permission.DeleteConfirmHeld">Supprimer le rôle « {0} » ? {1} personne(s) le détiennent et le perdront.</Text>
+  <Text key="Permission.NameRequired">Un rôle doit avoir un nom.</Text>
+  <Text key="Permission.NameTaken">Un autre rôle porte déjà ce nom.</Text>
+  <Text key="Permission.RoleGone">Ce rôle n’existe plus.</Text>
+  <Text key="Permission.RoleProtected">Ce rôle ne peut pas être modifié.</Text>
 </Language>
