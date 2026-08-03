@@ -231,8 +231,6 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <Menu Grid.Column="1" Background="Transparent" VerticalAlignment="Center" Margin="0,0,18,0">
@@ -377,67 +375,55 @@
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <!-- v9.3.0. Between the roster and Lock, because the three of them are the account
-                     block and this is the one that acts on YOUR account. Until now the only way to a
-                     new password was to ask a manager to set one — who then knew it, and the whole
-                     point of a password is that nobody else does. Shown to everybody: an account is
-                     the one thing its holder always administers. -->
-                <Button x:Name="ChangePasswordButton" Grid.Column="5" Click="OnChangePasswordClick" Padding="12,7" Margin="0,0,10,0"
-                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Password.Change.Hint], Mode=OneWay}"
-                        AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Password.Change.Title], Mode=OneWay}">
-                    <StackPanel Orientation="Horizontal">
-                        <!-- A key: bow, shaft and two teeth. Distinct from the padlock beside it, which
-                             is the same subject but the opposite act. -->
-                        <Canvas Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0">
-                            <Ellipse Canvas.Left="1.6" Canvas.Top="5.2" Width="6" Height="6"
-                                     Stroke="#4F46E5" StrokeThickness="1.6"/>
-                            <Path Stroke="#4F46E5" StrokeThickness="1.6" StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                  Data="M 7.6 8.2 L 14.4 8.2 M 12.2 8.2 L 12.2 11 M 14.4 8.2 L 14.4 10.4"/>
-                        </Canvas>
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Password.Change.Title], Mode=OneWay}"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                <!-- v9.3.1: Lock, Change Password and Sign Out were three separate buttons and are
+                     now one ACCOUNT menu. They were the only three controls in the bar that act on
+                     the person rather than on the shop or the records, and as buttons they took a
+                     third of the bar's width to say so — while Change Password, added one release
+                     earlier, is a thing somebody does twice a year.
 
-                <!-- Beside Sign Out, and before it: locking is the one you want several times a day
-                     and signing out is the one you want at the end of a shift, so the frequent one
-                     is nearer the content and the ending one sits at the edge. Both raise the same
-                     panel; this button is the discoverable route to what ESC does. -->
-                <Button Grid.Column="6" Click="OnLockClick" Padding="12,7" Margin="0,0,8,0"
-                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LockHint], Mode=OneWay}"
-                        AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Lock], Mode=OneWay}">
-                    <StackPanel Orientation="Horizontal">
-                        <!-- A padlock: shackle over a closed body. -->
-                        <Canvas Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0">
-                            <Path Stroke="#4F46E5" StrokeThickness="1.6" StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                  Data="M 5 7 L 5 4.8 C 5 3.1 6.3 1.8 8 1.8 C 9.7 1.8 11 3.1 11 4.8 L 11 7"/>
-                            <Rectangle Canvas.Left="3.2" Canvas.Top="7" Width="9.6" Height="7.2"
-                                       RadiusX="1.6" RadiusY="1.6" Stroke="#4F46E5" StrokeThickness="1.6"/>
-                        </Canvas>
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Lock], Mode=OneWay}"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                     Ordered by frequency, as the buttons were: locking is a several-times-a-day
+                     action, signing out ends a shift, and changing a password sits between them
+                     because it is the one you go LOOKING for rather than reach for by habit.
 
-                <Button Grid.Column="7" Click="OnSignOutClick" Padding="12,7"
-                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}"
-                        AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}">
-                    <StackPanel Orientation="Horizontal">
-                        <!-- Door with an arrow leaving it. -->
-                        <Canvas Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0">
-                            <Path Stroke="#B45309" StrokeThickness="1.6" StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                  Data="M 9.5 2.5 L 3 2.5 L 3 13.5 L 9.5 13.5"/>
-                            <Path Stroke="#B45309" StrokeThickness="1.6" StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                                  Data="M 7.5 8 L 14 8 M 11.2 5.2 L 14 8 L 11.2 10.8"/>
-                        </Canvas>
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+                     A Menu, built exactly like Local Configuration on the left, so it inherits
+                     ThemedMenuItem's template and the popup's shared icon gutter rather than
+                     restating either — see context.md on what replacing an implicit MenuItem style
+                     silently throws away. -->
+                <Menu Grid.Column="5" Background="Transparent" VerticalAlignment="Center">
+                    <MenuItem x:Name="AccountMenuItem" Padding="10,4"
+                              AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Account], Mode=OneWay}"
+                              ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.AccountHint], Mode=OneWay}">
+                        <MenuItem.Header>
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <!-- A head and shoulders: the person, where the two neighbours on the
+                                     left are a shop's settings and a shop's roster. -->
+                                <Canvas Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0">
+                                    <Ellipse Canvas.Left="5" Canvas.Top="2" Width="6" Height="6"
+                                             Stroke="#4F46E5" StrokeThickness="1.5"/>
+                                    <Path Stroke="#4F46E5" StrokeThickness="1.5" StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                          Data="M 2.6 14 C 2.6 10.6 5.1 9.2 8 9.2 C 10.9 9.2 13.4 10.6 13.4 14"/>
+                                </Canvas>
+                                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Account], Mode=OneWay}" VerticalAlignment="Center"/>
+                                <Path Data="M 0 0 L 4 4 L 8 0 Z" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=MenuItem}}"
+                                      Width="8" Height="4" Stretch="Fill" Margin="6,2,0,0" VerticalAlignment="Center"
+                                      SnapsToDevicePixels="True"/>
+                            </StackPanel>
+                        </MenuItem.Header>
+
+                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Lock], Mode=OneWay}"
+                                  ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LockHint], Mode=OneWay}"
+                                  Click="OnLockClick"/>
+                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Password.Change.Title], Mode=OneWay}"
+                                  ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Password.Change.Hint], Mode=OneWay}"
+                                  Click="OnChangePasswordClick"/>
+                        <!-- Below a separator: the two above are things you do and come back from,
+                             this one ends the session. -->
+                        <Separator/>
+                        <MenuItem Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}"
+                                  Click="OnSignOutClick"/>
+                    </MenuItem>
+                </Menu>
             </Grid>
         </Border>
 
@@ -604,8 +590,13 @@
                              carries three things at once: the label, a caret saying which way it will
                              go, and a mark when the row it hides holds an active filter — without
                              which a list narrowed by a collapsed date range looks broken. -->
+                        <!-- No Padding of its own (v9.3.1). It carried 12,5 against the theme's 16,8,
+                             which left it visibly shorter than every other button in the window.
+                             Deleting the override is the fix rather than restating 16,8 here — a
+                             local value that merely repeats the theme is the trap re-armed for the
+                             next person who changes the theme. -->
                         <Button x:Name="AdvancedSearchButton" Grid.Column="6" Margin="16,0,0,0"
-                                Padding="12,5" VerticalAlignment="Center"
+                                VerticalAlignment="Center"
                                 Click="OnToggleAdvancedSearchClick"/>
 
                         <StackPanel Grid.Column="7" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -665,7 +656,8 @@
                              one more input in a row of inputs; it is the only control here that ACTS,
                              so it takes the theme's indigo tint — the same one the administrator
                              tools use — and stops looking like a fourth filter. -->
-                        <Button x:Name="ClearFiltersButton" Grid.Column="6" Margin="16,0,0,0" Padding="12,5"
+                        <!-- Padding likewise left to the theme — see Advanced search above. -->
+                        <Button x:Name="ClearFiltersButton" Grid.Column="6" Margin="16,0,0,0"
                                 VerticalAlignment="Center"
                                 Style="{StaticResource AccentIndigoButton}"
                                 IsEnabled="{Binding HasQuery}"

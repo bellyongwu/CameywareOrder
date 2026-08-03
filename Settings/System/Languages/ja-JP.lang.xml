@@ -86,6 +86,8 @@
   <Text key="Toolbar.SwitchShop">店舗を切り替え</Text>
   <Text key="Toolbar.ShopSettings">店舗設定</Text>
   <Text key="Toolbar.SignOut">ログアウト</Text>
+  <Text key="Toolbar.Account">アカウント</Text>
+  <Text key="Toolbar.AccountHint">画面のロック、パスワードの変更、ログアウト</Text>
   <Text key="Main.Greeting">こんにちは {0} さん、{1} としてログインしています。</Text>
   <Text key="Main.Records">注文記録</Text>
   <Text key="Main.SelectedCount">{0} 件選択中</Text>

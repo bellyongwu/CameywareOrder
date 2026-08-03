@@ -597,7 +597,9 @@ move.
     (S2325 false positives — SKILL §9a). A partial moves the code without moving what it can reach,
     and the XAML event wiring keeps resolving because it is still one class.
   - `MainWindow` — split into a SYSTEM bar (Local Configuration on the left; greeting, language, Store Members and
-    Sign Out on the right) and a RECORDS panel that owns its own action bar (Add / Edit / Delete / Refresh plus a
+    an **Account** menu on the right — Lock / Change Password / Sign Out, one dropdown since v9.3.1,
+    those being the only three controls that act on the person rather than on the shop or the
+    records) and a RECORDS panel that owns its own action bar (Add / Edit / Delete / Refresh plus a
     count badge bound to `MainViewModel.FilteredCount`, and beside it a `WarningSoftBrush` badge
     carrying `MainViewModel.SelectionSummary`, shown only while MORE THAN ONE record is selected —
     how far Delete reaches has to be on screen, since ctrl-picked rows can be scrolled out of

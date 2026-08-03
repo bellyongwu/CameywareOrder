@@ -83,6 +83,8 @@
   <Text key="Toolbar.SwitchShop">Changer de boutique</Text>
   <Text key="Toolbar.ShopSettings">Paramètres de la boutique</Text>
   <Text key="Toolbar.SignOut">Se déconnecter</Text>
+  <Text key="Toolbar.Account">Compte</Text>
+  <Text key="Toolbar.AccountHint">Verrouiller l’écran, changer votre mot de passe ou vous déconnecter</Text>
   <Text key="Main.Greeting">Bonjour {0}, vous êtes connecté en tant que {1}.</Text>
   <Text key="Main.Records">Registre des commandes</Text>
   <Text key="Main.SelectedCount">{0} sélectionnées</Text>

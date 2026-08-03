@@ -84,6 +84,8 @@
   <Text key="Toolbar.SwitchShop">Cambiar de tienda</Text>
   <Text key="Toolbar.ShopSettings">Configuración de la tienda</Text>
   <Text key="Toolbar.SignOut">Cerrar sesión</Text>
+  <Text key="Toolbar.Account">Cuenta</Text>
+  <Text key="Toolbar.AccountHint">Bloquear la pantalla, cambiar su contraseña o cerrar sesión</Text>
   <Text key="Main.Greeting">Hola {0}, has iniciado sesión como {1}.</Text>
   <Text key="Main.Records">Registros de pedidos</Text>
   <Text key="Main.SelectedCount">{0} seleccionados</Text>

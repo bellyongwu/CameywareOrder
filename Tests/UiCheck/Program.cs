@@ -154,7 +154,13 @@ internal static class Program
             scopeFactory, localization);
         Show(opened, 1500, 900);
         Press(opened, "AdvancedSearchButton");
+        shortcutsOk &= CheckFilterButtonHeights(opened);
         Render(opened, Path.Combine(outDir, "main-filters-open.png"), 1500, 900);
+
+        // The Account menu's CONTENTS (v9.3.1). A Popup lives in its own window and never appears in
+        // the parent's RenderTargetBitmap, so opening the menu and re-rendering the window would
+        // produce the same picture as before and prove nothing. Its Child is an ordinary visual.
+        RenderOpenMenu(opened, "AccountMenuItem", Path.Combine(outDir, "main-account-menu.png"));
 
         // The busy overlay, held open for the length of the render. Anything with an animation has to
         // be given real time before the shot — a render taken at t=0 catches the bar off-screen.
@@ -381,6 +387,107 @@ internal static class Program
         Check("the separator is shown when both halves are",
             ((System.Windows.Controls.Separator)window.FindName("DataPathToolsSeparator")!).Visibility
                 == Visibility.Visible);
+
+        // v9.3.1: Lock / Change Password / Sign Out became one Account menu. Asserted on ORDER as
+        // well as membership, because the order is the whole of what was specified and it is the
+        // part a later edit would silently disturb.
+        var account = (System.Windows.Controls.MenuItem)window.FindName("AccountMenuItem")!;
+        var entries = account.Items.OfType<System.Windows.Controls.MenuItem>()
+            .Select(item => item.Header?.ToString()).ToList();
+
+        Check("the Account menu holds exactly three entries", entries.Count == 3);
+        Check("...Lock first",
+            entries.Count > 0 && entries[0] == LocalizationService.Instance["Toolbar.Lock"]);
+        Check("...Change Password second",
+            entries.Count > 1 && entries[1] == LocalizationService.Instance["Password.Change.Title"]);
+        Check("...Sign Out last",
+            entries.Count > 2 && entries[2] == LocalizationService.Instance["Toolbar.SignOut"]);
+
+        return ok;
+    }
+
+    /// <summary>Opens a top-level menu and renders the drop-down itself.</summary>
+    /// <remarks>
+    /// The popup's <c>Child</c> is what gets rendered, not the window: a <c>Popup</c> is hosted in a
+    /// separate HWND and is invisible to the parent's <c>RenderTargetBitmap</c>. The item has to be
+    /// realized before its template can be reached, which is what <c>ApplyTemplate</c> is for — the
+    /// same null-Template trap that had `uicheck`'s menu check throwing for weeks.
+    /// </remarks>
+    private static void RenderOpenMenu(Window window, string menuItemName, string path)
+    {
+        var item = (System.Windows.Controls.MenuItem)window.FindName(menuItemName)!;
+        item.IsSubmenuOpen = true;
+        Settle(300);
+
+        item.ApplyTemplate();
+        if (item.Template.FindName("PART_Popup", item) is not System.Windows.Controls.Primitives.Popup popup
+            || popup.Child is not FrameworkElement child)
+        {
+            Console.WriteLine($"  !! {menuItemName}: no PART_Popup to render");
+            return;
+        }
+
+        // A popup's child is not laid out by the parent window's pass, so it can still be 0x0 after
+        // the dispatcher has been pumped. Measure and arrange it explicitly, or RenderTargetBitmap
+        // throws on pixelWidth.
+        child.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        child.Arrange(new Rect(child.DesiredSize));
+        child.UpdateLayout();
+
+        if (child.ActualWidth < 1 || child.ActualHeight < 1)
+        {
+            Console.WriteLine($"  !! {menuItemName}: the drop-down measured {child.ActualWidth}x{child.ActualHeight}");
+            item.IsSubmenuOpen = false;
+            return;
+        }
+
+        var bitmap = new RenderTargetBitmap(
+            (int)Math.Ceiling(child.ActualWidth), (int)Math.Ceiling(child.ActualHeight),
+            96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(child);
+
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using (var stream = File.Create(path))
+            encoder.Save(stream);
+
+        item.IsSubmenuOpen = false;
+        Console.WriteLine($"  {Path.GetFileName(path)}  {bitmap.PixelWidth}x{bitmap.PixelHeight}");
+    }
+
+    /// <summary>
+    /// The two filter buttons carried a local <c>Padding="12,5"</c> against the theme's 16,8, which
+    /// left them visibly shorter than every other button in the window (v9.3.1).
+    /// </summary>
+    /// <remarks>
+    /// Driven on a window whose ADVANCED PANEL IS OPEN, not on the default one: Clear filters lives
+    /// inside that panel, and a collapsed element measures zero — the check would have compared
+    /// 0 against 0 and passed while proving nothing.
+    ///
+    /// Measured against a real neighbour rather than against the number 33: asserting the literal
+    /// height would go red the day somebody legitimately changes the theme's padding, which is the
+    /// opposite of what this is for.
+    /// </remarks>
+    private static bool CheckFilterButtonHeights(Window window)
+    {
+        var ok = true;
+
+        void Check(string what, bool passed)
+        {
+            Console.WriteLine((passed ? "  PASS  " : "  FAIL  ") + what);
+            ok &= passed;
+        }
+
+        var advanced = (System.Windows.Controls.Button)window.FindName("AdvancedSearchButton")!;
+        var newOrder = (System.Windows.Controls.Button)window.FindName("NewOrderButton")!;
+        var clear = (System.Windows.Controls.Button)window.FindName("ClearFiltersButton")!;
+
+        Check($"the filter buttons are really measured (>0): {advanced.ActualHeight}/{clear.ActualHeight}",
+            advanced.ActualHeight > 0 && clear.ActualHeight > 0);
+        Check($"Advanced search is as tall as New Order ({advanced.ActualHeight} vs {newOrder.ActualHeight})",
+            Math.Abs(advanced.ActualHeight - newOrder.ActualHeight) < 0.5);
+        Check($"Clear filters matches it too ({clear.ActualHeight})",
+            Math.Abs(clear.ActualHeight - advanced.ActualHeight) < 0.5);
 
         return ok;
     }

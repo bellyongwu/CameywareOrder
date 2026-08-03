@@ -24,6 +24,25 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A collapsed element measures ZERO, so a size assertion on one passes while proving nothing
+  (2026-08-02, v9.3.1).** The check that two buttons are the same height was first driven against the
+  main window, where `ClearFiltersButton` sits inside the collapsed advanced-search panel: it
+  compared 0 against 0 and went green. Drive such a check on a window where the thing is VISIBLE, and
+  assert the measurement is `> 0` before comparing it — that guard is what makes the comparison mean
+  anything. Same family as every other fixture-on-an-unreachable-path in this file.
+  - And compare against a real NEIGHBOUR, not a literal: asserting 35.29 would go red the day
+    somebody legitimately changes the theme's padding, which is the opposite of the check's purpose.
+- **Rendering a drop-down: `popup.Child`, and it needs its own Measure/Arrange (2026-08-02).** The
+  first half was already recorded — a `Popup` is a separate HWND and never appears in the parent
+  window's `RenderTargetBitmap`. The half that was missing: pumping the dispatcher does not lay the
+  child out either, so it is still 0×0 and `RenderTargetBitmap` throws on `pixelWidth`. Call
+  `Measure(infinity)` + `Arrange(DesiredSize)` on the child first. `UiCheck.RenderOpenMenu` is the
+  reusable version.
+- **A local `Padding` that merely differs from the theme is how a bar stops looking like one
+  (2026-08-02).** Advanced search and Clear filters carried `12,5` against the theme's `16,8` and
+  were visibly shorter than every other button. The fix is to DELETE the local value, never to
+  restate the theme's — a local value that repeats the theme leaves the trap armed for whoever
+  changes the theme next. Same instinct as "delete the local style rather than add `BasedOn`".
 - **A partial-class split BREAKS static initializer order, and does it invisibly (2026-08-02,
   v9.3.0).** `AuthenticationService` carried a comment saying to keep `Instance = new()` declared
   BELOW everything its constructor reads, because static field initializers run in textual order.

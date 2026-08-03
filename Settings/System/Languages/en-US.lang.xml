@@ -86,6 +86,8 @@
   <Text key="Toolbar.SwitchShop">Switch Shop</Text>
   <Text key="Toolbar.ShopSettings">Shop Settings</Text>
   <Text key="Toolbar.SignOut">Sign Out</Text>
+  <Text key="Toolbar.Account">Account</Text>
+  <Text key="Toolbar.AccountHint">Lock the screen, change your password, or sign out</Text>
   <Text key="Main.Greeting">Hi {0}, you are logged in as {1}.</Text>
   <Text key="Main.Records">Order Records</Text>
   <Text key="Main.SelectedCount">{0} selected</Text>

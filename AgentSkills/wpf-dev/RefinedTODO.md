@@ -43,6 +43,14 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 Nothing in flight.
 
+## v9.3.1 — two UI fixes
+
+Lock / Change Password / Sign Out collapsed into one **Account** menu, in that order (they were the
+only three controls in the bar acting on the person rather than the shop, and took a third of its
+width). Advanced search and Clear filters lost a local `Padding` that made them shorter than every
+other button. Both rendered; the height check is measured against a neighbour, on a window where the
+panel is open — see `context.md` for why the first version of it was worthless.
+
 ## v9.3.0 — the four findings from the v9.2.1 review
 
 1. **Copy fidelity.** `OrderDuplicate` projects every mapped scalar from `db.Model`; `NotInherited`

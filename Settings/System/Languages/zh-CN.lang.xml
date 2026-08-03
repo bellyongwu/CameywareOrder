@@ -88,6 +88,8 @@
   <Text key="Toolbar.SwitchShop">切换店铺</Text>
   <Text key="Toolbar.ShopSettings">店铺设置</Text>
   <Text key="Toolbar.SignOut">退出登录</Text>
+  <Text key="Toolbar.Account">账号</Text>
+  <Text key="Toolbar.AccountHint">锁定屏幕、修改密码或退出登录</Text>
   <!-- Punctuation differs by language (full-width vs half-width brackets), so this is a
        translated format string rather than a hard-coded one. -->
   <Text key="Main.Greeting">你好 {0}，您当前的身份是{1}。</Text>

@@ -17,6 +17,29 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-02 22:10 — v9.3.1: two UI fixes on the main window  [DONE]
+- Ask: "Minor fixes on UI. >Advance Search + Clear Filters => make these two buttons higher, just like other buttons. >Group Lock, Change Password, Sign Out into one Dropdown category (by this order) called whatever you think is reasonable. Push it as a minor fix. for 9.3.1"
+- Plan:
+  - [x] 1. Both filter buttons override the theme's `Padding="16,8"` with `12,5`, which is what makes
+        them ~6px shorter than every other button. DELETE the override rather than restate it.
+  - [x] 2. Lock / Change Password / Sign Out → one `Account` dropdown, in that order, built like the
+        Local Configuration menu so it inherits `ThemedMenuItem`.
+  - [x] 3. Render both before believing either.
+- Notes:
+  - Heights MEASURED, not eyeballed: all three buttons come out at 35.29. Asserted against a real
+    neighbour (`NewOrderButton`) rather than against the literal number, or the check goes red the
+    day somebody legitimately changes the theme's padding — the opposite of its purpose.
+  - **The height check had to move to the window whose advanced panel is OPEN.** `ClearFiltersButton`
+    lives inside the collapsed panel and a collapsed element measures zero, so on the default window
+    the assertion would have compared 0 against 0 and passed while proving nothing. It now asserts
+    both heights are `> 0` first, which is the guard that makes the comparison mean anything.
+  - **Rendering the menu needed `popup.Child`, and the child needed an explicit Measure/Arrange.**
+    A `Popup` is a separate HWND and never appears in the parent's `RenderTargetBitmap`; pumping the
+    dispatcher is not enough either — the child was still 0×0 and `RenderTargetBitmap` threw on
+    `pixelWidth`. `RenderOpenMenu` is now a reusable helper.
+  - `Toolbar.Account` / `Toolbar.AccountHint` × 5 languages. Three `x:Name`d buttons and two toolbar
+    columns removed. Build 0/0, SUITE GREEN.
+
 ### 2026-08-02 20:45 — v9.3.0: the four findings from the v9.2.1 review  [DONE]
 - Ask: "Fix all these issues and treat it as a mid release. 9.3.0" — the four items from the review,
   in the order they were reported.

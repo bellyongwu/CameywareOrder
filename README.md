@@ -11,6 +11,15 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.3.1 — 2026-08-02
+
+**Lock, Change Password and Sign Out are now one Account menu**, in that order, at the top right.
+They were the only three buttons that act on *you* rather than on the shop or the records, and as
+three buttons they took up a third of the bar to say so. Everything still does exactly what it did.
+
+**Advanced search and Clear filters are the same height as every other button.** They had been
+slightly shorter, which made the filter row look like a different part of the application.
+
 ### v9.3.0 — 2026-08-02
 
 **A copied order now keeps everything the original was priced with.** Copying an order was quietly
