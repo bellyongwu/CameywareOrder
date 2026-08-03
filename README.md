@@ -11,6 +11,24 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.2.1 — 2026-08-02
+
+**A copied order now says that it is one.** Copy Order used to produce a record identical to the one
+it came from apart from its receipt number, so two rows in the list looked like the same customer
+booked twice and telling them apart meant opening both.
+
+- **The copy's customer name carries a numbered mark** — "Priya Raghunathan" copied becomes
+  "Priya Raghunathan - Copy 1", and the next copy is "Copy 2". Rename it to whatever the job is
+  really for; the mark is only there so the copy is not mistaken for the original.
+- **Copying a copy counts on rather than piling up.** Duplicating "Priya Raghunathan - Copy 1" gives
+  "Priya Raghunathan - Copy 2", not "- Copy 1 - Copy 1". The same holds when several records are
+  copied at once: each gets its own number.
+- **The mark is written in your own language**, and a copy made by a colleague working in another one
+  is still recognised, so the numbering does not start again when you switch language.
+- **Receipt numbers are untouched.** A copy takes the next number from your own receipt run, exactly
+  as a new order does — nothing is added to the number that is printed on the customer's slip.
+- The Customer Name column in the list is wider, so a name and its copy mark both fit.
+
 ### v9.2.0 — 2026-08-02
 
 **The application no longer ships with accounts anyone can guess.** Until now a new installation was

@@ -43,6 +43,21 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 Nothing in flight.
 
+## v9.2.1 — a copied order says whose copy it is
+
+Copy Order postfixes the COPY's customer name (`XXX - Copy 1`) through the new `OrderCopyName`,
+localized as `Order.Copy.Suffix`, following `Store.Copy.Suffix`. Copying a copy strips the existing
+suffix first so the index increments rather than stacking, the strip reads EVERY shipped language's
+format (the name is one stored string, written in whoever's language made the first copy), and the
+scan starts past the highest index in use so a language switch does not produce a second "Copy 1".
+The order NUMBER was the other candidate and was rejected: it comes from the shop's receipt run and
+is printed on the customer's slip.
+
+The defect worth remembering was found by RENDERING, not by the suite — the customer column's
+ellipsis ate the suffix, so a copy looked like a truncation of its own source. Column widened to 240;
+the general lesson is in `context.md`, along with the fact that `uicheck` had been screenshotting the
+main list with no rows in it at all.
+
 **The suite lives in `Tests/` and runs with `Tests\run-all.ps1` (v9.1.0).** It supersedes the
 scratchpad harnesses that were lost with a previous session's temp folder; what survived of them is
 the lessons in this file and in `context.md`, not the assertions. Four harnesses plus two source

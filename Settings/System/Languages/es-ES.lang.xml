@@ -376,6 +376,7 @@
   <Text key="Status.CopySucceeded">Pedido copiado como {0}</Text>
   <Text key="Status.CopiedCount">{0} pedidos copiados</Text>
   <Text key="Status.CopyFailed">Error al copiar: {0}</Text>
+  <Text key="Order.Copy.Suffix">&#32;- Copia {0}</Text>
   <Text key="Status.OpenFolderFailed">Error al abrir la carpeta: {0}</Text>
   <Text key="Status.CopyPathSucceeded">Ruta de la base de datos copiada</Text>
   <Text key="Status.CopyPathFailed">Error al copiar la ruta: {0}</Text>

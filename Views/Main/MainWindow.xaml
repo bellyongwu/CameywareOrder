@@ -737,7 +737,13 @@
                                  columns below. DisplayMemberBinding generates a bare TextBlock that
                                  cannot be styled, so an over-long value is CLIPPED mid-glyph with no
                                  ellipsis and no way to read the rest. -->
-                            <GridViewColumn local:OrderColumnSort.SortKey="CustomerName" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Width="170">
+                            <!-- 240, not 170: a copied order is marked by a suffix on this value
+                                 (Order.Copy.Suffix, v9.2.1), and the ellipsis trims from the END —
+                                 so at the old width "Priya Raghunathan - Copy 1" rendered as
+                                 "Priya Raghunatha…", indistinguishable from its own source. A name
+                                 long enough to overflow even this still trims, as every long value
+                                 in the list does; the tooltip below carries the whole of it. -->
+                            <GridViewColumn local:OrderColumnSort.SortKey="CustomerName" Header="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Order.Fields.CustomerName], Mode=OneWay}" Width="240">
                                 <GridViewColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBlock Style="{StaticResource ListCellText}" Text="{Binding CustomerName}"

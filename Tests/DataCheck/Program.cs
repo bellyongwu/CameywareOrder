@@ -6,7 +6,9 @@ using CameywareOrder.Data;
 using CameywareOrder.Localization;
 using CameywareOrder.Models;
 using CameywareOrder.Services;
+using CameywareOrder.ViewModels;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Path = System.IO.Path;
 
 namespace DataCheck;
@@ -49,8 +51,9 @@ internal static class Program
         var folder = Path.Combine(Path.GetTempPath(), "datacheck-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(folder);
 
+        var dbPath = Path.Combine(folder, "orders.db");
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlite($"Data Source={Path.Combine(folder, "orders.db")}")
+            .UseSqlite($"Data Source={dbPath}")
             .Options;
 
         Shop shop;
@@ -76,6 +79,8 @@ internal static class Program
         RunCsvChecks(options, localization);
         RunScheduleChecks();
         RunPruneChecks(folder);
+        RunCopyNameRuleChecks(localization);
+        await RunCopyOrderChecksAsync(dbPath, options, localization);
 
         try { Directory.Delete(folder, recursive: true); } catch (IOException) { /* temp */ }
 
@@ -433,6 +438,190 @@ internal static class Program
         UserDataPaths.PruneBackups(0, root);
         Check("a keep count of zero keeps everything",
             Directory.GetFiles(backups, "backup-*.zip").Length == 3);
+    }
+
+    // ── what a copied order is called ─────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The naming rules on their own, with no database in the way: compose, strip, and the numbering
+    /// that has to survive both.
+    /// </summary>
+    private static void RunCopyNameRuleChecks(LocalizationService localization)
+    {
+        Console.WriteLine("── copy name rules ────────────────────────────────────");
+
+        const string customer = "Mary Watson";
+        string Suffixed(int index) => customer + localization.Format(OrderCopyName.SuffixKey, index);
+
+        var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        var first = OrderCopyName.Next(customer, taken, localization);
+        Check("the first copy is numbered 1", first == Suffixed(1), first);
+        taken.Add(first);
+
+        // The rule the user asked for by name: copying a copy has to recover the real name before it
+        // numbers, or the suffixes stack and the number stops describing anything.
+        var second = OrderCopyName.Next(first, taken, localization);
+        Check("copying a copy increments rather than stacking", second == Suffixed(2), second);
+        Check("the real name is recoverable from a copy", OrderCopyName.BaseName(second) == customer,
+            OrderCopyName.BaseName(second));
+        Check("a name that is not a copy is left alone", OrderCopyName.BaseName(customer) == customer);
+
+        // The stored name was written by whoever made the first copy, in whatever language they had
+        // on screen; it is one string from then on. A strip that only knew the CURRENT language would
+        // read it as part of the customer's name and stack on top of it.
+        var chinese = customer + localization.GetText(OrderCopyName.SuffixKey, "zh-CN").Replace("{0}", "4");
+        Check("a suffix written in another language is still recognised",
+            OrderCopyName.BaseName(chinese) == customer, chinese);
+
+        var afterChinese = OrderCopyName.Next(
+            customer, new HashSet<string>(new[] { chinese }, StringComparer.OrdinalIgnoreCase), localization);
+        Check("numbering continues past a copy made in another language",
+            afterChinese == Suffixed(5), afterChinese);
+
+        // Same defect Copy Shop shipped with once: a batch that does not see its own additions hands
+        // every copy in one click the same number.
+        var batch = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var batched = new List<string>();
+        for (var i = 0; i < 3; i++)
+        {
+            var name = OrderCopyName.Next(customer, batch, localization);
+            batch.Add(name);
+            batched.Add(name);
+        }
+
+        Check("three copies in one batch get three different names",
+            batched.Distinct(StringComparer.OrdinalIgnoreCase).Count() == 3, string.Join(" / ", batched));
+
+        // Someone else's name that merely resembles the suffix must not be mistaken for one: the
+        // pattern is anchored to the end and requires the digits the compose always writes.
+        Check("a name ending in the word alone is not treated as a copy",
+            OrderCopyName.BaseName("Mary - Copy") == "Mary - Copy");
+    }
+
+    /// <summary>
+    /// The same rules driven through the real Copy action, against real rows.
+    /// </summary>
+    /// <remarks>
+    /// Through <c>MainViewModel.CopyOrdersAsync</c> rather than the helper, because the part that can
+    /// still go wrong once the helper is right is the wiring: which names are read, whether the
+    /// recycle bin is among them, and whether the batch grows its own set.
+    /// </remarks>
+    private static async Task RunCopyOrderChecksAsync(
+        string dbPath, DbContextOptions<AppDbContext> options, LocalizationService localization)
+    {
+        Console.WriteLine("── copy order ─────────────────────────────────────────");
+
+        var services = new ServiceCollection();
+        services.AddDbContext<AppDbContext>(o => o.UseSqlite($"Data Source={dbPath}"), ServiceLifetime.Transient);
+        var factory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+
+        var shop = ShopContext.Instance.RequireCurrent();
+        const string customer = "Copy Probe";
+        string Suffixed(int index) => customer + localization.Format(OrderCopyName.SuffixKey, index);
+
+        var sourceId = SeedOrder(options, shop, customer);
+
+        var viewModel = new MainViewModel(factory, localization);
+        var written = await viewModel.CopyOrdersAsync(new[] { sourceId });
+        Check("the copy is written", written == 1, viewModel.StatusMessage);
+
+        var copyId = FindOrder(options, Suffixed(1));
+        Check("the copy carries the numbered suffix", copyId is not null,
+            string.Join(" / ", ReadProbeNames(options, customer)));
+        Check("the source keeps its own name", FindOrder(options, customer) == sourceId);
+
+        // The order NUMBER is drawn from the shop's receipt run and must stay undecorated — it is
+        // printed on a slip the customer walks out with.
+        using (var db = new AppDbContext(options))
+        {
+            var numbers = db.Orders.AsNoTracking()
+                .Where(order => order.Id == sourceId || order.Id == copyId)
+                .Select(order => order.OrderNumber).ToList();
+
+            Check("the copy takes its own receipt number", numbers.Distinct().Count() == 2);
+            Check("and the number carries no copy suffix",
+                numbers.TrueForAll(number => !number.Contains("Copy", StringComparison.OrdinalIgnoreCase)),
+                string.Join(" / ", numbers));
+        }
+
+        if (copyId is not null)
+        {
+            await viewModel.CopyOrdersAsync(new[] { copyId.Value });
+            Check("copying the copy gives the next number, not a second Copy 1",
+                FindOrder(options, Suffixed(2)) is not null,
+                string.Join(" / ", ReadProbeNames(options, customer)));
+        }
+
+        await viewModel.CopyOrdersAsync(new[] { sourceId, sourceId });
+        Check("two copies in one click are numbered separately",
+            FindOrder(options, Suffixed(3)) is not null && FindOrder(options, Suffixed(4)) is not null,
+            string.Join(" / ", ReadProbeNames(options, customer)));
+
+        // A binned order still holds its name: it can be restored at any point in the retention
+        // window, and would then sit beside a copy claiming to be the same one.
+        //
+        // Guarded rather than dereferenced: when an earlier check above has failed there is no
+        // "Copy 4" to bin, and a harness that throws at that point reports a crash where it should be
+        // reporting the assertion that actually broke.
+        var binned = FindOrder(options, Suffixed(4));
+        if (binned is null)
+        {
+            Check("a BINNED copy's number is still taken", false, "no Copy 4 to bin — see the failures above");
+            return;
+        }
+
+        using (var db = new AppDbContext(options))
+        {
+            OrderRecycleBin.Delete(db, new[] { binned.Value }, DateTime.UtcNow);
+        }
+
+        await viewModel.CopyOrdersAsync(new[] { sourceId });
+        Check("a BINNED copy's number is still taken",
+            FindOrder(options, Suffixed(5)) is not null,
+            string.Join(" / ", ReadProbeNames(options, customer)));
+    }
+
+    private static int SeedOrder(DbContextOptions<AppDbContext> options, Shop shop, string customer)
+    {
+        using var db = new AppDbContext(options);
+
+        var order = new Order
+        {
+            ShopId = shop.Id,
+            OrderNumber = OrderNumberFormatter.Reserve(db, shop, DateTime.Now),
+            CustomerName = customer,
+            PhoneNumber = "+1 416-555-0101",
+            OrderDate = DateTime.UtcNow,
+        };
+
+        using (db.SuppressShopStamping())
+        {
+            db.Orders.Add(order);
+            db.SaveChanges();
+        }
+
+        return order.Id;
+    }
+
+    private static int? FindOrder(DbContextOptions<AppDbContext> options, string customerName)
+    {
+        using var db = new AppDbContext(options);
+
+        return db.Orders.IgnoreQueryFilters().AsNoTracking()
+            .Where(order => order.CustomerName == customerName)
+            .Select(order => (int?)order.Id)
+            .FirstOrDefault();
+    }
+
+    private static List<string> ReadProbeNames(DbContextOptions<AppDbContext> options, string customer)
+    {
+        using var db = new AppDbContext(options);
+
+        return db.Orders.IgnoreQueryFilters().AsNoTracking()
+            .Where(order => order.CustomerName.StartsWith(customer))
+            .Select(order => order.CustomerName)
+            .ToList();
     }
 
     // ── plumbing ──────────────────────────────────────────────────────────────────────────────────

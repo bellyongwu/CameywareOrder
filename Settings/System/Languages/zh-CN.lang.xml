@@ -381,6 +381,7 @@
   <Text key="Status.CopySucceeded">订单已复制为 {0}</Text>
   <Text key="Status.CopiedCount">已复制 {0} 个订单</Text>
   <Text key="Status.CopyFailed">复制失败: {0}</Text>
+  <Text key="Order.Copy.Suffix">（复制{0}）</Text>
   <Text key="Status.OpenFolderFailed">打开目录失败: {0}</Text>
   <Text key="Status.CopyPathSucceeded">数据库路径已复制</Text>
   <Text key="Status.CopyPathFailed">复制路径失败: {0}</Text>

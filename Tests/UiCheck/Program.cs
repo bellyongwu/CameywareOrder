@@ -125,6 +125,14 @@ internal static class Program
         Render(french, Path.Combine(outDir, "login-password-change-fr.png"), 440, 600);
         localization.SetLanguage(was);
 
+        // A copy made through the REAL Copy action, so the list renders what the customer column
+        // actually does with the "- Copy 1" suffix rather than a name typed to look like one. The
+        // long fixture name is deliberate: the column is 170px with CharacterEllipsis, and a suffix
+        // trimmed off the end would leave a copy looking identical to its source.
+        SeedLiveOrders(scopeFactory, shop);
+        new CameywareOrder.ViewModels.MainViewModel(scopeFactory, localization)
+            .CopyOrdersAsync(LiveOrderIds(scopeFactory)).GetAwaiter().GetResult();
+
         // The main window, for the two-row filter bar the search and export added to it.
         var viewModel = new CameywareOrder.ViewModels.MainViewModel(scopeFactory, localization);
         var main = new CameywareOrder.MainWindow(viewModel, scopeFactory, localization);
@@ -444,6 +452,41 @@ internal static class Program
 
         using (db.SuppressShopStamping())
             db.SaveChanges();
+    }
+
+    /// <summary>Two live orders for the list to render — one ordinary name, one long enough to overflow.</summary>
+    private static void SeedLiveOrders(IServiceScopeFactory factory, Shop shop)
+    {
+        using var scope = factory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var names = new[] { "Priya Raghunathan", "Alexandra Fairweather-Blythe" };
+
+        for (var index = 0; index < names.Length; index++)
+        {
+            db.Orders.Add(new Order
+            {
+                ShopId = shop.Id,
+                OrderNumber = $"ORD-20260801-1100{index}0",
+                CustomerName = names[index],
+                PhoneNumber = "+1 416-555-02" + (10 + index),
+                OrderDate = DateTime.UtcNow.AddDays(-2 - index),
+                ExpectedPickupDate = DateTime.UtcNow.AddDays(6 + index),
+                AlterationSubtotal = 240m + index * 90m,
+                TotalAmount = 240m + index * 90m,
+            });
+        }
+
+        using (db.SuppressShopStamping())
+            db.SaveChanges();
+    }
+
+    private static List<int> LiveOrderIds(IServiceScopeFactory factory)
+    {
+        using var scope = factory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        return db.Orders.AsNoTracking().OrderBy(order => order.Id).Select(order => order.Id).ToList();
     }
 
     private static void SignInAsFabricatedAdministrator()

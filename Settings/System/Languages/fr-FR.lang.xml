@@ -375,6 +375,7 @@
   <Text key="Status.CopySucceeded">Commande copiée sous {0}</Text>
   <Text key="Status.CopiedCount">{0} commandes copiées</Text>
   <Text key="Status.CopyFailed">Échec de la copie : {0}</Text>
+  <Text key="Order.Copy.Suffix">&#32;- Copie {0}</Text>
   <Text key="Status.OpenFolderFailed">Échec de l’ouverture du dossier : {0}</Text>
   <Text key="Status.CopyPathSucceeded">Chemin de la base de données copié</Text>
   <Text key="Status.CopyPathFailed">Échec de la copie du chemin : {0}</Text>

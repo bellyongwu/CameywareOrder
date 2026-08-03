@@ -258,6 +258,17 @@ move.
     `CommitSequence` (advances the counter, called only AFTER the order is saved so an abandoned
     form cannot burn a receipt number), `SequenceKeyFor` (the period a counter belongs to —
     empty for a continuous run, which therefore never restarts).
+  - `OrderCopyName` (static, v9.2.1) — what a COPIED order's customer is called: the source's real
+    name plus the localized `Order.Copy.Suffix`, numbered. Composing and stripping live in one type
+    on purpose — copying a copy has to recover the real name first or the suffixes stack, and a strip
+    that did not know every shape the compose can produce would leave the old one in place.
+    `ShippedSuffixFormats` is the one place here that reaches `LocalizationService` rather than an
+    `ILocalizedText`: "what can this suffix look like in ANY language" is a question no single
+    language can answer, and the stored name was written by whoever made the first copy in whatever
+    language they had on screen. `Next` starts its scan past the highest number already in use rather
+    than at 1, so a copy made in one language and the next made in another do not both call themselves
+    the first. Consumed by `MainViewModel.CopyOrdersAsync`, which reads the taken set once per batch
+    (`ReadCustomerNames`, binned rows included) and grows it as copies are written.
   - `CustomMadeMeasurementReader` — static read-only helper that projects an
     order's saved `CustomMadeRecords` into print/UI shapes: `GetGarmentNames`
     (distinct, order-preserving garment display names in a given language) and
@@ -540,7 +551,8 @@ move.
       computed one. `GetSortSelector` still offers `ExpectedPickupDate` on its own for an explicit
       header click — asking to sort by a column is a different question from the default view.
     - `CopyOrderCommand` → `CopySelectedAsync` → `CopyOneOrderAsync` per record (deep-copy the
-      aggregate, reset a closed status to `Processing`). Its number comes from
+      aggregate, reset a closed status to `Processing`, and name the copy's customer through
+      `OrderCopyName` — v9.2.1). Its number comes from
       `OrderNumberFormatter.Reserve` + `CommitSequence`, exactly as a new order's does; it used to be
       a hand-built `ORD-{timestamp}`. One scope and one save PER COPY on purpose — `Reserve` asks the
       database what is taken and EF cannot see added-but-unsaved rows, so a single batched save would

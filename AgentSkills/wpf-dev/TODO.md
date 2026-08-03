@@ -17,6 +17,40 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-02 19:46 — v9.2.1: a copied order says whose copy it is  [DONE]
+- Ask: "wpf-dev skill, add a new feature for minor release for v9.2.1. for main copied records, add ` - Copy{index}` postfixes."
+- Clarified with the user before starting (three questions, three answers):
+  - the postfix goes on the **customer name**, in the shape `XXX - Copy 1`;
+  - copying a copy must **extract the real name first**, so `XXX - Copy 1` yields `XXX - Copy 2`
+    rather than `XXX - Copy 1 - Copy 1`; the index is resolved against what already exists, and a
+    batch resolves it per copy;
+  - the suffix is **localized**, following `Store.Copy.Suffix`.
+- Plan:
+  - [x] 1. `Order.Copy.Suffix` (` - Copy {0}`) in all five language files.
+  - [x] 2. `OrderCopyName` — strip the suffix in ANY shipped language to recover the base name, then
+        take the first free index against a taken set. One place, so the strip and the compose
+        cannot disagree.
+  - [x] 3. Wire into `MainViewModel.CopyOrdersAsync`: build the taken set once per batch (binned rows
+        included, shop half restated), grow it as copies are added.
+  - [x] 4. Harness coverage in `DataCheck`, proven red before green.
+  - [x] 5. Version 9.2.1, README, companions, commit.
+- Notes:
+  - Files: `Services/StoreManagement/OrderCopyName.cs` (new), `ViewModels/MainViewModel.cs`,
+    `Views/Main/MainWindow.xaml`, the five `*.lang.xml`, `Tests/DataCheck/Program.cs`,
+    `Tests/UiCheck/Program.cs`, `Directory.Build.props`, `README.md`.
+  - Build 0 warnings / 0 errors (the in-build Sonar pass is the whole of the Sonar evidence — neither
+    IDE gate has been connectable since 2026-08-01). Suite green: 72 + 39 + 41 assertions, uicheck,
+    keycheck, surfacecheck.
+  - **Falsified both halves before believing them.** Reverting `CustomerName = copyName` turned three
+    copy-order checks red; removing the strip in `Next` reproduced "Copy Probe - Copy 1 - Copy 1" and
+    turned four red. Neither had been seen failing until then.
+  - `surfacecheck` caught a Chinese example inside a new C# comment — the CJK rule, working. Reworded
+    rather than whitelisted; the point survives without the literal.
+  - **The render is what found the real defect** — the suffix was being eaten by the customer column's
+    ellipsis, so a copy looked exactly like its own source. See `context.md`. `uicheck` had been
+    rendering the main list EMPTY, which is why nothing had ever looked at a cell in it.
+  - Left undone and reported: a customer name long enough to overflow 240px still trims its mark.
+
 ### 2026-08-02 — v9.2.0: first-run hardening, then a second project rating  [IN PROGRESS]
 - Ask: "5. First-run hardening — the seeded admin/admin, manager/manager, staff/staff and the test1/test2 accounts still ship. Flagged in the earlier review, still open. resolve this. After that Do another full rating on the current project. see if there are still running defects at first. then rating the usability and maintanable"
 - Context: item 5 of the improvement list from the v9.1.0 review. A fresh installation ships FIVE

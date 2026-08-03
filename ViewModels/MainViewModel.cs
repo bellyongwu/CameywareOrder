@@ -748,9 +748,14 @@ public class MainViewModel : INotifyPropertyChanged
         {
             var shop = ShopContext.Instance.RequireCurrent();
 
+            // Read once for the whole batch and grown as copies are written. Read once PER COPY it
+            // would be correct too and would ask the database the same question n times; not grown,
+            // two copies made in one click would both come out "- Copy 1".
+            var takenNames = ReadCustomerNames(shop);
+
             foreach (var sourceId in ids)
             {
-                var copy = await CopyOneOrderAsync(shop, sourceId);
+                var copy = await CopyOneOrderAsync(shop, sourceId, takenNames);
                 if (copy is null)
                     continue;
 
@@ -793,7 +798,29 @@ public class MainViewModel : INotifyPropertyChanged
         SelectionRequested?.Invoke(this, copies);
     }
 
-    private async Task<Order?> CopyOneOrderAsync(Shop shop, int sourceId)
+    /// <summary>
+    /// Every customer name this shop holds, for <see cref="OrderCopyName"/> to number a copy against.
+    /// </summary>
+    /// <remarks>
+    /// <c>IgnoreQueryFilters</c> with the shop restated by hand, the same reading as
+    /// <c>OrderNumberFormatter.IsTaken</c>: the DELETION half must go, because an order in the
+    /// recycle bin can be restored at any point in the retention window and would then sit beside a
+    /// copy claiming to be the same one; the SHOP half must stay, since another branch's customers
+    /// are no reason to number this branch's copies differently.
+    /// </remarks>
+    private HashSet<string> ReadCustomerNames(Shop shop)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        return new HashSet<string>(
+            db.Orders.IgnoreQueryFilters()
+                .Where(order => order.ShopId == shop.Id)
+                .Select(order => order.CustomerName),
+            StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task<Order?> CopyOneOrderAsync(Shop shop, int sourceId, ICollection<string> takenNames)
     {
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -810,13 +837,19 @@ public class MainViewModel : INotifyPropertyChanged
         // This used to compose "ORD-{timestamp}" by hand, which ignored whatever prefix and
         // numbering mode the shop had configured — so a shop on sequential numbering got a
         // timestamp number from Copy and nothing else.
+        // The copy is marked on the CUSTOMER name, not on the order number: the number is drawn from
+        // the shop's receipt run and is printed on a slip somebody carries, so it carries no
+        // decoration. Claimed before the save, so a failure part way cannot re-issue the same one.
+        var copyName = OrderCopyName.Next(source.CustomerName, takenNames, _localization);
+        takenNames.Add(copyName);
+
         var now = DateTime.Now;
         var copy = new Order
         {
             OrderNumber = OrderNumberFormatter.Reserve(db, shop, now),
             OrderDate = DateTime.UtcNow,
             LastModifiedDate = DateTime.UtcNow,
-            CustomerName = source.CustomerName,
+            CustomerName = copyName,
             PhoneNumber = source.PhoneNumber,
             Email = source.Email,
             Address = source.Address,

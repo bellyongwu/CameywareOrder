@@ -377,6 +377,7 @@
   <Text key="Status.CopySucceeded">注文を {0} としてコピーしました</Text>
   <Text key="Status.CopiedCount">{0} 件の注文をコピーしました</Text>
   <Text key="Status.CopyFailed">コピーに失敗しました：{0}</Text>
+  <Text key="Order.Copy.Suffix">（コピー{0}）</Text>
   <Text key="Status.OpenFolderFailed">フォルダーを開けませんでした：{0}</Text>
   <Text key="Status.CopyPathSucceeded">データベースのパスをコピーしました</Text>
   <Text key="Status.CopyPathFailed">パスのコピーに失敗しました：{0}</Text>

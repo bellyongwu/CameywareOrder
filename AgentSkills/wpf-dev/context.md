@@ -24,6 +24,35 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A mark that the ELLIPSIS eats is not a mark (2026-08-02, v9.2.1).** Copy Order suffixes the
+  copy's customer name (`- Copy 1`). Every assertion passed and the list still could not tell a copy
+  from its source: the column was 170px with `CharacterEllipsis`, which trims from the END, so
+  "Priya Raghunathan - Copy 1" rendered as "Priya Raghunatha…" — visually a *truncation of the
+  original*, which is worse than no mark at all. Widened to 240. Generalises: when a feature's whole
+  point is a suffix, check what the surface showing it does with overflow, and check it by RENDERING.
+  - Residual and known: a name long enough to overflow 240 still trims, as every long value in the
+    list does. The tooltip carries the whole of it. Reported to the user rather than fixed.
+  - The render only found it because the fixture had ROWS. `uicheck` had been screenshotting the main
+    window against an empty list, which proves the chrome and nothing about a cell. It now seeds two
+    live orders and copies them through the real command.
+- **Compose and STRIP the same suffix in one type, and read every language's format (2026-08-02).**
+  `OrderCopyName` does both. Split across two places they drift, and the failure is silent: copying a
+  copy produces "X - Copy 1 - Copy 1" and the number stops describing anything. The strip must read
+  EVERY shipped language's format, not the current one — the name is one stored string, written by
+  whoever made the first copy in whatever language they had on screen. Same reason the numbering scan
+  starts past the highest index already in use rather than at 1: a Chinese-suffixed copy and an
+  English-suffixed one are different STRINGS, so a plain collision test finds "1" free and hands out
+  a second first-copy.
+  - The `ILocalizedText`-not-`LocalizationService` rule has a real exception here. "Which language do
+    I write in" is the interface's question; "what can this value look like in ANY language" is the
+    SERVICE's, and no single language can answer it. One method (`ShippedSuffixFormats`) reaches the
+    singleton and is documented as the seam.
+  - The mark went on the CUSTOMER NAME, not the order number — the user's call, and the right one:
+    the number is drawn from the shop's receipt run and printed on a slip somebody walks out with.
+- **A harness that dereferences a fixture it did not verify reports a CRASH instead of the assertion
+  (2026-08-02).** Proving the copy-naming checks could fail turned the "Copy 4" lookup null, and
+  `binned!.Value` threw — burying three real FAILs under a stack trace. Guard the fixture and Check
+  the guard, so a broken run still names what broke.
 - **A `Window`'s code-behind belongs under `Views/`, whatever it contains (2026-08-02).** Asked to
   file the MainWindow partials under `Services/Main/`, they went to `Views/Main/` instead. Two
   reasons, and the first is mechanical: the SDK pairs `Foo.xaml` with `Foo.xaml.cs` by their being in

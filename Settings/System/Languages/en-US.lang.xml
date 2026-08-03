@@ -377,6 +377,7 @@
   <Text key="Status.CopySucceeded">Order copied as {0}</Text>
   <Text key="Status.CopiedCount">{0} orders copied</Text>
   <Text key="Status.CopyFailed">Copy failed: {0}</Text>
+  <Text key="Order.Copy.Suffix">&#32;- Copy {0}</Text>
   <Text key="Status.OpenFolderFailed">Open folder failed: {0}</Text>
   <Text key="Status.CopyPathSucceeded">Database path copied</Text>
   <Text key="Status.CopyPathFailed">Copy path failed: {0}</Text>
