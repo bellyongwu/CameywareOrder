@@ -36,6 +36,15 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
   - Generalises to every `static readonly` field a constructor reads. Before splitting a class,
     grep it for static initializers that depend on each other — the compiler will not warn, and the
     build will not fail.
+- **A refusal test must assert WHICH refusal, or two guards cover for each other (2026-08-02,
+  v9.3.0).** `ApiAuthorization` refuses twice: no session, then no capability. The first version of
+  the harness asserted only "it threw" — and deleting the no-session guard outright left every
+  assertion GREEN, because a signed-out session also holds no capabilities and the second guard
+  caught it. The checks were passing for a reason they did not name. They now assert on the MESSAGE,
+  which the two refusals deliberately distinguish (an integration must tell "wait for a sign-in"
+  from "never going to be allowed"), and the same deletion now turns two of them red.
+  - Generalises to any layered guard: N guards over one outcome means N-1 of them can be removed
+    without a boolean test noticing.
 - **Copy an aggregate by PROJECTING the model, not by listing columns (2026-08-02, v9.3.0).**
   `CopyOneOrderAsync` was a 43-line hand-written property list, and it was exactly as complete as
   whoever last added a column remembered to make it: `AlterationFinalTaxRate` (and its two siblings)

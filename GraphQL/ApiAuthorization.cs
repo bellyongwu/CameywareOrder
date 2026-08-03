@@ -28,7 +28,11 @@ namespace CameywareOrder.GraphQL;
 /// Messages are English and are not routed through the string table. They are read by whoever wrote
 /// the integration, in a JSON error body — not by a shop, on a screen.
 /// </remarks>
-internal static class ApiAuthorization
+/// <remarks>
+/// Public rather than internal so the harness can drive it directly. A security gate whose only
+/// coverage is "the resolvers call it" is a gate nobody has watched refuse anything.
+/// </remarks>
+public static class ApiAuthorization
 {
     /// <summary>
     /// Throws unless somebody is signed in AND holds <paramref name="capability"/>.

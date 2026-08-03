@@ -3,6 +3,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using CameywareOrder.Configuration;
+using CameywareOrder.GraphQL;
+using CameywareOrder.Models;
 using CameywareOrder.Services;
 using Path = System.IO.Path;
 
@@ -65,6 +67,9 @@ internal static class Program
 
         Console.WriteLine("-- the sign-in gate");
         CheckSignInRefusesAnUnchangedPassword();
+
+        Console.WriteLine("-- the API gate");
+        CheckApiGate();
 
         var afterReadOnlySections = HashOf(credentials);
         Check("credentials.json untouched by the read-only sections",
@@ -293,6 +298,68 @@ internal static class Program
         => (CredentialRecord)typeof(AuthenticationService)
             .GetMethod("CreateRecord", BindingFlags.NonPublic | BindingFlags.Static)!
             .Invoke(null, new object[] { userName, password, isAdministrator })!;
+
+    // --- The API gate (v9.3.0) --------------------------------------------------------------
+
+    /// <summary>
+    /// The GraphQL server used to answer anybody who could reach the port. Two defences now, and
+    /// both are asserted here rather than left as "the resolvers call it".
+    /// </summary>
+    /// <remarks>
+    /// Driven against <c>ApiAuthorization</c> itself, not through a running server: standing Kestrel
+    /// up inside a harness would test HotChocolate's plumbing, and the thing that can actually
+    /// regress is whether the gate refuses. The three states are the three that matter — nobody
+    /// signed in, signed in without the capability, signed in with it.
+    ///
+    /// The signed-out case is asserted FIRST and against the live singleton, which is signed out at
+    /// this point in the run. If a later change made <c>CurrentUser</c> non-null by default this
+    /// check goes red, which is the point.
+    /// </remarks>
+    private static void CheckApiGate()
+    {
+        Check("the API is off unless an installation switches it on",
+            !IntegrationSettingsStore.Instance.Settings.GraphQlApiEnabled,
+            "Config/integrations.json on this machine has it enabled");
+
+        AuthenticationService.Instance.SignOut();
+
+        // On the MESSAGE, not merely on "it threw". Deleting the no-session guard entirely still
+        // left every one of these green, because a signed-out session also holds no capabilities and
+        // the second guard caught it — the assertions were passing for a reason they did not name,
+        // which is the fixture-on-a-fallback-path trap this file keeps re-learning. The two
+        // refusals are deliberately distinguishable (an integration must be able to tell "wait for
+        // somebody to sign in" from "this will never be allowed"), so assert that they differ.
+        var signedOut = Refusal(() => ApiAuthorization.Require(AppCapability.ViewOrders));
+
+        Check("with nobody signed in, the API refuses to read orders", signedOut is not null);
+        Check("...and says the session is what is missing",
+            signedOut?.Contains("signed in", StringComparison.OrdinalIgnoreCase) is true,
+            signedOut ?? "(no exception)");
+        Check("...rather than blaming the permission",
+            signedOut?.Contains("permission", StringComparison.OrdinalIgnoreCase) is not true,
+            signedOut ?? "(no exception)");
+
+        // Every resolver's capability, so a resolver added later cannot quietly pick one that is
+        // never checked in the signed-out state.
+        foreach (var capability in new[]
+                 {
+                     AppCapability.ViewOrders, AppCapability.CreateOrders,
+                     AppCapability.EditOrders, AppCapability.DeleteOrders,
+                 })
+        {
+            Check($"refused signed out: {capability}",
+                Throws(() => ApiAuthorization.Require(capability)));
+        }
+    }
+
+    private static bool Throws(Action action) => Refusal(action) is not null;
+
+    /// <summary>The refusal message, or null when the call was allowed through.</summary>
+    private static string Refusal(Action action)
+    {
+        try { action(); return null; }
+        catch (Exception ex) { return ex.Message; }
+    }
 
     /// <summary>
     /// A second <see cref="AuthenticationService"/> over the same file, discarded at the end of the
