@@ -206,6 +206,15 @@
   <Text key="Users.NewUser">新しいアカウントを作成</Text>
   <Text key="Users.NewPassword">新しいパスワード</Text>
   <Text key="Users.ConfirmPassword">パスワードの確認</Text>
+
+  <Text key="Password.Change.Title">パスワードの変更</Text>
+  <Text key="Password.Change.Hint">自分のアカウントのパスワードを変更します</Text>
+  <Text key="Password.Change.Subhead">アカウント「{0}」。新しいパスワードは誰にも通知されません。</Text>
+  <Text key="Password.Change.Current">現在のパスワード</Text>
+  <Text key="Password.Change.Rule">{0} 文字以上で、ユーザー名と同じにはできません。</Text>
+  <Text key="Password.Change.Save">パスワードを変更</Text>
+  <Text key="Password.Change.WrongCurrent">現在のパスワードが正しくありません。</Text>
+  <Text key="Password.Change.Succeeded">パスワードを変更しました。</Text>
   <Text key="Users.PasswordHint">現在のパスワードを変更しない場合は、両方の欄を空のままにしてください。</Text>
   <Text key="Users.Assignments">店舗と役割</Text>
   <Text key="Users.AssignmentsHint">各店舗でこのアカウントが持つ役割にチェックを入れてください。両方にチェックすると両方の権限を持ちます。何もチェックしないと、その店舗を開くことはできません。</Text>
@@ -369,7 +378,7 @@
   <Text key="StatusBar.Label">状態：</Text>
   <Text key="Status.Ready">準備完了</Text>
   <Text key="Status.LoadingOrders">注文を読み込んでいます...</Text>
-  <Text key="Status.LoadedSummary">注文 {0} 件  |  GraphQL エンドポイント: http://localhost:5050/graphql</Text>
+  <Text key="Status.LoadedSummary">注文 {0} 件</Text>
   <Text key="Status.LoadFailed">読み込みに失敗しました：{0}</Text>
   <Text key="Status.DeleteFailed">削除に失敗しました：{0}</Text>
   <Text key="Status.Deleted">注文「{0}」を削除しました</Text>
@@ -716,7 +725,6 @@
   <Text key="Measure.SelectGarments">採寸する衣類を選択してください</Text>
   <Text key="Measure.NoGarmentSelected">採寸を記録するには、衣類を 1 つ以上選択してください。</Text>
 
-  <Text key="DataPath.Label">データベースファイル：</Text>
 
   <Text key="CurrencyType.CAD">CAD</Text>
   <Text key="CurrencyType.USD">USD</Text>

@@ -203,6 +203,15 @@
   <Text key="Users.NewUser">Créer un nouveau compte</Text>
   <Text key="Users.NewPassword">Nouveau mot de passe</Text>
   <Text key="Users.ConfirmPassword">Confirmer le mot de passe</Text>
+
+  <Text key="Password.Change.Title">Changer le mot de passe</Text>
+  <Text key="Password.Change.Hint">Changer le mot de passe de votre propre compte</Text>
+  <Text key="Password.Change.Subhead">Pour le compte «&#160;{0}&#160;». Personne d’autre n’est informé du nouveau mot de passe.</Text>
+  <Text key="Password.Change.Current">Mot de passe actuel</Text>
+  <Text key="Password.Change.Rule">Au moins {0} caractères, et différent de votre nom d’utilisateur.</Text>
+  <Text key="Password.Change.Save">Changer le mot de passe</Text>
+  <Text key="Password.Change.WrongCurrent">Le mot de passe actuel est incorrect.</Text>
+  <Text key="Password.Change.Succeeded">Votre mot de passe a été changé.</Text>
   <Text key="Users.PasswordHint">Laissez les deux champs vides pour conserver le mot de passe actuel.</Text>
   <Text key="Users.Assignments">Boutiques et rôles</Text>
   <Text key="Users.AssignmentsHint">Cochez le rôle que ce compte détient dans chaque boutique. Cocher les deux accorde les deux ; un compte sans aucune case cochée ne peut pas ouvrir cette boutique.</Text>
@@ -367,7 +376,7 @@
   <Text key="StatusBar.Label">État&#160;:</Text>
   <Text key="Status.Ready">Prêt</Text>
   <Text key="Status.LoadingOrders">Chargement des commandes...</Text>
-  <Text key="Status.LoadedSummary">{0} commandes  |  Point de terminaison GraphQL : http://localhost:5050/graphql</Text>
+  <Text key="Status.LoadedSummary">{0} commandes</Text>
   <Text key="Status.LoadFailed">Échec du chargement : {0}</Text>
   <Text key="Status.DeleteFailed">Échec de la suppression : {0}</Text>
   <Text key="Status.Deleted">Commande «&#160;{0}&#160;» supprimée</Text>
@@ -715,7 +724,6 @@
   <Text key="Measure.SelectGarments">Sélectionnez les vêtements à mesurer</Text>
   <Text key="Measure.NoGarmentSelected">Veuillez sélectionner au moins un vêtement pour enregistrer des mesures.</Text>
 
-  <Text key="DataPath.Label">Fichier de base de données&#160;:</Text>
 
   <Text key="CurrencyType.CAD">CAD</Text>
   <Text key="CurrencyType.USD">USD</Text>

@@ -11,6 +11,36 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.3.0 — 2026-08-02
+
+**A copied order now keeps everything the original was priced with.** Copying an order was quietly
+leaving two things behind: the separate tax rate you can set for the final balance, and a stage paid
+by more than one method. A copy of an order whose final balance was taxed differently from its
+deposit came out charging the deposit's rate instead — a job priced at 1,102.00 copied to one
+recomputing 1,060.00. **If you have copied orders recently, check their tax and payment split before
+taking money against them.** Copies made from now on carry both.
+
+Behind that fix, copying now inherits everything a new column adds, automatically, instead of a
+hand-kept list that had to be remembered. The things a copy deliberately does *not* take — the
+receipt number, the pickup date you promised, a cancellation reason, who last touched the original —
+are written down in one place, and the tests fail if any of the rest goes missing.
+
+**You can change your own password.** A "Change Password" button sits beside Lock at the top of the
+main screen. Until now the only way to a new password was to ask a manager to set one for you — and
+they then knew it. It asks for your current password first, even though you are already signed in,
+because the person at the keyboard is not always the person who signed in.
+
+**The built-in API is off unless you switch it on.** The application used to open a local network
+port on every launch, which anything on the machine could read every customer's details through and
+delete orders with, whoever was signed in. It is now off by default; if you use it for an
+integration, switch it on in `Config/integrations.json`. When it is on it now works as the signed-in
+person — it can do what they can do, and nothing when nobody is signed in.
+
+**A tidier status bar.** The database path and the API address are gone from the bottom of the main
+screen; the order count stays. The database path is still under Local Configuration → Local
+Database, beside the tools that use it. And a mistyped import file now says so in the status bar
+rather than in a pop-up you have to dismiss.
+
 ### v9.2.1 — 2026-08-02
 
 **A copied order now says that it is one.** Copy Order used to produce a record identical to the one

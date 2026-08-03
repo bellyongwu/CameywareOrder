@@ -201,15 +201,10 @@
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}" Margin="4,0"/>
             </StatusBarItem>
-            <!-- Administrator only; hidden in code together with the Local Database and Import/Export menus.
-                 It is the same information those menus act on, printed rather than clicked. -->
-            <Separator x:Name="DataPathSeparator"/>
-            <StatusBarItem x:Name="DataPathLabelItem">
-                <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[DataPath.Label], Mode=OneWay}" Margin="4,0,4,0" FontWeight="SemiBold"/>
-            </StatusBarItem>
-            <StatusBarItem x:Name="DataPathValueItem">
-                <TextBlock Text="{Binding DatabaseFilePath}" Margin="0,0,4,0" TextTrimming="CharacterEllipsis"/>
-            </StatusBarItem>
+            <!-- v9.3.0: the database path and the GraphQL endpoint used to print here. Neither is
+                 something a shop can act on, and the endpoint advertised an API to every person who
+                 walked past the counter. The path is still one click away, under
+                 Local Configuration → Local Database, which is where the tools that USE it live. -->
         </StatusBar>
 
         <!-- ── System bar ──────────────────────────────────────────────────
@@ -231,6 +226,7 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
@@ -381,11 +377,34 @@
                                    VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
+                <!-- v9.3.0. Between the roster and Lock, because the three of them are the account
+                     block and this is the one that acts on YOUR account. Until now the only way to a
+                     new password was to ask a manager to set one — who then knew it, and the whole
+                     point of a password is that nobody else does. Shown to everybody: an account is
+                     the one thing its holder always administers. -->
+                <Button x:Name="ChangePasswordButton" Grid.Column="5" Click="OnChangePasswordClick" Padding="12,7" Margin="0,0,10,0"
+                        ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Password.Change.Hint], Mode=OneWay}"
+                        AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Password.Change.Title], Mode=OneWay}">
+                    <StackPanel Orientation="Horizontal">
+                        <!-- A key: bow, shaft and two teeth. Distinct from the padlock beside it, which
+                             is the same subject but the opposite act. -->
+                        <Canvas Width="16" Height="16" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <Ellipse Canvas.Left="1.6" Canvas.Top="5.2" Width="6" Height="6"
+                                     Stroke="#4F46E5" StrokeThickness="1.6"/>
+                            <Path Stroke="#4F46E5" StrokeThickness="1.6" StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                  Data="M 7.6 8.2 L 14.4 8.2 M 12.2 8.2 L 12.2 11 M 14.4 8.2 L 14.4 10.4"/>
+                        </Canvas>
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Password.Change.Title], Mode=OneWay}"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
                 <!-- Beside Sign Out, and before it: locking is the one you want several times a day
                      and signing out is the one you want at the end of a shift, so the frequent one
                      is nearer the content and the ending one sits at the edge. Both raise the same
                      panel; this button is the discoverable route to what ESC does. -->
-                <Button Grid.Column="5" Click="OnLockClick" Padding="12,7" Margin="0,0,8,0"
+                <Button Grid.Column="6" Click="OnLockClick" Padding="12,7" Margin="0,0,8,0"
                         ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.LockHint], Mode=OneWay}"
                         AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.Lock], Mode=OneWay}">
                     <StackPanel Orientation="Horizontal">
@@ -402,7 +421,7 @@
                     </StackPanel>
                 </Button>
 
-                <Button Grid.Column="6" Click="OnSignOutClick" Padding="12,7"
+                <Button Grid.Column="7" Click="OnSignOutClick" Padding="12,7"
                         ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}"
                         AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Toolbar.SignOut], Mode=OneWay}">
                     <StackPanel Orientation="Horizontal">

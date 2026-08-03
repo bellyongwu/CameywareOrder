@@ -24,6 +24,34 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A partial-class split BREAKS static initializer order, and does it invisibly (2026-08-02,
+  v9.3.0).** `AuthenticationService` carried a comment saying to keep `Instance = new()` declared
+  BELOW everything its constructor reads, because static field initializers run in textual order.
+  Splitting the class into partials moved `SeedAccounts` into another FILE, where there is no
+  textual order to keep — the compiler picks one. Build stayed 0/0; the whole suite went red with a
+  `TypeInitializationException`, reported at the call site as "Copy failed".
+  - The fix is to REMOVE the dependency, not restate it: `Instance` is now a `Lazy<T>`, so the
+    constructor runs on first access when every static field is initialized whatever order was
+    chosen. A rule that a comment has to enforce is a rule the next refactor breaks.
+  - Generalises to every `static readonly` field a constructor reads. Before splitting a class,
+    grep it for static initializers that depend on each other — the compiler will not warn, and the
+    build will not fail.
+- **Copy an aggregate by PROJECTING the model, not by listing columns (2026-08-02, v9.3.0).**
+  `CopyOneOrderAsync` was a 43-line hand-written property list, and it was exactly as complete as
+  whoever last added a column remembered to make it: `AlterationFinalTaxRate` (and its two siblings)
+  and `PaymentSplitsJson` had stopped travelling. Silent, and it moved money — the copy's final
+  balance was taxed at the DEPOSIT stage's rate. `OrderDuplicate` inverts the default: every mapped
+  scalar EF knows about travels, and `NotInherited` names the exceptions with a reason each.
+  - The guard has a deliberate shape. "Every inherited column came across" cannot catch a column
+    somebody ADDS to the exclusion list — it is then not inherited. So the list is the review
+    surface (one reason per entry) and the money assertions are the backstop. Proven by adding
+    `AlterationFinalTaxRate` to the list: the sweep stayed green, the three money checks went red.
+  - **`PricesIncludeTax` was NOT one of the losses, and the first probe said it was.** The fixture
+    set it by hand against a shop whose location prices tax-exclusively — a state the application
+    cannot produce, because `AppDbContext.StampNewOrdersWithShop` writes the mode (and the currency,
+    and the shop) onto every added order. It reported a 60.00 discrepancy that belonged to the
+    fixture. A copy is priced the way the OPEN SHOP prices, by design. Same trap as every other
+    fixture-on-an-unreachable-path in this file: the assertion was measuring its own setup.
 - **A mark that the ELLIPSIS eats is not a mark (2026-08-02, v9.2.1).** Copy Order suffixes the
   copy's customer name (`- Copy 1`). Every assertion passed and the list still could not tell a copy
   from its source: the column was 170px with `CharacterEllipsis`, which trims from the END, so

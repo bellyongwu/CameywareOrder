@@ -51,6 +51,8 @@ public class Mutation
     /// </summary>
     public async Task<Order> CreateOrderAsync(CreateOrderInput input, AppDbContext context)
     {
+        ApiAuthorization.Require(AppCapability.CreateOrders);
+
         if (string.IsNullOrWhiteSpace(input.PhoneNumber))
             throw new ArgumentException("Phone number is required.", nameof(input));
 
@@ -77,6 +79,8 @@ public class Mutation
     /// </summary>
     public static async Task<Order?> UpdateOrderAsync(UpdateOrderInput input, AppDbContext context)
     {
+        ApiAuthorization.Require(AppCapability.EditOrders);
+
         var order = await context.Orders.FirstOrDefaultAsync(o => o.Id == input.Id);
         if (order is null) return null;
 
@@ -107,6 +111,8 @@ public class Mutation
     public static bool DeleteOrder(int id, AppDbContext context)
     {
         ArgumentNullException.ThrowIfNull(context);
+        ApiAuthorization.Require(AppCapability.DeleteOrders);
+
         return OrderRecycleBin.Delete(context, new[] { id }, DateTime.UtcNow) > 0;
     }
 
@@ -115,6 +121,11 @@ public class Mutation
     /// </summary>
     public async Task<OrderItem> AddOrderItemAsync(AddOrderItemInput input, AppDbContext context)
     {
+        // Changing what an order CONTAINS is editing it, so it answers to the same capability as
+        // updating one. A separate "may add line items" permission would be a distinction the
+        // application's own screens do not make.
+        ApiAuthorization.Require(AppCapability.EditOrders);
+
         // Resolve the parent order FIRST. The lookup is shop-filtered, so an order belonging to
         // another shop comes back null and the item is never created. Previously the item was
         // added before this check and saved regardless of whether the order was found, which let a
@@ -145,6 +156,8 @@ public class Mutation
     /// </summary>
     public static async Task<bool> RemoveOrderItemAsync(int itemId, AppDbContext context)
     {
+        ApiAuthorization.Require(AppCapability.EditOrders);
+
         // Reached through Orders rather than OrderItems: OrderItem carries no shop of its own, and
         // OrderItems.FindAsync would bypass the filter anyway, so a caller could have deleted a
         // line item from another shop's order. Coming in via the (filtered) order also yields the

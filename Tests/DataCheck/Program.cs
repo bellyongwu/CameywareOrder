@@ -81,6 +81,7 @@ internal static class Program
         RunPruneChecks(folder);
         RunCopyNameRuleChecks(localization);
         await RunCopyOrderChecksAsync(dbPath, options, localization);
+        await RunCopyFidelityChecksAsync(dbPath, options, localization);
 
         try { Directory.Delete(folder, recursive: true); } catch (IOException) { /* temp */ }
 
@@ -622,6 +623,143 @@ internal static class Program
             .Where(order => order.CustomerName.StartsWith(customer))
             .Select(order => order.CustomerName)
             .ToList();
+    }
+
+    // ── what a copy inherits ─────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The v9.3.0 defect and the structure that replaced it: a copy inherits every mapped column
+    /// except the ones named in <c>OrderDuplicate.NotInherited</c>.
+    /// </summary>
+    /// <remarks>
+    /// Driven against an order carrying a distinct final-stage tax rate and a payment split: those
+    /// are the two columns the hand-written property list had stopped copying, and each of them moves
+    /// money. Losing the final rate made the copy charge the DEPOSIT rate on its final balance;
+    /// losing the split reverted a multi-tender stage to a single one.
+    ///
+    /// <c>PricesIncludeTax</c> is deliberately NOT among them and the fixture no longer forces it.
+    /// The first version of this check set it by hand against a shop whose location prices
+    /// tax-exclusively — a state the application cannot produce, since
+    /// <c>AppDbContext.StampNewOrdersWithShop</c> writes the mode from the open shop onto every added
+    /// order. It reported a 60.00 discrepancy that belonged to the fixture rather than to Copy.
+    ///
+    /// The comparison walks <c>OrderDuplicate.InheritedProperties</c> rather than a list written out
+    /// here. A list would be the same construct that failed — it would have to be updated by the same
+    /// person who forgot to update the last one.
+    /// </remarks>
+    private static async Task RunCopyFidelityChecksAsync(
+        string dbPath, DbContextOptions<AppDbContext> options, LocalizationService localization)
+    {
+        Console.WriteLine("── what a copy inherits ───────────────────────────────");
+
+        var services = new ServiceCollection();
+        services.AddDbContext<AppDbContext>(o => o.UseSqlite($"Data Source={dbPath}"), ServiceLifetime.Transient);
+        var factory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
+        var shop = ShopContext.Instance.RequireCurrent();
+
+        const string customer = "Fidelity Probe";
+        var sourceId = SeedInclusiveOrder(options, shop, customer);
+
+        var written = await new MainViewModel(factory, localization).CopyOrdersAsync(new[] { sourceId });
+        Check("the copy is written", written == 1);
+
+        using var db = new AppDbContext(options);
+        var source = db.Orders.AsNoTracking().Include(o => o.Items).Single(o => o.Id == sourceId);
+        var copy = db.Orders.AsNoTracking().Include(o => o.Items)
+            .Where(o => o.CustomerName.StartsWith(customer) && o.Id != sourceId)
+            .OrderByDescending(o => o.Id).First();
+
+        // The whole rule in one assertion: every column not on the exclusion list came across.
+        var missed = OrderDuplicate.InheritedProperties(db)
+            .Where(member => !Equals(member.GetValue(source), member.GetValue(copy)))
+            .Select(member => member.Name)
+            .ToList();
+
+        // Note what this one can and cannot catch: a column added later and not copied fails here,
+        // but a column somebody ADDS TO THE EXCLUSION LIST passes, because it is then not "inherited".
+        // That is the intended layering — the list is the review surface and needs a written reason
+        // per entry, and the money assertions below are the backstop. Proven by putting
+        // AlterationFinalTaxRate on the list: this check stayed green and the three below went red.
+        Check("every inherited column came across", missed.Count == 0, string.Join(", ", missed));
+
+        // Named individually as well, because these two are the ones that were actually lost and a
+        // reader of this file should be able to see them without resolving the reflection above.
+        Check("the final-stage tax rate travels",
+            copy.AlterationFinalTaxRate == source.AlterationFinalTaxRate,
+            $"source={source.AlterationFinalTaxRate} copy={copy.AlterationFinalTaxRate}");
+        Check("the payment split travels", copy.PaymentSplitsJson == source.PaymentSplitsJson);
+
+        // The consequence the columns exist for. This is the same invariant democheck asserts on
+        // seeded data, and Copy was breaking it on real data: with the final rate gone, the copy's
+        // final balance was taxed at the deposit stage's rate instead of its own.
+        Check("the copy's stored total matches what it recomputes",
+            Math.Abs(copy.TotalAmount - copy.ComputedSectionsTotal) < 0.005m,
+            $"stored {copy.TotalAmount} vs recomputed {copy.ComputedSectionsTotal}");
+        Check("and it charges the same tax as its source",
+            Math.Abs(copy.TotalTax - source.TotalTax) < 0.005m,
+            $"source {source.TotalTax} vs copy {copy.TotalTax}");
+
+        // Stamped rather than inherited, and asserted so the distinction stays visible: whatever the
+        // source carried, a new row is priced the way the OPEN SHOP prices.
+        Check("the pricing mode comes from the shop",
+            copy.PricesIncludeTax == TaxJurisdictions.PricesIncludeTax(shop),
+            $"copy={copy.PricesIncludeTax} shop={TaxJurisdictions.PricesIncludeTax(shop)}");
+        Check("and so does the currency", copy.CurrencyType == shop.CurrencyType);
+
+        // The other half of the rule: the exclusions really are excluded.
+        Check("a cancel reason does not travel", copy.StatusReasonCategory is null);
+        Check("the pickup promise does not travel", copy.ExpectedPickupDate is null);
+        Check("the copy is not in the recycle bin", copy.DeletedOnUtc is null);
+        Check("the copy records who made it, not who last touched the source",
+            copy.LastModifiedBy != "Somebody Else", copy.LastModifiedBy ?? "(null)");
+
+        // Line items are projected by the same mechanism, so they cannot drift either.
+        Check("line items are copied as new rows",
+            copy.Items.Count == source.Items.Count
+            && copy.Items.TrueForAll(item => item.OrderId == copy.Id),
+            $"{copy.Items.Count} of {source.Items.Count}");
+
+        // A rename must not silently stop excluding a column — the exclusion list is strings, and a
+        // string that no longer names anything is a rule that quietly stopped applying.
+        var mapped = db.Model.FindEntityType(typeof(Order))!.GetProperties()
+            .Select(property => property.Name).ToHashSet(StringComparer.Ordinal);
+        var stale = OrderDuplicate.NotInherited.Where(name => !mapped.Contains(name)).ToList();
+        Check("every excluded column still exists on the model", stale.Count == 0, string.Join(", ", stale));
+    }
+
+    private static int SeedInclusiveOrder(DbContextOptions<AppDbContext> options, Shop shop, string customer)
+    {
+        using var db = new AppDbContext(options);
+
+        var order = new Order
+        {
+            ShopId = shop.Id,
+            OrderNumber = OrderNumberFormatter.Reserve(db, shop, DateTime.Now),
+            CustomerName = customer,
+            PhoneNumber = "+1 416-555-0303",
+            OrderDate = DateTime.UtcNow,
+            ExpectedPickupDate = DateTime.UtcNow.AddDays(9),
+            LastModifiedBy = "Somebody Else",
+            AlterationSubtotal = 1000m,
+            AlterationTaxRate = 6m,
+            AlterationFinalTaxRate = 13m,
+            AlterationDownpayment = 400m,
+            AlterationDownpaymentMethod = PaymentMethod.Cash,
+            AlterationFinalBalanceMethod = PaymentMethod.CreditCard,
+            StatusReasonCategory = "Other",
+            PaymentSplitsJson = "{\"Sections\":{}}",
+            Items = { new OrderItem { ProductName = "Silk lining", Quantity = 2, UnitPrice = 45m } },
+        };
+
+        // Saved WITHOUT suppressing the stamp, so the fixture is an order this application could
+        // really have written: its pricing mode and currency are the shop's own.
+        db.Orders.Add(order);
+        db.SaveChanges();
+
+        order.TotalAmount = order.ComputedSectionsTotal;
+        db.SaveChanges();
+
+        return order.Id;
     }
 
     // ── plumbing ──────────────────────────────────────────────────────────────────────────────────

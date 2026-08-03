@@ -152,10 +152,13 @@ public partial class MainWindow
 
         if (imported is null)
         {
-            MessageBox.Show(
-                _localization["Status.ImportMeasurementTermsInvalid"],
-                _localization["MeasureTerms.Title"],
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            // The status bar, not a dialog (v9.3.0). The catch above already reports the OTHER way
+            // this same import can fail through StatusMessage, so a dialog here meant two failures
+            // of one operation answering in two different places — SKILL §4b's "one code path
+            // reports, or they drift", caught in the act. Nothing has changed yet at this point:
+            // the file was rejected before anything was written, so there is nothing to warn about,
+            // only something to say.
+            _viewModel.StatusMessage = _localization["Status.ImportMeasurementTermsInvalid"];
             return;
         }
 
@@ -295,10 +298,8 @@ public partial class MainWindow
 
         if (imported is null)
         {
-            MessageBox.Show(
-                _localization["Status.ImportBrandingInvalid"],
-                _localization["Toolbar.HeaderFooter"],
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            // Reported where its sibling failure is reported — see the measurement-terms import.
+            _viewModel.StatusMessage = _localization["Status.ImportBrandingInvalid"];
             return;
         }
 
@@ -365,10 +366,8 @@ public partial class MainWindow
         var payload = GlobalSettingsPackage.TryRead(dialog.FileName);
         if (payload is null)
         {
-            MessageBox.Show(
-                _localization["Status.ImportGlobalSettingsInvalid"],
-                _localization["Toolbar.GlobalSettings"],
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            // Reported where its sibling failure is reported — see the measurement-terms import.
+            _viewModel.StatusMessage = _localization["Status.ImportGlobalSettingsInvalid"];
             return;
         }
 

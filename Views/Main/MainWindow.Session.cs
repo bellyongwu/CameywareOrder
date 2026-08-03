@@ -67,9 +67,6 @@ public partial class MainWindow
         DataPathToolsSeparator.Visibility = Show(auth.CanUseDataTools && auth.CanManageBackups);
         LocalDatabaseMenuItem.Visibility = Show(auth.CanUseDataTools || auth.CanManageBackups);
         ImportExportMenuItem.Visibility = dataTools;
-        DataPathSeparator.Visibility = dataTools;
-        DataPathLabelItem.Visibility = dataTools;
-        DataPathValueItem.Visibility = dataTools;
 
         UserManagementMenuItem.Visibility = Show(auth.CanManageUsers);
         PermissionsMenuItem.Visibility = Show(auth.CanManagePermissions);
@@ -130,6 +127,25 @@ public partial class MainWindow
     /// asking a question whose answer is then thrown away.
     /// </remarks>
     private async void OnLockClick(object sender, RoutedEventArgs e) => await OfferSessionChoiceAsync();
+
+    /// <summary>
+    /// Changes the signed-in account's own password. Reports through the status bar rather than a
+    /// dialog: the change either happened or the window is still open saying why.
+    /// </summary>
+    private void OnChangePasswordClick(object sender, RoutedEventArgs e)
+    {
+        // Only reachable with a session, since the button lives on the signed-in main window — but
+        // the harness constructs this window with no session at all, and a null here would be a
+        // crash rather than a refusal.
+        if (AuthenticationService.Instance.CurrentUser is not { } account)
+            return;
+
+        var panel = new ChangePasswordWindow(_localization, account) { Owner = this };
+        panel.ShowDialog();
+
+        if (panel.Changed)
+            _viewModel.StatusMessage = _localization["Password.Change.Succeeded"];
+    }
 
     private void OfferSessionChoice() => _ = OfferSessionChoiceAsync();
 

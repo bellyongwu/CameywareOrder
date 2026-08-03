@@ -204,6 +204,15 @@
   <Text key="Users.NewUser">Crear una cuenta nueva</Text>
   <Text key="Users.NewPassword">Contraseña nueva</Text>
   <Text key="Users.ConfirmPassword">Confirmar la contraseña</Text>
+
+  <Text key="Password.Change.Title">Cambiar la contraseña</Text>
+  <Text key="Password.Change.Hint">Cambiar la contraseña de su propia cuenta</Text>
+  <Text key="Password.Change.Subhead">Para la cuenta «{0}». No se comunica la nueva contraseña a nadie más.</Text>
+  <Text key="Password.Change.Current">Contraseña actual</Text>
+  <Text key="Password.Change.Rule">Al menos {0} caracteres, y distinta de su nombre de usuario.</Text>
+  <Text key="Password.Change.Save">Cambiar la contraseña</Text>
+  <Text key="Password.Change.WrongCurrent">La contraseña actual no es correcta.</Text>
+  <Text key="Password.Change.Succeeded">Se ha cambiado su contraseña.</Text>
   <Text key="Users.PasswordHint">Deja las dos casillas vacías para mantener la contraseña actual.</Text>
   <Text key="Users.Assignments">Tiendas y roles</Text>
   <Text key="Users.AssignmentsHint">Marca el rol que tiene esta cuenta en cada tienda. Marcar los dos concede ambos; una cuenta sin nada marcado no puede abrir esa tienda.</Text>
@@ -368,7 +377,7 @@
   <Text key="StatusBar.Label">Estado:</Text>
   <Text key="Status.Ready">Listo</Text>
   <Text key="Status.LoadingOrders">Cargando pedidos...</Text>
-  <Text key="Status.LoadedSummary">{0} pedidos  |  Punto de conexión GraphQL: http://localhost:5050/graphql</Text>
+  <Text key="Status.LoadedSummary">{0} pedidos</Text>
   <Text key="Status.LoadFailed">Error al cargar: {0}</Text>
   <Text key="Status.DeleteFailed">Error al eliminar: {0}</Text>
   <Text key="Status.Deleted">Pedido «{0}» eliminado</Text>
@@ -715,7 +724,6 @@
   <Text key="Measure.SelectGarments">Selecciona las prendas que hay que medir</Text>
   <Text key="Measure.NoGarmentSelected">Selecciona al menos una prenda para registrar las medidas.</Text>
 
-  <Text key="DataPath.Label">Archivo de base de datos:</Text>
 
   <Text key="CurrencyType.CAD">CAD</Text>
   <Text key="CurrencyType.USD">USD</Text>

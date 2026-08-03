@@ -17,6 +17,46 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-02 20:45 — v9.3.0: the four findings from the v9.2.1 review  [DONE]
+- Ask: "Fix all these issues and treat it as a mid release. 9.3.0" — the four items from the review,
+  in the order they were reported.
+- Context: the review measured a real defect (Copy Order drops `PricesIncludeTax`, the three
+  `XxxFinalTaxRate` columns and `PaymentSplitsJson`; a copy of a 1000.00 inclusive order stores
+  1000.00 and recomputes 1060.00). The other three items had each been reported at a previous review
+  and left undecided.
+- Plan:
+  - [x] 1. Copy fidelity → `OrderDuplicate`, projecting from EF's model with a named exclusion set.
+  - [x] 2. Guard it (7 new assertions in `DataCheck`, proven red).
+  - [x] 3. GraphQL: OFF by default (`IntegrationSettingsStore`), every resolver capability-checked
+        (`ApiAuthorization`). DECIDED rather than asked again — gating is reversible, deleting is
+        not, and the user had twice declined to choose.
+  - [x] 4. Status bar: endpoint and database path gone; the count stays.
+  - [x] 5. `ChangePasswordWindow` + a toolbar button, 8 keys × 5 languages.
+  - [x] 6. `AuthenticationService` 1,833 → 559, twelve types lifted to siblings + three partials.
+  - [x] 7. Four import refusals moved to the status bar (45 → 42 dialogs).
+  - [x] 8. Build 0/0, suite green (86 + 39 + 41 + uicheck + keycheck + surfacecheck), renders,
+        README, 9.3.0, companions, commit.
+- Notes:
+  - **The measured defect was smaller than first reported, and the correction matters.** Three
+    columns were named in the review; only TWO were real (`AlterationFinalTaxRate` and its siblings,
+    `PaymentSplitsJson`). `PricesIncludeTax` is STAMPED from the open shop by
+    `AppDbContext.StampNewOrdersWithShop`, so Copy never carried it — the first probe forced an
+    inclusive order into an exclusive shop, a state the app cannot produce, and blamed Copy for the
+    60.00 it manufactured. The honest figure, from a shop-shaped fixture: source tax 102.00, copy
+    60.00; stored 1,102.00 against a recomputed 1,060.00.
+  - **The split broke static initializer order and the build did not notice.** `Instance = new()`
+    carried a comment saying to keep it below everything the constructor reads; moving `SeedAccounts`
+    to another file made "below" meaningless. 0 warnings, 0 errors, suite red with a
+    `TypeInitializationException`. Fixed by making `Instance` a `Lazy<T>` — removing the dependency
+    rather than restating it. Full reasoning in `context.md`.
+  - Split done by the v9.1 member-NAME splitter (script in the scratchpad), reconciled: 1,274 moved
+    + 560 kept == 1,834 original. It found 101 members and refused to run until every name resolved.
+    One trap beyond v9.1's: a TUPLE TYPE in a field declaration makes "identifier before the first
+    `(`" yield the member name `readonly`.
+  - Left undone and reported: the other 42 dialogs live on windows with no status surface. Turning
+    those into inline validation is a per-window job (`CustomMadeServiceWindow` alone holds 8) and is
+    a release of its own, not a line item in this one.
+
 ### 2026-08-02 19:46 — v9.2.1: a copied order says whose copy it is  [DONE]
 - Ask: "wpf-dev skill, add a new feature for minor release for v9.2.1. for main copied records, add ` - Copy{index}` postfixes."
 - Clarified with the user before starting (three questions, three answers):

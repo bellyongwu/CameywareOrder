@@ -466,6 +466,19 @@ public partial class App : Application
     {
         var logger = _host!.Services.GetRequiredService<ILogger<App>>();
 
+        // v9.3.0: OFF unless this installation has said otherwise. It used to start on every launch,
+        // listening on a local port with no authentication of any kind — see IntegrationSettingsStore
+        // for the whole reasoning. Checked BEFORE StartAsync rather than by unregistering the server,
+        // so nothing about the host's composition changes with the setting and the two paths cannot
+        // drift apart.
+        if (!IntegrationSettingsStore.Instance.Settings.GraphQlApiEnabled)
+        {
+            ApiEndpoint = null;
+            logger.LogInformation(
+                "The GraphQL API is disabled. Set graphQlApiEnabled in Config/integrations.json to enable it.");
+            return;
+        }
+
         try
         {
             await _host.StartAsync();

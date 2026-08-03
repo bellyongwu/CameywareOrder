@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using CameywareOrder.Data;
@@ -392,10 +391,6 @@ public class MainViewModel : INotifyPropertyChanged
         set { _statusMessage = value; OnPropertyChanged(); }
     }
 
-    [SuppressMessage("Minor Code Smell", "S2325:Methods and properties that don't access instance data should be static",
-        Justification = "Instance property required for WPF data binding ({Binding DatabaseFilePath}).")]
-    public string DatabaseFilePath => DatabasePathProvider.DatabaseFilePath;
-
     // ── Commands ───────────────────────────────────────────────────────────────
 
     public ICommand LoadOrdersCommand { get; }
@@ -703,13 +698,6 @@ public class MainViewModel : INotifyPropertyChanged
     public void ReportExport(bool succeeded, string detail)
         => StatusMessage = succeeded ? detail : _localization.Format("Csv.Export.Failed", detail);
 
-    // Statuses that represent a finished order (Shipped is now also read-only/finalized,
-    // same as Completed/Cancelled/Returned). Copying such an order starts a fresh
-    // active order, so its status is reset to Processing (which also removes the
-    // "picked up" tick, since that flag is derived from the Completed status).
-    private static bool IsClosedStatus(OrderStatus status)
-        => status is OrderStatus.Shipped or OrderStatus.Completed or OrderStatus.Cancelled or OrderStatus.Returned;
-
     /// <summary>
     /// Copies every selected order and selects the copies. Returns how many were written.
     /// </summary>
@@ -833,72 +821,22 @@ public class MainViewModel : INotifyPropertyChanged
         if (source is null)
             return null;
 
-        // The copy takes a number from the shop's OWN receipt run, exactly as a new order does.
-        // This used to compose "ORD-{timestamp}" by hand, which ignored whatever prefix and
-        // numbering mode the shop had configured — so a shop on sequential numbering got a
-        // timestamp number from Copy and nothing else.
         // The copy is marked on the CUSTOMER name, not on the order number: the number is drawn from
         // the shop's receipt run and is printed on a slip somebody carries, so it carries no
         // decoration. Claimed before the save, so a failure part way cannot re-issue the same one.
         var copyName = OrderCopyName.Next(source.CustomerName, takenNames, _localization);
         takenNames.Add(copyName);
 
+        // The number comes from the shop's OWN receipt run, exactly as a new order's does. This used
+        // to compose "ORD-{timestamp}" by hand, which ignored whatever prefix and numbering mode the
+        // shop had configured.
+        //
+        // WHAT the copy inherits is OrderDuplicate's to decide, and it projects from the EF model
+        // rather than listing columns here — the list that used to live in this method had silently
+        // stopped copying the pricing mode, the per-stage tax rates and the payment split.
         var now = DateTime.Now;
-        var copy = new Order
-        {
-            OrderNumber = OrderNumberFormatter.Reserve(db, shop, now),
-            OrderDate = DateTime.UtcNow,
-            LastModifiedDate = DateTime.UtcNow,
-            CustomerName = copyName,
-            PhoneNumber = source.PhoneNumber,
-            Email = source.Email,
-            Address = source.Address,
-            CurrencyType = source.CurrencyType,
-            ServiceType = source.ServiceType,
-            ServiceDetails = source.ServiceDetails,
-            AdditionalNotes = source.AdditionalNotes,
-            Subtotal = source.Subtotal,
-            TaxRate = source.TaxRate,
-            ChestSize = source.ChestSize,
-            JacketLength = source.JacketLength,
-            CustomMadeRecordsJson = source.CustomMadeRecordsJson,
-            // A closed order becomes a new Processing order; otherwise keep its status.
-            Status = IsClosedStatus(source.Status) ? OrderStatus.Processing : source.Status,
-            TotalAmount = source.TotalAmount,
-            Downpayment = source.Downpayment,
-            DownpaymentMethod = source.DownpaymentMethod,
-            FinalBalanceMethod = source.FinalBalanceMethod,
-            AlterationDownpayment = source.AlterationDownpayment,
-            AlterationDownpaymentMethod = source.AlterationDownpaymentMethod,
-            AlterationDownpaymentCompleted = source.AlterationDownpaymentCompleted,
-            AlterationFinalBalanceMethod = source.AlterationFinalBalanceMethod,
-            AlterationBalanceCleared = source.AlterationBalanceCleared,
-            CustomMadeDownpayment = source.CustomMadeDownpayment,
-            CustomMadeDownpaymentMethod = source.CustomMadeDownpaymentMethod,
-            CustomMadeDownpaymentCompleted = source.CustomMadeDownpaymentCompleted,
-            CustomMadeFinalBalanceMethod = source.CustomMadeFinalBalanceMethod,
-            CustomMadeBalanceCleared = source.CustomMadeBalanceCleared,
-            ClothingDownpayment = source.ClothingDownpayment,
-            ClothingDownpaymentMethod = source.ClothingDownpaymentMethod,
-            ClothingDownpaymentCompleted = source.ClothingDownpaymentCompleted,
-            ClothingFinalBalanceMethod = source.ClothingFinalBalanceMethod,
-            ClothingBalanceCleared = source.ClothingBalanceCleared,
-            AlterationSubtotal = source.AlterationSubtotal,
-            AlterationTaxRate = source.AlterationTaxRate,
-            ClothingSubtotal = source.ClothingSubtotal,
-            ClothingTaxRate = source.ClothingTaxRate,
-            CustomMadeTaxRate = source.CustomMadeTaxRate,
-            Notes = source.Notes,
-            Items = source.Items
-                .Select(item => new OrderItem
-                {
-                    ProductName = item.ProductName,
-                    Quantity = item.Quantity,
-                    UnitPrice = item.UnitPrice,
-                    PromotionalPrice = item.PromotionalPrice
-                })
-                .ToList()
-        };
+        var copy = OrderDuplicate.Build(db, source, OrderNumberFormatter.Reserve(db, shop, now),
+            copyName, DateTime.UtcNow);
 
         db.Orders.Add(copy);
         await db.SaveChangesAsync();

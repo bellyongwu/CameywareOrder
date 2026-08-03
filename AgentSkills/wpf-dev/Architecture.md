@@ -155,7 +155,15 @@ move.
     shops sharing one per-shop file name) and the count is reported so the panel can say so. `TryRead`
     validates with no side effects, like `GlobalSettingsPackage.TryRead`. Wraps the restore in
     `AppDbContext.SuppressShopStamping()`.
-  - `AuthenticationService` — singleton `Instance`; sign-in **and** authorization. Accounts live in
+  - `AuthenticationService` — **split into four files in v9.3.0** (it was 1,833 lines holding a
+    service and TWELVE other top-level types). The types are now siblings — `SignInResult.cs`,
+    `AccountOperationResult.cs`, `PersonName.cs`, `UserAccount.cs` (+ StoreMember / MemberProfile /
+    AccountProfile), `CredentialFile.cs` (+ CredentialRecord / ShopMembership / LegacyShopAssignment)
+    — and the class is partials by responsibility: `.Passwords.cs`, `.Roster.cs`, `.Storage.cs`,
+    leaving session and capabilities in the original. Partials rather than extracted types because
+    every one of them reads the same private state. **`Instance` had to become a `Lazy<T>`** for the
+    split to be safe at all — see `context.md`.
+    Singleton `Instance`; sign-in **and** authorization. Accounts live in
     `credentials.json` under LocalAppData (outside the database on purpose: an Import → Database restore replaces the
     whole database file and must not wipe the accounts). An account is either an administrator
     (`IsAdministrator` — everything, everywhere, never a shop membership) or holds `ShopMembership`s:
@@ -258,6 +266,16 @@ move.
     `CommitSequence` (advances the counter, called only AFTER the order is saved so an abandoned
     form cannot burn a receipt number), `SequenceKeyFor` (the period a counter belongs to —
     empty for a continuous run, which therefore never restarts).
+  - `OrderDuplicate` (static, v9.3.0) — WHAT a copied order inherits. Projects every mapped scalar
+    from `db.Model` rather than listing columns, with `NotInherited` naming the exceptions (identity,
+    receipt number, dates, author, status + its reason, the pickup promise, the bin stamp, and the
+    two the CONTEXT stamps — `CurrencyType` and `PricesIncludeTax`). Replaced a hand-written property
+    list that had silently stopped copying three columns; see `context.md`. `IsClosedStatus` moved
+    here from `MainViewModel`. `InheritedProperties` exists for the harness, so the guard does not
+    re-derive the rule it checks.
+  - `IntegrationSettingsStore` (singleton, v9.3.0) — `Config/integrations.json`: whether the GraphQL
+    server starts at all. Defaults to OFF and reads defensively to OFF, since a file nobody can parse
+    is not permission to open a port. Read by `App.StartApiServerAsync` before `StartAsync`.
   - `OrderCopyName` (static, v9.2.1) — what a COPIED order's customer is called: the source's real
     name plus the localized `Order.Copy.Suffix`, numbered. Composing and stripping live in one type
     on purpose — copying a copy has to recover the real name first or the suffixes stack, and a strip
@@ -482,6 +500,14 @@ move.
 - **GraphQL/**
   - `Query` — `GetOrders`, `GetOrderAsync`.
   - `Mutation` — create/update/delete order, add/remove order item.
+  - `ApiAuthorization` (v9.3.0) — `Require(AppCapability)` at the top of EVERY resolver. Before it
+    the schema exposed read/create/update/delete over HTTP with no authentication and no capability
+    check at all. The API acts as the SIGNED-IN SESSION, not a service account: there is one session
+    in a desktop application, orders are already shop-scoped by the context's query filter, and the
+    alternative is a second identity system for a feature no screen consumes. With nobody signed in
+    it answers nothing, and it says which of the two refusals happened so an integration does not
+    retry forever against a permission it will never be granted. Second line of defence — the server
+    itself is off by default (`IntegrationSettingsStore`).
 - **Localization/**
   - `ILocalizedText` — *somewhere* to read UI text from: an indexer and `Format`, nothing else.
     Implemented by both the service and a scope. A helper that composes a localized string takes

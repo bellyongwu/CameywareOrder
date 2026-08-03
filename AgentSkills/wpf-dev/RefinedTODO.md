@@ -43,6 +43,25 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 Nothing in flight.
 
+## v9.3.0 — the four findings from the v9.2.1 review
+
+1. **Copy fidelity.** `OrderDuplicate` projects every mapped scalar from `db.Model`; `NotInherited`
+   names the exceptions with a reason each. Replaced a hand-written list that had silently stopped
+   copying the per-stage final tax rates and the payment split — a copy taxed its final balance at
+   the DEPOSIT stage's rate. Two columns, not the three first reported: `PricesIncludeTax` is
+   stamped from the open shop, and the first probe manufactured its own discrepancy. Guarded, and
+   the guard's blind spot is documented at the assertion.
+2. **GraphQL is off by default** (`Config/integrations.json`) and every resolver is
+   capability-checked (`ApiAuthorization`), acting as the signed-in session. Decided rather than
+   asked a third time: gating is reversible, deleting is not.
+3. **Status bar** lost the endpoint and the database path; a mistyped import now reports there
+   instead of in a pop-up, beside the failure path that already did.
+4. **Self-service password change** (`ChangePasswordWindow`), asking for the current password even
+   inside a live session.
+5. **`AuthenticationService` 1,833 → 559** — twelve types lifted to siblings, three partials by
+   responsibility. `Instance` had to become a `Lazy<T>`: see `context.md`, the split broke static
+   initializer order and the build stayed green while the suite went red.
+
 ## v9.2.1 — a copied order says whose copy it is
 
 Copy Order postfixes the COPY's customer name (`XXX - Copy 1`) through the new `OrderCopyName`,
@@ -63,22 +82,22 @@ scratchpad harnesses that were lost with a previous session's temp folder; what 
 the lessons in this file and in `context.md`, not the assertions. Four harnesses plus two source
 sweeps, and the runner exits non-zero so it can gate a release.
 
-**Neither quality GATE has been runnable since 2026-08-01.** No IDE-diagnostics tool and no SonarLint
-tool is connected in this session, so Gate 1 and Gate 2 of `SKILL.md` §9b cannot be performed as
-written. The in-build `SonarAnalyzer.CSharp` pass is the whole of the Sonar evidence from v4.3.0
-onward. Say so rather than reporting the gates as clean.
+**Both quality gates are BACK as of 2026-08-02 (v9.3.0).** They had been unrunnable since
+2026-08-01 with no diagnostics tool connected. They now arrive automatically after each edit —
+Roslyn diagnostics (they caught two nullable-annotation warnings on a scratch harness within a
+second) and SonarLint (`javascript:S3776`, `S6594`, `S8786` on a scratchpad script). Both gates of
+`SKILL.md` §9b can be performed as written again; the in-build `SonarAnalyzer.CSharp` pass is no
+longer the whole of the evidence. Check before assuming either way — this has flipped twice.
 
 **Open items the user has been told about and has not yet decided:**
 
-- **GraphQL.** `GraphQL/*.cs` performs zero authentication and zero capability checks, and the host
-  has no `UseAuthorization`. Two options offered: delete it, or keep it off by default behind a
-  setting and route every mutation through `AuthenticationService.Can(...)`. Not chosen.
 - **Five languages.** ~4,500 translated values carried forward on every string added.
 - **`MainWindow.Receipt.cs` → `Services/StoreManagement/`.** 466 lines, 0 `x:Name` controls, one
   field (`_localization`), single entry point `BuildReceiptDocument`. A real extraction, not a move.
-- **Self-service password change from inside the application.** v9.2.0 added one on the sign-in
-  screen for the forced case only. A staff member who simply wants to change their password still
-  has to ask a manager. Reported, not built.
+- **The other 42 `MessageBox` calls.** v9.3.0 moved the four that had a status surface to use. The
+  rest live on windows with none — `CustomMadeServiceWindow` alone holds 8, and they are validation
+  refusals that want the inline/banner treatment of SKILL §4b. A per-window job, and a release of
+  its own.
 
 **Fixed 2026-07-30:** `langcheck`'s "installs every shipped language" pair was FLAPPING — red, then
 green for several runs, then red — because it asserted on live shop data that `storecheck` rewrites

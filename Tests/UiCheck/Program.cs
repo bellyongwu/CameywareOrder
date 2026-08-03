@@ -125,6 +125,13 @@ internal static class Program
         Render(french, Path.Combine(outDir, "login-password-change-fr.png"), 440, 600);
         localization.SetLanguage(was);
 
+        // v9.3.0: changing your own password from inside a session. Rendered because the three boxes
+        // and the rule line are the kind of thing no assertion can judge, and because French runs a
+        // quarter longer than English on every one of these labels.
+        var changePassword = new ChangePasswordWindow(localization, AuthenticationService.Instance.CurrentUser!);
+        Show(changePassword, 460, 460);
+        Render(changePassword, Path.Combine(outDir, "change-password.png"), 460, 460);
+
         // A copy made through the REAL Copy action, so the list renders what the customer column
         // actually does with the "- Copy 1" suffix rather than a name typed to look like one. The
         // long fixture name is deliberate: the column is 170px with CharacterEllipsis, and a suffix

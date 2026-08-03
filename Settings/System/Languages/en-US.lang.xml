@@ -206,6 +206,15 @@
   <Text key="Users.NewUser">Create a new account</Text>
   <Text key="Users.NewPassword">New password</Text>
   <Text key="Users.ConfirmPassword">Confirm password</Text>
+
+  <Text key="Password.Change.Title">Change Password</Text>
+  <Text key="Password.Change.Hint">Change the password for your own account</Text>
+  <Text key="Password.Change.Subhead">For the account “{0}”. Nobody else is told the new password.</Text>
+  <Text key="Password.Change.Current">Current password</Text>
+  <Text key="Password.Change.Rule">At least {0} characters, and not the same as your user name.</Text>
+  <Text key="Password.Change.Save">Change Password</Text>
+  <Text key="Password.Change.WrongCurrent">The current password is not correct.</Text>
+  <Text key="Password.Change.Succeeded">Your password was changed.</Text>
   <Text key="Users.PasswordHint">Leave both boxes empty to keep the current password.</Text>
   <Text key="Users.Assignments">Shops and roles</Text>
   <Text key="Users.AssignmentsHint">Tick the role this account holds in each shop. Ticking both grants both; an account with nothing ticked cannot open that shop.</Text>
@@ -369,7 +378,7 @@
   <Text key="StatusBar.Label">Status:</Text>
   <Text key="Status.Ready">Ready</Text>
   <Text key="Status.LoadingOrders">Loading orders...</Text>
-  <Text key="Status.LoadedSummary">{0} orders  |  GraphQL endpoint: http://localhost:5050/graphql</Text>
+  <Text key="Status.LoadedSummary">{0} orders</Text>
   <Text key="Status.LoadFailed">Load failed: {0}</Text>
   <Text key="Status.DeleteFailed">Delete failed: {0}</Text>
   <Text key="Status.Deleted">Order “{0}” deleted</Text>
@@ -716,7 +725,6 @@
   <Text key="Measure.SelectGarments">Select garments to measure</Text>
   <Text key="Measure.NoGarmentSelected">Please select at least one garment to record measurements.</Text>
 
-  <Text key="DataPath.Label">Database file:</Text>
 
   <Text key="CurrencyType.CAD">CAD</Text>
   <Text key="CurrencyType.USD">USD</Text>

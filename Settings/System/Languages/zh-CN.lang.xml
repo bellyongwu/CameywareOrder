@@ -210,6 +210,15 @@
   <Text key="Users.NewUser">新建账户</Text>
   <Text key="Users.NewPassword">新密码</Text>
   <Text key="Users.ConfirmPassword">确认密码</Text>
+
+  <Text key="Password.Change.Title">修改密码</Text>
+  <Text key="Password.Change.Hint">修改本人账号的密码</Text>
+  <Text key="Password.Change.Subhead">账号“{0}”。新密码不会告知任何其他人。</Text>
+  <Text key="Password.Change.Current">当前密码</Text>
+  <Text key="Password.Change.Rule">至少 {0} 个字符，且不能与用户名相同。</Text>
+  <Text key="Password.Change.Save">修改密码</Text>
+  <Text key="Password.Change.WrongCurrent">当前密码不正确。</Text>
+  <Text key="Password.Change.Succeeded">密码已修改。</Text>
   <Text key="Users.PasswordHint">两个输入框均留空则不修改当前密码。</Text>
   <Text key="Users.Assignments">店铺与角色</Text>
   <Text key="Users.AssignmentsHint">请勾选该账户在各店铺中的角色。两项同时勾选即同时具备；一项都不勾选则无法进入该店铺。</Text>
@@ -373,7 +382,7 @@
   <Text key="StatusBar.Label">状态:</Text>
   <Text key="Status.Ready">就绪</Text>
   <Text key="Status.LoadingOrders">正在加载订单...</Text>
-  <Text key="Status.LoadedSummary">共 {0} 条订单  |  GraphQL 端点: http://localhost:5050/graphql</Text>
+  <Text key="Status.LoadedSummary">共 {0} 条订单</Text>
   <Text key="Status.LoadFailed">加载失败: {0}</Text>
   <Text key="Status.DeleteFailed">删除失败: {0}</Text>
   <Text key="Status.Deleted">订单“{0}”已删除</Text>
@@ -719,7 +728,6 @@
   <Text key="Measure.SelectGarments">选择需要量身的服装</Text>
   <Text key="Measure.NoGarmentSelected">请至少选择一件服装类别以录入量身数据。</Text>
 
-  <Text key="DataPath.Label">数据库文件:</Text>
 
   <Text key="CurrencyType.CAD">加元</Text>
   <Text key="CurrencyType.USD">美元</Text>
