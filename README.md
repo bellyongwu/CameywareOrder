@@ -11,6 +11,13 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.3.2 — 2026-08-02
+
+**The clothing and accessory lines now sit under their own headings.** In the order form, Item
+Category, Unit Price, Promotional Price and Subtotal were each drifting to the right of the values
+beneath them — worst on Subtotal, where the price sat noticeably left of its heading. The headings
+and the lines now line up.
+
 ### v9.3.1 — 2026-08-02
 
 **Lock, Change Password and Sign Out are now one Account menu**, in that order, at the top right.

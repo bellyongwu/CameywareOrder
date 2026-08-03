@@ -17,6 +17,25 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-02 22:55 — v9.3.2: the ready-made column headings did not sit over their values  [DONE]
+- Ask: "This price should be aligned with the header." (screenshot of the 成衣或配饰 lines, 小计 circled)
+- Diagnosis, and it was NOT the price's alignment: the header row and every item row are SEPARATE
+  Grids with identical column definitions, but only the ROWS carry a Remove button in the trailing
+  `Auto` column. The header's Auto measured 0, so its star columns divided a wider space than the
+  rows' did and every heading drifted right — progressively, worst at the last column, which is why
+  Subtotal was the one that looked wrong. `品类` looked fine only because column 0 starts at zero.
+- Fix: `Grid.IsSharedSizeScope` on `ClothingItemsPanel` + `SharedSizeGroup` on both trailing columns,
+  so the two Autos agree. Self-correcting when the Remove button's label changes length in another
+  language, which a hard-coded spacer would not be.
+- Notes:
+  - **The order editor had never been rendered by the harness** — the largest window in the
+    application, and the defect lived in it. `RenderReadyMadeSection` now does.
+  - Two traps getting that render: the panel fades in over 0.5s so a shot at 400ms was a blank white
+    rectangle of exactly the right SIZE (the animation trap, in its emptiest form); and the
+    transition leaves a `TranslateTransform`, so `Render(panel)` draws it offset — painting a
+    `VisualBrush` into a rectangle of the panel's own size neutralises whatever transform it holds.
+  - Checked for siblings: no other window builds a header grid separate from its row grids.
+
 ### 2026-08-02 22:10 — v9.3.1: two UI fixes on the main window  [DONE]
 - Ask: "Minor fixes on UI. >Advance Search + Clear Filters => make these two buttons higher, just like other buttons. >Group Lock, Change Password, Sign Out into one Dropdown category (by this order) called whatever you think is reasonable. Push it as a minor fix. for 9.3.1"
 - Plan:

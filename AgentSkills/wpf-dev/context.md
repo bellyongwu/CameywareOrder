@@ -24,6 +24,25 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **Two Grids with identical column definitions do NOT line up if one column's content differs
+  (2026-08-02, v9.3.2).** The ready-made section builds its header as one Grid and each item as
+  another, same five columns — but only the rows put a Remove button in the trailing `Auto` column.
+  An empty Auto measures 0, so the header's star columns divided a wider space and every heading sat
+  right of the values under it, the drift growing column by column. Reported as "the price is not
+  aligned with the header"; it was the HEADER that had moved, and the last column merely showed it
+  worst. `Grid.IsSharedSizeScope` on the container plus a `SharedSizeGroup` on both trailing columns
+  is the fix — and it stays correct when the button's label changes length in another language,
+  which a hard-coded spacer would not.
+  - The tell for this class of bug: the leftmost column looks fine (it starts at zero whatever the
+    stars do) and the error grows to the right. If the first heading is right and the last is wrong,
+    suspect the widths, not the alignment.
+- **Rendering a panel mid-transition gives a blank picture of the RIGHT SIZE (2026-08-02).**
+  `Animations/PanelTransition` fades in over 0.5s from zero opacity, so a render at 400ms produced a
+  1130×518 white rectangle — every dimension correct, no content. Worse than an obviously broken
+  shot, because the file looks plausible. Settle past the animation, and paint the element through a
+  `VisualBrush` into a rectangle of its own size rather than `Render(element)`: the transition leaves
+  a `TranslateTransform`, and rendering the visual directly draws it at that offset, partly outside
+  the bitmap.
 - **A collapsed element measures ZERO, so a size assertion on one passes while proving nothing
   (2026-08-02, v9.3.1).** The check that two buttons are the same height was first driven against the
   main window, where `ClearFiltersButton` sits inside the collapsed advanced-search panel: it

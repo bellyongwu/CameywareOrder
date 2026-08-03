@@ -43,6 +43,15 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 Nothing in flight.
 
+## v9.3.2 — the ready-made headings sat right of their values
+
+The header and the item rows are separate Grids with identical columns, but only the rows carry a
+Remove button in the trailing `Auto` — which measured 0 in the header, so its star columns divided a
+wider space and every heading drifted right, worst at the last one. `IsSharedSizeScope` +
+`SharedSizeGroup` ties the two Autos together. The order editor had never been rendered by the
+harness before this; it is now. See `context.md` for the diagnostic tell and for the two traps in
+rendering a panel that fades in.
+
 ## v9.3.1 — two UI fixes
 
 Lock / Change Password / Sign Out collapsed into one **Account** menu, in that order (they were the

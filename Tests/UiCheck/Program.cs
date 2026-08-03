@@ -157,6 +157,12 @@ internal static class Program
         shortcutsOk &= CheckFilterButtonHeights(opened);
         Render(opened, Path.Combine(outDir, "main-filters-open.png"), 1500, 900);
 
+        // The order editor's ready-made section (v9.3.2). Never rendered before, and it is where the
+        // column-alignment defect lived: the header row and the item rows are separate Grids, and
+        // only the rows carry a Remove button — so the header's trailing Auto column measured zero
+        // and every heading drifted right of the values beneath it. Nothing but a picture shows that.
+        RenderReadyMadeSection(scopeFactory, localization, Path.Combine(outDir, "order-ready-made.png"));
+
         // The Account menu's CONTENTS (v9.3.1). A Popup lives in its own window and never appears in
         // the parent's RenderTargetBitmap, so opening the menu and re-rendering the window would
         // produce the same picture as before and prove nothing. Its Child is an ordinary visual.
@@ -404,6 +410,81 @@ internal static class Program
             entries.Count > 2 && entries[2] == LocalizationService.Instance["Toolbar.SignOut"]);
 
         return ok;
+    }
+
+    /// <summary>
+    /// Opens the order editor on the ready-made panel with three priced lines and renders that
+    /// section alone.
+    /// </summary>
+    /// <remarks>
+    /// The whole window is far taller than a useful screenshot, so this renders the panel rather
+    /// than the window — the panel is an ordinary visual inside the same tree, so it needs no
+    /// separate measure the way a popup's child does.
+    ///
+    /// Three rows rather than one: the defect being guarded against is a HEADER that drifts right of
+    /// the values, and a single row shows the drift less clearly than a column of them.
+    /// </remarks>
+    private static void RenderReadyMadeSection(
+        IServiceScopeFactory factory, LocalizationService localization, string path)
+    {
+        var order = new CameywareOrder.Models.Order
+        {
+            OrderNumber = "ORD-20260801-120000",
+            CustomerName = "Layout Probe",
+            PhoneNumber = "+1 416-555-0404",
+            OrderDate = DateTime.UtcNow,
+            ServiceType = CameywareOrder.Models.OrderServiceType.ReadyMade,
+            ClothingSubtotal = 520m,
+            Items =
+            {
+                new CameywareOrder.Models.OrderItem { ProductName = "suit-jacket", Quantity = 1, UnitPrice = 80m },
+                new CameywareOrder.Models.OrderItem { ProductName = "suit-jacket", Quantity = 1, UnitPrice = 120m },
+                new CameywareOrder.Models.OrderItem { ProductName = "trousers", Quantity = 1, UnitPrice = 320m },
+            },
+        };
+
+        var editor = new CameywareOrder.Views.OrderEditWindow(factory, localization, order);
+        Show(editor, 1200, 900);
+
+        // Past the panel's own transition. Animations/PanelTransition runs 0.5s and the panel fades
+        // IN from zero opacity, so a render at 400ms came out a blank white rectangle of exactly the
+        // right size — the "render after the animation, or the screenshot lies" trap, in the version
+        // where the picture is not merely wrong but empty.
+        Settle(900);
+
+        if (editor.FindName("ReadyMadePanel") is not FrameworkElement panel || panel.ActualWidth < 1)
+        {
+            Console.WriteLine("  !! the ready-made panel did not render");
+            editor.Close();
+            return;
+        }
+
+        var bitmap = new RenderTargetBitmap(
+            (int)Math.Ceiling(panel.ActualWidth), (int)Math.Ceiling(panel.ActualHeight),
+            96, 96, PixelFormats.Pbgra32);
+
+        // Through a VisualBrush rather than Render(panel) directly: the transition leaves a
+        // TranslateTransform on the panel, and rendering the visual itself draws it at that offset —
+        // partly outside the bitmap. A brush painted into a rectangle of the panel's own size
+        // neutralises any transform it happens to be carrying. The white backing is because the
+        // panel's own background is transparent over the window's page colour.
+        var composed = new DrawingVisual();
+        using (var context = composed.RenderOpen())
+        {
+            var bounds = new Rect(0, 0, panel.ActualWidth, panel.ActualHeight);
+            context.DrawRectangle(Brushes.White, null, bounds);
+            context.DrawRectangle(new VisualBrush(panel) { Stretch = Stretch.None }, null, bounds);
+        }
+
+        bitmap.Render(composed);
+
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using (var stream = File.Create(path))
+            encoder.Save(stream);
+
+        Console.WriteLine($"  {Path.GetFileName(path)}  {bitmap.PixelWidth}x{bitmap.PixelHeight}");
+        editor.Close();
     }
 
     /// <summary>Opens a top-level menu and renders the drop-down itself.</summary>

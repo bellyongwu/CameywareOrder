@@ -974,7 +974,14 @@
                         <TextBlock Style="{StaticResource SectionHeading}" Margin="0,0,0,8" Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.ReadyMade], Mode=OneWay}"/>
                         <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.Panel.ReadyMadeHint], Mode=OneWay}" Foreground="#666" Margin="0,0,0,12"/>
                         <Button x:Name="AddItemButton" Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[OrderEdit.AddItem], Mode=OneWay}" Width="120" Padding="10,4" HorizontalAlignment="Left" Click="OnAddClothingItemClick"/>
-                        <StackPanel x:Name="ClothingItemsPanel" Margin="0,12,0,0"/>
+                        <!-- IsSharedSizeScope is load-bearing here (v9.3.2), not decoration. The
+                             header and every item row are SEPARATE Grids with identical column
+                             definitions — but only the rows carry a Remove button in the trailing
+                             Auto column. The header's Auto column was therefore 0 wide, so its star
+                             columns divided a wider space than the rows' did and every heading sat
+                             progressively further right than the values under it, worst at the last
+                             column. The scope lets the two Autos agree, which lines the rest up. -->
+                        <StackPanel x:Name="ClothingItemsPanel" Margin="0,12,0,0" Grid.IsSharedSizeScope="True"/>
 
                         <Border Style="{StaticResource PaymentCard}">
                             <StackPanel>

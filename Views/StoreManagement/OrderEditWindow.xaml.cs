@@ -1783,7 +1783,11 @@ public partial class OrderEditWindow : Window
         rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) });
         rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) });
         rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
-        rowGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        rowGrid.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = GridLength.Auto,
+            SharedSizeGroup = ClothingRowActionsGroup
+        });
 
         var categoryBox = new ComboBox { Margin = new Thickness(0, 0, 10, 0), Padding = new Thickness(6, 4, 6, 4) };
 
@@ -1884,6 +1888,12 @@ public partial class OrderEditWindow : Window
             ApplyReadOnlyModeToClothingRows();
     }
 
+    /// <summary>
+    /// Ties the header's trailing column to the item rows' Remove-button column, so the two Grids
+    /// divide the same space and the headings line up with the values under them.
+    /// </summary>
+    private const string ClothingRowActionsGroup = "ClothingRowActions";
+
     private UIElement CreateClothingHeader()
     {
         var headerGrid = new Grid { Margin = new Thickness(0, 12, 0, 8) };
@@ -1891,7 +1901,14 @@ public partial class OrderEditWindow : Window
         headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) });
         headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.2, GridUnitType.Star) });
         headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1.1, GridUnitType.Star) });
-        headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        // Shares its width with the item rows' Remove-button column — see ClothingItemsPanel in the
+        // markup. Empty here, and without the shared group it measured 0, which pushed every heading
+        // right of the values beneath it.
+        headerGrid.ColumnDefinitions.Add(new ColumnDefinition
+        {
+            Width = GridLength.Auto,
+            SharedSizeGroup = ClothingRowActionsGroup
+        });
 
         headerGrid.Children.Add(CreateHeaderText(_localization["Order.Fields.ItemCategory"], 0));
         headerGrid.Children.Add(CreateHeaderText(_localization["Order.Fields.UnitPrice"], 1));
