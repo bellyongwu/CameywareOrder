@@ -80,8 +80,9 @@ public static class ShopAdministration
     }
 
     /// <summary>
-    /// Deletes shops and everything that belongs to them: their orders, those orders' items, and the
-    /// per-shop files keyed on each shop's <see cref="Shop.PublicId"/>.
+    /// Deletes shops and everything that belongs to them: their orders, those orders' items, the
+    /// per-shop files keyed on each shop's <see cref="Shop.PublicId"/>, and the memberships that name
+    /// them.
     /// </summary>
     /// <remarks>
     /// Items go first and explicitly. The relationship is configured with a cascade, but a cascade only
@@ -91,6 +92,12 @@ public static class ShopAdministration
     ///
     /// One `SaveChanges`, so a failure part-way leaves the installation as it was rather than with a
     /// shop whose orders are gone.
+    ///
+    /// The roster goes too, and it is the piece that was missing until v9.5.1. Memberships live in
+    /// `credentials.json` and key on <see cref="Shop.PublicId"/>, so deleting the row left each of them
+    /// pointing at nothing — counted as a shop the person belonged to by every screen that counts
+    /// memberships, and shown by none, because every one of those screens builds its rows from the
+    /// shops that exist. An installation with one shop reported three.
     /// </remarks>
     public static ShopDeletionResult Delete(AppDbContext db, IReadOnlyList<Shop> shops)
     {
@@ -121,6 +128,10 @@ public static class ShopAdministration
 
         foreach (var shop in shops)
             DeletePerShopFiles(shop);
+
+        // After the save, like the files: nothing outside the database is touched until the database
+        // itself has committed, or a failed delete would strip people of shops that still exist.
+        AuthenticationService.Instance.DropShops(shops.Select(shop => shop.PublicId));
 
         return new ShopDeletionResult(tracked.Count, orders.Count);
     }

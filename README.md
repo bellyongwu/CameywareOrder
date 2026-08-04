@@ -11,6 +11,28 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.5.1 — 2026-08-04
+
+**A person's shop count no longer includes shops you have deleted.** In **User Management**, under
+each person's name, is the number of shops they are assigned to — and it was counting branches that
+no longer exist. An installation left with one shop showed *3 shop(s)* beside a member of staff, above
+a list offering the one. The same number sits beside the name on the **Select Shop** screen, and it
+was wrong there too.
+
+- **Deleting a shop now removes the people from it**, the way deleting it already removed its orders
+  and its settings. That was the missing step: the shop went, and everyone's place in it quietly
+  stayed behind where no screen could show it to you or let you clear it.
+- **The number is now counted from the shops that exist**, so it is right on this release for the
+  shops you deleted *before* it — you do not have to do anything, delete anything again, or re-assign
+  anybody. Open **User Management** and the count will have corrected itself.
+- **On the Select Shop screen the number now keeps up.** Delete a shop from **Store Management** and
+  come back, and the count beside your name changes with the list instead of holding the old total
+  until the app is restarted.
+
+**Nobody's access changed.** This corrects a number that was being reported; it does not add or remove
+anyone's permission to open a shop. The shops each person can actually open were always the ones
+listed, and those are unchanged.
+
 ### v9.5.0 — 2026-08-03
 
 **The period filter moves into Advanced search, gains a This year button, and stops at today.** Three

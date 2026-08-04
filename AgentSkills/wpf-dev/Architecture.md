@@ -109,7 +109,8 @@ move.
   - `ShopAdministration` (static) — the one place the shop-level destructive rules live: `Delist` /
     `Activate` (sets the EXISTING `Shop.IsArchived`, which the startup load, the picker and the
     name-uniqueness check already honour, plus a `DelistedOnUtc` audit stamp), `Delete` (orders, items,
-    the shop row, and the per-shop FILES named after its `PublicId`), `Reinitialize` (every shop —
+    the shop row, the per-shop FILES named after its `PublicId`, and — v9.5.1 —
+    `AuthenticationService.DropShops`, the MEMBERSHIPS naming it), `Reinitialize` (every shop —
     accounts, language and global settings deliberately kept, so nobody is locked out), `CountOrders`,
     `AllShops`, `CreateDemoShop` (one click, built from the shipped presets, seeded with the 100 preset
     orders and flagged `Shop.IsDemo`; returns a `DemoShopResult` so the panel can report how much
@@ -182,6 +183,13 @@ move.
     (`ListMembers` / `AddMember` / `UpdateMember` / `CanSetPasswordFor` → `AccountOperationResult`)
     backs Store Members; installation-wide CRUD (`CreateAccount` / `DeleteAccount` / `SetPassword` /
     `SetShopRoles` / `UpdateAccountContact`) backs User Management.
+    **`DropShops(shopPublicIds)` (v9.5.1)** withdraws every membership of the given shops, and is the
+    roster's counterpart to `DropRole`: called from `ShopAdministration.Delete` so the shops that exist
+    and the memberships naming them cannot disagree. Deliberately reachable ONLY from that explicit
+    delete — there is no startup sweep against the current database, because this file lives outside it
+    and databases move between machines (`context.md`). Screens that COUNT memberships
+    (`UserManagementWindow.BuildSummary`, the `ShopPickerWindow` header) resolve against the shops that
+    exist rather than trusting the list, so a file written before v9.5.1 still reads correctly.
     **Passwords (v9.2, file schema 6).** `SeedAccounts` is ONE entry — the administrator; `manager`,
     `staff`, `test1` and `test2` no longer ship. `WritePassword` is the single write path and the
     only caller of `CheckPassword` (minimum length, and never the user name), so

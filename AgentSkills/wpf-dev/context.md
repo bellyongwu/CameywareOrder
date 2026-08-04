@@ -24,6 +24,33 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A reference outlives what it names — count against the AUTHORITY, not the reference list
+  (2026-08-04, v9.5.1).** `ShopMembership.RoleIds` already carries this rule in its own doc ("an id
+  naming a role that no longer exists grants nothing; the catalog is the authority, not this list") and
+  it was never applied to the shop the membership names. Deleting a shop removed the row, its orders
+  and its per-shop files and left every membership keyed on its `PublicId` behind, where no screen could
+  show it and every screen that COUNTED memberships counted it: one shop in the database, `3 shop(s)`
+  under a person's name. Before counting a collection of references on screen, ask what the authority
+  is and resolve against it — the same question `CanAccessShop` already asks about roles.
+- **Fixing the cause and repairing the data are two different jobs, and only one of them helps today
+  (2026-08-04, v9.5.1).** The root-cause fix (a delete withdraws the memberships) is right and repairs
+  nothing already on disk — the installation that reported this had two dead memberships per account
+  before it existed. Expect to need both, and be explicit about which one the user actually sees.
+- **Do NOT sweep `credentials.json` against the current database (2026-08-04, v9.5.1).** The obvious
+  third option — prune, at startup, every membership naming a shop the database does not have — repairs
+  the file and is wrong. That file lives OUTSIDE the database and whole databases move between
+  machines (it is why memberships key on `Shop.PublicId` rather than `Shop.Id` in the first place), so
+  "the shop is not in this database" is not "the shop is gone", and the sweep delists people the moment
+  a different or older `orders.db` is attached. Pruning is reachable only from the EXPLICIT delete; the
+  reasoning is recorded in `DropShops`' remarks so it is not re-attempted.
+- **A count written once in a constructor goes stale where the thing it counts reloads (2026-08-04,
+  v9.5.1).** Found only while moving the shop picker's number onto the row list: `ApplySignedInHeader`
+  ran once at construction while `LoadShops` ran four times, so deleting a shop from Store Management
+  shrank the card list and left the old total above it. Reading the number off the collection it
+  describes, and refreshing it where that collection is built, fixes the staleness and the wrong source
+  with one structure. When a summary and a list disagree, suspect the summary is answering from a
+  different source, not that its arithmetic is wrong.
+
 - **A `CanExecute` guard reaches the CHROME, not the command (2026-08-03, v9.5.0).** The forward
   period arrow was stopped at the current month by giving `NextPeriodCommand` a `CanExecute`. The
   button greyed out correctly and the render looked exactly right — and the command underneath it

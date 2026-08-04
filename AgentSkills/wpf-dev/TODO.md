@@ -17,6 +17,82 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-04 19:26 — v9.5.1: deleting a shop leaves its memberships behind, so the account count lies  [DONE]
+- Ask: "use skill wpf-dev AgentSkills\wpf-dev\SKILL.md, we have a bug right now, the user management
+  panel shows the wrong number of active users, after I delete the stores. for instance, `Leon Wu` is
+  the user that I set in the store, however, it shows three stores for this role. I believe it still
+  keep the old record count for the previous stores. Currently I have one store only for this user,
+  it should show only one."
+- Measured first (SKILL §9), against the user's own installation:
+  - `orders.db` holds **1** shop (`eeab645d…`).
+  - `credentials.json` holds **3** active memberships for `leonfighter` and **3** for `leonfighter1`;
+    2 of each name a shop that no longer exists. `BuildSummary` counts 3, the truth is 1.
+- Cause: `ShopAdministration.Delete` removes the shop rows, their orders and their per-shop files,
+  but never touches `credentials.json`. Memberships key on `Shop.PublicId`, so they outlive the shop
+  silently — nothing on any screen can show or clear one.
+- Plan:
+  - [x] `AuthenticationService.DropShops(shopPublicIds)` — mirrors the existing `DropRole`, which is
+        how a deleted ROLE is withdrawn from every membership in the same operation
+  - [x] `ShopAdministration.Delete` calls it, so the delete stops manufacturing orphans
+  - [x] `UserManagementWindow.BuildSummary` counts memberships whose shop EXISTS — fixes the data
+        already on disk without deleting anything, and stays honest when a different database is
+        attached (memberships live outside the db and the db moves between machines)
+  - [x] `ShopPickerWindow` header: same wrong number, same cause; count what the list will show, and
+        refresh it on every `LoadShops` rather than once in the constructor
+  - [x] democheck: the delete section now asserts the roster half, and restores `credentials.json`
+  - [x] Both gates (§9b) → build 0/0 → harness suite → render → README + version → companions
+- Notes: `AuthenticationService.Roster.cs` (`DropShops`), `ShopAdministration.cs`,
+  `UserManagementWindow.xaml.cs`, `ShopPickerWindow.xaml.cs`, `Tests/DemoCheck/Program.cs`,
+  `Directory.Build.props` 9.5.1, `README.md`. Build 0 warnings / 0 errors; suite green (datacheck 86,
+  authcheck 47, democheck 44, uicheck, keycheck, surfacecheck); published, exe stamps 9.5.1.0.
+
+  **Two fixes, and the second is the one that helped the user today.** Pruning on delete is the
+  correct root-cause fix but repairs nothing already written — the reporting installation had two dead
+  memberships per account on disk before the fix existed. Only the count resolving against the live
+  shop list fixed what was on screen. Rendered against the user's own data to prove it: `leonfighter`
+  went from `3 shop(s)` to `1 shop(s)`, beside a matrix of one row.
+
+  **A startup sweep was considered and rejected.** It would have repaired the file too, but
+  `credentials.json` lives OUTSIDE the database and whole databases move between machines — so "the
+  shop is not in this database" is not "the shop is gone", and a sweep would delist people the moment
+  someone attached a different or older `orders.db`. The prune is therefore reachable only from the
+  explicit delete. This is recorded in `DropShops`' own remarks so it is not re-attempted.
+
+  **The picker's header was wrong a second way, found only by moving the count.** It was written once
+  in the constructor, so deleting a shop from Store Management shrank the card list and left the old
+  number above it. Reading the number off `_rows` and calling `ApplySignedInHeader` at the END of
+  `LoadShops` fixes both faults with one structure.
+
+  **The new assertion was proved able to fail** (§9a-1.2): commenting out the one `DropShops` call
+  turned "deleting a shop withdraws its memberships" red and left everything else green. Its companion
+  ("...and leaves the person's other shops alone") is what stops a delete that empties the whole roster
+  from passing.
+
+- Reported, NOT fixed — the same orphan memberships reach further than the count, and every one of
+  these is repaired going forward by the delete but still carries pre-v9.5.1 data:
+  - `AuthenticationService.ResolveCapabilities` unions installation-scoped capabilities from EVERY
+    active membership, so a role instance in a deleted shop still grants them. The nearest thing to a
+    privilege leak in the set.
+  - `IsLockedOut` and `UserManagementWindow.CanSignInAs` both read "active somewhere", which a dead
+    shop satisfies — someone delisted from every real shop is neither locked out nor hidden from
+    Sign in as.
+  - `CanSetPasswordFor` requires the target's memberships to be a subset of the manager's managed
+    shops, so an orphan the manager cannot possibly manage REFUSES a legitimate password reset.
+  - `product-catalog-<publicId>.json` is not deleted with its shop. `DeletePerShopFiles` sweeps the
+    measurement-terms file, the branding folder and `roles.json`'s per-shop role instances
+    (`RolePermissionStore.DropShop`) — but `ProductCatalogService` names a file the same way and is not
+    in that list. Eight of them on the reporting machine against one live shop. It carries the risk
+    `DropShop`'s own comment names: a restored archive with the same `PublicId` inherits a catalogue
+    nobody remembers setting.
+  - NOTE for anyone reading the first draft of this entry: `roles.json` was listed here as unpruned and
+    that was WRONG — `Architecture.md` said it was handled, the source agreed, and the claim came from
+    grepping `Delete` without following `DeletePerShopFiles`. The membership list was genuinely the only
+    thing the delete missed.
+- Also found: `Tests\run-all.ps1` cannot run under Windows PowerShell 5.1 (no `pwsh` on this machine).
+  It is UTF-8 with no BOM, 5.1 reads it as ANSI, and the em dash in `"BUILD FAILED — ..."` becomes a
+  curly quote — which PowerShell accepts as a string delimiter, so the file stops parsing at line 33.
+  Saving it UTF-8 WITH a BOM would fix it for both shells. The suite was run step by step instead.
+
 ### 2026-08-03 22:33 — v9.5.0: the period filter stops at today, moves into Advanced search, and gains This year  [DONE]
 - Ask: "use wpf-dev skill. We have added the filter based on current month for order records. but a few issues:
   1. if the month is over than current month, the right arrow should be disabled. and only up to today.

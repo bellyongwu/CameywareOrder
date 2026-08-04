@@ -28,6 +28,9 @@ public partial class UserManagementWindow : Window
     private readonly ObservableCollection<ShopAssignmentRow> _assignments = new();
     private readonly List<Shop> _shops;
 
+    // The same set as _shops, as a lookup: BuildSummary asks it once per account row.
+    private readonly HashSet<Guid> _existingShopIds;
+
     // Selecting an item programmatically raises SelectionChanged, and clearing the list raises it
     // with a null selection — both would repaint the detail pane mid-rebuild.
     private bool _isReloading;
@@ -43,6 +46,7 @@ public partial class UserManagementWindow : Window
         AssignmentList.ItemsSource = _assignments;
 
         _shops = LoadShops();
+        _existingShopIds = _shops.Select(shop => shop.PublicId).ToHashSet();
 
         ReloadUsers(selectUserName: null);
     }
@@ -106,12 +110,29 @@ public partial class UserManagementWindow : Window
         ShowSelectedUser();
     }
 
+    /// <summary>
+    /// "Three shops" under an account's name — counted against the shops that EXIST.
+    /// </summary>
+    /// <remarks>
+    /// The membership list alone is not the answer, for the same reason it is not the authority on
+    /// which ROLES exist: it is a set of references, and a reference outlives what it names. A shop
+    /// deleted before v9.5.1 left its memberships in `credentials.json`, and this line counted them —
+    /// an installation with one shop reported three, above a matrix showing the one. Deleting now
+    /// withdraws them (`ShopAdministration.Delete`), but that repairs nothing already written, and it
+    /// is not the only way the two can part company: `credentials.json` lives outside the database
+    /// and whole databases move between machines.
+    ///
+    /// So this counts what <see cref="BuildAssignmentRows"/> can draw, which is the number the person
+    /// reading it is about to check against the list — and it is right on a file written by any
+    /// version.
+    /// </remarks>
     private string BuildSummary(UserAccount account)
     {
         if (account.IsAdministrator)
             return _localization["Shop.Role.Admin"];
 
-        var shopCount = account.Memberships.Count(membership => membership.IsActive);
+        var shopCount = account.Memberships.Count(membership =>
+            membership.IsActive && _existingShopIds.Contains(membership.ShopPublicId));
 
         return shopCount == 0
             ? _localization["Users.NoAccess"]

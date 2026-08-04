@@ -487,6 +487,48 @@ public sealed partial class AuthenticationService
         => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Withdraws every membership of the given shops, from every account. Called by
+    /// <c>ShopAdministration.Delete</c> as part of the same operation, so the shops that exist and the
+    /// memberships that name them cannot disagree.
+    /// </summary>
+    /// <remarks>
+    /// The counterpart to <see cref="DropRole"/>, and for the same reason: a membership keyed on a
+    /// shop nobody can open is invisible on every screen — no window lists it, so no window can clear
+    /// it — while still being counted as a shop the person belongs to. Deleting a shop already takes
+    /// its orders and its per-shop files with it; its half of the roster is the piece that was left.
+    ///
+    /// Unlike <see cref="DropRole"/> the whole membership goes, not a field of it. A membership
+    /// stripped of its roles still renders as "no role" on a roster somebody can read and fix; a
+    /// membership of a deleted shop has no roster left to render on.
+    ///
+    /// Called ONLY from the explicit delete. There is deliberately no sweep that prunes whatever the
+    /// current database happens not to contain: this file lives outside the database and whole
+    /// databases move between machines, so "the shop is not in front of me" is not "the shop is gone".
+    /// </remarks>
+    public void DropShops(IEnumerable<Guid> shopPublicIds)
+    {
+        ArgumentNullException.ThrowIfNull(shopPublicIds);
+
+        var dropped = shopPublicIds.ToHashSet();
+
+        if (dropped.Count == 0)
+            return;
+
+        var changed = false;
+
+        foreach (var record in _file.Users)
+            changed |= record.Memberships.RemoveAll(m => dropped.Contains(m.ShopPublicId)) > 0;
+
+        if (!changed)
+            return;
+
+        Save(_file);
+
+        if (CurrentUser is not null && FindRecord(CurrentUser.UserName) is { } current)
+            RefreshCurrentUser(current);
+    }
+
+    /// <summary>
     /// Second half of the upgrade from a single global role to per-shop memberships: an account that
     /// held Manager or Staff before could open every shop, so it is made an active member of every
     /// shop that exists, with that role.

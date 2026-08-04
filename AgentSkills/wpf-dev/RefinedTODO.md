@@ -41,7 +41,34 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 ## Open
 
-Nothing in flight.
+Nothing in flight. Five adjacent findings from v9.5.1 are reported but NOT fixed — see that entry.
+
+## v9.5.1 — a deleted shop kept its people
+
+`ShopAdministration.Delete` removed the shop, its orders and its per-shop files but never
+`credentials.json`, so every membership keyed on the dead `Shop.PublicId` survived. One shop in the
+database, `3 shop(s)` beside a member of staff.
+
+**Both halves were needed, for different reasons.** `DropShops` on delete (mirroring `DropRole`, the
+existing precedent) is the root-cause fix and repairs nothing already written. The count resolving
+against the shops that EXIST is what fixed the reporting installation, and is right on a file written
+by any version.
+
+**A startup sweep was rejected and must not be re-attempted.** `credentials.json` lives outside the
+database and whole databases move between machines, so "not in this database" is not "gone" — a sweep
+delists people the moment a different `orders.db` is attached. The prune is reachable only from the
+explicit delete.
+
+The picker's header was wrong a second, independent way: written once in the constructor, so a shop
+deleted from Store Management shrank the list and left the number. Counting `_rows` and calling
+`ApplySignedInHeader` at the END of `LoadShops` fixes both with one structure.
+
+Still carrying pre-v9.5.1 orphans (repaired going forward by the delete, reported to the user, not
+fixed): `ResolveCapabilities` grants installation-scoped capabilities from a deleted shop's role
+instance; `IsLockedOut` / `CanSignInAs` read "active somewhere" and a dead shop satisfies it;
+`CanSetPasswordFor` REFUSES a legitimate reset over an orphan. Separately, `product-catalog-<publicId>.json`
+is not swept by `DeletePerShopFiles` the way the terms file, the branding folder and `roles.json`'s
+per-shop role instances are.
 
 ## v9.4.0 / v9.5.0 — the order list opens on this month
 

@@ -19,10 +19,10 @@
     README.md's "Latest release" heading and this number must always name the same release.
   -->
   <PropertyGroup>
-    <Version>9.5.0</Version>
+    <Version>9.5.1</Version>
     <AssemblyVersion>9.0.0.0</AssemblyVersion>
-    <FileVersion>9.5.0.0</FileVersion>
-    <InformationalVersion>9.5.0</InformationalVersion>
+    <FileVersion>9.5.1.0</FileVersion>
+    <InformationalVersion>9.5.1</InformationalVersion>
     <Company>Cameyware INC</Company>
     <Product>Cameyware Order</Product>
   </PropertyGroup>

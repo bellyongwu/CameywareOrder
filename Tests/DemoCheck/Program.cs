@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Reflection;
+using System.Security.Cryptography;
 using CameywareOrder.Configuration;
 using CameywareOrder.Data;
 using CameywareOrder.Localization;
@@ -16,9 +17,15 @@ namespace DemoCheck;
 /// order history, the one-demo-store rule, and Copy Shop's naming.
 /// </summary>
 /// <remarks>
-/// Touches no user data. The database is a fresh file in a temp folder and every shop is created by
-/// this run, which is the rule this project's harnesses keep re-learning: a harness must establish
-/// what it asserts on.
+/// The database is a fresh file in a temp folder and every shop is created by this run, which is the
+/// rule this project's harnesses keep re-learning: a harness must establish what it asserts on.
+///
+/// ONE section is not confined to that temp folder. Deleting a shop now also withdraws its
+/// memberships, and it does so through the <c>AuthenticationService</c> singleton over the real
+/// <c>credentials.json</c> — there is no seam to point that at a fixture. So the delete section
+/// snapshots the file, pushes a fixture ACCOUNT (never a real one) into the in-memory copy, and
+/// restores the bytes in a finally; the run then asserts the file is unchanged, byte for byte, and
+/// fails if it is not. Same shape and same reasoning as authcheck's writing section.
 /// </remarks>
 internal static class Program
 {
@@ -200,20 +207,104 @@ internal static class Program
         }
 
         Console.WriteLine("── delete brings the offer back ───────────────────────");
-        await using (var db = new AppDbContext(options))
+
+        // The roster half of the delete is asserted from here, so credentials.json is snapshotted
+        // around the whole section and restored in the finally — see CheckDeleteDropsMemberships for
+        // why this one harness section cannot stay entirely off the user's data.
+        var credentials = UserDataPaths.ResolveConfigFile("credentials.json");
+        var originalCredentials =
+            File.Exists(credentials) ? await File.ReadAllBytesAsync(credentials) : null;
+        var credentialsBefore = HashOf(credentials);
+
+        try
         {
-            var stored = db.Shops.AsNoTracking().Where(s => s.IsDemo).ToList();
-            ShopAdministration.Delete(db, stored);
-            Check("deleting the demo store re-opens the offer", !ShopAdministration.HasDemoShop(db));
-            Check("its orders went with it",
-                db.Orders.IgnoreQueryFilters().Count(o => o.ShopId == demo.Id) == 0);
+            var fixture = SeedFixtureAccount(demo.PublicId, out var otherShop);
+
+            await using (var db = new AppDbContext(options))
+            {
+                var stored = db.Shops.AsNoTracking().Where(s => s.IsDemo).ToList();
+                ShopAdministration.Delete(db, stored);
+                Check("deleting the demo store re-opens the offer", !ShopAdministration.HasDemoShop(db));
+                Check("its orders went with it",
+                    db.Orders.IgnoreQueryFilters().Count(o => o.ShopId == demo.Id) == 0);
+            }
+
+            CheckDeleteDropsMemberships(fixture, demo.PublicId, otherShop);
         }
+        finally
+        {
+            if (originalCredentials is not null)
+                await File.WriteAllBytesAsync(credentials, originalCredentials);
+        }
+
+        Check("credentials.json restored byte for byte", credentialsBefore == HashOf(credentials),
+            "the user's accounts were left modified");
 
         try { Directory.Delete(folder, recursive: true); } catch (IOException) { /* temp folder */ }
 
         Console.WriteLine();
         Console.WriteLine($"{_passed} passed, {_failed} failed");
         return _failed == 0 ? 0 : 1;
+    }
+
+    /// <summary>
+    /// Puts a fixture account holding TWO memberships into the live service's in-memory file: one in
+    /// the shop about to be deleted, one in a shop that has nothing to do with this run.
+    /// </summary>
+    /// <remarks>
+    /// The live singleton rather than a throwaway, because the thing under test is whether
+    /// <c>ShopAdministration.Delete</c> reaches the roster at all, and it reaches it through
+    /// <c>AuthenticationService.Instance</c>. A throwaway would assert that <c>DropShops</c> works
+    /// while leaving the wiring — the half that was actually missing — untested.
+    ///
+    /// The second membership is the load-bearing one. A delete that dropped every membership rather
+    /// than the deleted shop's would satisfy the first assertion perfectly and delist the whole
+    /// installation.
+    /// </remarks>
+    private static CredentialRecord SeedFixtureAccount(Guid deletedShop, out Guid otherShop)
+    {
+        otherShop = Guid.NewGuid();
+
+        var record = new CredentialRecord
+        {
+            UserName = "democheck-fixture",
+            IsAdministrator = false,
+            Memberships =
+            {
+                new ShopMembership { ShopPublicId = deletedShop, RoleIds = { "staff" } },
+                new ShopMembership { ShopPublicId = otherShop, RoleIds = { "staff" } },
+            },
+        };
+
+        InMemoryFile(AuthenticationService.Instance).Users.Add(record);
+        return record;
+    }
+
+    private static void CheckDeleteDropsMemberships(
+        CredentialRecord fixture, Guid deletedShop, Guid otherShop)
+    {
+        Check("deleting a shop withdraws its memberships",
+            fixture.Memberships.TrueForAll(m => m.ShopPublicId != deletedShop),
+            "the membership outlived the shop — every screen that counts memberships now counts it");
+
+        // Without this one the assertion above passes just as well for a delete that emptied the
+        // roster entirely.
+        Check("...and leaves the person's other shops alone",
+            fixture.Memberships.Exists(m => m.ShopPublicId == otherShop));
+    }
+
+    private static CredentialFile InMemoryFile(AuthenticationService service)
+        => (CredentialFile)typeof(AuthenticationService)
+            .GetField("_file", BindingFlags.NonPublic | BindingFlags.Instance)
+            .GetValue(service);
+
+    private static string HashOf(string path)
+    {
+        if (!File.Exists(path))
+            return "(absent)";
+
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(SHA256.HashData(stream));
     }
 
     private static async Task InvokeAppAsync(string methodName, AppDbContext db)

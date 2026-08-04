@@ -59,8 +59,8 @@ public partial class ShopPickerWindow : Window
             ? Visibility.Visible
             : Visibility.Collapsed;
 
-        ApplySignedInHeader();
-
+        // No ApplySignedInHeader() here: LoadShops ends with it, because the header counts the rows
+        // LoadShops builds.
         LoadShops(currentShop?.Id);
     }
 
@@ -100,24 +100,30 @@ public partial class ShopPickerWindow : Window
         SignedInRoleText.Text = BuildAccessSummary(_user);
     }
 
+    /// <summary>
+    /// "Three shops" beside the signed-in name — the count of the cards below it.
+    /// </summary>
+    /// <remarks>
+    /// Counted from <see cref="_rows"/> rather than from the account's memberships, which is why
+    /// <see cref="ApplySignedInHeader"/> runs at the END of <see cref="LoadShops"/>. Counting the
+    /// memberships answered a subtly different question and got it wrong twice over: a membership of
+    /// a shop DELETED before v9.5.1 survives in `credentials.json` and was counted (one shop, "three
+    /// shops"), and the header was written once in the constructor, so deleting a shop from Store
+    /// Management shrank the list and left the number behind.
+    ///
+    /// Both stop being possible when the number is read off the thing it describes.
+    /// </remarks>
     private string BuildAccessSummary(UserAccount user)
     {
         if (user.IsAdministrator)
             return _localization["Shop.Role.Admin"];
 
-        var shopCount = CountAccessibleShops(user);
-
         // "0 shops" is a count where the user needs a statement — it is the whole reason the list
         // below is empty.
-        return shopCount == 0
+        return _rows.Count == 0
             ? _localization["Users.NoAccess"]
-            : _localization.Format("Users.ShopCount", shopCount);
+            : _localization.Format("Users.ShopCount", _rows.Count);
     }
-
-    // Active memberships only: a shop that has delisted this person is not one they can open, so
-    // counting it here would promise access the list below does not offer.
-    private static int CountAccessibleShops(UserAccount user)
-        => user.Memberships.Count(membership => membership.IsActive);
 
     private void LoadShops(int? preselectShopId)
     {
@@ -172,6 +178,11 @@ public partial class ShopPickerWindow : Window
             _rows.FirstOrDefault(row => row.Shop.Id == preselectShopId) ?? _rows.FirstOrDefault();
 
         UpdateOpenButtonState();
+
+        // Last, and inside LoadShops rather than beside its callers: the header reports how many of
+        // these rows there are, and three of the four reloads (Store Management, a language change,
+        // a new shop) can change that number. See BuildAccessSummary.
+        ApplySignedInHeader();
     }
 
     /// <summary>
