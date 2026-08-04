@@ -413,6 +413,10 @@ public partial class MainWindow
     /// narrowed by a date range the user set an hour ago, then collapsed, reads as a list that has
     /// lost half its orders — the worst kind of bug report, because nothing on screen is wrong.
     ///
+    /// Since v9.5.0 that mark is load-bearing on the very first frame, not only after somebody sets
+    /// a filter: the list OPENS on the current month and the period control that says so now lives
+    /// inside this panel. The mark is the whole of what a shop sees telling it the list is narrowed.
+    ///
     /// Written from code rather than bound, so it has to be re-run from
     /// <see cref="OnLanguageChangedGlobally"/> like every other code-written label here, and from the
     /// view model's <c>Query</c> change so the mark appears the moment a filter is set.

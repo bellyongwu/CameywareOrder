@@ -424,7 +424,8 @@
   <Text key="Filter.Status.All">Tous</Text>
   <Text key="Filter.RecordFontSize">Taille du texte</Text>
   <Text key="Filter.Period.Label">Période</Text>
-  <Text key="Filter.Period.Current">Ce mois-ci</Text>
+  <Text key="Filter.Period.CurrentMonth">Ce mois-ci</Text>
+  <Text key="Filter.Period.CurrentYear">Cette année</Text>
   <Text key="Filter.Period.All">Toute la période</Text>
   <Text key="Paging.PageSize">Par page</Text>
   <Text key="Paging.Previous">Précédent</Text>

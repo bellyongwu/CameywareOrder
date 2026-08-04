@@ -576,18 +576,27 @@ move.
       the copies end up selected, which is what a single copy always did through `SelectedOrder`.
       `RebuildOrdersView` COLLAPSES the selection to the anchor: Ctrl+A means "this page", so a
       selection must not survive a search, a sort or a page turn.
-    - **The period quick-filter** (v9.4.0): the list OPENS on `DateRange.CurrentMonth()` rather than
-      on everything — a shop's working set is what it took this month, and the whole history is what
-      it looks up by name. `PreviousPeriodCommand` / `NextPeriodCommand` step through
-      `DateRange.Shift`, so they move a month by a month and a custom span by its own length;
-      `CurrentMonthCommand` returns; `PeriodTitle` is `DateRange.Title` in the APPLICATION's culture
-      (not `CurrentUICulture`, which is the OS's), falling back to `Filter.Period.All`. Forward past
-      the current month is deliberately allowed. **`SetPeriod` writes back to `FromDate`/`ToDate`**:
-      one period with two surfaces, and the advanced row already writes the other way, so without the
-      write-back the pickers would describe a different month from the list. It assigns the FIELDS,
-      not the properties, or `ApplyPeriod` would recompose the month as a `Custom` span and cost the
-      arrows the month-ness they step by. `ClearQuery` drops the period to null, not back to the
-      month — a "clear filters" that left a filter standing would be lying.
+    - **The period quick-filter** (v9.4.0, revised v9.5.0): the list OPENS on
+      `DateRange.CurrentMonth()` rather than on everything — a shop's working set is what it took this
+      month, and the whole history is what it looks up by name. `PreviousPeriodCommand` /
+      `NextPeriodCommand` step through `DateRange.Shift`, so they move a month by a month, a year by
+      a year and a custom span by its own length; `CurrentMonthCommand` / `CurrentYearCommand` set
+      one; `PeriodTitle` is `DateRange.Title` in the APPLICATION's culture (not `CurrentUICulture`,
+      which is the OS's), falling back to `Filter.Period.All`.
+      **`ShiftedPeriod(periods)` is the single definition of where an arrow leads** — null for "all
+      time" (nothing to step) and null forward of the period containing today (`DateRange.HasStarted`
+      on the period it would LAND on, which covers month, year and span in one test).
+      `CanShiftPeriod` and `ShiftPeriod` both read it, because written as two rules they were two: the
+      button greyed correctly while the command underneath still stepped past the current month.
+      **`SetPeriod` writes back to `FromDate`/`ToDate`**: one period with two surfaces, and the
+      advanced row already writes the other way, so without the write-back the pickers would describe
+      a different month from the list. It assigns the FIELDS, not the properties, or `ApplyPeriod`
+      would recompose the month as a `Custom` span and cost the arrows the month-ness they step by.
+      `ClearQuery` drops the period to null, not back to the month — a "clear filters" that left a
+      filter standing would be lying.
+      The controls live INSIDE `AdvancedFilterPanel` (v9.5.0), above the `From`/`To` pickers they
+      write into; `RefreshAdvancedSearch`'s `•` mark is what tells a shop the list is narrowed, and
+      it is on screen from the first frame because the default period is a period.
     - `DeleteOrderCommand` → `ConfirmAndDeleteSelectedAsync` (owns the one MessageBox, naming a
       single order or counting several) → `DeleteSelectedAsync` (does the work, no dialog, so a
       harness can drive it — same split as `TryValidateForSave`/`ValidateForSave`). One query over
@@ -1033,8 +1042,10 @@ move.
 Four pieces, each usable without the others — the analysis the feature was asked to start with:
 
 - **`Models/Global/DateRange`** — a calendar period: `Day` / `Month` / `Year` / `Custom`, half-open
-  and in LOCAL days, with `Shift` (previous/next by its own kind) and `Title`. Knows nothing about
-  money or orders; the next filter or export should take this rather than a start/end pair.
+  and in LOCAL days, with `Shift` (previous/next by its own kind), `Title`, `CurrentMonth` /
+  `CurrentYear`, and `HasStarted` (v9.5.0 — what a forward arrow is enabled by, and the reason the
+  ceiling is one test rather than one per kind of period). Knows nothing about money or orders; the
+  next filter or export should take this rather than a start/end pair.
 - **`Models/StoreManagement/SettlementReport`** — `ServiceLine`, `ServiceLineTotals`, `MethodTotals`,
   `OrderStateCounts` and the report itself. Plain data: no WPF, no keys, no database. Refunded orders
   are COUNTED but earn nothing, and their value is reported on `RefundedValue` rather than dropped.

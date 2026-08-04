@@ -425,7 +425,8 @@
   <Text key="Filter.Status.All">Todos</Text>
   <Text key="Filter.RecordFontSize">Tamaño del texto</Text>
   <Text key="Filter.Period.Label">Periodo</Text>
-  <Text key="Filter.Period.Current">Este mes</Text>
+  <Text key="Filter.Period.CurrentMonth">Este mes</Text>
+  <Text key="Filter.Period.CurrentYear">Este año</Text>
   <Text key="Filter.Period.All">Todo el histórico</Text>
   <Text key="Paging.PageSize">Por página</Text>
   <Text key="Paging.Previous">Anterior</Text>

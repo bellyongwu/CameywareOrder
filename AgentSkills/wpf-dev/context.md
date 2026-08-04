@@ -24,6 +24,32 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A `CanExecute` guard reaches the CHROME, not the command (2026-08-03, v9.5.0).** The forward
+  period arrow was stopped at the current month by giving `NextPeriodCommand` a `CanExecute`. The
+  button greyed out correctly and the render looked exactly right — and the command underneath it
+  still stepped past the current month whenever anything called `Execute` directly, which the
+  keyboard, an `InputBinding` and every harness do. WPF asks `CanExecute` to decide how to DRAW the
+  button; it does not enforce it. Put the rule where the work happens and let the enabling read the
+  same function — here one `ShiftedPeriod(periods)` returning null for "leads nowhere", with
+  `CanShiftPeriod` and `ShiftPeriod` both reading it. Two methods stating one rule is two rules.
+  - This is the same shape as "destructive commands own their confirmation" (`SKILL.md` §11): the
+    guard belongs to the action, not to the surfaces that offer it.
+  - It was caught by asserting the period AFTER an `Execute` that should have been refused, not only
+    by asserting `CanExecute` — which passed throughout. An assertion on the chrome cannot see a
+    command that would still run.
+- **Test the period you would LAND on, not the one you are leaving (2026-08-03, v9.5.0).** "Forward
+  stops at today" has an obvious spelling — "is this period the current one?" — that needs a separate
+  answer for a month, a year and a custom span, and gets the custom span wrong. Asking instead
+  whether `Shift(1)` has STARTED (`DateRange.HasStarted`) is one test for all three, because `Shift`
+  already knows how far each kind moves. The ceiling then follows any period kind added later for
+  free.
+- **A filter can be hidden if something already says it is on (2026-08-03, v9.5.0).** v9.4.0 kept the
+  period control on a permanently visible row, reasoning that a list which OPENS narrowed has to say
+  so on screen. Moving it into Advanced search did not reintroduce that problem, because
+  `RefreshAdvancedSearch`'s `•` mark reports any live period — and the default period IS a period, so
+  the mark is on the button in the first frame. Before defending a control's placement on "the user
+  must be told", check whether an existing indicator already tells them; the answer here was a render
+  of the collapsed state, not an argument.
 - **A second surface onto an existing filter needs the write-back, and nothing looks wrong without it
   (2026-08-03, v9.4.0).** The period quick-filter and the advanced From/To pickers are two controls
   over one `OrderQuery.Period`. The advanced row already wrote INTO the query; adding arrows that

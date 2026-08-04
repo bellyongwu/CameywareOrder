@@ -17,6 +17,59 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-03 22:33 — v9.5.0: the period filter stops at today, moves into Advanced search, and gains This year  [DONE]
+- Ask: "use wpf-dev skill. We have added the filter based on current month for order records. but a few issues:
+  1. if the month is over than current month, the right arrow should be disabled. and only up to today.
+  2. put month filter into advance search toggle.
+  3. add a 本年 filter. then you can check previous years. but still you cannot go to filter years to check, it is impossible."
+- Plan:
+  - [x] `NextPeriodCommand` gets a `CanExecute`: the period it would land on must have STARTED
+        (`DateRange.HasStarted`). Reverses v9.4.0's deliberate "forward is always allowed"
+  - [x] `PreviousPeriodCommand` too — nothing to step from "all time", so both arrows go dead there
+        rather than the ◀ silently jumping to the current month
+  - [x] Move the period row inside `AdvancedFilterPanel` (the `•` mark on the toggle already
+        reports a live period, so the "hidden filter" objection from v9.4.0 is answered)
+  - [x] `DateRange.CurrentYear()` + `CurrentYearCommand`; `Filter.Period.Current` renamed to
+        `.CurrentMonth`, new `.CurrentYear`, five languages
+  - [x] Harness: the disabled-forward rule at month AND year granularity; re-render the filter card
+  - [x] README, version 9.5.0, companions
+- Notes: **The guard reached the chrome and not the command, and the harness is what said so.**
+  `NextPeriodCommand` got a `CanExecute` and the button greyed correctly — while `ShiftPeriod` itself
+  still stepped past the current month for anything calling `Execute` directly. The assertion
+  "...and would not move even if something called it anyway" went RED on the first run; the
+  `CanExecute` assertion beside it passed throughout, so a check on the chrome alone would have
+  shipped it. Fixed by making `ShiftedPeriod(periods)` the ONE definition of where an arrow leads
+  (null = nowhere), read by both `CanShiftPeriod` and `ShiftPeriod`.
+  **The ceiling is asked of the period it would LAND on**, via a new `DateRange.HasStarted`. The
+  obvious spelling ("is this the current period?") needs a different answer per kind and gets a
+  custom span wrong; `Shift(1).HasStarted` covers month, year and span in one test because `Shift`
+  already knows how far each moves. Asserted at all three granularities, including a loop that walks
+  a 10-day span forward until the arrow refuses (15 steps) and lands on the span containing today.
+  **Both arrows are now dead from "all time"**, reversing v9.4.0's "an arrow from All time lands on
+  the current month" — that rule existed because a DEAD button reads as broken, but a DISABLED one
+  does not, and an arrow that silently invents a period is worse. `ShiftPeriod` no longer invents.
+  **Moving the bar into Advanced search did not lose the "you are being filtered" signal**, which was
+  v9.4.0's whole argument for the extra row: `RefreshAdvancedSearch` already marks the toggle when a
+  period is live, and the default period is a period — rendered the collapsed state and read
+  `Advanced search ▾ •` on the first frame. The filter card is back to two rows and the text-size
+  slider has its full 150px again.
+  Falsification: removed the `CanExecute` argument, rebuilt, and watched all three ceiling assertions
+  (VM, year, and the on-screen `IsEnabled`) go red together, then restored.
+  Disabled styling is the theme's `Opacity 0.45` on the chrome — measured the render, the ▶ glyph
+  reads 229 against 197 for its live neighbours. Not given a treatment of its own; every disabled
+  button in the app looks like this one.
+  Files: `Models/Global/DateRange.cs` (`CurrentYear`, `HasStarted`), `ViewModels/MainViewModel.cs`,
+  `Views/Main/MainWindow.xaml` (period bar inside `AdvancedFilterPanel`, above the pickers it writes
+  into; filter card 3 rows → 2), `Views/Main/MainWindow.OrderList.cs` (remark: the `•` mark is now
+  load-bearing on the first frame), five `*.lang.xml` (`Filter.Period.Current` → `.CurrentMonth`,
+  new `.CurrentYear`), `Tests/UiCheck/Program.cs` (`CheckPeriodBarOnScreen` + 12 more in
+  `CheckPeriodQuickFilter`), `Architecture.md`, `context.md`, `README.md`,
+  `Directory.Build.props` → 9.5.0.
+  Build 0/0, Sonar clean (analyzer in the build). SUITE GREEN: DataCheck 86, AuthCheck 47,
+  DemoCheck 41, UiCheck green + rendered, keycheck 921 keys × 5 parallel, surfacecheck clean.
+  No IDE `get_errors`/SonarLint MCP tool is exposed in this session — Gate 1 could not be run as
+  written in `SKILL.md` §9b; Gate 2 ran as the analyzer package, which is the enforcing copy.
+
 ### 2026-08-03 11:15 — v9.4.0: a period quick-filter on the order list, defaulting to this month  [DONE]
 - Ask: "添加一个新的快捷filter在订单主页面，default在本月。 可以查看之前的订单。也可以往后看。"
   (A new quick filter on the main order page, defaulting to this month; can look at earlier orders and also forward.)

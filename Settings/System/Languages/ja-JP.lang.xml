@@ -426,7 +426,8 @@
   <Text key="Filter.Status.All">すべて</Text>
   <Text key="Filter.RecordFontSize">文字サイズ</Text>
   <Text key="Filter.Period.Label">期間</Text>
-  <Text key="Filter.Period.Current">今月</Text>
+  <Text key="Filter.Period.CurrentMonth">今月</Text>
+  <Text key="Filter.Period.CurrentYear">今年</Text>
   <Text key="Filter.Period.All">全期間</Text>
   <Text key="Paging.PageSize">1 ページあたり</Text>
   <Text key="Paging.Previous">前へ</Text>

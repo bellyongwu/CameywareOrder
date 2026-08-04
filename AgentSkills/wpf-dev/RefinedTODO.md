@@ -43,17 +43,33 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 Nothing in flight.
 
-## v9.4.0 — the order list opens on this month
+## v9.4.0 / v9.5.0 — the order list opens on this month
 
-A period quick-filter on its own always-visible row: `◀ August 2026 ▶ This month`. Not a new filter —
-a second SURFACE onto `OrderQuery.Period`, which the advanced From/To row already wrote. That is why
-the arrows work on a custom span for free: `DateRange.Shift` steps a month by a month and a span by
+A period quick-filter: `◀ August 2026 ▶ This month · This year`. Not a new filter — a second SURFACE
+onto `OrderQuery.Period`, which the advanced From/To row already wrote. That is why the arrows work
+on a custom span for free: `DateRange.Shift` steps a month by a month, a year by a year and a span by
 its own length. `SetPeriod` writes BACK to the two pickers, the half that is easy to omit; it assigns
 the fields, because the properties would recompose the month as `Custom` and cost the arrows their
 month-ness. `ClearQuery` drops the period entirely rather than to the month.
 
-Consequence worth remembering: Search now runs INSIDE the period, so finding an old order means
-clearing first. Documented in `README.md` rather than special-cased.
+v9.5.0 revised three of v9.4.0's decisions, all of them at the user's direction:
+
+- **Forward stops at the period containing today.** v9.4.0 deliberately allowed stepping past it, for
+  orders dated ahead through the GraphQL API; the shop found the empty months worse than the case
+  they served. The test is `Shift(1).HasStarted` — asked of the period it would LAND on, so one rule
+  covers month, year and span.
+- **The bar lives inside Advanced search**, above the pickers it writes into. v9.4.0's argument for
+  its own always-visible row — a list that opens narrowed must say so — is answered by the `•` mark
+  `RefreshAdvancedSearch` already puts on the toggle, which is on screen from the first frame.
+- **Both arrows are dead from "all time".** v9.4.0 sent them to the current month so neither would
+  read as broken; a disabled button does not read as broken, and inventing a period is worse.
+
+`ShiftedPeriod(periods)` is the single definition of where an arrow leads. Split across a `CanExecute`
+and the handler it stopped the button without stopping the command, which is a defect no render can
+show: see `context.md`, "A `CanExecute` guard reaches the CHROME, not the command".
+
+Consequence worth remembering: Search runs INSIDE the period, so finding an old order means clearing
+first. Documented in `README.md` rather than special-cased.
 
 ## v9.3.3 — the pickup date is floored at the ORDER date
 

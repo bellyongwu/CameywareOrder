@@ -81,12 +81,15 @@ public class MainViewModel : INotifyPropertyChanged
             async _ => await CopySelectedAsync(),
             _ => HasSelection && AuthenticationService.Instance.CanCopyOrders);
 
-        // Both directions are always enabled. Backwards is obvious; FORWARDS past the current month
-        // is deliberate too — the shop asked for it, and an order can legitimately be dated ahead
-        // through the GraphQL API, so a stop at "today" would hide records with no way to reach them.
-        PreviousPeriodCommand = new RelayCommand(_ => ShiftPeriod(-1));
-        NextPeriodCommand = new RelayCommand(_ => ShiftPeriod(1));
+        // Forward STOPS at the period containing today (v9.5.0), reversing v9.4.0's "forward is
+        // always allowed". A month that has not begun cannot hold an order the shop took, so stepping
+        // into it only ever produces an empty list the user then has to step back out of. Both arrows
+        // are also dead while the period is "all time": there is no period there to step, and the two
+        // named buttons beside them are the way in.
+        PreviousPeriodCommand = new RelayCommand(_ => ShiftPeriod(-1), _ => CanShiftPeriod(-1));
+        NextPeriodCommand = new RelayCommand(_ => ShiftPeriod(1), _ => CanShiftPeriod(1));
         CurrentMonthCommand = new RelayCommand(_ => SetPeriod(DateRange.CurrentMonth()));
+        CurrentYearCommand = new RelayCommand(_ => SetPeriod(DateRange.CurrentYear()));
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e)
@@ -303,6 +306,17 @@ public class MainViewModel : INotifyPropertyChanged
     public ICommand CurrentMonthCommand { get; }
 
     /// <summary>
+    /// Switches the period to the current calendar YEAR (v9.5.0).
+    /// </summary>
+    /// <remarks>
+    /// It is not only a wider month: it changes what the ARROWS step by, because
+    /// <see cref="DateRange.Shift"/> reads the period's own kind. So this is also how a shop reaches
+    /// last year and the year before — the two date pickers can express any span, but not without
+    /// being told twice which day a year starts and ends on.
+    /// </remarks>
+    public ICommand CurrentYearCommand { get; }
+
+    /// <summary>
     /// What the period reads as on the bar — "August 2026", a span, or "all time".
     /// </summary>
     /// <remarks>
@@ -336,16 +350,50 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>
+    /// Where an arrow would land, or null when it leads nowhere.
+    /// </summary>
+    /// <remarks>
+    /// ONE definition, read by both the enabling and the acting. Written as two methods it was two:
+    /// the button greyed out correctly and the command underneath it still stepped past the current
+    /// month when anything called it, which the harness caught and no amount of looking at the
+    /// screen would have. A guard that only reaches the chrome is not a guard.
+    ///
+    /// Two refusals, and they are different refusals. There is nothing to step when the period is
+    /// "all time", so both arrows lead nowhere; and forward stops at the period containing today,
+    /// because a month or a year that has not begun cannot hold an order the shop took.
+    ///
+    /// The test is on the period this would LAND on, not on the one being left, which is what covers
+    /// a month, a year and a custom span in one line — <c>Shift</c> already knows how far each of
+    /// them moves, so the only question left is whether the answer has started yet.
+    /// </remarks>
+    private DateRange? ShiftedPeriod(int periods)
+    {
+        if (_query.Period is not { } period)
+            return null;
+
+        var shifted = period.Shift(periods);
+        if (periods > 0 && !shifted.HasStarted)
+            return null;
+
+        return shifted;
+    }
+
+    /// <summary>Whether an arrow is live — see <see cref="ShiftedPeriod"/>.</summary>
+    private bool CanShiftPeriod(int periods) => ShiftedPeriod(periods) is not null;
+
+    /// <summary>
     /// Moves the period by whole periods of its own kind.
     /// </summary>
     /// <remarks>
-    /// <c>DateRange.Shift</c> steps a month by a month and a custom span by its own LENGTH, so the
-    /// arrows keep meaning "the one before this" after the advanced pickers have been used. From "all
-    /// time" there is nothing to step, so the arrows land on the current month rather than doing
-    /// nothing — a dead button is indistinguishable from a broken one.
+    /// <c>DateRange.Shift</c> steps a month by a month, a year by a year and a custom span by its own
+    /// LENGTH, so the arrows keep meaning "the one before this" whichever of the three the period
+    /// came from — the This year button sets a period, not a mode.
     /// </remarks>
     private void ShiftPeriod(int periods)
-        => SetPeriod(_query.Period is { } period ? period.Shift(periods) : DateRange.CurrentMonth());
+    {
+        if (ShiftedPeriod(periods) is { } target)
+            SetPeriod(target);
+    }
 
     /// <summary>
     /// Sets the period from the quick-filter side, and writes it through to the date pickers.

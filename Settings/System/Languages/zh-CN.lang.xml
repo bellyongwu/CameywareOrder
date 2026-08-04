@@ -430,7 +430,8 @@
   <Text key="Filter.Status.All">全部</Text>
   <Text key="Filter.RecordFontSize">字号</Text>
   <Text key="Filter.Period.Label">时间段</Text>
-  <Text key="Filter.Period.Current">本月</Text>
+  <Text key="Filter.Period.CurrentMonth">本月</Text>
+  <Text key="Filter.Period.CurrentYear">本年</Text>
   <Text key="Filter.Period.All">全部时间</Text>
   <Text key="Paging.PageSize">每页</Text>
   <Text key="Paging.Previous">上一页</Text>

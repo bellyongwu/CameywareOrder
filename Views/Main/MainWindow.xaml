@@ -550,7 +550,6 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0">
@@ -610,92 +609,99 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- The period quick-filter (v9.4.0). Its OWN row, and always visible.
-                         Not in Advanced search, because the list OPENS narrowed to this month: a
-                         filter already hiding rows has to be on screen saying so, or the shop reads
-                         it as having lost its older orders.
-                         Not on row 0 either, and this was measured rather than guessed — the four
-                         controls need ~380px, which row 0 did not have. Squeezing them in rendered
-                         the text-size slider down to a 40px stub, a defect in a control that has
-                         nothing to do with this feature and the kind only a picture shows.
-                         The month label carries a fixed MinWidth so the arrows do not jump sideways
-                         as the name changes length ("May" against "September", and wider again in a
-                         language that spells the month out). -->
-                    <StackPanel x:Name="PeriodFilterPanel" Grid.Row="1" Orientation="Horizontal"
-                                Margin="0,10,0,0" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.Period.Label], Mode=OneWay}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <Button x:Name="PreviousPeriodButton" Command="{Binding PreviousPeriodCommand}"
-                                Content="&#x25C0;" Padding="10,4" MinWidth="0"
-                                ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Previous], Mode=OneWay}"
-                                AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Previous], Mode=OneWay}"/>
-                        <TextBlock x:Name="PeriodTitleText" Text="{Binding PeriodTitle}"
-                                   VerticalAlignment="Center" TextAlignment="Center"
-                                   MinWidth="150" Margin="10,0,10,0" FontWeight="SemiBold"/>
-                        <Button x:Name="NextPeriodButton" Command="{Binding NextPeriodCommand}"
-                                Content="&#x25B6;" Padding="10,4" MinWidth="0"
-                                ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Next], Mode=OneWay}"
-                                AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Next], Mode=OneWay}"/>
-                        <Button x:Name="CurrentMonthButton" Command="{Binding CurrentMonthCommand}" Margin="12,0,0,0"
-                                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.Period.Current], Mode=OneWay}"/>
-                    </StackPanel>
-
                     <!-- Where to look, and over what period. Collapsed until Advanced search is
                          opened: a shop looking somebody up types a name and presses nothing else, and
                          four more controls on permanent display are four the everyday case has to
-                         read past. -->
-                    <Grid x:Name="AdvancedFilterPanel" Grid.Row="2" Margin="0,10,0,0"
-                          Visibility="Collapsed">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
+                         read past.
+                         Two rows since v9.5.0, the period quick-filter above the pickers it writes
+                         into. It was on its own always-visible row in v9.4.0, on the argument that a
+                         list which OPENS narrowed has to say so on screen — but the Advanced search
+                         toggle already carries a mark whenever a period is set (RefreshAdvancedSearch),
+                         which is the same statement in a control that was already there. -->
+                    <StackPanel x:Name="AdvancedFilterPanel" Grid.Row="1" Margin="0,10,0,0"
+                                Visibility="Collapsed">
 
-                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0"
-                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Field.Label], Mode=OneWay}"/>
-                        <ComboBox x:Name="SearchFieldBox" Grid.Column="1" Width="150" VerticalAlignment="Center"
-                                  ItemsSource="{Binding SearchFieldOptions}"
-                                  SelectedItem="{Binding SearchField}"
-                                  AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Field.Label], Mode=OneWay}">
-                            <ComboBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding Converter={StaticResource SearchFieldName}}"/>
-                                </DataTemplate>
-                            </ComboBox.ItemTemplate>
-                        </ComboBox>
+                        <!-- The period quick-filter. The month label carries a fixed MinWidth so the
+                             arrows do not jump sideways as the text changes length ("May" against
+                             "September", a bare year, and wider again in a language that spells the month
+                             out).
+                             The forward arrow DISABLES at the period containing today (v9.5.0) — a month
+                             or a year that has not begun cannot hold an order the shop took. -->
+                        <StackPanel x:Name="PeriodFilterPanel" Orientation="Horizontal"
+                                    Margin="0,0,0,10" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.Period.Label], Mode=OneWay}"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <Button x:Name="PreviousPeriodButton" Command="{Binding PreviousPeriodCommand}"
+                                    Content="&#x25C0;" Padding="10,4" MinWidth="0"
+                                    ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Previous], Mode=OneWay}"
+                                    AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Previous], Mode=OneWay}"/>
+                            <TextBlock x:Name="PeriodTitleText" Text="{Binding PeriodTitle}"
+                                       VerticalAlignment="Center" TextAlignment="Center"
+                                       MinWidth="150" Margin="10,0,10,0" FontWeight="SemiBold"/>
+                            <Button x:Name="NextPeriodButton" Command="{Binding NextPeriodCommand}"
+                                    Content="&#x25B6;" Padding="10,4" MinWidth="0"
+                                    ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Next], Mode=OneWay}"
+                                    AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Next], Mode=OneWay}"/>
+                            <Button x:Name="CurrentMonthButton" Command="{Binding CurrentMonthCommand}" Margin="12,0,0,0"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.Period.CurrentMonth], Mode=OneWay}"/>
+                            <!-- Not a wider month: it changes what the ARROWS step by, which is the only
+                                 way to reach 2024 without spelling out both ends of it in the pickers. -->
+                            <Button x:Name="CurrentYearButton" Command="{Binding CurrentYearCommand}" Margin="8,0,0,0"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.Period.CurrentYear], Mode=OneWay}"/>
+                        </StackPanel>
 
-                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="16,0,8,0"
-                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.From], Mode=OneWay}"/>
-                        <!-- No Width: the drop-down calendar is floored at the box's width, so a box
-                             pinned narrower than the calendar needs leaves it hanging off. The floor
-                             lives in the themed picker; a call site only has to not override it. -->
-                        <DatePicker x:Name="FromDatePicker" Grid.Column="3" VerticalAlignment="Center"
-                                    SelectedDate="{Binding FromDate}"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
 
-                        <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="12,0,8,0"
-                                   Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.To], Mode=OneWay}"/>
-                        <DatePicker x:Name="ToDatePicker" Grid.Column="5" VerticalAlignment="Center"
-                                    SelectedDate="{Binding ToDate}"/>
+                            <TextBlock Grid.Column="0" VerticalAlignment="Center" Margin="0,0,8,0"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Field.Label], Mode=OneWay}"/>
+                            <ComboBox x:Name="SearchFieldBox" Grid.Column="1" Width="150" VerticalAlignment="Center"
+                                      ItemsSource="{Binding SearchFieldOptions}"
+                                      SelectedItem="{Binding SearchField}"
+                                      AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Field.Label], Mode=OneWay}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Converter={StaticResource SearchFieldName}}"/>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
 
-                        <!-- Tinted rather than plain. It shipped as a bare themed Button and read as
-                             one more input in a row of inputs; it is the only control here that ACTS,
-                             so it takes the theme's indigo tint — the same one the administrator
-                             tools use — and stops looking like a fourth filter. -->
-                        <!-- Padding likewise left to the theme — see Advanced search above. -->
-                        <Button x:Name="ClearFiltersButton" Grid.Column="6" Margin="16,0,0,0"
-                                VerticalAlignment="Center"
-                                Style="{StaticResource AccentIndigoButton}"
-                                IsEnabled="{Binding HasQuery}"
-                                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Clear], Mode=OneWay}"
-                                Click="OnClearFiltersClick"/>
+                            <TextBlock Grid.Column="2" VerticalAlignment="Center" Margin="16,0,8,0"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.From], Mode=OneWay}"/>
+                            <!-- No Width: the drop-down calendar is floored at the box's width, so a box
+                                 pinned narrower than the calendar needs leaves it hanging off. The floor
+                                 lives in the themed picker; a call site only has to not override it. -->
+                            <DatePicker x:Name="FromDatePicker" Grid.Column="3" VerticalAlignment="Center"
+                                        SelectedDate="{Binding FromDate}"/>
 
-                    </Grid>
+                            <TextBlock Grid.Column="4" VerticalAlignment="Center" Margin="12,0,8,0"
+                                       Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.To], Mode=OneWay}"/>
+                            <DatePicker x:Name="ToDatePicker" Grid.Column="5" VerticalAlignment="Center"
+                                        SelectedDate="{Binding ToDate}"/>
+
+                            <!-- Tinted rather than plain. It shipped as a bare themed Button and read as
+                                 one more input in a row of inputs; it is the only control here that ACTS,
+                                 so it takes the theme's indigo tint — the same one the administrator
+                                 tools use — and stops looking like a fourth filter. -->
+                            <!-- Padding likewise left to the theme — see Advanced search above. -->
+                            <Button x:Name="ClearFiltersButton" Grid.Column="6" Margin="16,0,0,0"
+                                    VerticalAlignment="Center"
+                                    Style="{StaticResource AccentIndigoButton}"
+                                    IsEnabled="{Binding HasQuery}"
+                                    Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Search.Clear], Mode=OneWay}"
+                                    Click="OnClearFiltersClick"/>
+
+                        </Grid>
+                    </StackPanel>
                   </Grid>
                 </Border>
 

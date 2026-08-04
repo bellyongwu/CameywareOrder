@@ -11,26 +11,46 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.5.0 — 2026-08-03
+
+**The period filter moves into Advanced search, gains a This year button, and stops at today.** Three
+changes to the month control that arrived in v9.4.0.
+
+- **It lives under Advanced search now**, with the **From** and **To** boxes it feeds, instead of on
+  a row of its own. The **Advanced search** button carries a dot — **Advanced search ▾ •** — whenever
+  a period is narrowing the list, which it is from the moment the app opens, so nothing is hidden
+  from you: the dot is there on the first screen you see.
+- **This year.** Beside **This month**, and it is more than a wider month — it changes what the
+  arrows step by. Press **This year** and each press of the left arrow is one whole year earlier, so
+  last year and the year before are two clicks away rather than four typed dates.
+- **The forward arrow stops at today.** It goes grey once you are on the current month — or the
+  current year, if that is what you chose. There was nothing to find beyond it: a month that has not
+  begun cannot hold an order you have taken, so the arrow only ever led to an empty list you then had
+  to come back from.
+- Everything else is unchanged. The list still opens on the current month, the left arrow still goes
+  back as far as the shop's records do, and **Clear filters** still drops the period along with the
+  rest to show every order ever taken.
+
+**One thing to know:** Search still looks inside the period you are on. If you are hunting for an
+older order by name or receipt number, press **Clear filters** first and then search — that reaches
+everything the shop has.
+
 ### v9.4.0 — 2026-08-03
 
-**The order list now opens on this month, with arrows to move through the others.** A new **Period**
-control sits under the search box: a back arrow, the month you are looking at, a forward arrow, and a
-**This month** button to come straight back.
+**The order list now opens on this month, with arrows to move through the others.** A **Period**
+control with a back arrow, the month you are looking at, a forward arrow, and a **This month** button
+to come straight back. (Moved under **Advanced search** in v9.5.0, which also stopped the forward
+arrow at the current month.)
 
 - **It opens on the current month.** That is the work you are actually doing; the rest is still there
   and one click away. The count beside "Order Records" tells you how many orders the month holds.
 - **Back as far as you like.** Each press of the left arrow is one month earlier.
-- **Forward too**, past this month, for anything already booked ahead.
 - **All of it at once:** press **Clear filters** in Advanced search and the period drops away with
   the rest, showing every order the shop has ever taken.
-- The **From** and **To** boxes under Advanced search follow the month you are on, so you can start
-  from a month and then trim it to a few days. Do that and the arrows step by the length of the span
-  you chose — a ten-day window moves ten days at a time.
+- The **From** and **To** boxes follow the month you are on, so you can start from a month and then
+  trim it to a few days. Do that and the arrows step by the length of the span you chose — a ten-day
+  window moves ten days at a time.
 - The month is written in your own language.
-
-**One thing to know:** Search now looks inside the period you are on. If you are hunting for an older
-order by name or receipt number, press **Clear filters** first and then search — that reaches
-everything the shop has, exactly as it always did.
 
 ### v9.3.3 — 2026-08-03
 

@@ -79,6 +79,19 @@ public readonly record struct DateRange(DateTime Start, DateTime EndExclusive, D
     /// <summary>This month — the settlement period a shop wants nine times out of ten.</summary>
     public static DateRange CurrentMonth() => Month(DateTime.Today);
 
+    /// <summary>This year — the tenth time, and where a shop starts when it is looking back.</summary>
+    public static DateRange CurrentYear() => Year(DateTime.Today);
+
+    /// <summary>
+    /// Whether this period has BEGUN — false for one lying entirely in the future.
+    /// </summary>
+    /// <remarks>
+    /// What a forward arrow is enabled by: a period nobody could have taken an order in yet is not
+    /// somewhere to step to. Deliberately "has started" rather than "has finished", so the period
+    /// containing today is reachable and the one after it is not.
+    /// </remarks>
+    public bool HasStarted => Start <= DateTime.Today;
+
     /// <summary>Whether a stored UTC instant falls inside this local period.</summary>
     public bool Contains(DateTime utcInstant)
     {

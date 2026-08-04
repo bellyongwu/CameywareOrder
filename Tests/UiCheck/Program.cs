@@ -155,6 +155,7 @@ internal static class Program
         Show(opened, 1500, 900);
         Press(opened, "AdvancedSearchButton");
         shortcutsOk &= CheckFilterButtonHeights(opened);
+        shortcutsOk &= CheckPeriodBarOnScreen(opened);
         Render(opened, Path.Combine(outDir, "main-filters-open.png"), 1500, 900);
 
         // The order editor's ready-made section (v9.3.2). Never rendered before, and it is where the
@@ -581,8 +582,47 @@ internal static class Program
     }
 
     /// <summary>
-    /// The period quick-filter: opens on this month, steps both ways, and stays one period with two
-    /// surfaces (v9.4.0).
+    /// The period bar as CHROME: it lives inside Advanced search now, and the forward arrow really
+    /// goes grey on the current month (v9.5.0).
+    /// </summary>
+    /// <remarks>
+    /// Everything else about this feature is asserted on the view model, where the query is. These
+    /// three are the facts a view model cannot have: that the panel moved, that the buttons are bound
+    /// to the commands the assertions exercise rather than to each other, and that WPF's
+    /// command-to-<c>IsEnabled</c> path is actually carrying the refusal to the screen.
+    ///
+    /// Driven on a window whose advanced panel is OPEN, for the same reason the button-height check
+    /// is: a collapsed element is not laid out, and these controls are inside it.
+    /// </remarks>
+    private static bool CheckPeriodBarOnScreen(Window window)
+    {
+        var ok = true;
+
+        void Check(string what, bool passed)
+        {
+            Console.WriteLine((passed ? "  PASS  " : "  FAIL  ") + what);
+            ok &= passed;
+        }
+
+        var panel = (System.Windows.Controls.StackPanel)window.FindName("PeriodFilterPanel")!;
+        var back = (System.Windows.Controls.Button)window.FindName("PreviousPeriodButton")!;
+        var forward = (System.Windows.Controls.Button)window.FindName("NextPeriodButton")!;
+        var year = (System.Windows.Controls.Button)window.FindName("CurrentYearButton")!;
+
+        Check("the period bar is inside the Advanced search panel",
+            panel.IsDescendantOf((System.Windows.DependencyObject)window.FindName("AdvancedFilterPanel")!));
+        Check($"...and is really laid out there ({panel.ActualWidth}x{panel.ActualHeight})",
+            panel.ActualWidth > 0 && panel.ActualHeight > 0);
+        Check($"This year is on it and measured ({year.ActualWidth})", year.ActualWidth > 0);
+        Check("the back arrow is live on the current month", back.IsEnabled);
+        Check("...and the forward arrow is greyed out", !forward.IsEnabled);
+
+        return ok;
+    }
+
+    /// <summary>
+    /// The period quick-filter: opens on this month, steps both ways, stops at today going forward,
+    /// and stays one period with two surfaces (v9.4.0, revised v9.5.0).
     /// </summary>
     /// <remarks>
     /// Driven through the view model rather than the window, because every one of these is a fact
@@ -594,6 +634,10 @@ internal static class Program
     /// leave out — the advanced row already writes INTO the query, so without it the pickers keep
     /// showing whatever they were last given while the list shows another month, and nothing about
     /// the list looks wrong.
+    ///
+    /// The forward ceiling is asserted on <c>CanExecute</c> AND on the period after an
+    /// <c>Execute</c> — a disabled button is a chrome fact, but a command that would still run if
+    /// something called it is the bug the chrome was hiding.
     /// </remarks>
     private static bool CheckPeriodQuickFilter(
         IServiceScopeFactory factory, LocalizationService localization)
@@ -624,10 +668,34 @@ internal static class Program
         Check("...and drags the pickers with it",
             vm.FromDate == lastMonth.Start && vm.ToDate == lastMonth.LastDay);
 
+        Check("...and forward is available again, because last month is behind us",
+            vm.NextPeriodCommand.CanExecute(null));
+
+        // The ceiling (v9.5.0). v9.4.0 deliberately allowed stepping past the current month; a month
+        // that has not begun cannot hold an order the shop took, so the arrow stops on this one.
         vm.NextPeriodCommand.Execute(null);
+        Check("the forward arrow returns to the current month", vm.Query.Period == thisMonth);
+        Check("...and then refuses to go further", !vm.NextPeriodCommand.CanExecute(null));
+
         vm.NextPeriodCommand.Execute(null);
-        Check("the forward arrow goes PAST the current month",
-            vm.Query.Period == thisMonth.Shift(1));
+        Check("...and would not move even if something called it anyway",
+            vm.Query.Period == thisMonth);
+
+        Check("backwards is never blocked", vm.PreviousPeriodCommand.CanExecute(null));
+
+        // This year (v9.5.0) — not a wider month: it changes what the ARROWS step by, which is how a
+        // shop reaches a year it cannot name in the two pickers without spelling out both ends.
+        var thisYear = CameywareOrder.Models.DateRange.CurrentYear();
+        vm.CurrentYearCommand.Execute(null);
+        Check("This year switches the period to the calendar year", vm.Query.Period == thisYear);
+        Check("...and the pickers follow it to both ends of the year",
+            vm.FromDate == thisYear.Start && vm.ToDate == thisYear.LastDay);
+        Check("...and forward stops on the current year too",
+            !vm.NextPeriodCommand.CanExecute(null));
+
+        vm.PreviousPeriodCommand.Execute(null);
+        Check("the back arrow now steps a whole YEAR", vm.Query.Period == thisYear.Shift(-1));
+        Check("...and forward opens up again", vm.NextPeriodCommand.CanExecute(null));
 
         vm.CurrentMonthCommand.Execute(null);
         Check("This month comes back from anywhere", vm.Query.Period == thisMonth);
@@ -639,9 +707,13 @@ internal static class Program
         Check("...and the bar says so", vm.PeriodTitle == localization["Filter.Period.All"]);
         Check("...and the query really is empty", !vm.HasQuery);
 
+        // Neither arrow has a period to step from All time. v9.4.0 sent them to the current month on
+        // the grounds that a dead button reads as a broken one — but a DISABLED button does not, and
+        // an arrow that silently invents a period is the worse of the two.
+        Check("neither arrow is live from All time",
+            !vm.PreviousPeriodCommand.CanExecute(null) && !vm.NextPeriodCommand.CanExecute(null));
         vm.PreviousPeriodCommand.Execute(null);
-        Check("an arrow from All time lands on the current month, not on nothing",
-            vm.Query.Period == thisMonth);
+        Check("...and calling one anyway does not invent a period", vm.Query.Period is null);
 
         // A custom span from the advanced row: the arrows must keep working, stepping by its LENGTH.
         vm.FromDate = new DateTime(2026, 3, 10);
@@ -654,6 +726,19 @@ internal static class Program
         Check("the back arrow steps a custom span by its own length",
             vm.Query.Period?.Start == new DateTime(2026, 2, 28)
             && vm.Query.Period?.LastDay == new DateTime(2026, 3, 9));
+
+        // The ceiling reads the span it would LAND on, not the one it is leaving, so a custom range
+        // obeys the same one rule as a month and a year without restating it.
+        var stepsToToday = 0;
+        while (vm.NextPeriodCommand.CanExecute(null) && stepsToToday < 500)
+        {
+            vm.NextPeriodCommand.Execute(null);
+            stepsToToday++;
+        }
+
+        Check($"a custom span walks forward and stops on the one containing today ({stepsToToday} steps)",
+            vm.Query.Period is { } landed && landed.Start <= DateTime.Today
+            && landed.Shift(1).Start > DateTime.Today);
 
         return ok;
     }
