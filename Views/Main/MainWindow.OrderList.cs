@@ -427,13 +427,7 @@ public partial class MainWindow
 
         // The caret points where pressing it will GO, which is the convention every disclosure
         // control on Windows follows.
-        var caret = _advancedSearchOpen ? " ▴" : " ▾";
-        var mark = !_advancedSearchOpen && HasAdvancedFilter() ? " •" : string.Empty;
-
-        AdvancedSearchButton.Content = _localization["Search.Advanced"] + caret + mark;
+        var caret = _advancedSearchOpen ? " ▴" : " ▾";        
+        AdvancedSearchButton.Content = _localization["Search.Advanced"] + caret;
     }
-
-    /// <summary>Whether anything in the hidden row is currently narrowing the list.</summary>
-    private bool HasAdvancedFilter()
-        => _viewModel.Query.Period is not null || _viewModel.Query.Field != OrderSearchField.All;
 }
