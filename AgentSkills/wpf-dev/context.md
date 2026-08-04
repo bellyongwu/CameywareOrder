@@ -24,6 +24,24 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A second surface onto an existing filter needs the write-back, and nothing looks wrong without it
+  (2026-08-03, v9.4.0).** The period quick-filter and the advanced From/To pickers are two controls
+  over one `OrderQuery.Period`. The advanced row already wrote INTO the query; adding arrows that
+  only wrote the same direction left the pickers describing the month they were last given while the
+  list showed another. The list is right, the count is right, the export is right — only the two
+  boxes disagree, and only if someone opens the panel. Assert the write-back explicitly; it is not
+  visible from the feature's own behaviour.
+  - And write it to the FIELDS, not the properties: the properties call `ApplyPeriod`, which
+    recomposes the month as a `DatePeriodKind.Custom` span. Everything still filters correctly, so
+    nothing goes red — but `DateRange.Shift` then steps by DAYS instead of by month, and the arrows
+    silently stop landing on month boundaries.
+- **A new control on a full row is a defect in a control that has nothing to do with it
+  (2026-08-03).** Four period controls (~380px) went onto the main filter row beside the status
+  filter; the render showed the text-size slider crushed from 150px to a ~40px stub at the far right.
+  Nothing failed, no assertion covered it, and the feature itself looked perfect. Before adding to a
+  row that is already several fixed widths and one star column, add up the fixed widths against the
+  pane — or render first and look at the far end of the row, which is where a star column pays for
+  everything inserted before it.
 - **A date rule enforced by a picker has TWO enforcement points, and `DatePicker` decides which
   designs are even available (2026-08-03, v9.3.3).** The pickup date was refused by
   `IsPickupDateAllowed` at save AND by `BlackoutDates` on the calendar, written independently as

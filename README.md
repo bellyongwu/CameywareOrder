@@ -11,6 +11,27 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.4.0 — 2026-08-03
+
+**The order list now opens on this month, with arrows to move through the others.** A new **Period**
+control sits under the search box: a back arrow, the month you are looking at, a forward arrow, and a
+**This month** button to come straight back.
+
+- **It opens on the current month.** That is the work you are actually doing; the rest is still there
+  and one click away. The count beside "Order Records" tells you how many orders the month holds.
+- **Back as far as you like.** Each press of the left arrow is one month earlier.
+- **Forward too**, past this month, for anything already booked ahead.
+- **All of it at once:** press **Clear filters** in Advanced search and the period drops away with
+  the rest, showing every order the shop has ever taken.
+- The **From** and **To** boxes under Advanced search follow the month you are on, so you can start
+  from a month and then trim it to a few days. Do that and the arrows step by the length of the span
+  you chose — a ten-day window moves ten days at a time.
+- The month is written in your own language.
+
+**One thing to know:** Search now looks inside the period you are on. If you are hunting for an older
+order by name or receipt number, press **Clear filters** first and then search — that reaches
+everything the shop has, exactly as it always did.
+
 ### v9.3.3 — 2026-08-03
 
 **You can now sell something and hand it over the same day.** The expected pickup date refused any

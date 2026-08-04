@@ -550,6 +550,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
                     <Grid Grid.Row="0">
@@ -609,11 +610,41 @@
                         </StackPanel>
                     </Grid>
 
+                    <!-- The period quick-filter (v9.4.0). Its OWN row, and always visible.
+                         Not in Advanced search, because the list OPENS narrowed to this month: a
+                         filter already hiding rows has to be on screen saying so, or the shop reads
+                         it as having lost its older orders.
+                         Not on row 0 either, and this was measured rather than guessed — the four
+                         controls need ~380px, which row 0 did not have. Squeezing them in rendered
+                         the text-size slider down to a 40px stub, a defect in a control that has
+                         nothing to do with this feature and the kind only a picture shows.
+                         The month label carries a fixed MinWidth so the arrows do not jump sideways
+                         as the name changes length ("May" against "September", and wider again in a
+                         language that spells the month out). -->
+                    <StackPanel x:Name="PeriodFilterPanel" Grid.Row="1" Orientation="Horizontal"
+                                Margin="0,10,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.Period.Label], Mode=OneWay}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Button x:Name="PreviousPeriodButton" Command="{Binding PreviousPeriodCommand}"
+                                Content="&#x25C0;" Padding="10,4" MinWidth="0"
+                                ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Previous], Mode=OneWay}"
+                                AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Previous], Mode=OneWay}"/>
+                        <TextBlock x:Name="PeriodTitleText" Text="{Binding PeriodTitle}"
+                                   VerticalAlignment="Center" TextAlignment="Center"
+                                   MinWidth="150" Margin="10,0,10,0" FontWeight="SemiBold"/>
+                        <Button x:Name="NextPeriodButton" Command="{Binding NextPeriodCommand}"
+                                Content="&#x25B6;" Padding="10,4" MinWidth="0"
+                                ToolTip="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Next], Mode=OneWay}"
+                                AutomationProperties.Name="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Settlement.Period.Next], Mode=OneWay}"/>
+                        <Button x:Name="CurrentMonthButton" Command="{Binding CurrentMonthCommand}" Margin="12,0,0,0"
+                                Content="{Binding Source={x:Static loc:LocalizationService.Instance}, Path=[Filter.Period.Current], Mode=OneWay}"/>
+                    </StackPanel>
+
                     <!-- Where to look, and over what period. Collapsed until Advanced search is
                          opened: a shop looking somebody up types a name and presses nothing else, and
                          four more controls on permanent display are four the everyday case has to
                          read past. -->
-                    <Grid x:Name="AdvancedFilterPanel" Grid.Row="1" Margin="0,10,0,0"
+                    <Grid x:Name="AdvancedFilterPanel" Grid.Row="2" Margin="0,10,0,0"
                           Visibility="Collapsed">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>

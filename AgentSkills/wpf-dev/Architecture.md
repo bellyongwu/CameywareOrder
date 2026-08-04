@@ -576,6 +576,18 @@ move.
       the copies end up selected, which is what a single copy always did through `SelectedOrder`.
       `RebuildOrdersView` COLLAPSES the selection to the anchor: Ctrl+A means "this page", so a
       selection must not survive a search, a sort or a page turn.
+    - **The period quick-filter** (v9.4.0): the list OPENS on `DateRange.CurrentMonth()` rather than
+      on everything — a shop's working set is what it took this month, and the whole history is what
+      it looks up by name. `PreviousPeriodCommand` / `NextPeriodCommand` step through
+      `DateRange.Shift`, so they move a month by a month and a custom span by its own length;
+      `CurrentMonthCommand` returns; `PeriodTitle` is `DateRange.Title` in the APPLICATION's culture
+      (not `CurrentUICulture`, which is the OS's), falling back to `Filter.Period.All`. Forward past
+      the current month is deliberately allowed. **`SetPeriod` writes back to `FromDate`/`ToDate`**:
+      one period with two surfaces, and the advanced row already writes the other way, so without the
+      write-back the pickers would describe a different month from the list. It assigns the FIELDS,
+      not the properties, or `ApplyPeriod` would recompose the month as a `Custom` span and cost the
+      arrows the month-ness they step by. `ClearQuery` drops the period to null, not back to the
+      month — a "clear filters" that left a filter standing would be lying.
     - `DeleteOrderCommand` → `ConfirmAndDeleteSelectedAsync` (owns the one MessageBox, naming a
       single order or counting several) → `DeleteSelectedAsync` (does the work, no dialog, so a
       harness can drive it — same split as `TryValidateForSave`/`ValidateForSave`). One query over

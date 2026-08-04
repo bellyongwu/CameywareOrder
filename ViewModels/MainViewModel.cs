@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using CameywareOrder.Data;
@@ -55,6 +56,13 @@ public class MainViewModel : INotifyPropertyChanged
         _statusMessage = _localization["Status.Ready"];
         _selectedStatusFilter = StatusFilterOptions[0];
 
+        // The list opens on THIS MONTH rather than on everything (v9.4.0). A shop's working set is
+        // what it took this month; the whole history is what it looks up by name, which the search
+        // box already answers without scrolling. Seeded through the field rather than the property
+        // so no rebuild is queued before the first load — LoadOrdersAsync does the first one.
+        _query = OrderQuery.Empty with { Period = DateRange.CurrentMonth() };
+        SyncPeriodPickers();
+
         _localization.LanguageChanged += OnLanguageChanged;
 
         LoadOrdersCommand = new RelayCommand(async _ => await LoadOrdersAsync());
@@ -72,6 +80,13 @@ public class MainViewModel : INotifyPropertyChanged
         CopyOrderCommand = new RelayCommand(
             async _ => await CopySelectedAsync(),
             _ => HasSelection && AuthenticationService.Instance.CanCopyOrders);
+
+        // Both directions are always enabled. Backwards is obvious; FORWARDS past the current month
+        // is deliberate too — the shop asked for it, and an order can legitimately be dated ahead
+        // through the GraphQL API, so a stop at "today" would hide records with no way to reach them.
+        PreviousPeriodCommand = new RelayCommand(_ => ShiftPeriod(-1));
+        NextPeriodCommand = new RelayCommand(_ => ShiftPeriod(1));
+        CurrentMonthCommand = new RelayCommand(_ => SetPeriod(DateRange.CurrentMonth()));
     }
 
     private void OnLanguageChanged(object? sender, EventArgs e)
@@ -79,6 +94,9 @@ public class MainViewModel : INotifyPropertyChanged
         StatusMessage = _localization["Status.Ready"];
         OnPropertyChanged(nameof(PageSummary));
         OnPropertyChanged(nameof(FilteredCount));
+        // The month NAME comes from the culture, not the string table, so this one does not follow a
+        // language switch on its own either — see PeriodTitle.
+        OnPropertyChanged(nameof(PeriodTitle));
         // Written by Format rather than bound to a key, so it does not follow a language switch on
         // its own.
         OnPropertyChanged(nameof(SelectionSummary));
@@ -259,6 +277,7 @@ public class MainViewModel : INotifyPropertyChanged
         if (_fromDate is null && _toDate is null)
         {
             Query = _query with { Period = null };
+            OnPropertyChanged(nameof(PeriodTitle));
             return;
         }
 
@@ -269,9 +288,99 @@ public class MainViewModel : INotifyPropertyChanged
             (first, last) = (last, first);
 
         Query = _query with { Period = DateRange.Custom(first, last) };
+        OnPropertyChanged(nameof(PeriodTitle));
+    }
+
+    // ── The period quick-filter (v9.4.0) ───────────────────────────────────────
+
+    /// <summary>Steps back one period — bound to the ◀ arrow.</summary>
+    public ICommand PreviousPeriodCommand { get; }
+
+    /// <summary>Steps forward one period — bound to the ▶ arrow.</summary>
+    public ICommand NextPeriodCommand { get; }
+
+    /// <summary>Returns to the current calendar month, whatever the arrows have reached.</summary>
+    public ICommand CurrentMonthCommand { get; }
+
+    /// <summary>
+    /// What the period reads as on the bar — "August 2026", a span, or "all time".
+    /// </summary>
+    /// <remarks>
+    /// <c>DateRange.Title</c>, the same wording the settlement report prints, so the two screens
+    /// describe one period identically rather than in two house styles.
+    ///
+    /// The culture comes from the APPLICATION's language, not the thread's. `CurrentUICulture` is the
+    /// operating system's, so a shop running the app in Chinese on an English Windows would read
+    /// "August 2026" on a bar where every other word is Chinese — the month name is the one piece of
+    /// text here that .NET supplies rather than the string table.
+    /// </remarks>
+    public string PeriodTitle => _query.Period is { } period
+        ? period.Title(_localization, LanguageCulture())
+        : _localization["Filter.Period.All"];
+
+    /// <summary>The active language as a culture, for anything .NET formats rather than the table.</summary>
+    /// <remarks>
+    /// Falls back rather than throws: a language file could in principle be named something
+    /// <c>CultureInfo</c> does not know, and a filter bar is no place to discover it.
+    /// </remarks>
+    private CultureInfo LanguageCulture()
+    {
+        try
+        {
+            return CultureInfo.GetCultureInfo(_localization.CurrentLanguageCode);
+        }
+        catch (CultureNotFoundException)
+        {
+            return CultureInfo.InvariantCulture;
+        }
+    }
+
+    /// <summary>
+    /// Moves the period by whole periods of its own kind.
+    /// </summary>
+    /// <remarks>
+    /// <c>DateRange.Shift</c> steps a month by a month and a custom span by its own LENGTH, so the
+    /// arrows keep meaning "the one before this" after the advanced pickers have been used. From "all
+    /// time" there is nothing to step, so the arrows land on the current month rather than doing
+    /// nothing — a dead button is indistinguishable from a broken one.
+    /// </remarks>
+    private void ShiftPeriod(int periods)
+        => SetPeriod(_query.Period is { } period ? period.Shift(periods) : DateRange.CurrentMonth());
+
+    /// <summary>
+    /// Sets the period from the quick-filter side, and writes it through to the date pickers.
+    /// </summary>
+    /// <remarks>
+    /// ONE period with two surfaces, and this is the direction that is easy to forget: the advanced
+    /// row already writes into the query through <see cref="ApplyPeriod"/>, so without the write-back
+    /// the pickers would keep showing the range they were last given while the list showed another
+    /// month. The fields are assigned directly, not through the properties, because those call
+    /// <see cref="ApplyPeriod"/> — which would recompose the period as a <c>Custom</c> span and cost
+    /// it the month-ness the arrows step by.
+    /// </remarks>
+    private void SetPeriod(DateRange? period)
+    {
+        Query = _query with { Period = period };
+        SyncPeriodPickers();
+
+        OnPropertyChanged(nameof(FromDate));
+        OnPropertyChanged(nameof(ToDate));
+        OnPropertyChanged(nameof(PeriodTitle));
+    }
+
+    /// <summary>Mirrors the query's period onto the two advanced date pickers.</summary>
+    private void SyncPeriodPickers()
+    {
+        _fromDate = _query.Period?.Start;
+        _toDate = _query.Period?.LastDay;
     }
 
     /// <summary>Clears every filter at once.</summary>
+    /// <remarks>
+    /// This clears the period too, back to ALL time rather than back to the default month. "Clear
+    /// filters" that left one filter standing would be the button lying about what it did, and the
+    /// month is one click away on its own control.
+    /// </remarks>
     public void ClearQuery()
     {
         _fromDate = null;
@@ -285,6 +394,7 @@ public class MainViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(SearchField));
 
         Query = OrderQuery.Empty;
+        OnPropertyChanged(nameof(PeriodTitle));
     }
 
     /// <summary>Every order matching the current query, across every page — what the export takes.</summary>

@@ -17,6 +17,41 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-03 11:15 — v9.4.0: a period quick-filter on the order list, defaulting to this month  [DONE]
+- Ask: "添加一个新的快捷filter在订单主页面，default在本月。 可以查看之前的订单。也可以往后看。"
+  (A new quick filter on the main order page, defaulting to this month; can look at earlier orders and also forward.)
+- Plan:
+  - [ ] `MainViewModel`: seed `Query.Period` with `DateRange.CurrentMonth()`; `PeriodTitle`,
+        `PreviousPeriodCommand` / `NextPeriodCommand` / `CurrentMonthCommand`
+  - [ ] Keep the advanced From/To pickers in sync both ways — one period, two surfaces
+  - [ ] `MainWindow.xaml` row 0: `◀ | period | ▶ | This month`, beside the status filter
+  - [ ] Keys `Filter.Period.Label` / `.Current` / `.All` in all five languages; reuse
+        `Settlement.Period.Previous` / `.Next` for the arrow tooltips
+  - [x] Harness assertions + render the filter bar; README, version, companions
+- Notes: `DateRange` already had `Month`, `Shift`, `Title` and `CurrentMonth`, and `OrderQuery.Period`
+  was already the filter the advanced From/To row writes — so this is a second SURFACE onto an
+  existing period, not a new filter. That is what makes the arrows work on a custom span for free:
+  `Shift` steps a month by a month and a custom range by its own length, already documented there.
+  **The write-back is the half that is easy to miss.** The advanced row writes INTO the query; without
+  `SetPeriod` writing back out to `_fromDate`/`_toDate` the pickers would keep describing the month
+  they were last given while the list showed another, and nothing about the list would look wrong.
+  It assigns the FIELDS: going through the properties calls `ApplyPeriod`, which recomposes the month
+  as a `Custom` span and costs the arrows the month-ness they step by.
+  **Placement was measured, not guessed.** First attempt put the four controls on row 0 beside the
+  status filter; the render showed the text-size slider crushed from 150px to a ~40px stub — the
+  controls need ~380px and row 0 did not have it. Moved to its own always-visible row (the advanced
+  panel became row 2). Own row rather than inside Advanced search because the list OPENS narrowed: a
+  filter already hiding rows has to be on screen saying so, or the shop reads it as lost orders.
+  `PeriodTitle` takes the culture from `_localization.CurrentLanguageCode`, NOT `CurrentUICulture` —
+  the month name is the one string here .NET supplies rather than the table, and `CurrentUICulture` is
+  the OS's. (`MainWindow.Session.cs:415` still passes `CurrentUICulture` for the summary tile; same
+  latent defect, left alone as out of scope and reported.)
+  Files: `ViewModels/MainViewModel.cs`, `Views/Main/MainWindow.xaml` (filter card now 3 rows), five
+  `*.lang.xml` (`Filter.Period.Label`/`.Current`/`.All`; arrow tooltips REUSE
+  `Settlement.Period.Previous`/`.Next`), `Tests/UiCheck/Program.cs` (`CheckPeriodQuickFilter`, 13
+  assertions on the view model), `Architecture.md`, `README.md`, `Directory.Build.props` → 9.4.0.
+  Build 0/0, Sonar clean; UiCheck green + rendered, DataCheck 86, AuthCheck 47, DemoCheck 41.
+
 ### 2026-08-03 10:30 — v9.3.3: the pickup date is floored at the order date, not at tomorrow  [DONE]
 - Ask: "Fixe a bug that the Expected date can be the same day as order date, because for ready made stuff can be sold on site. fix it" → "it can be future but need to include today. thats what i meant" → "The pickup date should be equal to or later than the order date. you can set the default as today's date. The expected due date should be dynamically set the avaiable future date after the picked order date."
 - Plan:

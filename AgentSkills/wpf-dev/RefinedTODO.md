@@ -43,6 +43,18 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 Nothing in flight.
 
+## v9.4.0 — the order list opens on this month
+
+A period quick-filter on its own always-visible row: `◀ August 2026 ▶ This month`. Not a new filter —
+a second SURFACE onto `OrderQuery.Period`, which the advanced From/To row already wrote. That is why
+the arrows work on a custom span for free: `DateRange.Shift` steps a month by a month and a span by
+its own length. `SetPeriod` writes BACK to the two pickers, the half that is easy to omit; it assigns
+the fields, because the properties would recompose the month as `Custom` and cost the arrows their
+month-ness. `ClearQuery` drops the period entirely rather than to the month.
+
+Consequence worth remembering: Search now runs INSIDE the period, so finding an old order means
+clearing first. Documented in `README.md` rather than special-cased.
+
 ## v9.3.3 — the pickup date is floored at the ORDER date
 
 The expected pickup date demanded tomorrow-or-later, which made the counter sale — ready-made stock

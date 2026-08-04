@@ -167,6 +167,9 @@ internal static class Program
         // collected the day it is bought, and the pickup date demanded tomorrow.
         shortcutsOk &= CheckPickupDateFloor(scopeFactory, localization);
 
+        // The period quick-filter (v9.4.0) — a fact about the query, so asserted on the view model.
+        shortcutsOk &= CheckPeriodQuickFilter(scopeFactory, localization);
+
         // The Account menu's CONTENTS (v9.3.1). A Popup lives in its own window and never appears in
         // the parent's RenderTargetBitmap, so opening the menu and re-rendering the window would
         // produce the same picture as before and prove nothing. Its Child is an ordinary visual.
@@ -573,6 +576,84 @@ internal static class Program
             Math.Abs(advanced.ActualHeight - newOrder.ActualHeight) < 0.5);
         Check($"Clear filters matches it too ({clear.ActualHeight})",
             Math.Abs(clear.ActualHeight - advanced.ActualHeight) < 0.5);
+
+        return ok;
+    }
+
+    /// <summary>
+    /// The period quick-filter: opens on this month, steps both ways, and stays one period with two
+    /// surfaces (v9.4.0).
+    /// </summary>
+    /// <remarks>
+    /// Driven through the view model rather than the window, because every one of these is a fact
+    /// about the QUERY — what the list, the count badge and the CSV export all read. A test that
+    /// clicked the arrows would prove the buttons are wired and say nothing about the three consumers
+    /// that matter.
+    ///
+    /// The write-back to the date pickers is asserted explicitly. It is the half that is easy to
+    /// leave out — the advanced row already writes INTO the query, so without it the pickers keep
+    /// showing whatever they were last given while the list shows another month, and nothing about
+    /// the list looks wrong.
+    /// </remarks>
+    private static bool CheckPeriodQuickFilter(
+        IServiceScopeFactory factory, LocalizationService localization)
+    {
+        var ok = true;
+
+        void Check(string what, bool passed)
+        {
+            Console.WriteLine((passed ? "  PASS  " : "  FAIL  ") + what);
+            ok &= passed;
+        }
+
+        var vm = new CameywareOrder.ViewModels.MainViewModel(factory, localization);
+        var thisMonth = CameywareOrder.Models.DateRange.CurrentMonth();
+
+        Check("the list opens on the current month",
+            vm.Query.Period == thisMonth);
+        Check("...and the advanced pickers are seeded from it",
+            vm.FromDate == thisMonth.Start && vm.ToDate == thisMonth.LastDay);
+        Check("the period reads as the month, not as a span",
+            vm.PeriodTitle == thisMonth.Title(localization,
+                System.Globalization.CultureInfo.GetCultureInfo(localization.CurrentLanguageCode)));
+
+        vm.PreviousPeriodCommand.Execute(null);
+        var lastMonth = thisMonth.Shift(-1);
+        Check("the back arrow steps a whole month",
+            vm.Query.Period == lastMonth);
+        Check("...and drags the pickers with it",
+            vm.FromDate == lastMonth.Start && vm.ToDate == lastMonth.LastDay);
+
+        vm.NextPeriodCommand.Execute(null);
+        vm.NextPeriodCommand.Execute(null);
+        Check("the forward arrow goes PAST the current month",
+            vm.Query.Period == thisMonth.Shift(1));
+
+        vm.CurrentMonthCommand.Execute(null);
+        Check("This month comes back from anywhere", vm.Query.Period == thisMonth);
+
+        // Clearing drops the period entirely rather than resetting it to the month: a "clear filters"
+        // that left one filter standing would be the button lying about what it did.
+        vm.ClearQuery();
+        Check("Clear filters clears the period too", vm.Query.Period is null);
+        Check("...and the bar says so", vm.PeriodTitle == localization["Filter.Period.All"]);
+        Check("...and the query really is empty", !vm.HasQuery);
+
+        vm.PreviousPeriodCommand.Execute(null);
+        Check("an arrow from All time lands on the current month, not on nothing",
+            vm.Query.Period == thisMonth);
+
+        // A custom span from the advanced row: the arrows must keep working, stepping by its LENGTH.
+        vm.FromDate = new DateTime(2026, 3, 10);
+        vm.ToDate = new DateTime(2026, 3, 19);
+        Check("the advanced pickers still compose a custom span",
+            vm.Query.Period?.Kind == CameywareOrder.Models.DatePeriodKind.Custom
+            && vm.Query.Period?.DayCount == 10);
+
+        vm.PreviousPeriodCommand.Execute(null);
+        Check("the back arrow steps a custom span by its own length",
+            vm.Query.Period?.Start == new DateTime(2026, 2, 28)
+            && vm.Query.Period?.LastDay == new DateTime(2026, 3, 9));
 
         return ok;
     }

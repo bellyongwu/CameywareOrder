@@ -425,6 +425,9 @@
   <Text key="Filter.Status.Label">Status</Text>
   <Text key="Filter.Status.All">All</Text>
   <Text key="Filter.RecordFontSize">Text size</Text>
+  <Text key="Filter.Period.Label">Period</Text>
+  <Text key="Filter.Period.Current">This month</Text>
+  <Text key="Filter.Period.All">All time</Text>
   <Text key="Paging.PageSize">Per page</Text>
   <Text key="Paging.Previous">Previous</Text>
   <Text key="Paging.Next">Next</Text>
