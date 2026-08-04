@@ -62,7 +62,7 @@ public partial class OrderEditWindow
             return Fail("OrderEdit.Validate.OrderDateFuture", OrderDateErrorText, OrderDatePicker);
 
         if (!IsPickupDateAllowed())
-            return Fail("OrderEdit.Validate.PickupDateFuture", PickupDateErrorText, PickupDatePicker);
+            return Fail("OrderEdit.Validate.PickupDateBeforeOrder", PickupDateErrorText, PickupDatePicker);
 
         RefreshComputedTotals();
 
@@ -218,12 +218,22 @@ public partial class OrderEditWindow
     }
 
     /// <summary>
-    /// Whether the pickup day is one the shop can still promise — strictly after today.
+    /// Whether the pickup day is one the order could be collected on — the order date, or later.
     /// </summary>
     /// <remarks>
-    /// Blank passes HERE: "you have not filled this in" is a different message from "that day has
-    /// gone", and it is <see cref="RequiredTextFields"/> that says the first one. Reporting both from
-    /// one check would name whichever came first and leave the other to the next attempt.
+    /// Measured against the ORDER DATE, not today (v9.3.3). Two things were wrong with today. The
+    /// same day was refused outright, which is the commonest sale in the shop — ready-made stock
+    /// handed over at the counter is ordered and collected within the hour. And a back-dated order
+    /// could not record the day it was actually collected, so entering last week's paperwork meant
+    /// promising a day in the future that had already been and gone.
+    ///
+    /// What is left is the only rule that is true of every order: it cannot be collected before it
+    /// was taken. <see cref="RefreshPickupDateFloor"/> blacks out exactly the days this refuses.
+    ///
+    /// Blank passes HERE: "you have not filled this in" is a different message from "that day is
+    /// before the order", and it is <see cref="RequiredTextFields"/> that says the first one.
+    /// Reporting both from one check would name whichever came first and leave the other to the
+    /// next attempt.
     ///
     /// A date already ON the order passes whatever it says, for the same reason the order date's
     /// check exempts one: an order whose promised day has passed is exactly the order somebody needs
@@ -234,7 +244,7 @@ public partial class OrderEditWindow
         if (PickupDatePicker.SelectedDate is not { } picked)
             return true;
 
-        return picked.Date > DateTime.Today
+        return picked.Date >= SelectedOrderDate()
             || picked.Date == _existing?.ExpectedPickupDateLocal?.Date;
     }
 

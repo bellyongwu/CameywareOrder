@@ -368,7 +368,16 @@ move.
     binds — the list, the detail panel and the receipt all show the shop's own day.
     `ExpectedPickupDate` (v5.1) is the day the customer agreed to COLLECT — nullable, because orders
     taken before it existed have none and no date has been invented for them, but REQUIRED by the
-    form and refused unless it is in the future. `ExpectedPickupDateLocal` is its read side and
+    form, which defaults a NEW order to today and refuses any day EARLIER THAN THE ORDER DATE
+    (v9.3.3). The floor is the order date rather than today because an order cannot be collected
+    before it was taken, and that is the only rule true of every order: the counter sale is ordered
+    and collected the same day, and a back-dated order was actually collected in the past. It
+    demanded tomorrow-or-later before that, which neither could satisfy. `RefreshPickupDateFloor`
+    re-blacks out the pickup calendar on every change to the order date and snaps a now-stale
+    selection forward — a `DatePicker` throws if its `SelectedDate` is inside `BlackoutDates`, so the
+    calendar and `IsPickupDateAllowed` have to agree by construction, not by accident.
+    An order that already exists is never defaulted, or opening one of the pre-v5.1 orders would
+    invent a pickup date on its next save. `ExpectedPickupDateLocal` is its read side and
     `ToStoredDate` the shared local-midnight-to-UTC conversion both dates use.
     `PickupDue` → `PickupDueKind` (None / Soon / Overdue, `PickupSoonDays` = 14) is what the list
     paints a row from. It is `None` for a FINISHED order as well as for one with no date: a collected

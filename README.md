@@ -11,6 +11,27 @@ Windows desktop app: **WPF on .NET 8**, with all data stored locally.
 
 ## Latest release
 
+### v9.3.3 — 2026-08-03
+
+**You can now sell something and hand it over the same day.** The expected pickup date refused any
+day earlier than tomorrow, so a customer buying a ready-made jacket off the rail — paid for and
+carried out within the hour — could not be entered as what it was. The only way past it was to
+promise a day the customer was never coming back on. Today is now a perfectly ordinary pickup date.
+
+**The pickup date is now measured against the order date, not against today.** The two go together:
+if you are entering last week's paperwork, the order date goes back to the day the order was taken
+and the pickup date can go back with it, because that collection has already happened. Choose a
+pickup date on or after the order date and the form is satisfied; the calendar greys out the days
+before it and reopens them the moment you change the order date.
+
+**A new order starts with today already filled in.** It was blank, and had to be typed on every
+order including the ones collected the same afternoon. Change it to whatever you agreed — nothing is
+assumed beyond the first guess. Orders taken before this field existed still show no pickup date;
+opening one does not invent one.
+
+If you move the order date forward past a pickup date you have already chosen, the pickup date moves
+up with it, so the two can never end up describing an order collected before it was taken.
+
 ### v9.3.2 — 2026-08-02
 
 **The clothing and accessory lines now sit under their own headings.** In the order form, Item

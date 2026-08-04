@@ -24,6 +24,28 @@ Read this (with `TODO.md` and `Architecture.md`) before starting any task.
 
 ## Recent decisions / state
 
+- **A date rule enforced by a picker has TWO enforcement points, and `DatePicker` decides which
+  designs are even available (2026-08-03, v9.3.3).** The pickup date was refused by
+  `IsPickupDateAllowed` at save AND by `BlackoutDates` on the calendar, written independently as
+  `> Today` and `>= Today.AddDays(1)`. Fixing one leaves the other: a calendar that strikes out a day
+  the save would have taken reads as a different bug entirely, so it gets reported twice and fixed
+  twice. Derive both from one expression — here `SelectedOrderDate()` — and assert both ends.
+  - The constraint that shapes the design: **`DatePicker` THROWS if its `SelectedDate` is inside
+    `BlackoutDates`.** So "leave the stale value and let the validator refuse it later" is not an
+    option once the floor moves under a live selection; the choice is snap-forward or clear, and
+    snapping keeps the calendar and the validator in agreement by construction. It also means a
+    harness cannot reach the refused case through a picker that is still refusing it — clear
+    `BlackoutDates` first, which is faithful anyway, because the save rule exists precisely for the
+    typed date the calendar never offered.
+  - Where the floor is READ from matters as much as its value. `SelectedOrderDate()` reads the
+    picker, not `RecordedOrderDate()`; the stored value would answer with the date the window opened
+    on, and the whole point was that the floor follows the order date while it is being edited.
+- **Defaulting a field on an EDIT window writes data into every legacy record (2026-08-03).**
+  Seeding the pickup date to today looks like a pure convenience until an order that predates the
+  field is opened: it now carries a date it never had, and the next save persists it. The README
+  says explicitly that those orders have no pickup date and "none has been invented for them", and
+  the default would have quietly falsified that for every one of them. Default on the NEW path only
+  (`_existing is null`), never on the load path — the same asymmetry as any other seeded control.
 - **Two Grids with identical column definitions do NOT line up if one column's content differs
   (2026-08-02, v9.3.2).** The ready-made section builds its header as one Grid and each item as
   another, same five columns — but only the rows put a Remove button in the trailing `Auto` column.

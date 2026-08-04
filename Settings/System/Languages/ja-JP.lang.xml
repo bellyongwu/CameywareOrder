@@ -532,10 +532,10 @@
   <Text key="OrderEdit.Cancel">キャンセル</Text>
   <Text key="OrderEdit.Save">保存</Text>
   <Text key="OrderEdit.OrderDateHint">注文を受けた日付です。過去の注文をあとから入力する場合を除き、当日のままにしてください。</Text>
-  <Text key="OrderEdit.PickupDateHint">お客様と約束した受け取りの日です。必須で、今日より後の日付にしてください。</Text>
+  <Text key="OrderEdit.PickupDateHint">お客様と約束した受け取りの日です。初期値は本日で、注文日と同じ日かそれ以降を指定できます。</Text>
   <Text key="OrderEdit.Validate.OrderNumber">注文番号を入力してください。</Text>
   <Text key="OrderEdit.Validate.OrderDateFuture">注文日は本日より後にはできません。</Text>
-  <Text key="OrderEdit.Validate.PickupDateRequired">受取予定日を選択してください。</Text>   <Text key="OrderEdit.Validate.PickupDateFuture">受取予定日は本日より後にしてください。</Text>
+  <Text key="OrderEdit.Validate.PickupDateRequired">受取予定日を選択してください。</Text>   <Text key="OrderEdit.Validate.PickupDateBeforeOrder">受取予定日は注文日より前にはできません。</Text>
   <Text key="OrderEdit.Validate.CustomerName">顧客名を入力してください。</Text>
   <Text key="OrderEdit.Validate.PhoneNumber">電話番号は空にできません。</Text>
   <Text key="OrderEdit.Validate.EmailRequired">支払方法を選択した場合は、メールアドレスを入力してください。</Text>

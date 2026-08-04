@@ -17,6 +17,45 @@ Entry format:
 
 ## Open / in progress
 
+### 2026-08-03 10:30 — v9.3.3: the pickup date is floored at the order date, not at tomorrow  [DONE]
+- Ask: "Fixe a bug that the Expected date can be the same day as order date, because for ready made stuff can be sold on site. fix it" → "it can be future but need to include today. thats what i meant" → "The pickup date should be equal to or later than the order date. you can set the default as today's date. The expected due date should be dynamically set the avaiable future date after the picked order date."
+- Plan:
+  - [x] `IsPickupDateAllowed`: `> DateTime.Today` → `>= SelectedOrderDate()`
+  - [x] Pickup calendar blackout floored at the order date, rebuilt on every `OrderDatePicker.SelectedDateChanged`
+  - [x] Default a NEW order's pickup date to today; leave an existing order alone
+  - [x] Rename the message key, retranslate it and the field hint in all five languages
+  - [x] Harness assertion for both ends of the rule; prove it fails without the fix
+  - [x] Companions, README, version bump, build + full suite
+- Notes: **Two halves of one rule, and the defect was in both.** `OrderEditWindow.Validation.cs`
+  `IsPickupDateAllowed` is what refuses the SAVE; `InitializePickupDatePicker`'s blackout is what
+  refuses the CLICK. They were `> DateTime.Today` and `>= DateTime.Today.AddDays(1)` respectively —
+  fixing either alone leaves a calendar striking out a day the save would take. Now
+  `RefreshPickupDateFloor` owns the blackout and re-runs on every order-date change, and both read
+  the same `SelectedOrderDate()` (the PICKER, not `RecordedOrderDate()`, or the floor would answer
+  with the date the window opened on).
+  **The floor moved from today to the order date** on the second ask, which also fixed the
+  back-dated order: entering last week's paperwork can now record the collection that already
+  happened. What survives is the only rule true of every order — it cannot be collected before it
+  was taken.
+  **A stale selection is snapped forward, not cleared and not left.** `DatePicker` THROWS if
+  `SelectedDate` is inside `BlackoutDates`, so leaving it was never an option; clearing would discard
+  a deliberate choice. Snap keeps the calendar and the validator in agreement by construction.
+  **The default is new-orders-only.** Seeding today unconditionally would invent a pickup date on the
+  next save of every pre-v5.1 order, silently, as a side effect of opening the window — against the
+  README's explicit "none has been invented for them".
+  **An existing order whose recorded pickup predates its order date** (reachable via the GraphQL API)
+  keeps that one day clickable, punched out of the blackout as its own `CalendarDateRange`, so the
+  calendar offers exactly what the validator accepts.
+  Files: `Views/StoreManagement/OrderEditWindow.xaml.cs` (`InitializeOrderDatePicker`,
+  `InitializePickupDatePicker`, new `RefreshPickupDateFloor` / `BlackoutPickupBefore` /
+  `SelectedOrderDate`), `OrderEditWindow.Validation.cs`, all five `*.lang.xml`
+  (`OrderEdit.Validate.PickupDateFuture` → `.PickupDateBeforeOrder`, `OrderEdit.PickupDateHint`
+  retranslated), `Tests/UiCheck/Program.cs` (`CheckPickupDateFloor`, 9 assertions),
+  `Architecture.md`, `README.md`, `Directory.Build.props` 9.3.2 → 9.3.3.
+  Guard proven: stashing the two code files turned "the calendar offers today" and "today is
+  accepted as a pickup date" red while the negative case stayed green. Build 0/0, Sonar clean;
+  UiCheck green, DataCheck 86, AuthCheck 47, DemoCheck 41.
+
 ### 2026-08-02 22:55 — v9.3.2: the ready-made column headings did not sit over their values  [DONE]
 - Ask: "This price should be aligned with the header." (screenshot of the 成衣或配饰 lines, 小计 circled)
 - Diagnosis, and it was NOT the price's alignment: the header row and every item row are SEPARATE

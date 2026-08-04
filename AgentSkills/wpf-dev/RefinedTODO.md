@@ -43,6 +43,17 @@ GraphQL, FlowDocument/QuestPDF printing.
 
 Nothing in flight.
 
+## v9.3.3 — the pickup date is floored at the ORDER date
+
+The expected pickup date demanded tomorrow-or-later, which made the counter sale — ready-made stock
+paid for and carried out within the hour — the one order the form could not express. The floor is
+now the order date, which fixes the same-day sale and the back-dated order in one rule: an order
+cannot be collected before it was taken, and nothing else is true of every order. `SelectedOrderDate`
+reads the PICKER, so the floor follows the order date as it is edited; a new order defaults to today,
+an existing one is never defaulted (that would invent a pickup date on every pre-v5.1 order's next
+save). See `context.md` for why the calendar and the validator have to be one rule, and for the
+`DatePicker` throw that decides what happens to a stale selection.
+
 ## v9.3.2 — the ready-made headings sat right of their values
 
 The header and the item rows are separate Grids with identical columns, but only the rows carry a

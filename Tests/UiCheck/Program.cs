@@ -163,6 +163,10 @@ internal static class Program
         // and every heading drifted right of the values beneath it. Nothing but a picture shows that.
         RenderReadyMadeSection(scopeFactory, localization, Path.Combine(outDir, "order-ready-made.png"));
 
+        // ...and the rule that made that same section unsaveable (v9.3.3): ready-made stock is
+        // collected the day it is bought, and the pickup date demanded tomorrow.
+        shortcutsOk &= CheckPickupDateFloor(scopeFactory, localization);
+
         // The Account menu's CONTENTS (v9.3.1). A Popup lives in its own window and never appears in
         // the parent's RenderTargetBitmap, so opening the menu and re-rendering the window would
         // produce the same picture as before and prove nothing. Its Child is an ordinary visual.
@@ -570,6 +574,96 @@ internal static class Program
         Check($"Clear filters matches it too ({clear.ActualHeight})",
             Math.Abs(clear.ActualHeight - advanced.ActualHeight) < 0.5);
 
+        return ok;
+    }
+
+    /// <summary>
+    /// The pickup date is floored at the ORDER date, defaults to today, and follows the order date
+    /// as it is edited (v9.3.3).
+    /// </summary>
+    /// <remarks>
+    /// Two orders the form could not express before this. The counter sale — ready-made stock handed
+    /// over within the hour — has a pickup date of today, and the form demanded tomorrow-or-later.
+    /// And a back-dated order could not record the day it was actually collected, because the floor
+    /// was today rather than the day the order was taken.
+    ///
+    /// BOTH ENDS ARE ASSERTED, because they are two halves of one rule and the defect showed up in
+    /// each independently: <c>IsPickupDateAllowed</c> is what refuses the save, and the picker's
+    /// blackout is what refuses the CLICK. Fixing one and leaving the other is the same bug with a
+    /// different symptom — a calendar that strikes out a day the save would have taken.
+    ///
+    /// The day before the floor is asserted every time. "Today counts" must not quietly become "any
+    /// date counts": a test that only proves what is now allowed would pass just as happily against
+    /// a check that had been deleted.
+    ///
+    /// Reflection, because the rule is private and belongs there — it is the window's own answer
+    /// about its own fields, not a service anything else should be able to call.
+    /// </remarks>
+    private static bool CheckPickupDateFloor(
+        IServiceScopeFactory factory, LocalizationService localization)
+    {
+        var ok = true;
+
+        void Check(string what, bool passed)
+        {
+            Console.WriteLine((passed ? "  PASS  " : "  FAIL  ") + what);
+            ok &= passed;
+        }
+
+        // A NEW order, deliberately: an order that already carries a date is exempted from the rule,
+        // and running this against one would pass no matter what the rule said.
+        var editor = new CameywareOrder.Views.OrderEditWindow(factory, localization);
+        Show(editor, 1200, 900);
+
+        var pickup = (System.Windows.Controls.DatePicker)editor.FindName("PickupDatePicker")!;
+        var orderDate = (System.Windows.Controls.DatePicker)editor.FindName("OrderDatePicker")!;
+        var allowed = typeof(CameywareOrder.Views.OrderEditWindow)
+            .GetMethod("IsPickupDateAllowed", BindingFlags.Instance | BindingFlags.NonPublic)!;
+
+        Check("a new order defaults its pickup date to today",
+            pickup.SelectedDate?.Date == DateTime.Today);
+
+        Check("the calendar offers today", !pickup.BlackoutDates.Contains(DateTime.Today));
+        Check("the calendar strikes out the day before the order date",
+            pickup.BlackoutDates.Contains(DateTime.Today.AddDays(-1)));
+
+        // The order date moved back a week. The floor has to follow it — this is the back-dated
+        // order, where a pickup date in the past is the truth rather than a mistake.
+        var backdated = DateTime.Today.AddDays(-7);
+        orderDate.SelectedDate = backdated;
+
+        Check("back-dating the order opens the calendar back to that day",
+            !pickup.BlackoutDates.Contains(backdated));
+        Check("...and no further", pickup.BlackoutDates.Contains(backdated.AddDays(-1)));
+        Check("the pickup date already chosen is left alone",
+            pickup.SelectedDate?.Date == DateTime.Today);
+
+        // Now forward again, past the chosen pickup date. The stale selection must be snapped to the
+        // new floor: a DatePicker THROWS if its SelectedDate is inside BlackoutDates, so leaving it
+        // is not one of the options.
+        pickup.SelectedDate = backdated;
+        orderDate.SelectedDate = DateTime.Today;
+
+        Check("moving the order date past the pickup date snaps the pickup date up to it",
+            pickup.SelectedDate?.Date == DateTime.Today);
+
+        // Then the save rule, with the blackout cleared. Not a convenience: assigning SelectedDate a
+        // blacked-out day THROWS, so the refused case cannot be reached through a picker that is
+        // still refusing it — and the save rule exists precisely for the day the calendar never
+        // offered, because the box can be typed into. Clearing it is that typed path.
+        pickup.BlackoutDates.Clear();
+
+        bool Accepts(DateTime day)
+        {
+            pickup.SelectedDate = day;
+            return (bool)allowed.Invoke(editor, null)!;
+        }
+
+        Check("today is accepted when the order was taken today", Accepts(DateTime.Today));
+        Check("tomorrow still is", Accepts(DateTime.Today.AddDays(1)));
+        Check("the day before the order date is refused", !Accepts(DateTime.Today.AddDays(-1)));
+
+        editor.Close();
         return ok;
     }
 

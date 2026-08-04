@@ -613,31 +613,98 @@ public partial class OrderEditWindow : Window
         OrderDatePicker.BlackoutDates.Add(new CalendarDateRange(lastAllowed.AddDays(1), DateTime.MaxValue));
 
         InitializePickupDatePicker();
+
+        // Subscribed AFTER the seeding above, which would otherwise fire this during construction
+        // and rebuild a floor that InitializePickupDatePicker is about to build anyway.
+        OrderDatePicker.SelectedDateChanged += (_, _) => RefreshPickupDateFloor();
     }
 
     /// <summary>
-    /// Seeds the pickup picker and blacks out everything that is not in the future.
+    /// Seeds the pickup picker, defaulting a NEW order to today.
     /// </summary>
     /// <remarks>
-    /// The mirror image of the order date, and empty where that one is seeded: a pickup date is
-    /// something the shop AGREED with a customer, so there is no sensible default. It stays blank
-    /// until somebody fills it in, and the save refuses to go without it.
+    /// The default is today because the commonest order in the shop is taken and collected the same
+    /// day, and a field that is right most of the time should not have to be filled in every time.
+    /// It stayed blank until v9.3.3 on the reasoning that a pickup date is something the shop AGREED
+    /// with a customer and so has no sensible default — true of a made-to-measure job, but it made
+    /// the counter sale type out a date it already knew.
     ///
-    /// The boundary is the EARLIER of tomorrow and whatever the order already carries. Orders taken
-    /// before this field existed have none, and one whose promised day has since passed must still
-    /// open, and still save, without being forced to a new date the customer never agreed to.
+    /// AN ORDER THAT ALREADY EXISTS IS NOT DEFAULTED. Orders taken before this field existed carry
+    /// no pickup date and none has been invented for them (README, v5.1); seeding today here would
+    /// invent one on the next save of every one of them, silently, as a side effect of opening the
+    /// window. Only a genuinely new order gets the default.
     /// </remarks>
     private void InitializePickupDatePicker()
     {
-        var recorded = _existing?.ExpectedPickupDateLocal?.Date;
-        var firstAllowed = recorded is { } day && day < DateTime.Today.AddDays(1)
-            ? day
-            : DateTime.Today.AddDays(1);
+        PickupDatePicker.SelectedDate = _existing is null
+            ? DateTime.Today
+            : _existing.ExpectedPickupDateLocal?.Date;
 
-        PickupDatePicker.SelectedDate = recorded;
-        PickupDatePicker.BlackoutDates.Add(
-            new CalendarDateRange(DateTime.MinValue, firstAllowed.AddDays(-1)));
+        RefreshPickupDateFloor();
     }
+
+    /// <summary>
+    /// Re-blacks out the pickup calendar against the order date currently on the form.
+    /// </summary>
+    /// <remarks>
+    /// The floor is the ORDER DATE, not today (v9.3.3). An order cannot be collected before it was
+    /// taken, and that is the whole rule — back-dating an order to last Monday has to make last
+    /// Monday collectable, because entering last week's paperwork is exactly when a pickup date in
+    /// the past is the truth rather than a mistake. Anchoring on today instead refused it.
+    ///
+    /// It runs again on every change to the order date, which is what makes the two fields agree
+    /// while they are being edited rather than only at save. A STALE SELECTION IS SNAPPED FORWARD to
+    /// the new floor rather than left to be refused later: <c>DatePicker</c> THROWS if its
+    /// <c>SelectedDate</c> is inside <c>BlackoutDates</c>, so leaving it is not one of the options,
+    /// and clearing it would discard a day somebody chose on purpose. The snap is visible — the two
+    /// pickers sit on the same row.
+    ///
+    /// The day the order already carries survives the floor, and only that day: it is punched out of
+    /// the blackout as its own range, so the calendar offers exactly what
+    /// <see cref="IsPickupDateAllowed"/> accepts. Anything looser would black out days the save would
+    /// have taken, or offer days it would refuse — the same defect read from either end.
+    /// </remarks>
+    private void RefreshPickupDateFloor()
+    {
+        var floor = SelectedOrderDate();
+        var recorded = _existing?.ExpectedPickupDateLocal?.Date;
+
+        // Cleared BEFORE the selection moves: a blackout still covering the new value would throw.
+        PickupDatePicker.BlackoutDates.Clear();
+
+        if (PickupDatePicker.SelectedDate is { } picked
+            && picked.Date < floor
+            && picked.Date != recorded)
+        {
+            PickupDatePicker.SelectedDate = floor;
+        }
+
+        if (recorded is { } kept && kept < floor)
+        {
+            BlackoutPickupBefore(kept);
+            if (kept.AddDays(1) <= floor.AddDays(-1))
+                PickupDatePicker.BlackoutDates.Add(new CalendarDateRange(kept.AddDays(1), floor.AddDays(-1)));
+            return;
+        }
+
+        BlackoutPickupBefore(floor);
+    }
+
+    /// <summary>Strikes out every day before <paramref name="day"/>, and nothing at all on the floor of time.</summary>
+    private void BlackoutPickupBefore(DateTime day)
+    {
+        if (day > DateTime.MinValue.Date)
+            PickupDatePicker.BlackoutDates.Add(new CalendarDateRange(DateTime.MinValue, day.AddDays(-1)));
+    }
+
+    /// <summary>The order date as the form currently stands — what the pickup rule is measured against.</summary>
+    /// <remarks>
+    /// The PICKER, not <see cref="RecordedOrderDate"/>: the point is that changing the order date
+    /// moves the pickup floor with it, and reading the stored value would answer with the date the
+    /// window opened on. Falls back to the stored one only while the box is empty.
+    /// </remarks>
+    private DateTime SelectedOrderDate()
+        => OrderDatePicker.SelectedDate?.Date ?? RecordedOrderDate().ToLocalTime().Date;
 
     /// <summary>The order date as it stands before this form is saved — <c>UtcNow</c> for a new one.</summary>
     private DateTime RecordedOrderDate() => _existing?.OrderDate ?? DateTime.UtcNow;

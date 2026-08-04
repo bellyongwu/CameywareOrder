@@ -531,10 +531,10 @@
   <Text key="OrderEdit.Cancel">Annuler</Text>
   <Text key="OrderEdit.Save">Enregistrer</Text>
   <Text key="OrderEdit.OrderDateHint">Le jour où la commande a été prise. Laissez la date du jour, sauf si vous saisissez une commande d’une journée antérieure.</Text>
-  <Text key="OrderEdit.PickupDateHint">Le jour convenu avec le client pour venir chercher la commande. Obligatoire, et il doit être à venir.</Text>
+  <Text key="OrderEdit.PickupDateHint">Le jour convenu avec le client pour venir chercher la commande. Aujourd’hui par défaut, et peut être la date de la commande ou tout jour suivant.</Text>
   <Text key="OrderEdit.Validate.OrderNumber">Veuillez saisir le numéro de commande.</Text>
   <Text key="OrderEdit.Validate.OrderDateFuture">La date de la commande ne peut pas être postérieure à aujourd’hui.</Text>
-  <Text key="OrderEdit.Validate.PickupDateRequired">Veuillez choisir la date de retrait prévue.</Text>   <Text key="OrderEdit.Validate.PickupDateFuture">La date de retrait prévue doit être postérieure à aujourd’hui.</Text>
+  <Text key="OrderEdit.Validate.PickupDateRequired">Veuillez choisir la date de retrait prévue.</Text>   <Text key="OrderEdit.Validate.PickupDateBeforeOrder">La date de retrait prévue ne peut pas être antérieure à la date de la commande.</Text>
   <Text key="OrderEdit.Validate.CustomerName">Veuillez saisir le nom du client.</Text>
   <Text key="OrderEdit.Validate.PhoneNumber">Le numéro de téléphone ne peut pas être vide.</Text>
   <Text key="OrderEdit.Validate.EmailRequired">Veuillez saisir une adresse courriel lorsqu’un mode de paiement est sélectionné.</Text>
